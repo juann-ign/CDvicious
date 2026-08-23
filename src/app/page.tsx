@@ -20,7 +20,7 @@ export default function Home() {
   return (
     <main className="stage">
       <div className="brand">
-        desktop<span>.fm</span>
+        CD<span>vicious</span>
       </div>
 
       <Disc track={data?.track ?? null} isPlaying={data?.isPlaying ?? false} />
