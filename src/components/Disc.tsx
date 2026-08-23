@@ -45,28 +45,34 @@ export function Disc({ track, isPlaying, accentColor }: DiscProps) {
   return (
     <div className="disc-stage">
       <div
-        className={`disc disc--${state} ${isDragging ? "disc--dragging" : ""}`}
+        className={`disc ${isDragging ? "disc--dragging" : ""}`}
         style={discStyle}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
       >
-        <div className="disc__spinner">
-          {coverUrl && (
-            <div className="disc__cover">
-              <Image
-                src={coverUrl}
-                alt={track!.album.name}
-                fill
-                sizes="260px"
-              />
-            </div>
-          )}
-          <div className="disc__halo" />
+        <div className={`disc__spinner disc__spinner--${state}`}>
+          <div className="disc__face disc__face--front">
+            {coverUrl && (
+              <div className="disc__cover">
+                <Image
+                  src={coverUrl}
+                  alt={track!.album.name}
+                  fill
+                  sizes="420px"
+                />
+              </div>
+            )}
+            <div className="disc__halo" />
+            {!track && <span className="disc__label">DISCO SIN GRABAR</span>}
+            <div className="disc__hole" />
+          </div>
+
+          <div className="disc__face disc__face--back">
+            <div className="disc__hole" />
+          </div>
         </div>
         {isRecording && <div className="disc__laser" />}
-        {!track && <span className="disc__label">DISCO SIN GRABAR</span>}
-        <div className="disc__hole" />
       </div>
     </div>
   );
