@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import type { SpotifyTrack } from "@/types/spotify";
-import { useMouseParallax } from "@/hooks/useMouseParallax";
+import { useDiscDrag } from "@/hooks/useDiscDrag";
 
 interface DiscProps {
   track: SpotifyTrack | null;
@@ -14,7 +14,8 @@ interface DiscProps {
 export function Disc({ track, isPlaying, accentColor }: DiscProps) {
   const coverUrl = track?.album.images[0]?.url;
   const state = !track ? "virgin" : isPlaying ? "playing" : "paused";
-  const { ref, offset } = useMouseParallax(5);
+  const { rotation, isDragging, onPointerDown, onPointerMove, onPointerUp } =
+    useDiscDrag();
 
   const previousTrackId = useRef<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
@@ -37,13 +38,19 @@ export function Disc({ track, isPlaying, accentColor }: DiscProps) {
   }, [track]);
 
   const discStyle = {
-    transform: `rotateX(${34 + offset.y}deg) rotateY(${offset.x}deg)`,
+    transform: `rotateX(${rotation.x}deg) rotateY(${rotation.y}deg)`,
     "--accent-color": accentColor,
   } as CSSProperties;
 
   return (
-    <div className="disc-stage" ref={ref}>
-      <div className={`disc disc--${state}`} style={discStyle}>
+    <div className="disc-stage">
+      <div
+        className={`disc disc--${state} ${isDragging ? "disc--dragging" : ""}`}
+        style={discStyle}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+      >
         <div className="disc__spinner">
           {coverUrl && (
             <div className="disc__cover">
