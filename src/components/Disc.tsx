@@ -13,7 +13,7 @@ interface DiscProps {
 
 export function Disc({ track, isPlaying, accentColor }: DiscProps) {
   const coverUrl = track?.album.images[0]?.url;
-  const { elRef, onPointerDown, onPointerMove, onPointerUp } = useDiscSpin(10);
+  const { elRef, onPointerDown, onPointerMove, onPointerUp } = useDiscSpin(15);
 
   const previousTrackId = useRef<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
@@ -62,6 +62,7 @@ export function Disc({ track, isPlaying, accentColor }: DiscProps) {
                 />
               </div>
             )}
+            <div className="disc__sheen" />
             {!track && <span className="disc__label">DISCO SIN GRABAR</span>}
             <div className="disc__hole" />
             <div className="disc__rim" />
