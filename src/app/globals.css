@@ -47,30 +47,20 @@ body {
 }
 
 .disc-stage {
-  perspective: 1200px;
-  z-index: 1;
+  perspective: 1600px;
 }
 
 .disc {
   position: relative;
-  width: 260px;
-  height: 260px;
-  border-radius: 50%;
-  background: radial-gradient(
-    circle at 40% 35%,
-    #3a3c42 0%,
-    #1c1d20 55%,
-    #0d0d0f 100%
-  );
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.08),
-    0 40px 70px -20px rgba(0, 0, 0, 0.6),
-    0 0 60px -10px var(--accent-color, #1db954);
-  transform-style: preserve-3d;
-  transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-  will-change: transform;
+  width: 400px;
+  height: 400px;
   cursor: grab;
   touch-action: none;
+  transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.disc--dragging {
+  cursor: grabbing;
+  transition: none;
 }
 
 .disc,
@@ -79,25 +69,19 @@ body {
   -webkit-user-select: none;
 }
 
-.disc--dragging {
-  cursor: grabbing;
-  transition: none;
-}
-
-.disc:active {
-  cursor: grabbing;
+.disc img {
+  pointer-events: none;
 }
 
 .disc__spinner {
+  position: relative;
   width: 100%;
   height: 100%;
-  border-radius: 50%;
-  position: relative;
+  transform-style: preserve-3d;
   animation: spin 4s linear infinite;
   animation-play-state: paused;
 }
-
-.disc--playing .disc__spinner {
+.disc__spinner--playing {
   animation-play-state: running;
 }
 
@@ -108,6 +92,71 @@ body {
   to {
     transform: rotateZ(360deg);
   }
+}
+
+.disc__face {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  backface-visibility: hidden;
+  overflow: hidden;
+}
+
+/* --- Cara frontal: portada del álbum --- */
+.disc__face--front {
+  background: radial-gradient(
+    circle at 40% 35%,
+    #d4d7dc 0%,
+    #9a9ea5 45%,
+    #55585f 78%,
+    #1c1d20 100%
+  );
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+/* --- Cara trasera: policarbonato iridiscente, como un CD real --- */
+.disc__face--back {
+  transform: rotateY(180deg);
+  background:
+    repeating-radial-gradient(
+      circle,
+      rgba(255, 255, 255, 0.05) 0px,
+      rgba(255, 255, 255, 0.05) 1px,
+      transparent 2px,
+      transparent 5px
+    ),
+    conic-gradient(
+      from 0deg,
+      #ffb3ba,
+      #ffdfba,
+      #ffffba,
+      #baffc9,
+      #bae1ff,
+      #d0baff,
+      #ffb3ba
+    ),
+    radial-gradient(
+      circle at 45% 40%,
+      #e8eaed 0%,
+      #a3a7ae 40%,
+      #57595f 75%,
+      #17181b 100%
+    );
+  background-blend-mode: overlay, color-dodge, normal;
+  opacity: 0.95;
+}
+
+.disc__face--back::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 30% 25%,
+    rgba(255, 255, 255, 0.35) 0%,
+    transparent 40%
+  );
+  mix-blend-mode: screen;
 }
 
 .disc__halo {
@@ -128,31 +177,18 @@ body {
   pointer-events: none;
 }
 
-.disc--playing .disc__halo {
+.disc__spinner--playing .disc__halo {
   opacity: 0.55;
 }
 
 .disc__cover {
   position: absolute;
-  inset: 12%;
+  inset: 6%;
   border-radius: 50%;
   overflow: hidden;
-  opacity: 0;
-  transform: scale(0.92);
-  transition:
-    opacity 0.6s ease,
-    transform 0.6s ease;
 }
-
-.disc--paused .disc__cover,
-.disc--playing .disc__cover {
-  opacity: 1;
-  transform: scale(1);
-}
-
 .disc__cover img {
   object-fit: cover;
-  pointer-events: none;
 }
 
 .disc__laser {
@@ -168,7 +204,6 @@ body {
   );
   animation: laser-sweep 0.7s ease-out;
 }
-
 @keyframes laser-sweep {
   from {
     transform: rotate(0deg);
@@ -186,28 +221,25 @@ body {
   left: 50%;
   transform: translate(-50%, -50%);
   font-family: monospace;
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 2px;
-  color: #3d3f45;
-  width: 120px;
+  color: #4a4d54;
+  width: 140px;
   text-align: center;
-}
-
-.disc--playing .disc__label,
-.disc--paused .disc__label {
-  opacity: 0;
+  z-index: 1;
 }
 
 .disc__hole {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 36px;
-  height: 36px;
+  width: 54px;
+  height: 54px;
   transform: translate(-50%, -50%);
   border-radius: 50%;
   background: #050506;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1);
+  z-index: 2;
 }
 
 .now-playing-wrap {
@@ -341,14 +373,14 @@ body {
 
 @media (max-width: 480px) {
   .disc {
-    width: 190px;
-    height: 190px;
+    width: 260px;
+    height: 260px;
   }
   .disc-stage {
-    perspective: 900px;
+    perspective: 1100px;
   }
-  .profile-chip {
-    top: 18px;
-    right: 18px;
+  .disc__hole {
+    width: 38px;
+    height: 38px;
   }
 }
