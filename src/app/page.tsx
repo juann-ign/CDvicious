@@ -25,11 +25,11 @@ export default function Home() {
 
   return (
     <main className="stage" style={stageStyle}>
-      <UserProfileChip />
-
-      <div className="brand">
-        CD<span>vicious</span>
+      <div className="brand-corner">
+        desktop<span>.fm</span>
       </div>
+
+      <UserProfileChip />
 
       <Disc
         track={data?.track ?? null}
@@ -37,7 +37,7 @@ export default function Home() {
         accentColor={accentColor}
       />
 
-      <div className="now-playing-wrap">
+      <div className="now-playing-dock">
         <NowPlayingCard
           track={data?.track ?? null}
           isPlaying={data?.isPlaying ?? false}
