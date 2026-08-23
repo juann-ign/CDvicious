@@ -12,7 +12,7 @@ body {
   height: 100%;
   color: #eceef0;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: linear-gradient(180deg, #1a1c22 0%, #12141a 60%, #0d0f14 100%);
+  background: linear-gradient(180deg, #3a3d45 0%, #2a2c33 55%, #1f2126 100%);
 }
 
 /* ============================================
@@ -71,23 +71,27 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  perspective: 1800px;
+  perspective: 2400px;
 }
 
 .disc-glow {
   position: absolute;
-  inset: 8%;
+  inset: -15%;
   border-radius: 50%;
-  background: var(--accent-color, #1db954);
-  filter: blur(90px);
-  opacity: 0.15;
+  background: radial-gradient(
+    circle,
+    var(--accent-color, #1db954) 0%,
+    transparent 65%
+  );
+  filter: blur(70px);
+  opacity: 0.35;
   transition:
     opacity 0.8s ease,
     background 0.8s ease;
   pointer-events: none;
 }
 .disc-glow.is-active {
-  opacity: 0.4;
+  opacity: 0.65;
 }
 
 /* ============================================
@@ -99,6 +103,10 @@ body {
   height: 90%;
   cursor: grab;
   touch-action: none;
+  /* NUEVO: Inclinación para la profundidad */
+  transform: rotateX(20deg, rotateY(15deg));
+  /* Podés subir o bajar los grados (ej: 20deg a 45deg) según qué tan acostado lo quieras */
+  transform-style: preserve-3d;
 }
 .disc:active {
   cursor: grabbing;
@@ -133,18 +141,41 @@ body {
 
 /* Cara frontal: portada del álbum */
 .disc__face--front {
+  transform: translateZ(1.5px); /* Le da grosor al CD */
   background: radial-gradient(
     circle at 40% 35%,
     #dfe2e6 0%,
-    #9a9ea5 45%,
-    #55585f 78%,
-    #1c1d20 100%
+    #e3e7ee 45%,
+    #f4f5f7 78%,
+    #ecedee 100%
   );
+}
+
+.disc__sheen {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    rgba(255, 255, 255, 0.75) 8deg,
+    transparent 22deg,
+    transparent 160deg,
+    rgba(255, 255, 255, 0.5) 172deg,
+    transparent 190deg,
+    transparent 360deg
+  );
+  mix-blend-mode: overlay;
 }
 
 /* Cara trasera: policarbonato iridiscente, tipo CD real */
 .disc__face--back {
-  transform: rotateY(180deg);
+  transform: rotateY(180deg) translateZ(1.5px);
+  /* NUEVO: Sombras para simular el brillo del borde y el reflejo del material */
+  box-shadow:
+    inset 0 0 50px rgba(230, 207, 207, 0.4),
+    0 0 20px rgba(255, 255, 255, 0.5);
   background:
     repeating-radial-gradient(
       circle,
@@ -165,10 +196,10 @@ body {
     ),
     radial-gradient(
       circle at 45% 40%,
-      #e8eaed 0%,
-      #a3a7ae 40%,
-      #57595f 75%,
-      #17181b 100%
+      #90949b 0%,
+      #7b7e85 40%,
+      #575758 75%,
+      #000000 100%
     );
   background-blend-mode: overlay, color-dodge, normal;
 }
@@ -191,30 +222,26 @@ body {
   inset: 0;
   border-radius: 50%;
   pointer-events: none;
+  transform: translateZ(0);
   background: conic-gradient(
     from 0deg,
-    rgba(255, 255, 255, 0.04) 0deg,
-    rgba(255, 255, 255, 0.55) 12deg,
-    rgba(255, 255, 255, 0.04) 35deg,
-    rgba(255, 255, 255, 0.04) 170deg,
-    rgba(255, 255, 255, 0.4) 195deg,
-    rgba(255, 255, 255, 0.04) 225deg,
-    rgba(255, 255, 255, 0.04) 360deg
+    rgba(255, 255, 255, 0.08) 0deg,
+    rgba(255, 255, 255, 0.95) 10deg,
+    rgba(255, 255, 255, 0.08) 28deg,
+    rgba(255, 255, 255, 0.08) 160deg,
+    rgba(255, 255, 255, 0.7) 178deg,
+    rgba(255, 255, 255, 0.08) 200deg,
+    rgba(255, 255, 255, 0.08) 360deg
   );
-  -webkit-mask: radial-gradient(
-    circle,
-    transparent 95.5%,
-    black 96.5%,
-    black 100%
-  );
-  mask: radial-gradient(circle, transparent 95.5%, black 96.5%, black 100%);
+  -webkit-mask: radial-gradient(circle, transparent 94%, black 96%, black 100%);
+  mask: radial-gradient(circle, transparent 94%, black 96%, black 100%);
 }
-
 .disc__cover {
   position: absolute;
-  inset: 5%;
+  inset: 4%;
   border-radius: 50%;
   overflow: hidden;
+  transform: translateZ(0.5px);
 }
 .disc__cover img {
   object-fit: cover;
