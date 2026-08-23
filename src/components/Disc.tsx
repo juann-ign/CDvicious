@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import type { SpotifyTrack } from "@/types/spotify";
 import { useDiscSpin } from "@/hooks/useDiscSpin";
+import { useDiscTilt } from "@/hooks/useDiscTilt";
 
 interface DiscProps {
   track: SpotifyTrack | null;
@@ -13,7 +14,19 @@ interface DiscProps {
 
 export function Disc({ track, isPlaying, accentColor }: DiscProps) {
   const coverUrl = track?.album.images[0]?.url;
-  const { elRef, onPointerDown, onPointerMove, onPointerUp } = useDiscSpin(15);
+  const {
+    elRef,
+    onPointerDown: spinDown,
+    onPointerMove: spinMove,
+    onPointerUp: spinUp,
+  } = useDiscSpin(0);
+  const {
+    tilt,
+    isDragging,
+    onPointerDown: tiltDown,
+    onPointerMove: tiltMove,
+    onPointerUp: tiltUp,
+  } = useDiscTilt();
 
   const previousTrackId = useRef<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
@@ -35,7 +48,27 @@ export function Disc({ track, isPlaying, accentColor }: DiscProps) {
     }
   }, [track]);
 
+  function handlePointerDown(e: React.PointerEvent) {
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    spinDown(e);
+    tiltDown(e);
+  }
+  function handlePointerMove(e: React.PointerEvent) {
+    spinMove(e);
+    tiltMove(e);
+  }
+  function handlePointerUp() {
+    spinUp();
+    tiltUp();
+  }
+
   const glowStyle = { "--accent-color": accentColor } as CSSProperties;
+  const discStyle = {
+    transform: `rotateX(${tilt}deg)`,
+    transition: isDragging
+      ? "none"
+      : "transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)",
+  } as CSSProperties;
 
   return (
     <div className="disc-stage">
@@ -45,10 +78,11 @@ export function Disc({ track, isPlaying, accentColor }: DiscProps) {
       />
 
       <div
-        className="disc"
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
+        className={`disc ${isDragging ? "disc--dragging" : ""}`}
+        style={discStyle}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
       >
         <div className="disc__spinner" ref={elRef}>
           <div className="disc__face disc__face--front">
@@ -62,15 +96,36 @@ export function Disc({ track, isPlaying, accentColor }: DiscProps) {
                 />
               </div>
             )}
+            <div className="disc__collar" />
+            <div className="disc__collar-line" />
             <div className="disc__sheen" />
+            <div className="disc__spotlight" />
             {!track && <span className="disc__label">DISCO SIN GRABAR</span>}
-            <div className="disc__hole" />
-            <div className="disc__rim" />
+
+            <div className="disc__center">
+              <div className="disc__hole" />
+              <div className="disc__ring disc__ring--bright" />
+              <div className="disc__ring disc__ring--halo disc__ring--halo-1" />
+              <div className="disc__ring disc__ring--halo disc__ring--halo-2" />
+              <div className="disc__ring disc__ring--halo disc__ring--halo-3" />
+            </div>
+
+            <div className="disc__edge" />
           </div>
 
           <div className="disc__face disc__face--back">
-            <div className="disc__hole" />
-            <div className="disc__rim" />
+            <div className="disc__prism">
+              <span className="disc__prism-blob p1" />
+              <span className="disc__prism-blob p2" />
+              <span className="disc__prism-blob p3" />
+              <span className="disc__prism-blob p4" />
+              <span className="disc__prism-blob p5" />
+            </div>
+
+            <div className="disc__center">
+              <div className="disc__hole" />
+              <div className="disc__ring disc__ring--bright" />
+            </div>
           </div>
         </div>
 
