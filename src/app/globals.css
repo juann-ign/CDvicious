@@ -32,6 +32,10 @@ body {
   color: #1db954;
 }
 
+.disc-stage {
+  perspective: 1400px;
+}
+
 .disc {
   position: relative;
   width: 260px;
@@ -43,21 +47,54 @@ body {
     #1c1d20 55%,
     #0d0d0f 100%
   );
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.06),
+    0 30px 60px -20px rgba(0, 0, 0, 0.7);
+  transform: rotateX(55deg);
+  transform-style: preserve-3d;
+  transition: box-shadow 0.4s ease;
+}
+
+.disc__spinner {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  position: relative;
   animation: spin 4s linear infinite;
   animation-play-state: paused;
 }
-.disc--playing {
+
+.disc--playing .disc__spinner {
   animation-play-state: running;
 }
 
 @keyframes spin {
   from {
-    transform: rotate(0deg);
+    transform: rotateZ(0deg);
   }
   to {
-    transform: rotate(360deg);
+    transform: rotateZ(360deg);
   }
+}
+
+.disc__halo {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    rgba(29, 185, 84, 0) 340deg,
+    rgba(29, 185, 84, 0.28) 350deg,
+    transparent 360deg
+  );
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+}
+
+.disc--playing .disc__halo {
+  opacity: 1;
 }
 
 .disc__cover {
@@ -65,7 +102,19 @@ body {
   inset: 12%;
   border-radius: 50%;
   overflow: hidden;
+  opacity: 0;
+  transform: scale(0.92);
+  transition:
+    opacity 0.6s ease,
+    transform 0.6s ease;
 }
+
+.disc--paused .disc__cover,
+.disc--playing .disc__cover {
+  opacity: 1;
+  transform: scale(1);
+}
+
 .disc__cover img {
   object-fit: cover;
 }
@@ -81,6 +130,13 @@ body {
   color: #3d3f45;
   width: 120px;
   text-align: center;
+  opacity: 1;
+  transition: opacity 0.4s ease;
+}
+
+.disc--playing .disc__label,
+.disc--paused .disc__label {
+  opacity: 0;
 }
 
 .disc__hole {
@@ -93,6 +149,17 @@ body {
   border-radius: 50%;
   background: #050506;
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+@media (max-width: 480px) {
+  .disc {
+    width: 190px;
+    height: 190px;
+    transform: rotateX(35deg);
+  }
+  .disc-stage {
+    perspective: 900px;
+  }
 }
 
 .now-playing-card {

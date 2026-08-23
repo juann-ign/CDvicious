@@ -13,14 +13,24 @@ export function Disc({ track, isPlaying }: DiscProps) {
   const state = !track ? "virgin" : isPlaying ? "playing" : "paused";
 
   return (
-    <div className={`disc disc--${state}`}>
-      {coverUrl && (
-        <div className="disc__cover">
-          <Image src={coverUrl} alt={track!.album.name} fill sizes="260px" />
+    <div className="disc-stage">
+      <div className={`disc disc--${state}`}>
+        <div className="disc__spinner">
+          {coverUrl && (
+            <div className="disc__cover">
+              <Image
+                src={coverUrl}
+                alt={track!.album.name}
+                fill
+                sizes="260px"
+              />
+            </div>
+          )}
+          <div className="disc__halo" />
         </div>
-      )}
-      {!track && <span className="disc__label">DISCO SIN GRABAR</span>}
-      <div className="disc__hole" />
+        {!track && <span className="disc__label">DISCO SIN GRABAR</span>}
+        <div className="disc__hole" />
+      </div>
     </div>
   );
 }
