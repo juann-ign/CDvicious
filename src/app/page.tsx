@@ -26,7 +26,7 @@ export default function Home() {
   return (
     <main className="stage" style={stageStyle}>
       <div className="brand-corner">
-        desktop<span>.fm</span>
+        CD<span>vicious</span>
       </div>
 
       <UserProfileChip />
