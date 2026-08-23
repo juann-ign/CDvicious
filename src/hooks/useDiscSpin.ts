@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useCallback } from "react";
 
-const BASE_SPEED = 0.12; // grados por frame, giro ambiental constante
+const BASE_SPEED = 0.7; // grados por frame, giro ambiental constante
 const DRAG_MULTIPLIER = 0.6;
 const EASE_BACK_MS = 1200;
 
