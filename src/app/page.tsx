@@ -28,7 +28,7 @@ export default function Home() {
       <UserProfileChip />
 
       <div className="brand">
-        desktop<span>.fm</span>
+        CD<span>vicious</span>
       </div>
 
       <Disc
