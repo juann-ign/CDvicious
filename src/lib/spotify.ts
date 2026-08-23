@@ -3,6 +3,7 @@ import {
   SPOTIFY_TOKEN_URL,
   SPOTIFY_SCOPES,
   SPOTIFY_NOW_PLAYING_URL,
+  SPOTIFY_ME_URL,
 } from "./constants";
 
 export function buildAuthUrl(state: string) {
@@ -70,7 +71,12 @@ export async function fetchNowPlaying(accessToken: string) {
   });
 
   if (res.status === 204) {
-    return { isPlaying: false, track: null };
+    return {
+      isPlaying: false,
+      progressMs: null,
+      durationMs: null,
+      track: null,
+    };
   }
 
   if (res.status === 401) {
@@ -87,6 +93,8 @@ export async function fetchNowPlaying(accessToken: string) {
 
   return {
     isPlaying: Boolean(data.is_playing),
+    progressMs: typeof data.progress_ms === "number" ? data.progress_ms : null,
+    durationMs: data.item?.duration_ms ?? null,
     track: data.item
       ? {
           id: data.item.id,
@@ -95,5 +103,21 @@ export async function fetchNowPlaying(accessToken: string) {
           album: data.item.album,
         }
       : null,
+  };
+}
+
+export async function fetchUserProfile(accessToken: string) {
+  const res = await fetch(SPOTIFY_ME_URL, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    cache: "no-store",
+  });
+
+  if (!res.ok) throw new Error(`spotify me failed: ${res.status}`);
+
+  const data = await res.json();
+
+  return {
+    displayName: data.display_name ?? "Usuario Spotify",
+    avatarUrl: data.images?.[0]?.url ?? null,
   };
 }
