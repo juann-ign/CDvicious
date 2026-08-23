@@ -2,6 +2,7 @@ import {
   SPOTIFY_AUTH_URL,
   SPOTIFY_TOKEN_URL,
   SPOTIFY_SCOPES,
+  SPOTIFY_NOW_PLAYING_URL,
 } from "./constants";
 
 export function buildAuthUrl(state: string) {
@@ -60,4 +61,39 @@ export async function refreshAccessToken(refreshToken: string) {
     access_token: string;
     expires_in: number;
   }>;
+}
+
+export async function fetchNowPlaying(accessToken: string) {
+  const res = await fetch(SPOTIFY_NOW_PLAYING_URL, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    cache: "no-store",
+  });
+
+  if (res.status === 204) {
+    return { isPlaying: false, track: null };
+  }
+
+  if (res.status === 401) {
+    const err = new Error("spotify_unauthorized");
+    err.name = "SpotifyUnauthorizedError";
+    throw err;
+  }
+
+  if (!res.ok) {
+    throw new Error(`spotify now-playing failed: ${res.status}`);
+  }
+
+  const data = await res.json();
+
+  return {
+    isPlaying: Boolean(data.is_playing),
+    track: data.item
+      ? {
+          id: data.item.id,
+          name: data.item.name,
+          artists: data.item.artists,
+          album: data.item.album,
+        }
+      : null,
+  };
 }
