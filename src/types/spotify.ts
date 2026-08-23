@@ -10,5 +10,12 @@ export interface SpotifyTrack {
 
 export interface NowPlayingResponse {
   isPlaying: boolean;
+  progressMs: number | null;
+  durationMs: number | null;
   track: SpotifyTrack | null;
+}
+
+export interface UserProfile {
+  displayName: string;
+  avatarUrl: string | null;
 }

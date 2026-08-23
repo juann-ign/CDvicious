@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { refreshAccessToken } from "./spotify";
 
 const ACCESS_TOKEN_COOKIE = "sp_access_token";
 const REFRESH_TOKEN_COOKIE = "sp_refresh_token";
@@ -58,4 +59,20 @@ export async function clearSession() {
   cookieStore.delete(ACCESS_TOKEN_COOKIE);
   cookieStore.delete(REFRESH_TOKEN_COOKIE);
   cookieStore.delete(EXPIRES_AT_COOKIE);
+}
+
+export async function getValidAccessToken(): Promise<string | null> {
+  const session = await getSession();
+  if (!session) return null;
+
+  if (!session.isExpired) return session.accessToken;
+
+  try {
+    const refreshed = await refreshAccessToken(session.refreshToken);
+    await updateAccessToken(refreshed.access_token, refreshed.expires_in);
+    return refreshed.access_token;
+  } catch {
+    await clearSession();
+    return null;
+  }
 }
