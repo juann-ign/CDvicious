@@ -6,10 +6,7 @@
 
 html,
 body {
-  height: 100%;
-  background: #0a0a0c;
-  color: #eceef0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: linear-gradient(180deg, #1a1c22 0%, #12141a 60%, #0d0f14 100%);
 }
 
 .stage {
@@ -28,17 +25,16 @@ body {
   position: absolute;
   inset: -20%;
   background: radial-gradient(
-    circle at 50% 35%,
+    circle at 50% 30%,
     var(--accent-color, #1db954) 0%,
-    transparent 45%
+    transparent 55%
   );
-  opacity: 0.1;
-  filter: blur(70px);
+  opacity: 0.22;
+  filter: blur(90px);
   pointer-events: none;
   transition: background 0.8s ease;
   z-index: 0;
 }
-
 .brand {
   font-family: monospace;
   font-size: 13px;
@@ -67,13 +63,29 @@ body {
     #0d0d0f 100%
   );
   box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.06),
-    0 30px 60px -20px rgba(0, 0, 0, 0.7);
+    0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 40px 70px -20px rgba(0, 0, 0, 0.6),
+    0 0 60px -10px var(--accent-color, #1db954);
   transform-style: preserve-3d;
-  transition:
-    box-shadow 0.4s ease,
-    transform 0.15s ease-out;
+  transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
   will-change: transform;
+  cursor: grab;
+  touch-action: none;
+}
+
+.disc,
+.disc * {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.disc--dragging {
+  cursor: grabbing;
+  transition: none;
+}
+
+.disc:active {
+  cursor: grabbing;
 }
 
 .disc__spinner {
@@ -140,6 +152,7 @@ body {
 
 .disc__cover img {
   object-fit: cover;
+  pointer-events: none;
 }
 
 .disc__laser {
@@ -209,7 +222,8 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: rgba(20, 21, 24, 0.85);
+  background: rgba(30, 32, 38, 0.75);
+  box-shadow: 0 12px 30px -12px rgba(0, 0, 0, 0.5);
   border: 1px solid rgba(255, 255, 255, 0.07);
   border-radius: 16px;
   padding: 14px 18px;
@@ -254,45 +268,45 @@ body {
 }
 
 .profile-chip {
-  position: absolute;
-  top: 28px;
-  right: 28px;
+  position: relative;
   z-index: 2;
 }
 
 .profile-chip--connect {
   font-family: monospace;
-  font-size: 11.5px;
+  font-size: 13px;
   letter-spacing: 1.5px;
   text-transform: uppercase;
-  color: #6c6e75;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #eceef0;
+  background: rgba(29, 185, 84, 0.12);
+  border: 1px solid rgba(29, 185, 84, 0.4);
   border-radius: 999px;
-  padding: 8px 18px;
+  padding: 12px 26px;
   text-decoration: none;
   transition: all 0.25s ease;
 }
+
 .profile-chip--connect:hover {
-  border-color: #1db954;
-  color: #1db954;
+  background: rgba(29, 185, 84, 0.22);
 }
 
 .profile-chip__trigger {
   display: flex;
   align-items: center;
-  gap: 8px;
-  background: rgba(20, 21, 24, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  gap: 12px;
+  background: rgba(30, 32, 38, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 999px;
-  padding: 6px 14px 6px 6px;
+  padding: 8px 20px 8px 8px;
   cursor: pointer;
   color: #eceef0;
-  font-size: 12.5px;
+  font-size: 14.5px;
+  font-weight: 500;
 }
 
 .profile-chip__avatar {
-  width: 26px;
-  height: 26px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
   object-fit: cover;
 }
@@ -302,22 +316,23 @@ body {
 
 .profile-chip__menu {
   position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  background: rgba(20, 21, 24, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
+  top: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(30, 32, 38, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
   overflow: hidden;
-  min-width: 130px;
+  min-width: 150px;
 }
 .profile-chip__menu button {
   width: 100%;
   text-align: left;
-  padding: 10px 14px;
+  padding: 12px 16px;
   background: none;
   border: none;
   color: #eceef0;
-  font-size: 12.5px;
+  font-size: 13px;
   cursor: pointer;
 }
 .profile-chip__menu button:hover {
