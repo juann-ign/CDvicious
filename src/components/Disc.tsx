@@ -4,7 +4,6 @@ import Image from "next/image";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import type { SpotifyTrack } from "@/types/spotify";
 import { useDiscSpin } from "@/hooks/useDiscSpin";
-import { useDiscTilt } from "@/hooks/useDiscTilt";
 
 interface DiscProps {
   track: SpotifyTrack | null;
@@ -19,14 +18,7 @@ export function Disc({ track, isPlaying, accentColor }: DiscProps) {
     onPointerDown: spinDown,
     onPointerMove: spinMove,
     onPointerUp: spinUp,
-  } = useDiscSpin(0);
-  const {
-    tilt,
-    isDragging,
-    onPointerDown: tiltDown,
-    onPointerMove: tiltMove,
-    onPointerUp: tiltUp,
-  } = useDiscTilt();
+  } = useDiscSpin();
 
   const previousTrackId = useRef<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
@@ -51,24 +43,15 @@ export function Disc({ track, isPlaying, accentColor }: DiscProps) {
   function handlePointerDown(e: React.PointerEvent) {
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
     spinDown(e);
-    tiltDown(e);
   }
   function handlePointerMove(e: React.PointerEvent) {
     spinMove(e);
-    tiltMove(e);
   }
   function handlePointerUp() {
     spinUp();
-    tiltUp();
   }
 
   const glowStyle = { "--accent-color": accentColor } as CSSProperties;
-  const discStyle = {
-    transform: `rotateX(${tilt}deg)`,
-    transition: isDragging
-      ? "none"
-      : "transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)",
-  } as CSSProperties;
 
   return (
     <div className="disc-stage">
@@ -78,8 +61,7 @@ export function Disc({ track, isPlaying, accentColor }: DiscProps) {
       />
 
       <div
-        className={`disc ${isDragging ? "disc--dragging" : ""}`}
-        style={discStyle}
+        className="disc"
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
@@ -117,14 +99,16 @@ export function Disc({ track, isPlaying, accentColor }: DiscProps) {
           </div>
 
           <div className="disc__face disc__face--back">
-            <div className="disc__prism">
-              <span className="disc__prism-blob p1" />
-              <span className="disc__prism-blob p2" />
-              <span className="disc__prism-blob p3" />
-              <span className="disc__prism-blob p4" />
-              <span className="disc__prism-blob p5" />
-            </div>
+            <div className="disc__spotlight" />
 
+            <div className="disc__rays">
+              <div className="disc__ray disc__ray--r1" />
+              <div className="disc__ray disc__ray--r2" />
+              <div className="disc__ray disc__ray--r3" />
+              <div className="disc__ray disc__ray--r4" />
+              <div className="disc__ray disc__ray--r5" />
+            </div>
+            <div className="disc__back-tone" />
             <div className="disc__center">
               <div className="disc__hole" />
               <div className="disc__ring disc__ring--bright" />
