@@ -425,7 +425,7 @@ body {
   transform: translateZ(0.5px);
 }
 .disc__cover img {
-  object-fit: contain;
+  object-fit: cover;
 }
 
 .disc__collar {

@@ -92,7 +92,10 @@ export function Disc({ track, isPlaying, accentColor }: DiscProps) {
                   src={coverUrl}
                   alt={track!.album.name}
                   fill
-                  sizes="480px"
+                  sizes="(max-width: 768px) 100vw, 500px"
+                  style={{
+                    objectFit: "cover", // Expande la imagen para llenar el contenedor
+                  }}
                 />
               </div>
             )}
