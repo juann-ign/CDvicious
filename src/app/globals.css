@@ -71,7 +71,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  perspective: 2400px;
+  perspective: 1500px;
+  perspective-origin: 50% 25%;
 }
 
 .disc-glow {
@@ -103,9 +104,6 @@ body {
   height: 90%;
   cursor: grab;
   touch-action: none;
-  /* NUEVO: Inclinación para la profundidad */
-  transform: rotateX(20deg, rotateY(15deg));
-  /* Podés subir o bajar los grados (ej: 20deg a 45deg) según qué tan acostado lo quieras */
   transform-style: preserve-3d;
 }
 .disc:active {
@@ -169,6 +167,35 @@ body {
   mix-blend-mode: overlay;
 }
 
+.disc__spotlight {
+  position: absolute;
+  inset: -10%;
+  pointer-events: none;
+  background: linear-gradient(
+    100deg,
+    transparent 40%,
+    rgba(255, 255, 255, 1) 48%,
+    transparent 56%,
+    transparent 90%,
+    rgba(255, 255, 255, 0.75) 96%,
+    transparent 100%
+  );
+  background-size: 250% 250%;
+  mix-blend-mode: overlay;
+  animation: spotlight-pass 3.3s ease-in-out infinite;
+}
+@keyframes spotlight-pass {
+  0% {
+    background-position: -60% 0%;
+  }
+  70% {
+    background-position: 160% 0%;
+  }
+  100% {
+    background-position: 160% 0%;
+  }
+}
+
 /* Cara trasera: policarbonato iridiscente, tipo CD real */
 .disc__face--back {
   transform: rotateY(180deg) translateZ(1.5px);
@@ -203,6 +230,72 @@ body {
     );
   background-blend-mode: overlay, color-dodge, normal;
 }
+
+.disc__prism {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  pointer-events: none;
+}
+.disc__prism-blob {
+  position: absolute;
+  width: 45%;
+  height: 45%;
+  border-radius: 50%;
+  filter: blur(18px);
+  mix-blend-mode: screen;
+  animation: prism-drift 6s ease-in-out infinite;
+}
+.p1 {
+  top: 5%;
+  left: 10%;
+  background: radial-gradient(circle, #ffffff 0%, #c9a8ff 45%, transparent 75%);
+  animation-delay: 0s;
+}
+.p2 {
+  top: 55%;
+  left: 5%;
+  background: radial-gradient(circle, #ffffff 0%, #a8d8ff 45%, transparent 75%);
+  animation-delay: -1.2s;
+}
+.p3 {
+  top: 20%;
+  left: 55%;
+  background: radial-gradient(circle, #ffffff 0%, #ffb3d9 45%, transparent 75%);
+  animation-delay: -2.4s;
+}
+.p4 {
+  top: 60%;
+  left: 50%;
+  background: radial-gradient(circle, #ffffff 0%, #a8fff0 45%, transparent 75%);
+  animation-delay: -3.6s;
+}
+.p5 {
+  top: 35%;
+  left: 30%;
+  background: radial-gradient(circle, #ffffff 0%, #d9c2ff 45%, transparent 75%);
+  animation-delay: -4.8s;
+}
+
+@keyframes prism-drift {
+  0% {
+    transform: translate(0%, 0%) scale(1);
+  }
+  25% {
+    transform: translate(10%, -8%) scale(1.3);
+  }
+  50% {
+    transform: translate(-6%, 10%) scale(0.85);
+  }
+  75% {
+    transform: translate(8%, 8%) scale(1.15);
+  }
+  100% {
+    transform: translate(0%, 0%) scale(1);
+  }
+}
+
 .disc__face--back::after {
   content: "";
   position: absolute;
@@ -216,35 +309,159 @@ body {
   mix-blend-mode: screen;
 }
 
-/* Borde con brillo tipo canto de CD */
-.disc__rim {
+.disc__center {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+}
+
+.disc__ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.disc__ring--bright {
+  width: 22%;
+  height: 22%;
+  background: radial-gradient(
+    circle,
+    #ffffff 0%,
+    #e4e6ea 60%,
+    transparent 100%
+  );
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.5);
+}
+
+.disc__ring--halo {
+  border: 2px solid transparent;
+  background: conic-gradient(
+      from 0deg,
+      #b1b1b1,
+      #7c7c7c,
+      #000000,
+      #7c7c7c,
+      #b1b1b1
+    )
+    border-box;
+  -webkit-mask:
+    linear-gradient(#000 0 0) padding-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: destination-out;
+  mask-composite: exclude;
+  animation: ring-spin 4s linear infinite;
+}
+.disc__ring--halo-1 {
+  width: 14%;
+  height: 14%;
+  animation-duration: 3s;
+}
+.disc__ring--halo-2 {
+  width: 30%;
+  height: 30%;
+  animation-duration: 5s;
+  animation-direction: reverse;
+}
+.disc__ring--halo-3 {
+  width: 10%;
+  height: 10%;
+  animation-duration: 7s;
+}
+
+@keyframes ring-spin {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+.disc__edge {
   position: absolute;
   inset: 0;
   border-radius: 50%;
   pointer-events: none;
-  transform: translateZ(0);
   background: conic-gradient(
     from 0deg,
-    rgba(255, 255, 255, 0.08) 0deg,
-    rgba(255, 255, 255, 0.95) 10deg,
-    rgba(255, 255, 255, 0.08) 28deg,
-    rgba(255, 255, 255, 0.08) 160deg,
-    rgba(255, 255, 255, 0.7) 178deg,
-    rgba(255, 255, 255, 0.08) 200deg,
-    rgba(255, 255, 255, 0.08) 360deg
+    #050506 0deg,
+    #9a9ea5 15deg,
+    #ffffff 30deg,
+    #b8e4ff 45deg,
+    #050506 60deg,
+    #050506 180deg,
+    #9a9ea5 195deg,
+    #ffffff 210deg,
+    #b8e4ff 225deg,
+    #050506 240deg,
+    #050506 360deg
   );
-  -webkit-mask: radial-gradient(circle, transparent 94%, black 96%, black 100%);
-  mask: radial-gradient(circle, transparent 94%, black 96%, black 100%);
+  -webkit-mask: radial-gradient(
+    circle,
+    transparent 99.1%,
+    black 99.4%,
+    black 100%
+  );
+  mask: radial-gradient(circle, transparent 99.1%, black 99.4%, black 100%);
+  animation: edge-drift 3s linear infinite;
 }
+@keyframes edge-drift {
+  from {
+    filter: hue-rotate(0deg);
+  }
+  to {
+    filter: hue-rotate(360deg);
+  }
+}
+
 .disc__cover {
   position: absolute;
-  inset: 4%;
+  inset: 1%;
   border-radius: 50%;
   overflow: hidden;
   transform: translateZ(0.5px);
 }
 .disc__cover img {
   object-fit: cover;
+}
+
+.disc__collar {
+  position: absolute;
+  inset: 5px;
+  border-radius: 50%;
+  pointer-events: none;
+  border: 1.5px solid transparent;
+  background: linear-gradient(#4a4c52, #4a4c52) border-box;
+  -webkit-mask:
+    linear-gradient(#000 0 0) padding-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: destination-out;
+  mask-composite: exclude;
+}
+
+.disc__collar-line {
+  position: absolute;
+  inset: 2px;
+  border-radius: 50%;
+  pointer-events: none;
+  border: 1.5px solid transparent;
+  background: conic-gradient(
+      from 0deg,
+      #6a6c72,
+      #4e5056,
+      #8a8c92,
+      #5c5e64,
+      #6a6c72
+    )
+    border-box;
+  -webkit-mask:
+    linear-gradient(#000 0 0) padding-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: destination-out;
+  mask-composite: exclude;
 }
 
 /* Barrido láser al cambiar de canción */
@@ -296,7 +513,7 @@ body {
   border-radius: 50%;
   background: #050506;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
-  z-index: 2;
+  z-index: 4;
 }
 
 /* ============================================
