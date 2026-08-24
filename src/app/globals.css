@@ -200,13 +200,23 @@ body {
 .disc__face--back {
   transform: rotateY(180deg) translateZ(1.5px);
   background: radial-gradient(
-    circle at 42% 38%,
-    #f4f5f7 0%,
-    #d5d8dc 32%,
-    #a8acb2 66%,
-    #74777d 100%
+    circle at 45% 40%,
+    #b9bcc2 0%,
+    #8f929a 35%,
+    #63656b 68%,
+    #35363a 100%
   );
   overflow: hidden;
+}
+
+.disc__face--back::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, transparent 50%, rgba(0, 0, 0, 0.4) 100%);
+  mix-blend-mode: multiply;
+  pointer-events: none;
 }
 
 .disc__rays {
@@ -230,42 +240,29 @@ body {
 
 .disc__ray--r1 {
   transform: translateY(-50%) rotate(18deg);
-  background: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0.95),
-    transparent 78%
-  );
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.8), transparent 78%);
   animation-delay: -0.3s;
 }
 .disc__ray--r2 {
   transform: translateY(-50%) rotate(95deg);
-  background: linear-gradient(90deg, rgba(50, 55, 80, 0.65), transparent 78%);
+  background: linear-gradient(90deg, rgba(90, 100, 150, 0.55), transparent 78%);
   animation-delay: -1.4s;
 }
 .disc__ray--r3 {
   transform: translateY(-50%) rotate(160deg);
-  background: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0.85),
-    transparent 78%
-  );
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.7), transparent 78%);
   animation-delay: -2.1s;
 }
 .disc__ray--r4 {
   transform: translateY(-50%) rotate(230deg);
-  background: linear-gradient(90deg, rgba(45, 50, 70, 0.55), transparent 78%);
+  background: linear-gradient(90deg, rgba(80, 90, 130, 0.5), transparent 78%);
   animation-delay: -0.8s;
 }
 .disc__ray--r5 {
   transform: translateY(-50%) rotate(305deg);
-  background: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0.75),
-    transparent 78%
-  );
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.6), transparent 78%);
   animation-delay: -2.8s;
 }
-
 @keyframes ray-pulse {
   0%,
   100% {
@@ -285,11 +282,11 @@ body {
   pointer-events: none;
   background: linear-gradient(
     100deg,
-    rgba(35, 32, 60, 0.45) 0%,
-    rgba(70, 80, 140, 0.3) 22%,
-    transparent 48%,
-    rgba(255, 255, 255, 0.18) 72%,
-    rgba(238, 240, 244, 0.35) 100%
+    rgba(15, 14, 28, 0.4) 0%,
+    rgba(40, 50, 85, 0.25) 22%,
+    transparent 50%,
+    transparent 75%,
+    rgba(255, 255, 255, 0.1) 100%
   );
   mix-blend-mode: soft-light;
   animation: tone-sweep 9s linear infinite;
