@@ -1,4 +1,5 @@
 import type { SpotifyTrack } from "@/types/spotify";
+import { PlaybackControls } from "./PlaybackControls";
 
 interface NowPlayingCardProps {
   track: SpotifyTrack | null;
@@ -16,6 +17,7 @@ export function NowPlayingCard({
       <div
         className={`now-playing-card__status ${isPlaying ? "is-active" : ""}`}
       />
+
       <div className="now-playing-card__meta">
         <div className="now-playing-card__track">
           {track
@@ -29,6 +31,11 @@ export function NowPlayingCard({
             ? track.artists.map((a) => a.name).join(", ")
             : "Conectá y dale play a algo"}
         </div>
+      </div>
+
+      {/* Controles renderizados acá, empujados a la derecha */}
+      <div style={{ marginLeft: "auto" }}>
+        <PlaybackControls />
       </div>
     </div>
   );
