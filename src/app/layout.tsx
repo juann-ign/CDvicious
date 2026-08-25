@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { SpotifyPlayerProvider } from "@/components/SpotifyPlayerProvider";
 
 export const metadata: Metadata = {
   title: "CDvicious",
@@ -12,8 +13,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body>{children}</body>
+    <html>
+      <body>
+        <SpotifyPlayerProvider>{children}</SpotifyPlayerProvider>
+      </body>
     </html>
   );
 }
