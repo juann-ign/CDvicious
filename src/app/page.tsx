@@ -5,6 +5,7 @@ import { UserProfileChip } from "@/components/UserProfileChip";
 import { Disc } from "@/components/Disc";
 import { NowPlayingCard } from "@/components/NowPlayingCard";
 import { ProgressBar } from "@/components/ProgressBar";
+import { StoreSearch } from "@/components/StoreSearch";
 import { useNowPlaying } from "@/hooks/useNowPlaying";
 import { useDominantColor } from "@/hooks/useDominantColor";
 
@@ -30,6 +31,7 @@ export default function Home() {
       </div>
 
       <UserProfileChip />
+      <StoreSearch />
 
       <Disc
         track={data?.track ?? null}
