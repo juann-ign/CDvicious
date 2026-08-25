@@ -6,6 +6,7 @@ import { Disc } from "@/components/Disc";
 import { NowPlayingCard } from "@/components/NowPlayingCard";
 import { ProgressBar } from "@/components/ProgressBar";
 import { StoreSearch } from "@/components/StoreSearch";
+import { LyricsBooklet } from "@/components/LyricsBooklet";
 import { useNowPlaying } from "@/hooks/useNowPlaying";
 import { useDominantColor } from "@/hooks/useDominantColor";
 
@@ -51,6 +52,7 @@ export default function Home() {
           isPlaying={data?.isPlaying ?? false}
         />
       </div>
+      <LyricsBooklet track={data?.track ?? null} />
     </main>
   );
 }

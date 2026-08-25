@@ -2,6 +2,7 @@ export interface SpotifyTrack {
   id: string;
   name: string;
   artists: { name: string }[];
+  duration_ms: number;
   album: {
     name: string;
     images: { url: string; width: number; height: number }[];
