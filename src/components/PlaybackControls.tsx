@@ -5,16 +5,19 @@ import { useSpotifyPlayer } from "@/components/SpotifyPlayerProvider";
 export function PlaybackControls() {
   const { player, isReady } = useSpotifyPlayer();
 
-  // Si el reproductor no está inicializado, no mostramos los controles
   if (!isReady || !player) return null;
+
+  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const volume = parseFloat(e.target.value);
+    player.setVolume(volume);
+  };
 
   return (
     <div
       style={{
         display: "flex",
-        gap: "16px",
+        gap: "12px",
         alignItems: "center",
-        marginTop: "8px",
       }}
     >
       {/* Botón Prev */}
@@ -29,7 +32,7 @@ export function PlaybackControls() {
       {/* Botón Play/Pause */}
       <button
         onClick={() => player.togglePlay()}
-        style={{ ...buttonStyle, fontSize: "24px" }}
+        style={{ ...buttonStyle, fontSize: "22px" }}
         aria-label="Play or Pause"
       >
         ⏯
@@ -43,20 +46,54 @@ export function PlaybackControls() {
       >
         ⏭
       </button>
+
+      {/* Control de Volumen Integrado */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "6px",
+          marginLeft: "4px",
+        }}
+      >
+        <span
+          style={{
+            fontSize: "10px",
+            color: "#82848a",
+            fontFamily: "monospace",
+          }}
+        >
+          VOL
+        </span>
+        <input
+          type="range"
+          min="0"
+          max="1"
+          step="0.01"
+          defaultValue="0.5"
+          onChange={handleVolumeChange}
+          style={{
+            accentColor: "var(--accent-color, #1db954)",
+            cursor: "pointer",
+            width: "50px",
+            height: "4px",
+          }}
+        />
+      </div>
     </div>
   );
 }
 
-// Unos estilos básicos para que no se vea feo, adaptalos a tu globals.css después
 const buttonStyle = {
   background: "transparent",
   border: "none",
   color: "#eceef0",
-  fontSize: "20px",
+  fontSize: "18px",
   cursor: "pointer",
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
   opacity: 0.8,
   transition: "opacity 0.2s",
+  padding: 0,
 };
