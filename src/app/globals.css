@@ -199,24 +199,27 @@ body {
 /* Cara trasera: policarbonato iridiscente, tipo CD real */
 .disc__face--back {
   transform: rotateY(180deg) translateZ(1.5px);
-  background: radial-gradient(
-    circle at 45% 40%,
-    #b9bcc2 0%,
-    #8f929a 35%,
-    #63656b 68%,
-    #35363a 100%
-  );
+  background: #a8abb3;
   overflow: hidden;
 }
 
-.disc__face--back::before {
+/* 1. BARRIDO LUMINOSO (Spotlight que blanquea el CD y los rayos) */
+.disc__face--back::after {
   content: "";
   position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background: radial-gradient(circle, transparent 50%, rgba(0, 0, 0, 0.4) 100%);
-  mix-blend-mode: multiply;
+  inset: -50%; /* Más grande que el CD para que barra cruzado */
+  background: linear-gradient(
+    135deg,
+    transparent 35%,
+    rgba(255, 255, 255, 0.582) 0%,
+    rgba(255, 255, 255, 0.95) 20%,
+    rgba(255, 255, 255, 0.678) 60%,
+    transparent 65%
+  );
+  mix-blend-mode: screen;
   pointer-events: none;
+  animation: sweep-light 3s ease-in-out infinite alternate;
+  z-index: 5; /* Asegura que pase POR ENCIMA de los rayos */
 }
 
 .disc__rays {
@@ -231,87 +234,134 @@ body {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 58%;
-  height: 4%;
+  width: 55%;
   transform-origin: left center;
-  filter: blur(5px);
-  animation: ray-pulse 3.5s ease-in-out infinite;
 }
 
+/* Anchos base variados */
 .disc__ray--r1 {
-  transform: translateY(-50%) rotate(18deg);
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.8), transparent 78%);
-  animation-delay: -0.3s;
+  height: 12%;
 }
 .disc__ray--r2 {
-  transform: translateY(-50%) rotate(95deg);
-  background: linear-gradient(90deg, rgba(90, 100, 150, 0.55), transparent 78%);
-  animation-delay: -1.4s;
+  height: 18%;
 }
 .disc__ray--r3 {
-  transform: translateY(-50%) rotate(160deg);
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.7), transparent 78%);
-  animation-delay: -2.1s;
+  height: 14%;
 }
 .disc__ray--r4 {
-  transform: translateY(-50%) rotate(230deg);
-  background: linear-gradient(90deg, rgba(80, 90, 130, 0.5), transparent 78%);
-  animation-delay: -0.8s;
+  height: 22%;
 }
 .disc__ray--r5 {
-  transform: translateY(-50%) rotate(305deg);
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.6), transparent 78%);
-  animation-delay: -2.8s;
+  height: 16%;
+}
+
+.disc__ray-fill {
+  position: absolute;
+  inset: 0;
+  clip-path: polygon(0% 50%, 100% 0%, 100% 100%); /* Forma de triángulo */
+  transform-origin: left center;
 }
 @keyframes ray-pulse {
-  0%,
-  100% {
-    transform: translateY(-50%) scaleY(1);
-    opacity: 0.55;
+  0% {
+    transform: scaleY(0.1);
+    opacity: 0.1;
+  }
+  30% {
+    opacity: 0.9;
   }
   50% {
-    transform: translateY(-50%) scaleY(3.5);
+    transform: scaleY(5);
     opacity: 1;
+  } /* El 3.5 los hace lo suficientemente gordos para unirse al de al lado */
+  70% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: scaleY(0.1);
+    opacity: 0.1;
   }
 }
 
-.disc__back-tone {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  pointer-events: none;
+/* Colores fijos basados en tus capturas + Desincronización de tiempos */
+.disc__ray-fill--r1 {
+  /* Cian puro */
   background: linear-gradient(
-    100deg,
-    rgba(15, 14, 28, 0.4) 0%,
-    rgba(40, 50, 85, 0.25) 22%,
-    transparent 50%,
-    transparent 75%,
-    rgba(255, 255, 255, 0.1) 100%
+    to right,
+    rgba(160, 240, 255, 0.95),
+    rgba(160, 240, 255, 0.1)
   );
-  mix-blend-mode: soft-light;
-  animation: tone-sweep 9s linear infinite;
+  animation: ray-pulse 5.7s ease-in-out infinite;
+}
+.disc__ray-fill--r2 {
+  /* Magenta que transiciona a blanco */
+  background: linear-gradient(
+    to right,
+    rgba(255, 210, 245, 0.95),
+    rgba(255, 255, 255, 0.3)
+  );
+  animation: ray-pulse 7.3s ease-in-out infinite;
+}
+.disc__ray-fill--r3 {
+  /* Azul suave / Aurora */
+  background: linear-gradient(
+    to right,
+    rgba(190, 220, 255, 0.9),
+    rgba(190, 220, 255, 0.1)
+  );
+  animation: ray-pulse 9.1s ease-in-out infinite;
+}
+.disc__ray-fill--r4 {
+  /* Plata / Blanco brillante */
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0.95),
+    rgba(220, 230, 240, 0.2)
+  );
+  animation: ray-pulse 4.8s ease-in-out infinite;
+}
+.disc__ray-fill--r5 {
+  /* Celeste pastel */
+  background: linear-gradient(
+    to right,
+    rgba(180, 255, 240, 0.9),
+    rgba(180, 255, 240, 0.1)
+  );
+  animation: ray-pulse 8.5s ease-in-out infinite;
 }
 
-@keyframes tone-sweep {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.disc__face--back::after {
+/* 2. BARRIDO OSCURO (El screening que oscurece partes del CD) */
+.disc__rays::after {
   content: "";
   position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background: radial-gradient(
-    circle at 30% 25%,
-    rgba(255, 255, 255, 0.18) 0%,
-    transparent 40%
+  inset: -50%;
+  background: linear-gradient(
+    180deg,
+    transparent 20%,
+    rgba(30, 35, 45, 0.5) 50%,
+    transparent 80%
   );
-  mix-blend-mode: screen;
+  mix-blend-mode: multiply;
+  pointer-events: none;
+  animation: sweep-dark 3s linear infinite;
+  z-index: 5; /* Por encima de los rayos */
+}
+
+@keyframes sweep-light {
+  0% {
+    transform: translate(-30%, -30%);
+  }
+  100% {
+    transform: translate(80%, 80%);
+  }
+}
+
+@keyframes sweep-dark {
+  0% {
+    transform: translateY(-50%);
+  }
+  100% {
+    transform: translateY(50%);
+  }
 }
 
 .disc__back-sheen {

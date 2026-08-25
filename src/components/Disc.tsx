@@ -99,16 +99,38 @@ export function Disc({ track, isPlaying, accentColor }: DiscProps) {
           </div>
 
           <div className="disc__face disc__face--back">
-            <div className="disc__spotlight" />
-
             <div className="disc__rays">
-              <div className="disc__ray disc__ray--r1" />
-              <div className="disc__ray disc__ray--r2" />
-              <div className="disc__ray disc__ray--r3" />
-              <div className="disc__ray disc__ray--r4" />
-              <div className="disc__ray disc__ray--r5" />
+              <div
+                className="disc__ray disc__ray--r1"
+                style={{ transform: "translateY(-50%) rotate(18deg)" }}
+              >
+                <div className="disc__ray-fill disc__ray-fill--r1" />
+              </div>
+              <div
+                className="disc__ray disc__ray--r2"
+                style={{ transform: "translateY(-50%) rotate(95deg)" }}
+              >
+                <div className="disc__ray-fill disc__ray-fill--r2" />
+              </div>
+              <div
+                className="disc__ray disc__ray--r3"
+                style={{ transform: "translateY(-50%) rotate(160deg)" }}
+              >
+                <div className="disc__ray-fill disc__ray-fill--r3" />
+              </div>
+              <div
+                className="disc__ray disc__ray--r4"
+                style={{ transform: "translateY(-50%) rotate(230deg)" }}
+              >
+                <div className="disc__ray-fill disc__ray-fill--r4" />
+              </div>
+              <div
+                className="disc__ray disc__ray--r5"
+                style={{ transform: "translateY(-50%) rotate(305deg)" }}
+              >
+                <div className="disc__ray-fill disc__ray-fill--r5" />
+              </div>
             </div>
-            <div className="disc__back-tone" />
             <div className="disc__center">
               <div className="disc__hole" />
               <div className="disc__ring disc__ring--bright" />
