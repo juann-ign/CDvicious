@@ -4,7 +4,6 @@ import { useEffect, useState, type CSSProperties } from "react";
 import { UserProfileChip } from "@/components/UserProfileChip";
 import { Disc } from "@/components/Disc";
 import { NowPlayingCard } from "@/components/NowPlayingCard";
-import { ProgressBar } from "@/components/ProgressBar";
 import { StoreSearch } from "@/components/StoreSearch";
 import { LyricsBooklet } from "@/components/LyricsBooklet";
 import { useNowPlaying } from "@/hooks/useNowPlaying";
@@ -45,11 +44,8 @@ export default function Home() {
           track={data?.track ?? null}
           isPlaying={data?.isPlaying ?? false}
           error={error}
-        />
-        <ProgressBar
           progressMs={data?.progressMs ?? null}
           durationMs={data?.durationMs ?? null}
-          isPlaying={data?.isPlaying ?? false}
         />
       </div>
       <LyricsBooklet track={data?.track ?? null} />
