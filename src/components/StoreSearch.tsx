@@ -55,10 +55,10 @@ export function StoreSearch() {
     <div
       style={{
         position: "fixed",
-        top: "80px",
+        top: "24px", // <-- Lo subimos para alinearlo con el Logo y el Perfil
         left: "50%",
         transform: "translateX(-50%)",
-        width: "min(90vw, 500px)",
+        width: "min(90vw, 420px)", // <-- Un poco más angosto para que respiren los costados
         zIndex: 10,
       }}
     >
@@ -69,27 +69,27 @@ export function StoreSearch() {
         onChange={(e) => setQuery(e.target.value)}
         style={{
           width: "100%",
-          padding: "14px 20px",
+          padding: "10px 18px", // <-- Input más bajo y elegante
           borderRadius: "999px",
           background: "rgba(30, 32, 38, 0.75)",
           border: "1px solid rgba(255, 255, 255, 0.1)",
           color: "#eceef0",
-          fontSize: "14px",
+          fontSize: "13px",
           outline: "none",
           backdropFilter: "blur(10px)",
-          boxShadow: "0 12px 30px -12px rgba(0, 0, 0, 0.5)",
+          boxShadow: "0 8px 20px -8px rgba(0, 0, 0, 0.5)",
         }}
       />
 
       {displayAlbums.length > 0 && (
-        <div style={{ marginTop: "16px" }}>
+        <div style={{ marginTop: "12px" }}>
           <h3
             style={{
-              fontSize: "13px",
+              fontSize: "11px",
               fontWeight: 600,
               color: "#82848a",
-              marginBottom: "12px",
-              marginLeft: "4px",
+              marginBottom: "8px",
+              marginLeft: "8px",
               textTransform: "uppercase",
               letterSpacing: "1px",
             }}
@@ -101,8 +101,9 @@ export function StoreSearch() {
             style={{
               display: "flex",
               overflowX: "auto",
-              gap: "16px",
-              paddingBottom: "12px",
+              gap: "12px", // <-- Menos espacio entre discos
+              paddingBottom: "8px",
+              paddingLeft: "4px",
               scrollbarWidth: "none",
             }}
           >
@@ -111,7 +112,7 @@ export function StoreSearch() {
                 key={album.id}
                 onClick={() => handlePlayAlbum(album.uri)}
                 style={{
-                  minWidth: "110px",
+                  minWidth: "85px", // <-- Discos más pequeños
                   cursor: isReady ? "pointer" : "not-allowed",
                   opacity: isReady ? 1 : 0.5,
                   transition: "transform 0.2s ease",
@@ -126,20 +127,20 @@ export function StoreSearch() {
                 <Image
                   src={album.images[0]?.url}
                   alt={album.name}
-                  width={110}
-                  height={110}
+                  width={85} // <-- Ajuste de imagen
+                  height={85}
                   style={{
-                    borderRadius: "8px",
+                    borderRadius: "6px",
                     objectFit: "cover",
-                    boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+                    boxShadow: "0 4px 10px rgba(0,0,0,0.4)",
                   }}
                 />
                 <div
                   style={{
-                    fontSize: "12px",
+                    fontSize: "11px",
                     fontWeight: 600,
                     color: "#eceef0",
-                    marginTop: "8px",
+                    marginTop: "6px",
                     whiteSpace: "nowrap",
                     overflow: "hidden",
                     textOverflow: "ellipsis",
@@ -149,7 +150,7 @@ export function StoreSearch() {
                 </div>
                 <div
                   style={{
-                    fontSize: "10px",
+                    fontSize: "9px",
                     color: "#82848a",
                     whiteSpace: "nowrap",
                     overflow: "hidden",

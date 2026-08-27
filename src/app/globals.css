@@ -66,8 +66,8 @@ body {
    ============================================ */
 .disc-stage {
   position: relative;
-  width: min(80vw, 520px);
-  height: min(80vw, 520px);
+  width: min(95vw, 680px);
+  height: min(95vw, 670px);
   display: flex;
   align-items: center;
   justify-content: center;
