@@ -28,14 +28,14 @@ export function DiscCanvas({ track, isPlaying, accentColor }: DiscCanvasProps) {
       shadows
       dpr={[1, 2]}
       frameloop={frameloop}
-      camera={{ position: [0, 0.7, 5.6], fov: 40 }}
+      camera={{ position: [0, 0.7, 4.6], fov: 40 }}
       onCreated={({ camera }) => camera.lookAt(0, 0, 0)}
       gl={{ antialias: true, alpha: true }}
     >
-      <ambientLight intensity={0.6} />
+      <ambientLight intensity={1.4} />
       <directionalLight
         position={[3, 5, 4]}
-        intensity={1.4}
+        intensity={1.8}
         castShadow
         shadow-mapSize={[1024, 1024]}
       />
