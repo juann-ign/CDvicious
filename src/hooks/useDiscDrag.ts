@@ -47,7 +47,7 @@ export function useDiscDrag(groupRef: React.RefObject<Group>) {
   const easeFrom = useRef(0);
 
   useFrame((_, delta) => {
-    elapsed.current += delta;
+    elapsed.current += delta * 1.4;
 
     if (easeElapsed.current !== null) {
       easeElapsed.current += delta;

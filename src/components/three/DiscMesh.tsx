@@ -16,8 +16,6 @@ interface DiscMeshProps {
   accentColor: string;
 }
 
-const RAY_COLORS = ["#a0f0ff", "#ffd2f5", "#beddff", "#ffffff", "#b4fff0"];
-
 // Anatomia de un CD real, en unidades de escena. Mismas proporciones que un
 // CD fisico (120mm de diametro, agujero de 15mm) escaladas a radio 1.5.
 const OUTER_RADIUS = 1.5;
@@ -41,8 +39,15 @@ export function DiscMesh({ track, isPlaying, accentColor }: DiscMeshProps) {
   useEffect(() => {
     coverTexture.colorSpace = THREE.SRGBColorSpace;
     coverTexture.needsUpdate = true;
-    coverTexture.wrapS = coverTexture.wrapT = THREE.ClampToEdgeWrapping;
+    // 1. Centramos el pivote de la textura exactamente en el medio
     coverTexture.center.set(0.5, 0.5);
+
+    // 2. Controlamos el Zoom (Escala UV)
+    const zoom = 1.28;
+    coverTexture.repeat.set(zoom, zoom);
+
+    // 3. Qué hacer con el espacio vacío que sobra
+    coverTexture.wrapS = coverTexture.wrapT = THREE.ClampToEdgeWrapping;
   }, [coverTexture]);
 
   const accent = useMemo(() => new THREE.Color(accentColor), [accentColor]);
@@ -113,27 +118,28 @@ export function DiscMesh({ track, isPlaying, accentColor }: DiscMeshProps) {
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
     >
+      {/* 1. TAPA SUPERIOR (Cover Art) */}
       <mesh
         position={[0, THICKNESS / 2, 0]}
         rotation={[-Math.PI / 2, 0, 0]}
         castShadow
         receiveShadow
       >
-        <ringGeometry args={[HOLE_RADIUS, OUTER_RADIUS, 96, 1]} />
+        <ringGeometry args={[BRIGHT_RING_RADIUS, OUTER_RADIUS, 96, 1]} />
         <meshStandardMaterial
           map={coverTexture}
-          roughness={0.7}
-          metalness={0.1}
+          roughness={0.35}
+          metalness={0.25}
         />
       </mesh>
-
+      {/* 2. BASE METÁLICA INFERIOR */}
       <mesh
         position={[0, -THICKNESS / 2, 0]}
         rotation={[Math.PI / 2, 0, 0]}
         castShadow
         receiveShadow
       >
-        <ringGeometry args={[HOLE_RADIUS, OUTER_RADIUS, 96, 1]} />
+        <ringGeometry args={[BRIGHT_RING_RADIUS, OUTER_RADIUS, 96, 1]} />
         <meshStandardMaterial
           color="#a8abb3"
           roughness={0.25}
@@ -144,6 +150,7 @@ export function DiscMesh({ track, isPlaying, accentColor }: DiscMeshProps) {
         />
       </mesh>
 
+      {/* 3. BORDE EXTERNO (Canto del CD) */}
       <mesh castShadow>
         <cylinderGeometry
           args={[OUTER_RADIUS, OUTER_RADIUS, THICKNESS, 96, 1, true]}
@@ -156,37 +163,43 @@ export function DiscMesh({ track, isPlaying, accentColor }: DiscMeshProps) {
         />
       </mesh>
 
+      {/* 4. ARO CENTRAL DE POLICARBONATO */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} castShadow receiveShadow>
+        <ringGeometry args={[HOLE_RADIUS, BRIGHT_RING_RADIUS, 64]} />
+        <meshPhysicalMaterial
+          color="#ffffff"
+          transmission={1} // Lo hace transparente como el vidrio
+          opacity={1}
+          metalness={0.1}
+          roughness={0.05}
+          ior={1.5} // Índice de refracción real del plástico/policarbonato
+          thickness={THICKNESS}
+          side={THREE.DoubleSide}
+          transparent
+        />
+      </mesh>
+      {/* 5. BORDE INTERNO DEL AGUJERO */}
       <mesh>
         <cylinderGeometry
           args={[HOLE_RADIUS, HOLE_RADIUS, THICKNESS, 48, 1, true]}
         />
-        <meshStandardMaterial
-          color="#050506"
-          roughness={0.6}
+        <meshPhysicalMaterial
+          color="#ffffff"
+          transmission={1}
+          opacity={1}
+          roughness={0.05}
+          ior={1.5}
           side={THREE.DoubleSide}
+          transparent
         />
       </mesh>
 
-      <mesh
-        position={[0, THICKNESS / 2 + 0.001, 0]}
-        rotation={[-Math.PI / 2, 0, 0]}
-      >
-        <ringGeometry args={[HOLE_RADIUS, BRIGHT_RING_RADIUS, 48]} />
-        <meshStandardMaterial color="#f4f5f7" roughness={0.1} metalness={1} />
-      </mesh>
-      <mesh
-        position={[0, -THICKNESS / 2 - 0.001, 0]}
-        rotation={[Math.PI / 2, 0, 0]}
-      >
-        <ringGeometry args={[HOLE_RADIUS, BRIGHT_RING_RADIUS, 48]} />
-        <meshStandardMaterial color="#f4f5f7" roughness={0.1} metalness={1} />
-      </mesh>
-
+      {/* 6. EFECTO SHEEN (El brillo iridiscente del CD) */}
       <mesh
         position={[0, THICKNESS / 2 + 0.002, 0]}
         rotation={[-Math.PI / 2, 0, 0]}
       >
-        <ringGeometry args={[HOLE_RADIUS, OUTER_RADIUS, 96, 1]} />
+        <ringGeometry args={[BRIGHT_RING_RADIUS, OUTER_RADIUS, 96, 1]} />
         <discSheenMaterial
           ref={sheenRef}
           uAccentColor={accent}
@@ -195,39 +208,18 @@ export function DiscMesh({ track, isPlaying, accentColor }: DiscMeshProps) {
         />
       </mesh>
 
-      {isPlaying && (
-        <group
-          position={[0, -THICKNESS / 2 - 0.003, 0]}
-          rotation={[Math.PI / 2, 0, 0]}
-        >
-          {RAY_COLORS.map((color, i) => (
-            <mesh
-              key={color}
-              rotation={[0, 0, (i / RAY_COLORS.length) * Math.PI * 2]}
-            >
-              <coneGeometry args={[0.75, 1.4, 3, 1, true, 0, 0.35]} />
-              <meshBasicMaterial
-                color={color}
-                transparent
-                opacity={0.55}
-                side={THREE.DoubleSide}
-              />
-            </mesh>
-          ))}
-        </group>
-      )}
-
+      {/* 7. LÁSER DE LECTURA */}
       <mesh
         ref={laserRef}
         position={[0, THICKNESS / 2 + 0.003, 0]}
         rotation={[-Math.PI / 2, 0, 0]}
         scale={0.001}
       >
-        <ringGeometry args={[HOLE_RADIUS, OUTER_RADIUS, 64]} />
+        <ringGeometry args={[BRIGHT_RING_RADIUS, OUTER_RADIUS, 64]} />
         <meshBasicMaterial
           color="#ffffff"
           transparent
-          opacity={0.85}
+          opacity={0.65}
           side={THREE.DoubleSide}
         />
       </mesh>
