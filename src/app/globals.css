@@ -1,3 +1,52 @@
+@font-face {
+  font-family: "Naive";
+  src: url("../../public/fonts/Naiveer.woff2") format("woff2");
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Punktype";
+  src: url("../../public/fonts/Punktype.woff2") format("woff2");
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: "DirtyCursive";
+  src: url("../../public/fonts/DirtyCursive.woff2") format("woff2");
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: "SpecialElite";
+  src: url("../../public/fonts/SpecialElite-Regular.woff2") format("woff2");
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: "JacobCursive";
+  src: url("../../public/fonts/JacobCursive.woff2") format("woff2");
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: "CursiveStandard";
+  src: url("../../public/fonts/Cursive\ standard.woff2") format("woff2");
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: "CursiveStandard";
+  src: url("../../public/fonts/Cursive\ standard\ Bold.woff2") format("woff2");
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: "JBCursiveV3";
+  src: url("../../public/fonts/JBCursive-V3-Bold.woff2") format("woff2");
+  font-weight: normal;
+  font-style: normal;
+}
+
 /* ============================================
    RESET Y BASE
    ============================================ */

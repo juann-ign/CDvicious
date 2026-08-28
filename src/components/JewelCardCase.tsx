@@ -45,37 +45,16 @@ export function LyricsBooklet({ track }: LyricsBookletProps) {
     fetchLyrics();
   }, [track?.id]);
 
-  // Se cortan líneas de forma plana respetando el texto original sin agrupar bloques forzados.
+  // Paginación estricta reducida a 11 líneas para prevenir desbordes por wrap de versos largos
   const pages = useMemo(() => {
     if (!lyrics) return [];
 
     const lines = lyrics.split("\n");
-    const maxPageWeight = 14; // Tope estricto pedido
+    const linesPerPage = 11; // Bajado a 11 para dar margen real al tamaño del div y evitar que se corte abajo
     const result: string[] = [];
-    let currentPageLines: string[] = [];
-    let currentWeight = 0;
 
-    lines.forEach((line) => {
-      // Si la línea tiene más de 38 caracteres, el navegador la baja a 2 renglones (Pesa 2).
-      // Las líneas normales o los espacios en blanco pesan 1.
-      const lineWeight = line.length > 60 ? 2 : 1; // 👈 TOQUE DE GUSTO 2: Umbral de caracteres para el wrap
-
-      if (currentWeight + lineWeight <= maxPageWeight) {
-        currentPageLines.push(line);
-        currentWeight += lineWeight;
-      } else {
-        // Si excede el peso de la página, cerramos la hoja actual y empezamos una nueva
-        if (currentPageLines.length > 0) {
-          result.push(currentPageLines.join("\n"));
-        }
-        currentPageLines = [line];
-        currentWeight = lineWeight;
-      }
-    });
-
-    // Guardamos el remanente final
-    if (currentPageLines.length > 0) {
-      result.push(currentPageLines.join("\n"));
+    for (let i = 0; i < lines.length; i += linesPerPage) {
+      result.push(lines.slice(i, i + linesPerPage).join("\n"));
     }
 
     return result.length > 0 ? result : [lyrics];
@@ -162,14 +141,13 @@ export function LyricsBooklet({ track }: LyricsBookletProps) {
           background: #e6e2d8;
         }
 
-        /* Contenedor principal ampliado (De 450px a 550px para tamaño real de imprenta) */
         .booklet-container {
           position: fixed;
           top: 50%;
           left: 50%;
           transform: translate(-70%, -50%) scale(0.9);
-          width: min(95vw, 460px);
-          height: 490px;
+          width: min(85vw, 480px);
+          height: 460px;
           aspect-ratio: 1 / 1;
           z-index: 1;
           opacity: 0;
@@ -178,7 +156,7 @@ export function LyricsBooklet({ track }: LyricsBookletProps) {
         }
 
         .booklet-container.is-open {
-          transform: translate(80%, -50%) scale(1);
+          transform: translate(75%, -50%) scale(1);
           opacity: 1;
           visibility: visible;
           box-shadow: 30px 30px 60px rgba(0, 0, 0, 0.8);
@@ -221,19 +199,17 @@ export function LyricsBooklet({ track }: LyricsBookletProps) {
         }
 
         .booklet-content {
-          padding: 20px 20px 5px 45px;
+          padding: 35px 25px 15px 50px;
           flex: 1;
           min-height: 0;
           display: flex;
           flex-direction: column;
-          gap: 0;
         }
 
         .booklet-header {
           border-bottom: 2px solid #2b2b2b;
-          padding-bottom: 6px;
-          padding-top: 0;
-          margin-bottom: 8px;
+          padding-bottom: 10px;
+          margin-bottom: 18px;
           flex-shrink: 0;
         }
 
@@ -244,7 +220,7 @@ export function LyricsBooklet({ track }: LyricsBookletProps) {
           text-transform: uppercase;
           letter-spacing: -0.5px;
           color: #1a1a1a;
-          margin: 0 0 0 0;
+          margin: 0 0 4px 0;
         }
 
         .booklet-header span {
@@ -254,18 +230,17 @@ export function LyricsBooklet({ track }: LyricsBookletProps) {
           text-transform: uppercase;
         }
 
-        /* [MODIFICACIÓN 2] Altura de línea compacta (1.35) y restricción máxima de caja 
-           para asegurar que nunca se desborde ni se meta debajo de la card inferior. */
         .booklet-lyrics {
-          font-family: "Courier New", Courier, monospace;
-          font-size: 13px;
-          line-height: 1.5;
-          letter-spacing: 0.5px;
+          font-family: "CursiveStandard", "Courier New", Courier, monospace;
+          font-size: 12px;
+          line-height: 1.35;
+          letter-spacing: -0.2px;
           color: #1a1a1a;
           white-space: pre-wrap;
           font-weight: 400;
           flex: 1;
-          overflow: hidden;
+          overflow: hidden; /* Corta netamente lo que supere la altura sin dejarlo pisar el footer */
+          padding-right: 0;
         }
 
         .booklet-loading {
@@ -307,7 +282,7 @@ export function LyricsBooklet({ track }: LyricsBookletProps) {
         }
 
         .booklet-pagination span {
-          fhir-family: "Helvetica", Arial, sans-serif;
+          font-family: "Helvetica", Arial, sans-serif;
           font-size: 11px;
           font-weight: bold;
           color: #888;
