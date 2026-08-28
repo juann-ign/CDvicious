@@ -1,6 +1,6 @@
 "use client";
 
-import { JewelCardCase } from "../../components/JewelCardCase";
+import { JewelCaseCard } from "../../components/JewelCardCase";
 
 // Mock Data: El esqueleto falso
 const MOCK_ALBUMS = [
@@ -52,7 +52,7 @@ export default function CratePage() {
 
       <div className="crate-grid">
         {MOCK_ALBUMS.map((album) => (
-          <JewelCardCase
+          <JewelCaseCard
             key={album.id}
             title={album.title}
             artist={album.artist}
@@ -64,7 +64,7 @@ export default function CratePage() {
       <style jsx>{`
         .crate-stage {
           min-height: 100vh;
-          background-color: #2b2e31; /* Fondo ultra oscuro, batea profunda */
+          background-color: #2b2e31;
           background-image: radial-gradient(
             circle at 50% -10%,
             #4a5055 0%,
@@ -86,7 +86,7 @@ export default function CratePage() {
           letter-spacing: 3px;
           color: #ffffff;
           margin: 0 0 8px 0;
-          text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5); /* Despega el texto del fondo */
+          text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
         }
 
         .crate-header p {
@@ -96,11 +96,11 @@ export default function CratePage() {
           margin: 0;
         }
 
-        /* La magia de la batea: Grilla automática que nunca se rompe */
+        /* Grilla ajustada: Columnas más amplias y mayor gap horizontal para que el CD respire */
         .crate-grid {
           display: grid;
           grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-          gap: 30px 20px; /* Más espacio vertical (30px) que horizontal (20px) */
+          gap: 30px 60px; /* 40px vertical, 45px horizontal de respiro */
           max-width: 1200px;
           margin: 0 auto;
         }

@@ -1,293 +1,183 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import type { SpotifyTrack } from "@/types/spotify";
+import Image from "next/image";
 
-interface LyricsBookletProps {
-  track: SpotifyTrack | null;
+interface JewelCaseCardProps {
+  title: string;
+  artist: string;
+  coverUrl: string;
 }
 
-export function LyricsBooklet({ track }: LyricsBookletProps) {
-  const [lyrics, setLyrics] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [isOpen, setIsOpen] = useState(false);
-  const [currentPage, setCurrentPage] = useState(0);
-
-  useEffect(() => {
-    if (!track) {
-      setLyrics(null);
-      setIsOpen(false);
-      return;
-    }
-
-    const fetchLyrics = async () => {
-      setLoading(true);
-      setCurrentPage(0);
-      try {
-        const artist = track.artists[0]?.name || "";
-        const title = track.name || "";
-        const album = track.album?.name || "";
-        const duration = Math.round((track.duration_ms || 0) / 1000);
-
-        const res = await fetch(
-          `/api/lyrics?artist=${encodeURIComponent(artist)}&title=${encodeURIComponent(title)}&album=${encodeURIComponent(album)}&duration=${duration}`,
-        );
-        const data = await res.json();
-
-        setLyrics(data.lyrics || "Pista instrumental / Letra no encontrada.");
-      } catch (err) {
-        setLyrics("Error de lectura del archivo.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchLyrics();
-  }, [track?.id]);
-
-  // Paginación estricta reducida a 11 líneas para prevenir desbordes por wrap de versos largos
-  const pages = useMemo(() => {
-    if (!lyrics) return [];
-
-    const lines = lyrics.split("\n");
-    const linesPerPage = 11; // Bajado a 11 para dar margen real al tamaño del div y evitar que se corte abajo
-    const result: string[] = [];
-
-    for (let i = 0; i < lines.length; i += linesPerPage) {
-      result.push(lines.slice(i, i + linesPerPage).join("\n"));
-    }
-
-    return result.length > 0 ? result : [lyrics];
-  }, [lyrics]);
-
-  if (!track) return null;
-
+export function JewelCaseCard({ title, artist, coverUrl }: JewelCaseCardProps) {
   return (
-    <>
-      {/* BOTÓN FÍSICO (Pestaña lateral estilo índice) */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="booklet-tab"
-        aria-label="Abrir Booklet"
-      >
-        {isOpen ? "CERRAR BOOKLET" : "VER BOOKLET"}
-      </button>
+    <div className="jewel-case-wrapper">
+      {/* El CD real: Plateado, brillante, metálico y sin rastro de negro */}
+      <div className="cd-disc">
+        <div className="cd-inner-ring" />
+        <div className="cd-inner-hub" />
+      </div>
 
-      {/* EL LIBRITO FÍSICO AMPLIADO */}
-      <div className={`booklet-container ${isOpen ? "is-open" : ""}`}>
-        <div className="booklet-page">
-          <div className="booklet-spine-shadow" />
+      {/* La caja de acrílico */}
+      <div className="jewel-case">
+        <div className="jewel-spine">
+          <span className="spine-text">
+            {artist} - {title}
+          </span>
+        </div>
 
-          <div className="booklet-content">
-            <div className="booklet-header">
-              <h4>{track.name}</h4>
-              <span>{track.artists.map((a) => a.name).join(", ")}</span>
-            </div>
-
-            {loading ? (
-              <div className="booklet-loading">[ BUSCANDO EN ARCHIVOS... ]</div>
-            ) : (
-              <div className="booklet-lyrics">{pages[currentPage] || ""}</div>
-            )}
-          </div>
-
-          {/* CONTROLES DE PAGINACIÓN */}
-          {!loading && pages.length > 1 && (
-            <div className="booklet-pagination">
-              <button
-                disabled={currentPage === 0}
-                onClick={() => setCurrentPage((p) => p - 1)}
-              >
-                ◄ PREV
-              </button>
-              <span>
-                {currentPage + 1} / {pages.length}
-              </span>
-              <button
-                disabled={currentPage === pages.length - 1}
-                onClick={() => setCurrentPage((p) => p + 1)}
-              >
-                NEXT ►
-              </button>
-            </div>
-          )}
+        <div className="jewel-cover">
+          <Image
+            src={coverUrl}
+            alt={`${title} cover`}
+            fill
+            className="cover-img"
+            sizes="(max-width: 768px) 50vw, 200px"
+            unoptimized
+          />
+          <div className="acrylic-glare" />
         </div>
       </div>
 
       <style jsx>{`
-        .booklet-tab {
-          position: fixed;
-          right: 0;
-          top: 50%;
-          transform: translateY(-50%) rotate(-90deg);
-          transform-origin: right bottom;
-          background: #d4cfc5;
-          border: 1px solid #a39e93;
-          border-bottom: none;
-          color: #2b2b2b;
-          padding: 6px 16px;
-          font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-          font-weight: bold;
-          font-size: 10px;
-          letter-spacing: 2px;
-          text-transform: uppercase;
-          cursor: pointer;
-          border-radius: 4px 4px 0 0;
-          box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
-          z-index: 10;
-          transition: all 0.2s ease;
-        }
-        .booklet-tab:hover {
-          background: #e6e2d8;
-        }
-
-        .booklet-container {
-          position: fixed;
-          top: 50%;
-          left: 50%;
-          transform: translate(-70%, -50%) scale(0.9);
-          width: min(85vw, 480px);
-          height: 460px;
-          aspect-ratio: 1 / 1;
-          z-index: 1;
-          opacity: 0;
-          visibility: hidden;
-          transition: all 0.6s cubic-bezier(0.25, 1, 0.5, 1);
-        }
-
-        .booklet-container.is-open {
-          transform: translate(75%, -50%) scale(1);
-          opacity: 1;
-          visibility: visible;
-          box-shadow: 30px 30px 60px rgba(0, 0, 0, 0.8);
-        }
-
-        @media (max-width: 768px) {
-          .booklet-container.is-open {
-            transform: translate(-50%, -85%) scale(1);
-          }
-        }
-
-        .booklet-page {
+        .jewel-case-wrapper {
           position: relative;
           width: 100%;
-          height: 100%;
-          background-color: #f4f1ea;
-          background-image: url("https://www.transparenttextures.com/patterns/cream-paper.png");
-          border-radius: 2px 8px 8px 2px;
-          overflow: hidden;
-          display: flex;
-          flex-direction: column;
-          border: 1px solid #dcd6cd;
+          aspect-ratio: 1.15 / 1;
+          cursor: pointer;
+          perspective: 1000px;
+          transition: z-index 0s ease 0s;
         }
 
-        .booklet-spine-shadow {
+        .jewel-case-wrapper:hover {
+          z-index: 100;
+        }
+
+        /* --- ESTÉTICA DEL CD PLATEADO REAL --- */
+        .cd-disc {
           position: absolute;
-          top: 0;
-          left: 0;
-          bottom: 0;
-          width: 30px;
+          top: 9%;
+          right: 12%;
+          width: 82%;
+          height: 82%;
+          /* Gradiente radial metálico plateado/blanco (efecto CD virgen) */
+          background: radial-gradient(
+            circle,
+            #e8e8e8 0%,
+            #ffffff 12%,
+            #b0b0b0 25%,
+            #f2f2f2 40%,
+            #999999 55%,
+            #e5e5e5 70%,
+            #aaaaaa 85%,
+            #d0d0d0 100%
+          );
+          border-radius: 50%;
+          z-index: 0;
+          transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+          box-shadow: 4px 4px 12px rgba(0, 0, 0, 0.7);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        /* Anillo interno de lectura del CD */
+        .cd-inner-ring {
+          position: absolute;
+          width: 45%;
+          height: 45%;
+          border: 1px dashed rgba(255, 255, 255, 0.5);
+          border-radius: 50%;
+          pointer-events: none;
+        }
+
+        /* El agujero central del CD */
+        .cd-inner-hub {
+          width: 22%;
+          height: 22%;
+          background: #1a1a1a;
+          border-radius: 50%;
+          border: 2px solid rgba(255, 255, 255, 0.6);
+          box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.9);
+        }
+
+        /* Hover: El CD se desliza hacia la derecha */
+        .jewel-case-wrapper:hover .cd-disc {
+          transform: translateX(52%) rotate(120deg);
+        }
+
+        /* --- CAJA DE ACRÍLICO --- */
+        .jewel-case {
+          position: absolute;
+          inset: 0;
+          display: flex;
+          background: #111;
+          border-radius: 2px 4px 4px 2px;
+          box-shadow:
+            5px 5px 15px rgba(0, 0, 0, 0.8),
+            inset 1px 1px 2px rgba(255, 255, 255, 0.2);
+          z-index: 1;
+          transition:
+            transform 0.2s ease,
+            box-shadow 0.2s ease;
+          border: 1px solid #222;
+        }
+
+        .jewel-case-wrapper:hover .jewel-case {
+          transform: translateY(-6px) scale(1.03);
+          box-shadow:
+            12px 18px 30px rgba(0, 0, 0, 0.95),
+            inset 1px 1px 2px rgba(255, 255, 255, 0.4);
+        }
+
+        .jewel-spine {
+          width: 12%;
+          background: #1a1a1a;
+          border-right: 1px solid #000;
+          position: relative;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: inset -2px 0 5px rgba(0, 0, 0, 0.5);
+        }
+
+        .spine-text {
+          writing-mode: vertical-rl;
+          transform: scale(-1);
+          font-family: monospace;
+          font-size: 8px;
+          color: #888;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          max-height: 90%;
+        }
+
+        .jewel-cover {
+          position: relative;
+          flex: 1;
+          background: #000;
+          overflow: hidden;
+        }
+
+        .cover-img {
+          object-fit: cover;
+        }
+
+        .acrylic-glare {
+          position: absolute;
+          inset: 0;
           background: linear-gradient(
-            90deg,
-            rgba(0, 0, 0, 0.25) 0%,
-            rgba(0, 0, 0, 0.05) 30%,
-            rgba(255, 255, 255, 0.4) 60%,
-            rgba(0, 0, 0, 0) 100%
+            105deg,
+            rgba(255, 255, 255, 0) 30%,
+            rgba(255, 255, 255, 0.1) 45%,
+            rgba(255, 255, 255, 0.25) 50%,
+            rgba(255, 255, 255, 0.05) 52%,
+            rgba(255, 255, 255, 0) 65%
           );
           pointer-events: none;
           z-index: 2;
         }
-
-        .booklet-content {
-          padding: 35px 25px 15px 50px;
-          flex: 1;
-          min-height: 0;
-          display: flex;
-          flex-direction: column;
-        }
-
-        .booklet-header {
-          border-bottom: 2px solid #2b2b2b;
-          padding-bottom: 10px;
-          margin-bottom: 18px;
-          flex-shrink: 0;
-        }
-
-        .booklet-header h4 {
-          font-family: "Helvetica", Arial, sans-serif;
-          font-weight: 900;
-          font-size: 20px;
-          text-transform: uppercase;
-          letter-spacing: -0.5px;
-          color: #1a1a1a;
-          margin: 0 0 4px 0;
-        }
-
-        .booklet-header span {
-          font-family: "Courier New", Courier, monospace;
-          font-size: 13px;
-          color: #555;
-          text-transform: uppercase;
-        }
-
-        .booklet-lyrics {
-          font-family: "CursiveStandard", "Courier New", Courier, monospace;
-          font-size: 12px;
-          line-height: 1.35;
-          letter-spacing: -0.2px;
-          color: #1a1a1a;
-          white-space: pre-wrap;
-          font-weight: 400;
-          flex: 1;
-          overflow: hidden; /* Corta netamente lo que supere la altura sin dejarlo pisar el footer */
-          padding-right: 0;
-        }
-
-        .booklet-loading {
-          font-family: "Courier New", Courier, monospace;
-          font-size: 13px;
-          color: #888;
-          margin-top: 20px;
-        }
-
-        .booklet-pagination {
-          flex-shrink: 0;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 15px 30px 15px 50px;
-          border-top: 1px solid #dcd6cd;
-          background: rgba(0, 0, 0, 0.02);
-        }
-
-        .booklet-pagination button {
-          background: none;
-          border: none;
-          font-family: "Courier New", Courier, monospace;
-          font-size: 12px;
-          font-weight: bold;
-          color: #2b2b2b;
-          cursor: pointer;
-          padding: 4px 8px;
-        }
-
-        .booklet-pagination button:disabled {
-          color: #bbb;
-          cursor: not-allowed;
-        }
-
-        .booklet-pagination button:not(:disabled):hover {
-          background: #2b2b2b;
-          color: #f4f1ea;
-        }
-
-        .booklet-pagination span {
-          font-family: "Helvetica", Arial, sans-serif;
-          font-size: 11px;
-          font-weight: bold;
-          color: #888;
-        }
       `}</style>
-    </>
+    </div>
   );
 }
