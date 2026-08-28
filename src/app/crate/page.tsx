@@ -54,6 +54,7 @@ export default function CratePage() {
         {MOCK_ALBUMS.map((album) => (
           <JewelCaseCard
             key={album.id}
+            id={album.id}
             title={album.title}
             artist={album.artist}
             coverUrl={album.coverUrl}
