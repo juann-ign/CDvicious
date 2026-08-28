@@ -1,48 +1,38 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { JewelCaseCard } from "../../components/JewelCardCase";
 
-// Mock Data: El esqueleto falso
-const MOCK_ALBUMS = [
-  {
-    id: "1",
-    title: "Dynamo",
-    artist: "Soda Stereo",
-    coverUrl: "https://picsum.photos/seed/dynamo/400/400",
-  },
-  {
-    id: "2",
-    title: "Bocanada",
-    artist: "Gustavo Cerati",
-    coverUrl: "https://picsum.photos/seed/bocanada/400/400",
-  },
-  {
-    id: "3",
-    title: "Luzbelito",
-    artist: "Patricio Rey",
-    coverUrl: "https://picsum.photos/seed/luzbelito/400/400",
-  },
-  {
-    id: "4",
-    title: "Clics Modernos",
-    artist: "Charly García",
-    coverUrl: "https://picsum.photos/seed/clics/400/400",
-  },
-  {
-    id: "5",
-    title: "Jessico",
-    artist: "Babasónicos",
-    coverUrl: "https://picsum.photos/seed/jessico/400/400",
-  },
-  {
-    id: "6",
-    title: "Artaud",
-    artist: "Pescado Rabioso",
-    coverUrl: "https://picsum.photos/seed/artaud/400/400",
-  },
-];
+interface AlbumItem {
+  id: string;
+  name: string;
+  artists: { name: string }[];
+  images: { url: string }[];
+  uri: string;
+}
 
 export default function CratePage() {
+  const [albums, setAlbums] = useState<AlbumItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/collection")
+      .then((res) => {
+        if (!res.ok) throw new Error("Error al cargar la colección");
+        return res.json();
+      })
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setAlbums(data);
+        } else {
+          setError(true);
+        }
+      })
+      .catch(() => setError(true))
+      .finally(() => setLoading(false));
+  }, []);
+
   return (
     <main className="crate-stage">
       <div className="crate-header">
@@ -50,14 +40,32 @@ export default function CratePage() {
         <p>Acrílico y polvo.</p>
       </div>
 
+      {loading && (
+        <div className="crate-status-message">
+          [ BUSCANDO DISCOS EN EL ESTANTE... ]
+        </div>
+      )}
+
+      {error && (
+        <div className="crate-status-message error">
+          [ ERR: NO SE PUDO CONECTAR CON LA COLECCIÓN ]
+        </div>
+      )}
+
+      {!loading && !error && albums.length === 0 && (
+        <div className="crate-status-message">
+          [ LA BATEA ESTÁ VACÍA. GUARDÁ ÁLBUMES EN SPOTIFY ]
+        </div>
+      )}
+
       <div className="crate-grid">
-        {MOCK_ALBUMS.map((album) => (
+        {albums.map((album) => (
           <JewelCaseCard
             key={album.id}
             id={album.id}
-            title={album.title}
-            artist={album.artist}
-            coverUrl={album.coverUrl}
+            title={album.name}
+            artist={album.artists.map((a) => a.name).join(", ")}
+            coverUrl={album.images[0]?.url || ""}
           />
         ))}
       </div>
@@ -97,11 +105,24 @@ export default function CratePage() {
           margin: 0;
         }
 
+        .crate-status-message {
+          text-align: center;
+          font-family: "Courier New", Courier, monospace;
+          font-size: 13px;
+          color: #82848a;
+          margin-top: 60px;
+          letter-spacing: 1px;
+        }
+
+        .crate-status-message.error {
+          color: #ff3333;
+        }
+
         /* Grilla ajustada: Columnas más amplias y mayor gap horizontal para que el CD respire */
         .crate-grid {
           display: grid;
           grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-          gap: 30px 60px; /* 40px vertical, 45px horizontal de respiro */
+          gap: 30px 60px;
           max-width: 1200px;
           margin: 0 auto;
         }
