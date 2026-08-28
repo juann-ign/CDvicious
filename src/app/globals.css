@@ -58,10 +58,11 @@
 
 html,
 body {
+  background-color: #c8c9cb;
+  background-image: linear-gradient(180deg, #dcdedd 0%, #b3b5b7 100%);
+  color: #1a1a1a;
   height: 100%;
-  color: #eceef0;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: linear-gradient(180deg, #3a3d45 0%, #2a2c33 55%, #1f2126 100%);
 }
 
 /* ============================================
