@@ -2,6 +2,7 @@
 
 import { useSpotifyPlayer } from "@/components/SpotifyPlayerProvider";
 import { useState } from "react";
+import styles from "./NowPlayingCard.module.css";
 
 interface PlaybackControlsProps {
   isPlaying: boolean;
@@ -46,27 +47,18 @@ export function PlaybackControls({ isPlaying }: PlaybackControlsProps) {
   };
 
   return (
-    <div
-      style={{
-        display: "flex",
-        width: "100%",
-        justifyContent: "space-between",
-        alignItems: "center",
-        padding: "0 4px",
-      }}
-    >
+    <div className={styles.transportGroup}>
       {/* Grupo de Transporte Cuadrado */}
-      <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+      <div className={styles.buttonsWrapper}>
         <button
-          className="hw-btn"
+          className={styles.hwBtn}
           onClick={() => player.previousTrack()}
           aria-label="Previous"
         >
           |◄◄
         </button>
-
         <button
-          className={`hw-btn hw-btn--play ${isPlaying ? "is-active" : ""}`}
+          className={`${styles.hwBtn} ${styles.hwBtnPlay} ${isPlaying ? styles.isAct : ""}`}
           onClick={() => player.togglePlay()}
           aria-label="Play/Pause"
         >
@@ -74,51 +66,33 @@ export function PlaybackControls({ isPlaying }: PlaybackControlsProps) {
         </button>
 
         <button
-          className="hw-btn"
+          className={styles.hwBtn}
           onClick={() => player.nextTrack()}
           aria-label="Next"
         >
           ►►|
         </button>
       </div>
-
       {/* Control de Volumen con Puntero Normal y Grab al Sostener */}
-      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-          <span
-            onClick={handleToggleMute}
-            style={{
-              fontSize: "10px",
-              color: isMuted ? "#ff3333" : "#4f554f",
-              fontFamily: "monospace",
-              letterSpacing: "1px",
-              cursor: "pointer",
-              userSelect: "none",
-              textShadow: isMuted ? "0 0 5px rgba(255, 51, 51, 0.6)" : "none",
-            }}
-            title="Clic para Silenciar / Restaurar"
-          >
-            {isMuted ? "MUT" : "VOL"}
-          </span>
-        </div>
+      <div className={styles.faderWrapper}>
+        <span
+          onClick={handleToggleMute}
+          style={{
+            fontSize: "10px",
+            color: isMuted ? "#3a1f1f" : "#4f554f",
+            fontFamily: "monospace",
+            letterSpacing: "1px",
+            cursor: "pointer",
+            userSelect: "none",
+            textShadow: isMuted ? "0 0 5px rgba(255, 51, 51, 0.6)" : "none",
+          }}
+          title="Clic para Silenciar / Restaurar"
+        >
+          {isMuted ? "MUT" : "VOL"}
+        </span>
 
         {/* Contenedor Físico del Fader (Cursor por defecto por fuera) */}
-        <div
-          onClick={handleTrackClick}
-          style={{
-            position: "relative",
-            width: "110px",
-            height: "18px",
-            display: "flex",
-            alignItems: "center",
-            background: "#0c0e11",
-            padding: "2px 5px",
-            borderRadius: "3px",
-            border: "1px solid #000",
-            borderTop: "1px solid #2a2e35",
-            cursor: "default", // <--- Puntero normal del sistema (flecha)
-          }}
-        >
+        <div onClick={handleTrackClick} className={styles.faderTrack}>
           {/* Matriz de 10 Bloques Discretos */}
           <div
             style={{
@@ -130,26 +104,22 @@ export function PlaybackControls({ isPlaying }: PlaybackControlsProps) {
               pointerEvents: "none",
             }}
           >
-            {Array.from({ length: totalVolumeBlocks }).map((_, i) => {
-              const isActive = i < activeVolumeBlocks;
-              return (
-                <div
-                  key={i}
-                  style={{
-                    flex: 1,
-                    height: "100%",
-                    backgroundColor: isActive ? "#39ff14" : "#122415",
-                    boxShadow: isActive
+            {Array.from({ length: totalVolumeBlocks }).map((_, i) => (
+              <div
+                key={i}
+                style={{
+                  flex: 1,
+                  height: "100%",
+                  backgroundColor:
+                    i < activeVolumeBlocks ? "#39ff14" : "#122415",
+                  boxShadow:
+                    i < activeVolumeBlocks
                       ? "0 0 4px rgba(57, 255, 20, 0.6)"
                       : "none",
-                    borderRadius: "1px",
-                    transition: "background-color 0.05s ease",
-                  }}
-                />
-              );
-            })}
+                }}
+              />
+            ))}
           </div>
-
           {/* Input Range con cursor grab (reposo) y grabbing (al hacer hold / click sostenido) */}
           <input
             type="range"
@@ -162,56 +132,11 @@ export function PlaybackControls({ isPlaying }: PlaybackControlsProps) {
               setVolumeLevel(val);
               player.setVolume(val);
             }}
-            style={{
-              position: "absolute",
-              inset: 0,
-              opacity: 0,
-              width: "100%",
-              height: "100%",
-              cursor: "default", // <--- Puntero de mano abierta en reposo
-              zIndex: 3,
-            }}
-            className="volume-slider-input"
+            className={styles.faderInput}
             title={`Volumen: ${Math.round(volumeLevel * 100)}%`}
           />
         </div>
       </div>
-
-      <style jsx>{`
-        .volume-slider-input:active {
-          cursor: grabbing !important; /* <--- Puntero de mano cerrada al hacer hold */
-        }
-
-        .hw-btn {
-          width: 44px;
-          height: 32px;
-          background: #111418;
-          border: 1px solid #000;
-          border-top: 1px solid #2a2e35;
-          border-radius: 3px;
-          color: #1b401e;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 13px;
-          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.6);
-          cursor: pointer;
-          transition: all 0.1s;
-          font-family: monospace;
-        }
-        .hw-btn--play {
-          width: 56px;
-        }
-        .hw-btn:active,
-        .hw-btn.is-active {
-          background: #080a0c;
-          border-top: 1px solid #111418;
-          color: #39ff14;
-          text-shadow: 0 0 8px rgba(57, 255, 20, 0.8);
-          transform: translateY(2px);
-          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
-        }
-      `}</style>
     </div>
   );
 }
