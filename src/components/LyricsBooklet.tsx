@@ -261,7 +261,7 @@ export function LyricsBooklet({ track }: LyricsBookletProps) {
           font-size: 13px;
           line-height: 1.5;
           letter-spacing: 0.5px;
-          color: #1a1a1a;
+          color: #070707;
           white-space: pre-wrap;
           font-weight: 400;
           flex: 1;

@@ -58,11 +58,25 @@
 
 html,
 body {
-  background-color: #525457;
-  background-image: linear-gradient(180deg, #002211 0%, #000000 100%);
-  color: #1a1a1a;
+  /* Subimos drásticamente la base lumínica a grises de aluminio pulido */
+  background-color: #525a66;
+  background-image: 
+    /* Luz cenital central potente simula el reflejo superior de estudio */
+    radial-gradient(
+      circle at 50% 10%,
+      rgba(210, 220, 235, 0.35) 0%,
+      transparent 55%
+    ),
+    /* Gradiente lineal de chapa de aluminio cepillado claro */
+    linear-gradient(135deg, #626c7a 0%, #3a4049 100%);
+  background-attachment: fixed;
   height: 100%;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.crate-stage,
+.main-page-stage {
+  color: #e0e0e0;
 }
 
 /* ============================================
