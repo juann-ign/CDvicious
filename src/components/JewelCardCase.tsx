@@ -28,7 +28,7 @@ export function JewelCaseCard({
 
     setTimeout(() => {
       router.push(`/?album=${id}`);
-    }, 1000);
+    }, 2600);
   };
 
   return (
@@ -97,7 +97,6 @@ export function JewelCaseCard({
             <div className="booklet-text-info">
               <span className="inside-artist">{artist}</span>
               <h4 className="inside-title">{title}</h4>
-              <p className="inside-sub">[ COMPACT DISC DIGITAL AUDIO ]</p>
             </div>
           </div>
         </div>
@@ -106,15 +105,16 @@ export function JewelCaseCard({
       <style jsx>{`
         .jewel-case-wrapper {
           position: relative;
-          width: 100%;
-          aspect-ratio: 1.15 / 1;
+          width: 88%;
+          aspect-ratio: 1.2 / 1;
           cursor: pointer;
           perspective: 1400px;
-          transition: z-index 0s ease 0s;
+          overflow: visible !important;
+          z-index: 1;
         }
 
         .jewel-case-wrapper:hover {
-          z-index: 100;
+          z-index: 9999;
         }
 
         /* --- BANDEJA TRASERA (TRAY) --- */
@@ -153,23 +153,13 @@ export function JewelCaseCard({
         /* --- ESTÉTICA DEL CD REAL (Plata reflectante + Arte impreso) --- */
         .cd-disc {
           position: absolute;
-          top: 9%;
+          top: 3%;
           right: 12%;
           width: 82%;
-          height: 82%;
-          background: radial-gradient(
-            circle,
-            #e8e8e8 0%,
-            #ffffff 15%,
-            #999999 30%,
-            #d8d8d8 50%,
-            #777777 75%,
-            #cccccc 100%
-          );
+          aspect-ratio: 1 / 1;
           border-radius: 50%;
           z-index: 2;
-          transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
-          box-shadow: 4px 4px 12px rgba(0, 0, 0, 0.7);
+          transition: transform 0.8s cubic-bezier(0.25, 1, 0.5, 1);
           overflow: hidden;
           display: flex;
           align-items: center;
@@ -207,7 +197,7 @@ export function JewelCaseCard({
         }
 
         .jewel-case-wrapper:hover:not(.is-opening) .cd-disc {
-          transform: translateX(52%) rotate(120deg);
+          transform: translateX(56%) rotate(360deg);
         }
 
         .cd-inner-ring {
@@ -236,7 +226,7 @@ export function JewelCaseCard({
           z-index: 3;
           transform-style: preserve-3d;
           transform-origin: left center;
-          transition: transform 1.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+          transition: transform 3s cubic-bezier(0.2, 0.8, 0.2, 1);
         }
 
         .jewel-case-wrapper:hover:not(.is-opening) .jewel-front {
@@ -273,62 +263,49 @@ export function JewelCaseCard({
         }
 
         .booklet-inner-content {
-          position: relative;
+          position: absolute;
           width: 100%;
           height: 100%;
-          display: flex;
-          flex-direction: column;
-          justify-content: flex-end;
-          padding: 20px;
+          inset: 0;
         }
 
         .booklet-art-bg {
-          position: absolute;
-          inset: 0;
-          opacity: 0.25;
-          filter: blur(15px);
-          transform: scale(1.2);
-          z-index: 1;
-        }
-
-        .blur-bg {
-          object-fit: cover;
+          display: none;
         }
 
         .booklet-text-info {
-          position: relative;
+          position: absolute;
+          inset: 0;
           z-index: 2;
-          background: rgba(244, 241, 234, 0.85);
-          padding: 10px 14px;
-          border-left: 3px solid #1a1a1a;
-          backdrop-filter: blur(4px);
+          background: #141619;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          text-align: center;
+          padding: 16px;
+          box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
         }
 
         .inside-artist {
           font-family: "Courier New", Courier, monospace;
-          font-size: 10px;
+          font-size: 14px;
           text-transform: uppercase;
-          color: #555;
+          color: #dddddd;
           display: block;
-          letter-spacing: 1px;
+          letter-spacing: 2px;
+          margin-bottom: 6px;
         }
 
         .inside-title {
           font-family: "Helvetica", Arial, sans-serif;
-          font-size: 13px;
-          font-weight: 900;
-          margin: 2px 0 4px 0;
+          font-size: 14px;
+          font-weight: 800;
+          margin: 0 0 10px 0;
           text-transform: uppercase;
-          color: #111;
-          letter-spacing: -0.5px;
-        }
-
-        .inside-sub {
-          font-family: "Courier New", Courier, monospace;
-          font-size: 8px;
-          color: #777;
-          margin: 0;
-          letter-spacing: 0.5px;
+          color: #ffffff;
+          letter-spacing: -0.3px;
+          line-height: 1.3;
         }
 
         .jewel-spine {
