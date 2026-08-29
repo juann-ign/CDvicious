@@ -9,7 +9,7 @@ export async function GET() {
   }
 
   // Traemos los últimos 20 álbumes guardados
-  const res = await fetch(`https://api.spotify.com/v1/me/albums?limit=20`, {
+  const res = await fetch(`https://api.spotify.com/v1/me/albums?limit=40`, {
     headers: {
       Authorization: `Bearer ${session.accessToken}`,
     },
