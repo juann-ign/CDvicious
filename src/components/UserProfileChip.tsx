@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { UserProfile } from "@/types/spotify";
+import styles from "./UserProfileChip.module.css";
 
 export function UserProfileChip() {
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
@@ -31,35 +32,32 @@ export function UserProfileChip() {
 
   if (!authenticated) {
     return (
-      <a href="/api/auth/login" className="profile-chip profile-chip--connect">
-        Conectar con Spotify
+      <a href="/api/auth/login" className={styles.profileConnect}>
+        CONECTAR SPOTIFY
       </a>
     );
   }
 
   return (
-    <div className="profile-chip">
+    <div className={styles.profileContainer}>
       <button
-        className="profile-chip__trigger"
+        className={styles.profileTrigger}
         onClick={() => setOpen((o) => !o)}
       >
         {profile?.avatarUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={profile.avatarUrl}
-            alt=""
-            className="profile-chip__avatar"
-          />
+          <img src={profile.avatarUrl} alt="" className={styles.avatar} />
         ) : (
-          <div className="profile-chip__avatar profile-chip__avatar--placeholder" />
+          <div className={`${styles.avatar} ${styles.avatarPlaceholder}`} />
         )}
-        <span className="profile-chip__name">
-          {profile?.displayName ?? "Cuenta"}
+        <span className={styles.username}>
+          {profile?.displayName ?? "USUARIO"}
         </span>
       </button>
+
       {open && (
-        <div className="profile-chip__menu">
-          <button onClick={handleLogout}>Desconectar</button>
+        <div className={styles.menu}>
+          <button onClick={handleLogout}>DESCONECTAR</button>
         </div>
       )}
     </div>
