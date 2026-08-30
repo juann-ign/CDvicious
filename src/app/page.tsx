@@ -2,17 +2,19 @@
 
 import { useEffect, useState, type CSSProperties, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { UserProfileChip } from "@/components/UserProfileChip";
 import { Disc } from "@/components/Disc";
 import { NowPlayingCard } from "@/components/NowPlayingCard";
-import { StoreSearch } from "@/components/StoreSearch";
 import { LyricsBooklet } from "@/components/LyricsBooklet";
 import { useNowPlaying } from "@/hooks/useNowPlaying";
 import { useDominantColor } from "@/hooks/useDominantColor";
 import { useSpotifyPlayer } from "@/components/SpotifyPlayerProvider";
+import styles from "./page.module.css";
 
 function HomeContent() {
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
+  const [isBookletOpen, setIsBookletOpen] = useState(false);
   const searchParams = useSearchParams();
   const albumId = searchParams.get("album");
   const { deviceId, isReady } = useSpotifyPlayer();
@@ -23,14 +25,11 @@ function HomeContent() {
       .then((d) => setAuthenticated(d.authenticated));
   }, []);
 
-  // Si venimos de la batea con un álbum seleccionado y el reproductor está listo, lo reproducimos
   useEffect(() => {
     if (!albumId || !deviceId || !isReady || authenticated !== true) return;
 
-    // Buscamos el URI del álbum o mandamos la orden de reproducción directa
     const playSelectedAlbum = async () => {
       try {
-        // Obtenemos los detalles del álbum o construimos su URI de Spotify
         const albumUri = albumId.startsWith("spotify:album:")
           ? albumId
           : `spotify:album:${albumId}`;
@@ -41,7 +40,7 @@ function HomeContent() {
           body: JSON.stringify({ uri: albumUri, deviceId }),
         });
       } catch (err) {
-        console.error("Error al iniciar reproducción del álbum:", err);
+        console.error("Error al iniciar reproducción:", err);
       }
     };
 
@@ -55,21 +54,40 @@ function HomeContent() {
   const stageStyle = { "--accent-color": accentColor } as CSSProperties;
 
   return (
-    <main className="stage" style={stageStyle}>
-      <div className="brand-corner">
-        CD<span>vicious</span>
+    <main className={styles.stageMain} style={stageStyle}>
+      {/* HEADER UNIFICADO DE PUNTA A PUNTA */}
+      <header className={styles.topControlBar}>
+        <div className={styles.brandCorner}>
+          CD<span>vicious</span>
+        </div>
+
+        <Link href="/crate" className={styles.crateNavLink}>
+          <span className={styles.vfdPrompt}>NAV:</span>
+          <span className={styles.navLabel}>CRATE / BATEA</span>
+        </Link>
+
+        <div className="top-nav-actions">
+          <UserProfileChip />
+        </div>
+      </header>
+
+      {/* ESCENARIO BILATERAL SIMÉTRICO */}
+      <div className={styles.mainContentCore}>
+        <LyricsBooklet
+          track={data?.track ?? null}
+          isOpen={isBookletOpen}
+          onToggle={() => setIsBookletOpen(!isBookletOpen)}
+        />
+
+        <Disc
+          track={data?.track ?? null}
+          isPlaying={data?.isPlaying ?? false}
+          accentColor={accentColor}
+        />
       </div>
 
-      <UserProfileChip />
-      <StoreSearch />
-
-      <Disc
-        track={data?.track ?? null}
-        isPlaying={data?.isPlaying ?? false}
-        accentColor={accentColor}
-      />
-
-      <div className="now-playing-dock">
+      {/* REPRODUCTOR VFD FIJO ABAJO */}
+      <div className={styles.nowPlayingDock}>
         <NowPlayingCard
           track={data?.track ?? null}
           isPlaying={data?.isPlaying ?? false}
@@ -78,7 +96,6 @@ function HomeContent() {
           durationMs={data?.durationMs ?? null}
         />
       </div>
-      <LyricsBooklet track={data?.track ?? null} />
     </main>
   );
 }

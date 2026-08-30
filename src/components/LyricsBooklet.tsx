@@ -6,18 +6,18 @@ import styles from "./LyricsBooklet.module.css";
 
 interface LyricsBookletProps {
   track: SpotifyTrack | null;
+  isOpen: boolean;
+  onToggle: () => void;
 }
 
-export function LyricsBooklet({ track }: LyricsBookletProps) {
+export function LyricsBooklet({ track, isOpen, onToggle }: LyricsBookletProps) {
   const [lyrics, setLyrics] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [isOpen, setIsOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
 
   useEffect(() => {
     if (!track) {
       setLyrics(null);
-      setIsOpen(false);
       return;
     }
 
@@ -34,9 +34,8 @@ export function LyricsBooklet({ track }: LyricsBookletProps) {
           `/api/lyrics?artist=${encodeURIComponent(artist)}&title=${encodeURIComponent(title)}&album=${encodeURIComponent(album)}&duration=${duration}`,
         );
         const data = await res.json();
-
         setLyrics(data.lyrics || "Pista instrumental / Letra no encontrada.");
-      } catch (err) {
+      } catch {
         setLyrics("Error de lectura del archivo.");
       } finally {
         setLoading(false);
@@ -46,26 +45,21 @@ export function LyricsBooklet({ track }: LyricsBookletProps) {
     fetchLyrics();
   }, [track?.id]);
 
-  // Se cortan líneas de forma plana respetando el texto original sin agrupar bloques forzados.
+  // Generación de páginas con mayor capacidad por bloque (Spread Layout)
   const pages = useMemo(() => {
     if (!lyrics) return [];
-
     const lines = lyrics.split("\n");
-    const maxPageWeight = 14; // Tope estricto pedido
+    const maxPageWeight = 22; // Más peso por página para aprovechar el spread de dos hojas
     const result: string[] = [];
     let currentPageLines: string[] = [];
     let currentWeight = 0;
 
     lines.forEach((line) => {
-      // Si la línea tiene más de 38 caracteres, el navegador la baja a 2 renglones (Pesa 2).
-      // Las líneas normales o los espacios en blanco pesan 1.
-      const lineWeight = line.length > 60 ? 2 : 1; // 👈 TOQUE DE GUSTO 2: Umbral de caracteres para el wrap
-
+      const lineWeight = line.length > 50 ? 2 : 1;
       if (currentWeight + lineWeight <= maxPageWeight) {
         currentPageLines.push(line);
         currentWeight += lineWeight;
       } else {
-        // Si excede el peso de la página, cerramos la hoja actual y empezamos una nueva
         if (currentPageLines.length > 0) {
           result.push(currentPageLines.join("\n"));
         }
@@ -74,7 +68,6 @@ export function LyricsBooklet({ track }: LyricsBookletProps) {
       }
     });
 
-    // Guardamos el remanente final
     if (currentPageLines.length > 0) {
       result.push(currentPageLines.join("\n"));
     }
@@ -84,56 +77,68 @@ export function LyricsBooklet({ track }: LyricsBookletProps) {
 
   if (!track) return null;
 
+  // Avanzamos de 2 en 2 páginas para el formato de libro abierto
+  const leftPageIdx = currentPage;
+  const rightPageIdx = currentPage + 1;
+  const totalSpreads = Math.ceil(pages.length / 2);
+  const currentSpread = Math.floor(currentPage / 2) + 1;
+
   return (
     <>
-      {/* BOTÓN FÍSICO (Pestaña lateral estilo índice) */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={onToggle}
         className={styles.bookletTab}
         aria-label="Abrir Booklet"
       >
         {isOpen ? "CERRAR BOOKLET" : "VER BOOKLET"}
       </button>
 
-      {/* EL LIBRITO FÍSICO AMPLIADO */}
       <div
         className={`${styles.bookletContainer} ${isOpen ? styles.isOpen : ""}`}
       >
-        <div className={styles.bookletPage}>
-          <div className={styles.bookletSpineShadow} />
+        <div className={styles.bookletPageSpread}>
+          {/* LOMO CENTRAL DEL LIBRO ABIERTO */}
+          <div className={styles.bookletCenterSpine} />
 
-          <div className={styles.bookletContent}>
-            <div className={styles.bookletHeader}>
-              <h4>{track.name}</h4>
-              <span>{track.artists.map((a) => a.name).join(", ")}</span>
-            </div>
-
-            {loading ? (
-              <div className={styles.bookletLoading}>
-                [ BUSCANDO EN ARCHIVOS... ]
-              </div>
-            ) : (
+          {/* PÁGINA IZQUIERDA */}
+          <div className={styles.bookletPageHalf}>
+            <div className={styles.bookletContent}>
+              {leftPageIdx === 0 && (
+                <div className={styles.bookletHeader}>
+                  <h4>{track.name}</h4>
+                  <span>{track.artists.map((a) => a.name).join(", ")}</span>
+                </div>
+              )}
               <div className={styles.bookletLyrics}>
-                {pages[currentPage] || ""}
+                {loading ? "[ CARGANDO... ]" : pages[leftPageIdx] || ""}
               </div>
-            )}
+            </div>
           </div>
 
-          {/* CONTROLES DE PAGINACIÓN */}
-          {!loading && pages.length > 1 && (
+          {/* PÁGINA DERECHA */}
+          <div className={styles.bookletPageHalf}>
+            <div className={styles.bookletContent}>
+              <div className={styles.bookletLyrics}>
+                {loading ? "" : pages[rightPageIdx] || ""}
+              </div>
+            </div>
+          </div>
+
+          {/* PAGINACIÓN INFERIOR DE DOBLE HOJA */}
+          {!loading && pages.length > 2 && (
             <div className={styles.bookletPagination}>
               <button
                 disabled={currentPage === 0}
-                onClick={() => setCurrentPage((p) => p - 1)}
+                onClick={() => setCurrentPage((p) => Math.max(0, p - 2))}
               >
                 ◄ PREV
               </button>
               <span>
-                {currentPage + 1} / {pages.length}
+                SPREAD {currentSpread} / {totalSpreads}
               </span>
               <button
-                disabled={currentPage === pages.length - 1}
-                onClick={() => setCurrentPage((p) => p + 1)}
+                disabled={rightPageIdx >= pages.length - 1}
+                onClick={() => setCurrentPage((p) => p + 2)}
               >
                 NEXT ►
               </button>

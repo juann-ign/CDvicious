@@ -1,0 +1,114 @@
+/* src/app/page.module.css */
+.stageMain {
+  min-height: 100dvh;
+  background-color: #525a66;
+  background-image:
+    radial-gradient(
+      circle at 50% 10%,
+      rgba(210, 220, 235, 0.35) 0%,
+      transparent 55%
+    ),
+    linear-gradient(135deg, #626c7a 0%, #3a4049 100%);
+  background-attachment: fixed;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px;
+  box-sizing: border-box;
+  color: #e0e0e0;
+  position: relative;
+  overflow: hidden;
+}
+
+/* CHASSIS SUPERIOR UNIFICADO DE PUNTA A PUNTA */
+.topControlBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  max-width: 1100px;
+  background: linear-gradient(to bottom, #4a505b, #32373f);
+  border: 2px solid #5e6573;
+  border-top-color: #7a8393;
+  border-bottom-color: #1a1d22;
+  padding: 10px 24px;
+  border-radius: 4px;
+  box-shadow:
+    0 10px 25px rgba(0, 0, 0, 0.5),
+    inset 0 1px 1px rgba(255, 255, 255, 0.2);
+  z-index: 10;
+}
+
+.brandCorner {
+  font-family: "Helvetica", sans-serif;
+  font-weight: 900;
+  font-size: 16px;
+  letter-spacing: 3px;
+  color: #ffffff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+.brandCorner span {
+  color: #55ff55;
+  text-shadow: 0 0 8px rgba(85, 255, 85, 0.6);
+}
+
+.crateNavLink {
+  display: flex;
+  align-items: center;
+  background: linear-gradient(to bottom, #14171c, #1f232a);
+  border: 1px solid #3a404b;
+  border-top-color: #2a2f38;
+  border-bottom-color: #4c5462;
+  padding: 6px 16px;
+  border-radius: 2px;
+  text-decoration: none;
+  gap: 8px;
+  box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.9);
+  transition: all 0.1s ease;
+}
+
+.crateNavLink:hover {
+  border-color: #55ff55;
+}
+
+.vfdPrompt {
+  font-family: "Courier New", monospace;
+  color: #44aa44;
+  font-size: 10px;
+  font-weight: bold;
+}
+
+.navLabel {
+  font-family: "Courier New", monospace;
+  font-weight: bold;
+  color: #55ff55;
+  text-shadow: 0 0 8px rgba(85, 255, 85, 0.6);
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-shadow: 0 0 6px rgba(127, 255, 127, 0.5);
+}
+
+/* ESCENARIO CENTRAL BILATERAL (LIBRO + CD) */
+.mainContentCore {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  max-width: 1100px;
+  flex: 1;
+  position: relative;
+  gap: 60px;
+  transition: all 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+/* DOCK INFERIOR VFD ESTABLE */
+.nowPlayingDock {
+  width: 100%;
+  max-width: 1100px;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 10px;
+  z-index: 8;
+}
