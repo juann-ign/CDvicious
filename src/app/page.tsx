@@ -72,13 +72,16 @@ function HomeContent() {
       </header>
 
       {/* ESCENARIO BILATERAL SIMÉTRICO */}
-      <div className={styles.mainContentCore}>
+      <div
+        className={`${styles.mainContentCore} ${isBookletOpen ? styles.isOpen : ""}`}
+      >
+        {" "}
         <LyricsBooklet
           track={data?.track ?? null}
           isOpen={isBookletOpen}
           onToggle={() => setIsBookletOpen(!isBookletOpen)}
+          accentColor={accentColor}
         />
-
         <Disc
           track={data?.track ?? null}
           isPlaying={data?.isPlaying ?? false}

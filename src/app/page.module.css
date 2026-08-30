@@ -1,6 +1,7 @@
 /* src/app/page.module.css */
 .stageMain {
-  min-height: 100dvh;
+  height: 100vh; /* Fijo al alto exacto del monitor */
+  overflow: hidden; /* Elimina de raíz cualquier barra de scroll */
   background-color: #525a66;
   background-image:
     radial-gradient(
@@ -13,21 +14,20 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  padding: 20px;
+  justify-content: space-evenly;
+  padding: 15px 20px;
   box-sizing: border-box;
   color: #e0e0e0;
   position: relative;
-  overflow: hidden;
 }
 
-/* CHASSIS SUPERIOR UNIFICADO DE PUNTA A PUNTA */
+/* CHASSIS SUPERIOR */
 .topControlBar {
   display: flex;
   justify-content: space-between;
   align-items: center;
   width: 100%;
-  max-width: 1100px;
+  max-width: 1500px;
   background: linear-gradient(to bottom, #4a505b, #32373f);
   border: 2px solid #5e6573;
   border-top-color: #7a8393;
@@ -84,31 +84,32 @@
   font-family: "Courier New", monospace;
   font-weight: bold;
   color: #55ff55;
-  text-shadow: 0 0 8px rgba(85, 255, 85, 0.6);
   font-size: 11px;
   letter-spacing: 2px;
   text-shadow: 0 0 6px rgba(127, 255, 127, 0.5);
 }
 
-/* ESCENARIO CENTRAL BILATERAL (LIBRO + CD) */
+/* ESCENARIO BILATERAL FÍSICO */
 .mainContentCore {
   display: flex;
+  flex-direction: row;
   justify-content: center;
   align-items: center;
   width: 100%;
-  max-width: 1100px;
-  flex: 1;
-  position: relative;
-  gap: 60px;
-  transition: all 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+  max-width: 1500px;
+  gap: 0px;
+  transition: gap 0.6s cubic-bezier(0.25, 1, 0.5, 1);
 }
 
+.mainContentCore.isOpen {
+  gap: 100px;
+}
 /* DOCK INFERIOR VFD ESTABLE */
 .nowPlayingDock {
   width: 100%;
-  max-width: 1100px;
+  max-width: 1450px;
   display: flex;
   justify-content: center;
-  margin-bottom: 10px;
   z-index: 8;
+  transform: translateY(-10%);
 }

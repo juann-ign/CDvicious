@@ -1,23 +1,43 @@
 /* src/components/LyricsBooklet.module.css */
+/* Contenedor resorte: cerrado = 0 masa, abierto = reclama 680px */
+.bookletOuter {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 0px;
+  height: 420px; /* Altura estilizada del libro abierto */
+  flex-shrink: 0;
+  transition: width 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.bookletOuter.isOpen {
+  /* Ancho exactamente el doble de la altura para formar un libro abierto apaisado perfecto */
+  width: 760px; /* Ancho total del spread abierto (doble página de 420px c/u) */
+}
+/* Pestaña anclada rígidamente al borde izquierdo del libro */
+/* EL BOTÓN AHORA VIVE PEGADO AL BORDE IZQUIERDO DE LA PANTALLA */
+/* EL BOTÓN DESPLAZADO */
 .bookletTab {
-  position: absolute;
-  left: -28px;
-  top: 50%;
-  transform: translateY(-50%) rotate(90deg);
-  background: linear-gradient(to bottom, #4a505b, #32373f);
+  position: fixed;
+  left: -2px;
+  top: 50%; /* Antes estaba en 50%. Ahora sube hacia el tercio superior */
+  transform: translateY(-80%);
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  background: linear-gradient(to right, #4a505b, #32373f);
   border: 1px solid #5e6573;
-  border-bottom: none;
   color: #55ff55;
-  padding: 6px 14px;
+  padding: 14px 8px;
   font-family: "Courier New", monospace;
   font-weight: bold;
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 2px;
   text-transform: uppercase;
   cursor: pointer;
-  border-radius: 0 0 4px 4px;
-  box-shadow: -4px 0 10px rgba(0, 0, 0, 0.4);
-  z-index: 10;
+  border-radius: 0 4px 4px 0;
+  box-shadow: 4px 0 15px rgba(0, 0, 0, 0.4);
+  z-index: 50;
+  white-space: nowrap;
   transition: all 0.2s ease;
 }
 
@@ -26,40 +46,44 @@
   background: linear-gradient(to bottom, #565d6a, #3a4049);
 }
 
-.bookletContainer {
-  position: relative;
-  width: 0px;
-  height: 380px;
-  overflow: visible;
-  transition:
-    width 0.6s cubic-bezier(0.25, 1, 0.5, 1),
-    opacity 0.4s ease;
-  opacity: 0;
-  visibility: hidden;
-}
-
-.bookletContainer.isOpen {
-  width: 680px; /* Ancho total del libro abierto */
-  opacity: 1;
-  visibility: visible;
-}
-
+/* El libro físico 2-pages spread */
+/* El libro físico 2-pages spread (Apaisado) */
 .bookletPageSpread {
   position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 680px;
-  height: 380px;
-  background-color: #26282c;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.07'/%3E%3C/svg%3E");
+  left: -1%;
+  top: 55%;
+  transform: translateY(-50%) scale(0.95); /* Centrado vertical perfecto con GSAP/CSS smooth */
+  width: 760px;
+  height: 420px;
+  background:
+    linear-gradient(rgba(226, 229, 233, 0.92), rgba(215, 218, 224, 0.98)),
+    radial-gradient(
+      circle at top left,
+      var(--booklet-accent) 0%,
+      transparent 60%
+    ),
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.08'/%3E%3C/svg%3E");
+  background-color: #e2e5e9;
   border-radius: 4px;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  border: 1px solid #4a4f59;
-  box-shadow: -15px 20px 40px rgba(0, 0, 0, 0.7);
+  border: 1px solid #b0b5be;
+  box-shadow: -15px 20px 50px rgba(0, 0, 0, 0.6);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.4s ease,
+    transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+  overflow: hidden;
 }
 
+.bookletOuter.isOpen .bookletPageSpread {
+  opacity: 1;
+  transform: translateY(-50%) scale(1); /* Mantiene el centrado vertical al abrirse */
+  pointer-events: auto;
+}
+
+/* Lomo adaptado a papel claro */
 .bookletCenterSpine {
   position: absolute;
   top: 0;
@@ -69,23 +93,25 @@
   transform: translateX(-50%);
   background: linear-gradient(
     90deg,
-    rgba(0, 0, 0, 0.6) 0%,
-    rgba(0, 0, 0, 0.2) 40%,
-    rgba(255, 255, 255, 0.04) 50%,
-    rgba(0, 0, 0, 0.2) 60%,
-    rgba(0, 0, 0, 0.6) 100%
+    rgba(0, 0, 0, 0.08) 0%,
+    rgba(0, 0, 0, 0.02) 40%,
+    rgba(255, 255, 255, 0.6) 50%,
+    rgba(0, 0, 0, 0.02) 60%,
+    rgba(0, 0, 0, 0.08) 100%
   );
   pointer-events: none;
   z-index: 3;
 }
 
+/* Control de límites de cajas interiores para prevenir que el texto empuje la altura */
 .bookletPageHalf {
   position: relative;
   height: 100%;
   display: flex;
   flex-direction: column;
-  padding: 20px;
+  padding: 24px;
   box-sizing: border-box;
+  min-width: 0;
 }
 
 .bookletContent {
@@ -96,49 +122,51 @@
 }
 
 .bookletHeader {
-  border-bottom: 2px solid #424750;
+  border-bottom: 2px solid #b0b5be;
   padding-bottom: 6px;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 }
 
 .bookletHeader h4 {
   font-family: "Helvetica", Arial, sans-serif;
   font-weight: 900;
-  font-size: 15px;
+  font-size: 16px;
   text-transform: uppercase;
-  color: #ffffff;
+  color: #1a1d24;
   margin: 0;
 }
 
 .bookletHeader span {
   font-family: "Courier New", monospace;
-  font-size: 10px;
-  color: #55ff55;
+  font-size: 12px;
+  color: #55575e;
   text-transform: uppercase;
+  font-weight: bold;
 }
 
 .bookletLyrics {
-  font-family: "Courier New", Courier, monospace;
-  font-size: 11px;
-  line-height: 1.45;
-  color: #e2e8f0;
-  white-space: pre-wrap;
-  font-weight: 500;
   flex: 1;
+  min-height: 0;
   overflow: hidden;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  font-family: "Courier New", Courier, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #2b303a;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-weight: 600;
 }
 
 .bookletPagination {
   position: absolute;
-  bottom: 8px;
-  left: 20px;
-  right: 20px;
+  bottom: 12px;
+  left: 24px;
+  right: 24px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-top: 6px;
-  border-top: 1px solid #424750;
+  padding-top: 8px;
+  border-top: 1px solid #b0b5be;
   z-index: 4;
 }
 
@@ -146,25 +174,26 @@
   background: none;
   border: none;
   font-family: "Courier New", monospace;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: bold;
-  color: #cfcfcf;
+  color: #7a828e;
   cursor: pointer;
+  transition: color 0.1s;
 }
 
 .bookletPagination button:disabled {
-  color: #444;
+  color: #b0b5be;
   cursor: not-allowed;
 }
 
 .bookletPagination button:not(:disabled):hover {
-  color: #55ff55;
+  color: #1a1d24;
 }
 
 .bookletPagination span {
   font-family: "Helvetica", sans-serif;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: bold;
-  color: #7a828e;
+  color: #55575e;
   letter-spacing: 1px;
 }
