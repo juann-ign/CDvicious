@@ -131,7 +131,14 @@ export default function CratePage() {
           height: 100vh;
           max-height: 100vh;
           overflow: hidden;
-          background-color: #111;
+          background-color: #525a66;
+          background-image:
+            radial-gradient(
+              circle at 50% 10%,
+              rgba(210, 220, 235, 0.35) 0%,
+              transparent 55%
+            ),
+            linear-gradient(135deg, #626c7a 0%, #3a4049 100%);
           display: flex;
           flex-direction: column;
           align-items: center;

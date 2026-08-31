@@ -55,7 +55,7 @@ export function LyricsBooklet({
   const pages = useMemo(() => {
     if (!lyrics) return [];
     const lines = lyrics.split("\n");
-    const maxPageWeight = 22;
+    const maxPageWeight = 12;
     const result: string[] = [];
     let currentPageLines: string[] = [];
     let currentWeight = 0;

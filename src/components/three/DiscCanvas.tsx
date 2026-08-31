@@ -35,14 +35,14 @@ export function DiscCanvas({ track, isPlaying, accentColor }: DiscCanvasProps) {
       <ambientLight intensity={1.4} />
       <directionalLight
         position={[3, 5, 4]}
-        intensity={1.8}
+        intensity={2.2}
         castShadow
         shadow-mapSize={[1024, 1024]}
       />
       <pointLight
         position={[-3, 1.5, -2]}
         color={accentColor}
-        intensity={isPlaying ? 2.2 : 0.6}
+        intensity={isPlaying ? 3.5 : 0.8}
       />
 
       <Suspense fallback={null}>
