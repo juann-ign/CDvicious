@@ -4,6 +4,7 @@ import { Canvas } from "@react-three/fiber";
 import { Suspense, useEffect, useState } from "react";
 import type { SpotifyTrack } from "@/types/spotify";
 import { DiscMesh } from "./DiscMesh";
+import { Environment, OrbitControls } from "@react-three/drei";
 
 interface DiscCanvasProps {
   track: SpotifyTrack | null;
@@ -33,6 +34,9 @@ export function DiscCanvas({ track, isPlaying, accentColor }: DiscCanvasProps) {
       gl={{ antialias: true, alpha: true }}
     >
       <ambientLight intensity={1.4} />
+
+      <Environment preset="studio" environmentIntensity={0.35} />
+
       <directionalLight
         position={[3, 5, 4]}
         intensity={2.2}
