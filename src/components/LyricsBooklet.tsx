@@ -97,7 +97,7 @@ export function LyricsBooklet({
       <button
         onClick={onToggle}
         className={styles.bookletTab}
-        aria-label="Abrir Booklet"
+        aria-label={isOpen ? "Cerrar Booklet" : "Abrir Booklet"}
       >
         {isOpen ? "CERRAR BOOKLET" : "VER BOOKLET"}
       </button>
