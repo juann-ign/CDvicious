@@ -106,11 +106,16 @@ export function LyricsBooklet({
 
         <div className={styles.bookletPageHalf}>
           <div className={styles.bookletContent}>
-            {leftPageIdx === 0 && (
+            {leftPageIdx === 0 ? (
               <div className={styles.bookletHeader}>
                 <h4>{track.name}</h4>
                 <span>{track.artists.map((a) => a.name).join(", ")}</span>
               </div>
+            ) : (
+              <div
+                className={styles.bookletHeaderPlaceholder}
+                aria-hidden="true"
+              />
             )}
             <div className={styles.bookletLyrics}>
               {loading ? "[ CARGANDO... ]" : pages[leftPageIdx] || ""}
@@ -120,6 +125,11 @@ export function LyricsBooklet({
 
         <div className={styles.bookletPageHalf}>
           <div className={styles.bookletContent}>
+            <div
+              className={styles.bookletHeaderPlaceholder}
+              aria-hidden="true"
+            />
+
             <div className={styles.bookletLyrics}>
               {loading ? "" : pages[rightPageIdx] || ""}
             </div>
@@ -135,7 +145,7 @@ export function LyricsBooklet({
               ◄ PREV
             </button>
             <span>
-              SPREAD {currentSpread} / {totalSpreads}
+              SPREAD {currentSpread}/{totalSpreads}
             </span>
             <button
               disabled={rightPageIdx >= pages.length - 1}

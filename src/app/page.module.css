@@ -117,7 +117,7 @@
 }
 
 .mainContentCore.isOpen {
-  gap: clamp(20px, 6vw, 32px);
+  gap: clamp(20px, 6vw, 48px);
 }
 
 /* DOCK INFERIOR VFD ESTABLE */

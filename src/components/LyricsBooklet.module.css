@@ -12,14 +12,14 @@
 
 .bookletOuter.isOpen {
   /* Ancho exactamente el doble de la altura para formar un libro abierto apaisado perfecto */
-  width: 760px; /* Ancho total del spread abierto (doble página de 420px c/u) */
+  width: 680px; /* Ancho total del spread abierto (doble página de 420px c/u) */
 }
 /* Pestaña anclada rígidamente al borde izquierdo del libro */
 /* EL BOTÓN AHORA VIVE PEGADO AL BORDE IZQUIERDO DE LA PANTALLA */
 /* EL BOTÓN DESPLAZADO */
 .bookletTab {
   position: absolute;
-  left: -52px;
+  left: -48px;
   top: 50%; /* Antes estaba en 50%. Ahora sube hacia el tercio superior */
   transform: translateY(-50%);
   writing-mode: vertical-rl;
@@ -27,10 +27,10 @@
   background: linear-gradient(to right, #4a505b, #32373f);
   border: 1px solid #5e6573;
   color: #55ff55;
-  padding: 14px 8px;
+  padding: 12px 8px;
   font-family: "Courier New", monospace;
   font-weight: bold;
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 2px;
   text-transform: uppercase;
   cursor: pointer;
@@ -53,8 +53,8 @@
   left: -1%;
   top: 55%;
   transform: translateY(-50%) scale(0.8); /* Centrado vertical perfecto con GSAP/CSS smooth */
-  width: 680px;
-  height: 420px;
+  width: 660px;
+  height: 400px;
   background:
     linear-gradient(rgba(226, 229, 233, 0.92), rgba(215, 218, 224, 0.98)),
     radial-gradient(
@@ -67,7 +67,7 @@
   border-radius: 4px;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  border: 1px solid #b0b5be;
+  border: 2px solid #000000;
   box-shadow: -15px 20px 50px rgba(0, 0, 0, 0.6);
   opacity: 0;
   pointer-events: none;
@@ -89,14 +89,16 @@
   top: 0;
   bottom: 0;
   left: 50%;
+  right: 20%;
   width: 20px;
+  height: 92%;
   transform: translateX(-50%);
   background: linear-gradient(
     90deg,
     rgba(0, 0, 0, 0.08) 0%,
-    rgba(0, 0, 0, 0.02) 40%,
+    rgba(196, 193, 193, 0.02) 40%,
     rgba(255, 255, 255, 0.6) 50%,
-    rgba(0, 0, 0, 0.02) 60%,
+    rgba(138, 136, 136, 0.02) 60%,
     rgba(0, 0, 0, 0.08) 100%
   );
   pointer-events: none;
@@ -123,8 +125,11 @@
 
 .bookletHeader {
   border-bottom: 2px solid #b0b5be;
-  padding-bottom: 6px;
-  margin-bottom: 12px;
+  padding-bottom: 4px;
+  margin-bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .bookletHeader h4 {
@@ -144,9 +149,16 @@
   font-weight: bold;
 }
 
+.bookletHeaderPlaceholder {
+  height: 16px;
+  margin-bottom: 0px;
+  flex-shrink: 0;
+}
+
 .bookletLyrics {
   flex: 1;
   min-height: 0;
+  display: block;
   overflow: hidden;
   font-family: "Courier New", Courier, monospace;
   font-size: 12px;
@@ -191,9 +203,9 @@
 }
 
 .bookletPagination span {
-  font-family: "Helvetica", sans-serif;
+  font-family: "Courier New", sans-serif;
   font-size: 10px;
   font-weight: bold;
   color: #55575e;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
 }
