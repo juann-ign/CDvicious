@@ -24,10 +24,13 @@
 
 .profileContainer {
   position: relative;
+  justify-self: end;
+  display: grid;
 }
 
 .profileTrigger {
   display: flex;
+  justify-self: end;
   align-items: center;
   gap: 10px;
   background: linear-gradient(to bottom, #14171c, #1f232a);

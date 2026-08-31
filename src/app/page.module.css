@@ -14,8 +14,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: space-evenly;
-  padding: 15px 20px;
+  padding: 32px 20px;
   box-sizing: border-box;
   color: #e0e0e0;
   position: relative;
@@ -23,7 +22,9 @@
 
 /* CHASSIS SUPERIOR */
 .topControlBar {
-  display: flex;
+  flex-shrink: 0; /* nunca se comprime: define el techo fijo del layout */
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   justify-content: space-between;
   align-items: center;
   width: 100%;
@@ -41,6 +42,7 @@
 }
 
 .brandCorner {
+  justify-self: start;
   font-family: "Helvetica", sans-serif;
   font-weight: 900;
   font-size: 16px;
@@ -84,9 +86,22 @@
   font-family: "Courier New", monospace;
   font-weight: bold;
   color: #55ff55;
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 2px;
   text-shadow: 0 0 6px rgba(127, 255, 127, 0.5);
+}
+
+/* ============================================
+   ZONA CENTRAL
+   ============================================ */
+.centerStage {
+  flex: 1 1 auto;
+  min-height: 0; /* deja que flexbox calcule el espacio real disponible */
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 /* ESCENARIO BILATERAL FÍSICO */
@@ -102,14 +117,16 @@
 }
 
 .mainContentCore.isOpen {
-  gap: 100px;
+  gap: clamp(20px, 6vw, 0px);
 }
+
 /* DOCK INFERIOR VFD ESTABLE */
 .nowPlayingDock {
+  flex-shrink: 0; /* nunca se comprime: define el piso fijo del layout */
   width: 100%;
-  max-width: 1450px;
+  max-width: 1500px;
+  padding: 10px 24px;
   display: flex;
   justify-content: center;
   z-index: 8;
-  transform: translateY(-10%);
 }

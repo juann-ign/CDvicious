@@ -154,7 +154,6 @@ body {
   width: 90%;
   height: 90%;
   touch-action: none;
-  transform: translateY(-5%);
 }
 
 .disc canvas {
@@ -221,9 +220,8 @@ body {
    ============================================ */
 .profile-chip {
   position: fixed;
-  top: 24px;
-  right: 28px;
-  z-index: 2;
+  justify-self: end;
+  display: grid;
 }
 
 .profile-chip--connect {
@@ -245,6 +243,7 @@ body {
 }
 
 .profile-chip__trigger {
+  justify-self: end;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -270,6 +269,7 @@ body {
 }
 
 .profile-chip__menu {
+  justify-self: end;
   position: absolute;
   top: calc(100% + 10px);
   left: 50%;
@@ -299,12 +299,6 @@ body {
 /* ============================================
    ESTACIÓN PRINCIPAL (MAIN PAGE HARDWARE LAYOUT)
    ============================================ */
-
-.top-nav-actions {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-}
 
 .vfd-prompt {
   font-family: "Courier New", monospace;

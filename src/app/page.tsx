@@ -71,22 +71,25 @@ function HomeContent() {
         </div>
       </header>
 
-      {/* ESCENARIO BILATERAL SIMÉTRICO */}
-      <div
-        className={`${styles.mainContentCore} ${isBookletOpen ? styles.isOpen : ""}`}
-      >
-        {" "}
-        <LyricsBooklet
-          track={data?.track ?? null}
-          isOpen={isBookletOpen}
-          onToggle={() => setIsBookletOpen(!isBookletOpen)}
-          accentColor={accentColor}
-        />
-        <Disc
-          track={data?.track ?? null}
-          isPlaying={data?.isPlaying ?? false}
-          accentColor={accentColor}
-        />
+      {/* ZONA CENTRAL: centra Disc + Booklet a igual distancia de nav y VFD */}
+      <div className={styles.centerStage}>
+        {/* ESCENARIO BILATERAL SIMÉTRICO */}
+        <div
+          className={`${styles.mainContentCore} ${isBookletOpen ? styles.isOpen : ""}`}
+        >
+          {" "}
+          <LyricsBooklet
+            track={data?.track ?? null}
+            isOpen={isBookletOpen}
+            onToggle={() => setIsBookletOpen(!isBookletOpen)}
+            accentColor={accentColor}
+          />
+          <Disc
+            track={data?.track ?? null}
+            isPlaying={data?.isPlaying ?? false}
+            accentColor={accentColor}
+          />
+        </div>
       </div>
 
       {/* REPRODUCTOR VFD FIJO ABAJO */}
