@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/session";
+import { getValidAccessToken } from "@/lib/session";
 
 export async function POST(request: Request) {
-  const session = await getSession();
+  const accessToken = await getValidAccessToken();
   const { uri, deviceId } = await request.json();
 
-  if (!session?.accessToken || !uri || !deviceId) {
+  if (!accessToken || !uri || !deviceId) {
     return NextResponse.json({ error: "Faltan datos" }, { status: 400 });
   }
 
@@ -15,7 +15,7 @@ export async function POST(request: Request) {
     {
       method: "PUT",
       headers: {
-        Authorization: `Bearer ${session.accessToken}`,
+        Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ context_uri: uri }),

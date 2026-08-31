@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/session";
+import { getValidAccessToken } from "@/lib/session";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const q = searchParams.get("q");
-  const session = await getSession();
+  const accessToken = await getValidAccessToken();
 
-  if (!session?.accessToken || !q) {
+  if (!accessToken || !q) {
     return NextResponse.json(
       { error: "Faltan parámetros o sesión" },
       { status: 400 },
@@ -18,7 +18,7 @@ export async function GET(request: Request) {
     `https://api.spotify.com/v1/search?q=${encodeURIComponent(q)}&type=album&limit=10`,
     {
       headers: {
-        Authorization: `Bearer ${session.accessToken}`,
+        Authorization: `Bearer ${accessToken}`,
       },
     },
   );
