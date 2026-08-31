@@ -18,10 +18,10 @@
 /* EL BOTÓN AHORA VIVE PEGADO AL BORDE IZQUIERDO DE LA PANTALLA */
 /* EL BOTÓN DESPLAZADO */
 .bookletTab {
-  position: fixed;
-  left: -2px;
+  position: absolute;
+  left: -52px;
   top: 50%; /* Antes estaba en 50%. Ahora sube hacia el tercio superior */
-  transform: translateY(-80%);
+  transform: translateY(-50%);
   writing-mode: vertical-rl;
   text-orientation: mixed;
   background: linear-gradient(to right, #4a505b, #32373f);
