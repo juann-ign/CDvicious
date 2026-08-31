@@ -1,17 +1,17 @@
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/session";
+import { getValidAccessToken } from "@/lib/session";
 
 export async function GET() {
-  const session = await getSession();
+  const accessToken = await getValidAccessToken();
 
-  if (!session?.accessToken) {
+  if (!accessToken) {
     return NextResponse.json({ error: "Falta sesión" }, { status: 400 });
   }
 
   // Traemos los últimos 20 álbumes guardados
   const res = await fetch(`https://api.spotify.com/v1/me/albums?limit=40`, {
     headers: {
-      Authorization: `Bearer ${session.accessToken}`,
+      Authorization: `Bearer ${accessToken}`,
     },
   });
 
