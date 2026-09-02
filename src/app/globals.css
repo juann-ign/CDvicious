@@ -46,10 +46,28 @@
   font-weight: normal;
   font-style: normal;
 }
+@font-face {
+  font-family: "Neon";
+  src: url("../../public/fonts/Neon.woff2") format("woff2");
+  font-weight: normal;
+  font-style: normal;
+}
 
 /* ============================================
    RESET Y BASE
    ============================================ */
+:root {
+  --cdv-bg: #141414; /* fondo de página, un poco más oscuro que el chasis */
+  --cdv-surface: #222222; /* tu referencia — chasis, cards, nav */
+  --cdv-surface-raised: #2c2c2c; /* inputs inset, hover */
+
+  --cdv-accent: #89e900; /* tu referencia — VFD activo, glow, bordes, CTAs */
+  --cdv-accent-dim: #6ba300; /* texto secundario del VFD, estados inactivos */ /* texto secundario del VFD, estados inactivos */
+
+  --cdv-text: #edeae0; /* texto de lectura — blanco hueso, no #fff puro */
+  --cdv-text-muted: #8a8a82; /* metadata, timestamps */
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -58,7 +76,7 @@
 
 html,
 body {
-  background-color: #525a66;
+  background-color: var(--cdv-bg);
   background-image:
     radial-gradient(
       circle at 50% 10%,
@@ -225,7 +243,7 @@ body {
 }
 
 .profile-chip--connect {
-  font-family: monospace;
+  font-family: "SpecialElite", monospace;
   font-size: 13px;
   letter-spacing: 1.5px;
   text-transform: uppercase;
@@ -301,7 +319,7 @@ body {
    ============================================ */
 
 .vfd-prompt {
-  font-family: "Courier New", monospace;
+  font-family: "SpecialElite", monospace;
   color: #569156;
   font-size: 10px;
   font-weight: bold;

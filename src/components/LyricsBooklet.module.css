@@ -20,13 +20,13 @@
 .bookletTab {
   position: absolute;
   left: -48px;
-  top: 50%; /* Antes estaba en 50%. Ahora sube hacia el tercio superior */
+  top: 50%;
   transform: translateY(-50%);
   writing-mode: vertical-rl;
   text-orientation: mixed;
-  background: linear-gradient(to right, #4a505b, #32373f);
-  border: 1px solid #5e6573;
-  color: #55ff55;
+  background-color: var(--cdv-surface);
+  border: 1px solid var(--cdv-accent-dim);
+  color: var(--cdv-accent);
   padding: 12px 8px;
   font-family: "Courier New", monospace;
   font-weight: bold;
@@ -63,7 +63,7 @@
       transparent 60%
     ),
     url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.08'/%3E%3C/svg%3E");
-  background-color: #e2e5e9;
+  background-color: var(--cdv-text);
   border-radius: 4px;
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -121,6 +121,7 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
+  max-height: 320px;
 }
 
 .bookletHeader {
@@ -133,18 +134,17 @@
 }
 
 .bookletHeader h4 {
-  font-family: "Helvetica", Arial, sans-serif;
-  font-weight: 900;
-  font-size: 16px;
-  text-transform: uppercase;
-  color: #1a1d24;
+  font-family: "CursiveStandard", Arial, sans-serif;
+  font-size: 22px;
+  letter-spacing: 2px;
+  color: var(--cdv-surface);
   margin: 0;
 }
 
 .bookletHeader span {
-  font-family: "Courier New", monospace;
+  font-family: "SpecialElite", monospace;
   font-size: 12px;
-  color: #55575e;
+  color: var(--cdv-text-muted);
   text-transform: uppercase;
   font-weight: bold;
 }
@@ -158,15 +158,17 @@
 .bookletLyrics {
   flex: 1;
   min-height: 0;
+  max-height: 320px;
   display: block;
   overflow: hidden;
-  font-family: "Courier New", Courier, monospace;
-  font-size: 12px;
-  line-height: 1.5;
-  color: #2b303a;
+  font-family: "Neon", Courier, monospace;
+  font-size: 16px;
+  line-height: 1.3;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--cdv-surface);
   white-space: pre-wrap;
   word-wrap: break-word;
-  font-weight: 600;
 }
 
 .bookletPagination {
@@ -185,7 +187,7 @@
 .bookletPagination button {
   background: none;
   border: none;
-  font-family: "Courier New", monospace;
+  font-family: "SpecialElite", monospace;
   font-size: 11px;
   font-weight: bold;
   color: #7a828e;
@@ -203,7 +205,7 @@
 }
 
 .bookletPagination span {
-  font-family: "Courier New", sans-serif;
+  font-family: "SpecialElite", monospace;
   font-size: 10px;
   font-weight: bold;
   color: #55575e;

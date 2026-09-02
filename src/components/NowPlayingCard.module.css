@@ -1,10 +1,9 @@
 /* src/components/NowPlayingCard.module.css */
 .chassis {
-  background: linear-gradient(to bottom, #1f232a, #15161a);
-  border-radius: 12px;
+  /*background: linear-gradient(to bottom, #1f232a, #15161a); */
+  background-color: var(--cdv-surface);
   padding: 20px;
-  border: 1px solid #2a2c35;
-  border-top: 1px solid #3d4351; /* Brillo metálico superior */
+  border-top: 3px solid var(--cdv-surface-raised); /* Brillo metálico superior */
   box-shadow:
     0 20px 40px rgba(0, 0, 0, 0.8),
     inset 0 2px 4px rgba(255, 255, 255, 0.05);
@@ -16,21 +15,20 @@
 }
 
 .vfdDisplay {
-  background: #090b0d;
+  background: var(--cdv-bg);
   border: 2px inset #121f13;
-  border-radius: 6px;
   padding: 16px 20px;
   width: 100%;
   box-shadow:
     inset 0 4px 10px rgba(0, 0, 0, 0.9),
     0 0 15px rgba(57, 255, 20, 0.08);
-  font-family: "Courier New", monospace;
+  font-family: "SpecialElite", monospace;
 }
 
 .vfdTrackName {
   font-size: 14px;
   font-weight: bold;
-  color: #55ff55;
+  color: var(--cdv-accent);
   text-shadow: 0 0 8px rgba(85, 255, 85, 0.6);
   white-space: nowrap;
   overflow: hidden;
@@ -39,8 +37,8 @@
 }
 
 .vfdArtist {
-  font-size: 11px;
-  color: #228b15;
+  font-size: 12px;
+  color: var(--cdv-accent-dim);
   margin-top: 6px;
   text-transform: uppercase;
   white-space: nowrap;
@@ -57,6 +55,7 @@
   width: 100%;
 }
 
+/* Botones de control de reproducción */
 .buttonsWrapper {
   display: flex;
   gap: 10px;
@@ -66,11 +65,10 @@
 .hwBtn {
   width: 44px;
   height: 32px;
-  background: #111418;
-  border: 1px solid #000;
-  border-top: 1px solid #2a2e35;
-  border-radius: 3px;
-  color: #1b401e;
+  background: var(--cdv-surface);
+  border: 1px solid var(--cdv-bg);
+  border-top: 1px solid var(--cdv-surface-raised);
+  color: var(--cdv-accent-dim);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -78,7 +76,7 @@
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.6);
   cursor: pointer;
   transition: all 0.1s;
-  font-family: monospace;
+  font-family: "SpecialElite", monospace;
 }
 
 .hwBtnPlay {
@@ -87,45 +85,12 @@
 
 .hwBtn:active,
 .hwBtn.isActive {
-  background: #080a0c;
-  border-top: 1px solid #111418;
-  color: #55ff55;
-  text-shadow: 0 0 8px rgba(85, 255, 85, 0.6);
+  background: var(--cdv-bg);
+  border-top: 1px solid var(--cdv-surface);
+  color: var(--cdv-accent);
+  text-shadow: 0 0 8px rgba(137, 233, 0, 0.6);
   transform: translateY(2px);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
-}
-
-.faderWrapper {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.faderTrack {
-  position: relative;
-  width: 110px;
-  height: 18px;
-  display: flex;
-  align-items: center;
-  background: #0c0e11;
-  padding: 2px 5px;
-  border-radius: 3px;
-  border: 1px solid #000;
-  border-top: 1px solid #2a2e35;
-}
-
-.faderInput {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  width: 100%;
-  height: 100%;
-  cursor: default;
-  z-index: 3;
-}
-
-.faderInput:active {
-  cursor: grabbing !important;
 }
 
 /* Progress Bar Component */
@@ -143,35 +108,54 @@
 }
 .progressBlock {
   flex: 1;
-  background-color: #101e12;
-  border-radius: 1px;
+  background-color: var(--cdv-surface-raised);
 }
 .progressBlockActive {
-  background-color: #39ff14;
+  background-color: var(--cdv-accent);
   box-shadow: 0 0 6px rgba(57, 255, 20, 0.7);
 }
 .progressTimes {
   display: flex;
   justify-content: space-between;
   font-size: 11px;
-  color: #228b15;
-  font-family: "Courier New", monospace;
+  color: var(--cdv-accent-dim);
+  font-family: "SpecialElite", monospace;
   letter-spacing: 1px;
 }
 
 /* Playback Fader Component */
+.faderWrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .muteLabel {
-  font-size: 10px;
+  font-size: 12px;
+  transform: translateY(2px);
   color: #4f554f;
-  font-family: "Courier New", monospace;
+  font-family: "SpecialElite", monospace;
   letter-spacing: 1px;
   cursor: pointer;
   user-select: none;
 }
 .muteLabelActive {
-  color: #3a1f1f;
-  text-shadow: 0 0 5px rgba(255, 51, 51, 0.6);
+  color: #b81c1c;
+  text-shadow: 0 0 5px rgba(241, 18, 18, 0.6);
 }
+
+.faderTrack {
+  position: relative;
+  width: 110px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  background: var(--cdv-surface);
+  padding: 2px 5px;
+  border: 1px solid #000;
+  border-top: 1px solid #2a2e35;
+}
+
 .faderTrackInner {
   height: 12px;
   width: 100%;
@@ -180,12 +164,27 @@
   align-items: center;
   pointer-events: none;
 }
+
 .faderBlock {
   flex: 1;
   height: 100%;
-  background-color: #122415;
+  background-color: var(--cdv-surface-raised);
 }
 .faderBlockActive {
-  background-color: #39ff14;
+  background-color: var(--cdv-accent);
   box-shadow: 0 0 4px rgba(57, 255, 20, 0.6);
+}
+
+.faderInput {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: default;
+  z-index: 3;
+}
+
+.faderInput:active {
+  cursor: grabbing !important;
 }
