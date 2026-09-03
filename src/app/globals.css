@@ -1,18 +1,6 @@
 @font-face {
-  font-family: "Naive";
-  src: url("../../public/fonts/Naiveer.woff2") format("woff2");
-  font-weight: normal;
-  font-style: normal;
-}
-@font-face {
   font-family: "Punktype";
   src: url("../../public/fonts/Punktype.woff2") format("woff2");
-  font-weight: normal;
-  font-style: normal;
-}
-@font-face {
-  font-family: "DirtyCursive";
-  src: url("../../public/fonts/DirtyCursive.woff2") format("woff2");
   font-weight: normal;
   font-style: normal;
 }
@@ -23,33 +11,39 @@
   font-style: normal;
 }
 @font-face {
-  font-family: "JacobCursive";
-  src: url("../../public/fonts/JacobCursive.woff2") format("woff2");
+  font-family: "Neon";
+  src: url("../../public/fonts/neon.woff2") format("woff2");
   font-weight: normal;
   font-style: normal;
 }
 @font-face {
-  font-family: "CursiveStandard";
-  src: url("../../public/fonts/Cursive\ standard.woff2") format("woff2");
-  font-weight: normal;
+  font-family: "California";
+  src: url("../../public/fonts/CALIFORNIA\ PERSONAL\ USE.woff2") format("woff2");
+  font-weight: 400;
   font-style: normal;
 }
 @font-face {
-  font-family: "CursiveStandard";
-  src: url("../../public/fonts/Cursive\ standard\ Bold.woff2") format("woff2");
-  font-weight: normal;
-  font-style: normal;
-}
-@font-face {
-  font-family: "JBCursiveV3";
-  src: url("../../public/fonts/JBCursive-V3-Bold.woff2") format("woff2");
-  font-weight: normal;
+  font-family: "Krinkes";
+  src: url("../../public/fonts/KrinkesRegularPERSONAL.woff2") format("woff2");
+  font-weight: 400;
   font-style: normal;
 }
 
 /* ============================================
    RESET Y BASE
    ============================================ */
+:root {
+  --cdv-bg: #141414; /* fondo de página, un poco más oscuro que el chasis */
+  --cdv-surface: #222222; /* tu referencia — chasis, cards, nav */
+  --cdv-surface-raised: #2c2c2c; /* inputs inset, hover */
+
+  --cdv-accent: #89e900; /* tu referencia — VFD activo, glow, bordes, CTAs */
+  --cdv-accent-dim: #6ba300; /* texto secundario del VFD, estados inactivos */ /* texto secundario del VFD, estados inactivos */
+
+  --cdv-text: #edeae0; /* texto de lectura — blanco hueso, no #fff puro */
+  --cdv-text-muted: #8a8a82; /* metadata, timestamps */
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -58,7 +52,7 @@
 
 html,
 body {
-  background-color: #525a66;
+  background-color: var(--cdv-bg);
   background-image:
     radial-gradient(
       circle at 50% 10%,
@@ -225,7 +219,7 @@ body {
 }
 
 .profile-chip--connect {
-  font-family: monospace;
+  font-family: "SpecialElite", monospace;
   font-size: 13px;
   letter-spacing: 1.5px;
   text-transform: uppercase;
@@ -301,7 +295,7 @@ body {
    ============================================ */
 
 .vfd-prompt {
-  font-family: "Courier New", monospace;
+  font-family: "SpecialElite", monospace;
   color: #569156;
   font-size: 10px;
   font-weight: bold;

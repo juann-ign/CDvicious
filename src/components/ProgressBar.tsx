@@ -48,11 +48,9 @@ export function ProgressBar({
         {Array.from({ length: totalBlocks }).map((_, i) => (
           <div
             key={i}
-            className={
-              i < filledCount
-                ? styles.progressBlockActive
-                : styles.progressBlock
-            }
+            className={`${styles.progressBlock} ${
+              i < filledCount ? styles.progressBlockActive : ""
+            }`}
           />
         ))}
       </div>

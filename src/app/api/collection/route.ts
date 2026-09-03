@@ -1,25 +1,46 @@
 import { NextResponse } from "next/server";
-import { getValidAccessToken } from "@/lib/session";
+import { getSession } from "@/lib/session";
+
+const SPOTIFY_MAX_LIMIT = 50; // límite máximo permitido por Spotify por request
+const MAX_ALBUMS = 120; // techo total: ~5 páginas de 24 en la batea
 
 export async function GET() {
-  const accessToken = await getValidAccessToken();
+  const session = await getSession();
 
-  if (!accessToken) {
+  if (!session?.accessToken) {
     return NextResponse.json({ error: "Falta sesión" }, { status: 400 });
   }
 
-  // Traemos los últimos 20 álbumes guardados
-  const res = await fetch(`https://api.spotify.com/v1/me/albums?limit=40`, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
+  const allAlbums: any[] = [];
+  let offset = 0;
+  let hasMore = true;
 
-  const data = await res.json();
+  try {
+    while (hasMore && allAlbums.length < MAX_ALBUMS) {
+      const res = await fetch(
+        `https://api.spotify.com/v1/me/albums?limit=${SPOTIFY_MAX_LIMIT}&offset=${offset}`,
+        {
+          headers: {
+            Authorization: `Bearer ${session.accessToken}`,
+          },
+        },
+      );
 
-  // La API de Spotify envuelve los álbumes en un objeto { added_at, album: { ... } }
-  // Los extraemos para que el frontend reciba exactamente la misma estructura que en la búsqueda
-  const formattedAlbums = data.items?.map((item: any) => item.album) || [];
+      if (!res.ok) {
+        break;
+      }
 
-  return NextResponse.json(formattedAlbums);
+      const data = await res.json();
+      const items = data.items || [];
+      allAlbums.push(...items.map((item: any) => item.album));
+
+      hasMore = Boolean(data.next);
+      offset += SPOTIFY_MAX_LIMIT;
+    }
+
+    // Por si el último batch se pasó del techo (ej. traer 50 cuando faltaban 10)
+    return NextResponse.json(allAlbums.slice(0, MAX_ALBUMS));
+  } catch {
+    return NextResponse.json(allAlbums.slice(0, MAX_ALBUMS));
+  }
 }

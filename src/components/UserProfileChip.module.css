@@ -1,16 +1,15 @@
 /* src/components/UserProfileChip.module.css */
 .profileConnect {
-  font-family: "Courier New", monospace;
-  font-size: 11px;
+  justify-self: end;
+  font-family: "Neon", monospace;
+  font-size: 14px;
   letter-spacing: 1.5px;
   text-transform: uppercase;
-  color: #55ff55;
+  color: var(--cdv-accent);
   background: linear-gradient(to bottom, #14171c, #1f232a);
-  border: 1px solid #3a404b;
-  border-top-color: #2a2f38;
   border-bottom-color: #4c5462;
-  padding: 6px 14px;
-  border-radius: 2px;
+  border: 1px solid var(--cdv-accent-dim);
+  padding: 6px 18px;
   text-decoration: none;
   box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.9);
   transition: all 0.1s ease;
@@ -39,9 +38,9 @@
   padding: 4px 12px 4px 4px;
   cursor: pointer;
   color: #e2e8f0;
-  font-family: "Courier New", monospace;
-  font-size: 11px;
-  letter-spacing: 1px;
+  font-family: "Neon", monospace;
+  font-size: 14px;
+  letter-spacing: 1.5px;
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.8);
 }
 
@@ -57,9 +56,11 @@
 }
 
 .username {
-  text-transform: uppercase;
-  color: #7fff7f;
-  text-shadow: 0 0 6px rgba(127, 255, 127, 0.4);
+  font-family: "Neon", monospace;
+  font-size: 22px;
+  letter-spacing: 3px;
+  color: var(--cdv-accent);
+  text-shadow: 0 0 6px rgba(7, 235, 7, 0.877);
 }
 
 .menu {
@@ -82,9 +83,9 @@
   background: none;
   border: none;
   color: #cfcfcf;
-  font-family: "Courier New", monospace;
-  font-size: 10px;
-  letter-spacing: 1px;
+  font-family: "Neon", monospace;
+  font-size: 14px;
+  letter-spacing: 1.5px;
   cursor: pointer;
 }
 
