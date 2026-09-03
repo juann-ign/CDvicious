@@ -1,18 +1,6 @@
 @font-face {
-  font-family: "Naive";
-  src: url("../../public/fonts/Naiveer.woff2") format("woff2");
-  font-weight: normal;
-  font-style: normal;
-}
-@font-face {
   font-family: "Punktype";
   src: url("../../public/fonts/Punktype.woff2") format("woff2");
-  font-weight: normal;
-  font-style: normal;
-}
-@font-face {
-  font-family: "DirtyCursive";
-  src: url("../../public/fonts/DirtyCursive.woff2") format("woff2");
   font-weight: normal;
   font-style: normal;
 }
@@ -23,33 +11,21 @@
   font-style: normal;
 }
 @font-face {
-  font-family: "JacobCursive";
-  src: url("../../public/fonts/JacobCursive.woff2") format("woff2");
-  font-weight: normal;
-  font-style: normal;
-}
-@font-face {
-  font-family: "CursiveStandard";
-  src: url("../../public/fonts/Cursive\ standard.woff2") format("woff2");
-  font-weight: normal;
-  font-style: normal;
-}
-@font-face {
-  font-family: "CursiveStandard";
-  src: url("../../public/fonts/Cursive\ standard\ Bold.woff2") format("woff2");
-  font-weight: normal;
-  font-style: normal;
-}
-@font-face {
-  font-family: "JBCursiveV3";
-  src: url("../../public/fonts/JBCursive-V3-Bold.woff2") format("woff2");
-  font-weight: normal;
-  font-style: normal;
-}
-@font-face {
   font-family: "Neon";
-  src: url("../../public/fonts/Neon.woff2") format("woff2");
+  src: url("../../public/fonts/neon.woff2") format("woff2");
   font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: "California";
+  src: url("../../public/fonts/CALIFORNIA\ PERSONAL\ USE.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Krinkes";
+  src: url("../../public/fonts/KrinkesRegularPERSONAL.woff2") format("woff2");
+  font-weight: 400;
   font-style: normal;
 }
 
