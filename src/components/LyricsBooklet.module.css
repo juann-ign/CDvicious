@@ -1,59 +1,81 @@
-/* src/components/LyricsBooklet.module.css */
-/* Contenedor resorte: cerrado = 0 masa, abierto = reclama 680px */
+/* =========================================================
+   CDVICIOUS — LYRICS BOOKLET
+   ========================================================= */
+
 .bookletOuter {
   position: relative;
   display: flex;
   align-items: center;
-  width: 0px;
-  height: 420px; /* Altura estilizada del libro abierto */
+  width: 0;
+  height: 420px;
   flex-shrink: 0;
-  transition: width 0.6s cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 .bookletOuter.isOpen {
-  /* Ancho exactamente el doble de la altura para formar un libro abierto apaisado perfecto */
-  width: 680px; /* Ancho total del spread abierto (doble página de 420px c/u) */
+  width: 680px;
 }
-/* Pestaña anclada rígidamente al borde izquierdo del libro */
-/* EL BOTÓN AHORA VIVE PEGADO AL BORDE IZQUIERDO DE LA PANTALLA */
-/* EL BOTÓN DESPLAZADO */
+
 .bookletTab {
   position: absolute;
-  left: -48px;
-  top: 50%;
-  transform: translateY(-50%);
+  left: 12px;
+  bottom: 12px;
+  top: auto;
+
+  transform: none;
+
   writing-mode: vertical-rl;
   text-orientation: mixed;
-  background-color: var(--cdv-surface);
-  border: 1px solid var(--cdv-accent-dim);
-  color: var(--cdv-accent);
-  padding: 12px 8px;
-  font-family: "Neon", monospace;
-  font-weight: bold;
-  font-size: 16px;
-  letter-spacing: 3px;
+
+  background-color: var(--color-surface);
+  border: var(--border-thin);
+  color: var(--color-phosphor);
+
+  padding: var(--space-3) var(--space-2);
+
+  font-family: var(--font-ui);
+  font-weight: var(--weight-bold);
+  font-size: var(--text-lg);
+  letter-spacing: var(--tracking-display);
+
   cursor: pointer;
-  border-radius: 0 4px 4px 0;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+
   box-shadow: 4px 0 15px rgba(0, 0, 0, 0.4);
-  z-index: 50;
+
+  z-index: var(--z-controls);
   white-space: nowrap;
-  transition: all 0.2s ease;
+
+  transition:
+    color var(--transition-standard),
+    background var(--transition-standard),
+    border-color var(--transition-standard),
+    bottom var(--transition-mechanical),
+    left var(--transition-mechanical);
 }
 
 .bookletTab:hover {
-  color: #ffffff;
+  color: var(--color-text);
   background: linear-gradient(to bottom, #565d6a, #3a4049);
 }
 
-/* El libro físico 2-pages spread */
-/* El libro físico 2-pages spread (Apaisado) */
+.bookletOuter.isOpen .bookletTab {
+  left: 0;
+  bottom: 50%;
+  transform: translateY(50%);
+}
+
 .bookletPageSpread {
   position: absolute;
-  left: -1%;
-  top: 55%;
-  transform: translateY(-50%) scale(0.8); /* Centrado vertical perfecto con GSAP/CSS smooth */
+  left: 0;
+  bottom: 0;
+  top: auto;
+
+  transform-origin: bottom left;
+  transform: translateY(100%) scale(0.8);
+
   width: 660px;
   height: 400px;
+
   background:
     linear-gradient(rgba(226, 229, 233, 0.92), rgba(215, 218, 224, 0.98)),
     radial-gradient(
@@ -62,27 +84,32 @@
       transparent 60%
     ),
     url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.08'/%3E%3C/svg%3E");
-  background-color: var(--cdv-text);
-  border-radius: 4px;
+
+  background-color: var(--color-text);
+
+  border: 2px solid #000000;
+  border-radius: var(--radius-sm);
+
   display: grid;
   grid-template-columns: 1fr 1fr;
-  border: 2px solid #000000;
+
   box-shadow: -15px 20px 50px rgba(0, 0, 0, 0.6);
+
   opacity: 0;
   pointer-events: none;
-  transition:
-    opacity 0.4s ease,
-    transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
   overflow: hidden;
+
+  transition:
+    opacity var(--transition-smooth),
+    transform var(--transition-mechanical);
 }
 
 .bookletOuter.isOpen .bookletPageSpread {
   opacity: 1;
-  transform: translateY(-50%) scale(1); /* Mantiene el centrado vertical al abrirse */
+  transform: translateY(0) scale(0.8);
   pointer-events: auto;
 }
 
-/* Lomo adaptado a papel claro */
 .bookletCenterSpine {
   position: absolute;
   top: 0;
@@ -101,16 +128,15 @@
     rgba(0, 0, 0, 0.08) 100%
   );
   pointer-events: none;
-  z-index: 3;
+  z-index: var(--z-content);
 }
 
-/* Control de límites de cajas interiores para prevenir que el texto empuje la altura */
 .bookletPageHalf {
   position: relative;
   height: 100%;
   display: flex;
   flex-direction: column;
-  padding: 24px;
+  padding: var(--space-6);
   box-sizing: border-box;
   min-width: 0;
 }
@@ -125,31 +151,31 @@
 
 .bookletHeader {
   border-bottom: 2px solid #b0b5be;
-  padding-bottom: 4px;
-  margin-bottom: 8px;
+  padding-bottom: var(--space-1);
+  margin-bottom: var(--space-2);
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .bookletHeader h4 {
-  font-family: "Punktype", Arial, sans-serif;
-  font-size: 20px;
-  font-weight: 400;
-  color: var(--cdv-surface);
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-regular);
+  color: var(--color-surface);
   margin: 0;
 }
 
 .bookletHeader span {
-  font-family: "Krinkes", monospace;
-  font-size: 14px;
-  color: var(--cdv-text-muted);
-  font-weight: bold;
+  font-family: var(--font-editorial);
+  font-size: var(--text-md);
+  color: var(--color-text-muted);
+  font-weight: var(--weight-bold);
 }
 
 .bookletHeaderPlaceholder {
   height: 16px;
-  margin-bottom: 0px;
+  margin-bottom: 0;
   flex-shrink: 0;
 }
 
@@ -159,9 +185,9 @@
   max-height: 320px;
   display: block;
   overflow: hidden;
-  font-family: "Krinkes", Courier, monospace;
-  font-size: 18px;
-  line-height: 1.2;
+  font-family: var(--font-editorial);
+  font-size: var(--text-lg);
+  line-height: var(--leading-normal);
   color: #444343;
   white-space: pre-wrap;
   word-wrap: break-word;
@@ -175,20 +201,20 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-top: 8px;
+  padding-top: var(--space-2);
   border-top: 1px solid #b0b5be;
-  z-index: 4;
+  z-index: calc(var(--z-content) + 3);
 }
 
 .bookletPagination button {
   background: none;
   border: none;
-  font-family: "Neon", monospace;
-  font-size: 11px;
-  font-weight: bold;
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
   color: #7a828e;
   cursor: pointer;
-  transition: color 0.1s;
+  transition: color var(--transition-fast);
 }
 
 .bookletPagination button:disabled {
@@ -201,9 +227,9 @@
 }
 
 .bookletPagination span {
-  font-family: "Neon", monospace;
-  font-size: 10px;
-  font-weight: bold;
-  color: #55575e;
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  color: var(--color-text-subtle);
   letter-spacing: 0.5px;
 }
