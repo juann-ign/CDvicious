@@ -31,3 +31,10 @@
   width: 100% !important;
   height: 100% !important;
 }
+
+@media (max-height: 800px) {
+  .discStage {
+    width: clamp(400px, 34vw, 500px);
+    height: clamp(400px, 34vw, 500px);
+  }
+}
