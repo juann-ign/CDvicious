@@ -1,48 +1,10 @@
-@font-face {
-  font-family: "Punktype";
-  src: url("../../public/fonts/Punktype.woff2") format("woff2");
-  font-weight: normal;
-  font-style: normal;
-}
-@font-face {
-  font-family: "SpecialElite";
-  src: url("../../public/fonts/SpecialElite-Regular.woff2") format("woff2");
-  font-weight: normal;
-  font-style: normal;
-}
-@font-face {
-  font-family: "Neon";
-  src: url("../../public/fonts/neon.woff2") format("woff2");
-  font-weight: normal;
-  font-style: normal;
-}
-@font-face {
-  font-family: "California";
-  src: url("../../public/fonts/CALIFORNIA\ PERSONAL\ USE.woff2") format("woff2");
-  font-weight: 400;
-  font-style: normal;
-}
-@font-face {
-  font-family: "Krinkes";
-  src: url("../../public/fonts/KrinkesRegularPERSONAL.woff2") format("woff2");
-  font-weight: 400;
-  font-style: normal;
-}
+@import "../styles/fonts.css";
+@import "../styles/tokens.css";
+@import "../styles/typography.css";
 
 /* ============================================
    RESET Y BASE
    ============================================ */
-:root {
-  --cdv-bg: #141414; /* fondo de página, un poco más oscuro que el chasis */
-  --cdv-surface: #222222; /* tu referencia — chasis, cards, nav */
-  --cdv-surface-raised: #2c2c2c; /* inputs inset, hover */
-
-  --cdv-accent: #89e900; /* tu referencia — VFD activo, glow, bordes, CTAs */
-  --cdv-accent-dim: #6ba300; /* texto secundario del VFD, estados inactivos */ /* texto secundario del VFD, estados inactivos */
-
-  --cdv-text: #edeae0; /* texto de lectura — blanco hueso, no #fff puro */
-  --cdv-text-muted: #8a8a82; /* metadata, timestamps */
-}
 
 * {
   box-sizing: border-box;
@@ -52,7 +14,7 @@
 
 html,
 body {
-  background-color: var(--cdv-bg);
+  background-color: var(--color-bg);
   background-image:
     radial-gradient(
       circle at 50% 10%,
@@ -62,13 +24,12 @@ body {
     linear-gradient(135deg, #626c7a 0%, #3a4049 100%);
   background-attachment: fixed;
   height: 100%;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  color: #e0e0e0;
+  color: var(--color-text);
 }
 
 .crate-stage,
 .main-page-stage {
-  color: #e0e0e0;
+  color: var(--color-text);
 }
 
 /* ============================================
@@ -89,7 +50,7 @@ body {
   inset: -20%;
   background: radial-gradient(
     circle at 50% 30%,
-    var(--accent-color, #1db954) 0%,
+    var(--accent-color) 0%,
     transparent 55%
   );
   opacity: 0.22;
@@ -124,11 +85,7 @@ body {
   position: absolute;
   inset: -15%; /* Expandimos un poco para el blur */
   border-radius: 50%;
-  background: radial-gradient(
-    circle,
-    var(--accent-color, #1db954) 0%,
-    transparent 65%
-  );
+  background: radial-gradient(circle, var(--accent-color,) 0%, transparent 65%);
   filter: blur(40px);
   opacity: 0.35;
   z-index: 0;
@@ -179,8 +136,8 @@ body {
 }
 
 .now-playing-card__status.is-active {
-  background: var(--accent-color, #1db954);
-  box-shadow: 0 0 8px var(--accent-color, #1db954);
+  background: var(--accent-color,);
+  box-shadow: 0 0 8px var(--accent-color);
 }
 
 .now-playing-card__track {
@@ -205,7 +162,7 @@ body {
 
 .progress-bar__fill {
   height: 100%;
-  background: var(--accent-color, #1db954);
+  background: var(--accent-color);
   transition: width 0.25s linear;
 }
 
@@ -288,17 +245,6 @@ body {
 
 .profile-chip__menu button:hover {
   background: rgba(255, 255, 255, 0.06);
-}
-
-/* ============================================
-   ESTACIÓN PRINCIPAL (MAIN PAGE HARDWARE LAYOUT)
-   ============================================ */
-
-.vfd-prompt {
-  font-family: "SpecialElite", monospace;
-  color: #569156;
-  font-size: 10px;
-  font-weight: bold;
 }
 
 /* ============================================
