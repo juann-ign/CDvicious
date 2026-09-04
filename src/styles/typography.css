@@ -1,0 +1,241 @@
+/* =========================================================
+   CDVICIOUS — TYPOGRAPHY SYSTEM
+   ========================================================= */
+
+/*
+ * TYPOGRAPHIC PRINCIPLE
+ *
+ * Neon     = hardware / interface / VFD
+ * Punktype = identity / track titles
+ * Krinkes  = printed booklet / lyrics
+ */
+
+/* =========================================================
+   FONT FAMILY ALIASES
+   ========================================================= */
+
+:root {
+  --font-ui: "Neon", monospace;
+  --font-display: "Punktype", sans-serif;
+  --font-editorial: "Krinkes", cursive;
+}
+
+/* =========================================================
+   TYPOGRAPHIC ROLES
+   ========================================================= */
+
+/* ---------------------------------------------------------
+   UI
+   Hardware controls, navigation, buttons, pagination
+   --------------------------------------------------------- */
+
+:root {
+  --type-ui-font: var(--font-ui);
+  --type-ui-size: var(--text-md);
+  --type-ui-weight: var(--weight-regular);
+  --type-ui-spacing: var(--tracking-wider);
+  --type-ui-leading: var(--leading-tight);
+  --type-ui-color: var(--color-phosphor);
+}
+
+/* ---------------------------------------------------------
+   UI SMALL
+   Secondary hardware labels
+   --------------------------------------------------------- */
+
+:root {
+  --type-ui-small-font: var(--font-ui);
+  --type-ui-small-size: var(--text-sm);
+  --type-ui-small-weight: var(--weight-regular);
+  --type-ui-small-spacing: var(--tracking-wide-2);
+  --type-ui-small-leading: var(--leading-tight);
+  --type-ui-small-color: var(--color-phosphor-dim);
+}
+
+/* ---------------------------------------------------------
+   UI MICRO
+   Tiny indicators / technical metadata
+   --------------------------------------------------------- */
+
+:root {
+  --type-ui-micro-font: var(--font-ui);
+  --type-ui-micro-size: var(--text-xs);
+  --type-ui-micro-weight: var(--weight-regular);
+  --type-ui-micro-spacing: var(--tracking-wide);
+  --type-ui-micro-leading: var(--leading-none);
+  --type-ui-micro-color: var(--color-text-muted);
+}
+
+/* ---------------------------------------------------------
+   VFD TITLE
+   Primary information on the fluorescent display
+   --------------------------------------------------------- */
+
+:root {
+  --type-vfd-font: var(--font-ui);
+  --type-vfd-size: var(--text-3xl);
+  --type-vfd-weight: var(--weight-regular);
+  --type-vfd-spacing: var(--tracking-display);
+  --type-vfd-leading: var(--leading-tight);
+  --type-vfd-color: var(--color-phosphor);
+}
+
+/* ---------------------------------------------------------
+   VFD SECONDARY
+   Artist / secondary information in VFD
+   --------------------------------------------------------- */
+
+:root {
+  --type-vfd-secondary-font: var(--font-ui);
+  --type-vfd-secondary-size: var(--text-md);
+  --type-vfd-secondary-weight: var(--weight-regular);
+  --type-vfd-secondary-spacing: var(--tracking-wide);
+  --type-vfd-secondary-leading: var(--leading-tight);
+  --type-vfd-secondary-color: var(--color-phosphor-dim);
+}
+
+/* ---------------------------------------------------------
+   BOOKLET TITLE
+   Song title — disruptive / punk identity
+   --------------------------------------------------------- */
+
+:root {
+  --type-booklet-title-font: var(--font-display);
+  --type-booklet-title-size: var(--text-xl);
+  --type-booklet-title-weight: var(--weight-regular);
+  --type-booklet-title-spacing: var(--tracking-tight);
+  --type-booklet-title-leading: var(--leading-normal);
+  --type-booklet-title-color: var(--color-surface);
+}
+
+/* ---------------------------------------------------------
+   BOOKLET META
+   Artist / contextual information
+   --------------------------------------------------------- */
+
+:root {
+  --type-booklet-meta-font: var(--font-ui);
+  --type-booklet-meta-size: var(--text-sm);
+  --type-booklet-meta-weight: var(--weight-regular);
+  --type-booklet-meta-spacing: var(--tracking-wide-2);
+  --type-booklet-meta-leading: var(--leading-tight);
+  --type-booklet-meta-color: var(--color-text-muted);
+}
+
+/* ---------------------------------------------------------
+   LYRICS
+   Main printed content of booklet
+   --------------------------------------------------------- */
+
+:root {
+  --type-lyrics-font: var(--font-editorial);
+  --type-lyrics-size: var(--text-lg);
+  --type-lyrics-weight: var(--weight-regular);
+  --type-lyrics-spacing: var(--tracking-normal);
+  --type-lyrics-leading: var(--leading-readable);
+  --type-lyrics-color: #444343;
+}
+
+/* ---------------------------------------------------------
+   PROFILE / ACCOUNT
+   Small hardware-style identity information
+   --------------------------------------------------------- */
+
+:root {
+  --type-profile-font: var(--font-ui);
+  --type-profile-size: var(--text-md);
+  --type-profile-weight: var(--weight-regular);
+  --type-profile-spacing: var(--tracking-wider);
+  --type-profile-leading: var(--leading-tight);
+  --type-profile-color: var(--color-phosphor);
+}
+
+/* =========================================================
+   OPTIONAL UTILITY CLASSES
+   ========================================================= */
+
+/*
+ * These are useful for isolated elements that need a
+ * complete typographic role without repeating properties.
+ */
+
+.type-ui {
+  font-family: var(--type-ui-font);
+  font-size: var(--type-ui-size);
+  font-weight: var(--type-ui-weight);
+  letter-spacing: var(--type-ui-spacing);
+  line-height: var(--type-ui-leading);
+  color: var(--type-ui-color);
+}
+
+.type-ui-small {
+  font-family: var(--type-ui-small-font);
+  font-size: var(--type-ui-small-size);
+  font-weight: var(--type-ui-small-weight);
+  letter-spacing: var(--type-ui-small-spacing);
+  line-height: var(--type-ui-small-leading);
+  color: var(--type-ui-small-color);
+}
+
+.type-ui-micro {
+  font-family: var(--type-ui-micro-font);
+  font-size: var(--type-ui-micro-size);
+  font-weight: var(--type-ui-micro-weight);
+  letter-spacing: var(--type-ui-micro-spacing);
+  line-height: var(--type-ui-micro-leading);
+  color: var(--type-ui-micro-color);
+}
+
+.type-vfd {
+  font-family: var(--type-vfd-font);
+  font-size: var(--type-vfd-size);
+  font-weight: var(--type-vfd-weight);
+  letter-spacing: var(--type-vfd-spacing);
+  line-height: var(--type-vfd-leading);
+  color: var(--type-vfd-color);
+}
+
+.type-vfd-secondary {
+  font-family: var(--type-vfd-secondary-font);
+  font-size: var(--type-vfd-secondary-size);
+  font-weight: var(--type-vfd-secondary-weight);
+  letter-spacing: var(--type-vfd-secondary-spacing);
+  line-height: var(--type-vfd-secondary-leading);
+  color: var(--type-vfd-secondary-color);
+}
+
+.type-booklet-title {
+  font-family: var(--type-booklet-title-font);
+  font-size: var(--type-booklet-title-size);
+  font-weight: var(--type-booklet-title-weight);
+  letter-spacing: var(--type-booklet-title-spacing);
+  line-height: var(--type-booklet-title-leading);
+  color: var(--type-booklet-title-color);
+}
+
+.type-booklet-meta {
+  font-family: var(--type-booklet-meta-font);
+  font-size: var(--type-booklet-meta-size);
+  font-weight: var(--type-booklet-meta-weight);
+  letter-spacing: var(--type-booklet-meta-spacing);
+  line-height: var(--type-booklet-meta-leading);
+  color: var(--type-booklet-meta-color);
+}
+
+.type-lyrics {
+  font-family: var(--type-lyrics-font);
+  font-size: var(--type-lyrics-size);
+  font-weight: var(--type-lyrics-weight);
+  letter-spacing: var(--type-lyrics-spacing);
+  line-height: var(--type-lyrics-leading);
+  color: var(--type-lyrics-color);
+}
+
+.type-profile {
+  font-family: var(--type-profile-font);
+  font-size: var(--type-profile-size);
+  font-weight: var(--type-profile-weight);
+  letter-spacing: var(--type-profile-spacing);
+  line-height: var(--type-profile-leading);
+  color: var(--type-profile-color);
+}
