@@ -3,77 +3,33 @@
    ========================================================= */
 
 :root {
-  /* =======================================================
-     COLORS — CORE PALETTE
-     ======================================================= */
-
-  /* Main surfaces */
+  /* COLORS */
   --color-bg: #141414;
   --color-surface: #222222;
   --color-surface-raised: #2c2c2c;
   --color-surface-dark: #111111;
-
-  /* Display / phosphor */
   --color-phosphor: #89e900;
   --color-phosphor-dim: #6ba300;
   --color-phosphor-soft: rgba(137, 233, 0, 0.18);
   --color-phosphor-glow: rgba(137, 233, 0, 0.6);
-
-  /* Text */
   --color-text: #edeae0;
   --color-text-secondary: #cfcfcf;
   --color-text-muted: #8a8a82;
   --color-text-subtle: #55575e;
-
-  /* Neutral hardware */
   --color-border: #3a404b;
   --color-border-subtle: rgba(255, 255, 255, 0.08);
   --color-border-light: rgba(255, 255, 255, 0.12);
-
-  /* Display-specific */
   --color-vfd-bg: #141414;
   --color-vfd-border: #121f13;
-
-  /* Error / active mute */
   --color-danger: #b81c1c;
   --color-danger-glow: rgba(241, 18, 18, 0.6);
 
-  /* =======================================================
-     TYPOGRAPHY — FONT ROLES
-     ======================================================= */
-
-  /*
-   * These are intentionally semantic.
-   * Components should consume these roles instead of
-   * choosing font families arbitrarily.
-   */
-
+  /* TYPOGRAPHY */
   --font-ui: "Neon", monospace;
   --font-display: "Punktype", sans-serif;
   --font-editorial: "Krinkes", cursive;
-
-  /* =======================================================
-     FONT WEIGHTS
-     ======================================================= */
-
-  /*
-   * Keep this restricted to weights that actually exist
-   * in the loaded font files.
-   */
-
   --weight-regular: 400;
-
-  /*
-   * Reserved for system fonts / future real bold files.
-   * Do NOT use these with Neon/Krinkes unless a real
-   * corresponding font-face exists.
-   */
   --weight-bold: 700;
-
-  /* =======================================================
-     FONT SIZES
-     ======================================================= */
-
   --text-xs: 10px;
   --text-sm: 12px;
   --text-md: 14px;
@@ -81,32 +37,26 @@
   --text-xl: 18px;
   --text-2xl: 20px;
   --text-3xl: 24px;
-
-  /* =======================================================
-     LETTER SPACING
-     ======================================================= */
-
   --tracking-tight: -0.3px;
   --tracking-normal: 0;
   --tracking-wide: 1px;
   --tracking-wider: 1.5px;
   --tracking-wide-2: 2px;
   --tracking-display: 3px;
-
-  /* =======================================================
-     LINE HEIGHT
-     ======================================================= */
-
   --leading-none: 1;
   --leading-tight: 1.1;
   --leading-normal: 1.3;
   --leading-readable: 1.4;
   --leading-loose: 1.5;
 
-  /* =======================================================
-     SPACING
-     ======================================================= */
+  /* BOOKLET TYPOGRAPHY */
+  --booklet-title-size: clamp(16px, 1.45vw, 19px);
+  --booklet-meta-size: var(--text-sm);
+  --booklet-body-size: 15px;
+  --booklet-body-line-height: 1.42;
+  --booklet-body-letter-spacing: -0.05px;
 
+  /* SPACING */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -118,23 +68,10 @@
   --space-12: 48px;
   --space-16: 64px;
 
-  /* =======================================================
-     BORDERS
-     ======================================================= */
-
+  /* BORDERS / RADIUS */
   --border-thin: 1px solid var(--color-border);
   --border-subtle: 1px solid var(--color-border-subtle);
   --border-light: 1px solid var(--color-border-light);
-
-  /* =======================================================
-     RADIUS
-     ======================================================= */
-
-  /*
-   * CDvicious is hardware-inspired, so keep radii small.
-   * Avoid modern "pill UI" unless semantically justified.
-   */
-
   --radius-none: 0;
   --radius-xs: 2px;
   --radius-sm: 4px;
@@ -142,58 +79,37 @@
   --radius-lg: 12px;
   --radius-pill: 999px;
 
-  /* =======================================================
-     SHADOWS — HARDWARE
-     ======================================================= */
-
+  /* SHADOWS */
   --shadow-hardware: 0 8px 16px rgba(0, 0, 0, 0.6);
-
   --shadow-hardware-heavy: 0 20px 40px rgba(0, 0, 0, 0.8);
-
   --shadow-inset: inset 0 2px 4px rgba(255, 255, 255, 0.05);
-
   --shadow-inset-dark: inset 0 4px 10px rgba(0, 0, 0, 0.9);
-
   --shadow-vfd: 0 0 15px rgba(57, 255, 20, 0.08);
-
   --shadow-phosphor: 0 0 8px var(--color-phosphor-glow);
 
-  /* =======================================================
-     TRANSITIONS
-     ======================================================= */
-
+  /* MOTION */
   --transition-fast: 0.1s ease;
   --transition-standard: 0.2s ease;
   --transition-smooth: 0.4s ease;
   --transition-mechanical: 0.6s cubic-bezier(0.25, 1, 0.5, 1);
 
-  /* =======================================================
-     Z-INDEX
-     ======================================================= */
-
+  /* Z-INDEX */
   --z-base: 0;
   --z-content: 1;
   --z-overlay: 10;
   --z-controls: 20;
   --z-modal: 100;
 
-  /* =======================================================
-     LAYOUT
-     ======================================================= */
-
+  /* LAYOUT */
   --header-height: 72px;
-
   --content-max-width: 1500px;
-
   --vfd-max-width: 500px;
+  --disc-min-size: 460px;
+  --disc-max-size: 620px;
+  --booklet-width: 540px;
+  --booklet-height: 328px;
 
-  --booklet-width: 660px;
-  --booklet-height: 400px;
-
-  /* =======================================================
-     COMPONENT GAPS
-     ======================================================= */
-
+  /* COMPONENT GAPS */
   --gap-xs: var(--space-1);
   --gap-sm: var(--space-2);
   --gap-md: var(--space-3);
@@ -201,4 +117,15 @@
   --gap-xl: var(--space-5);
   --gap-2xl: var(--space-6);
   --gap-stage: 48px;
+
+  /* BOOKLET MATERIAL / MOTION */
+  --booklet-paper-light: rgba(255, 255, 255, 0.32);
+  --booklet-paper-mid: rgba(230, 232, 235, 0.96);
+  --booklet-paper-dark: rgba(212, 215, 220, 0.98);
+  --booklet-paper-border: #090909;
+  --booklet-shadow: -16px 20px 42px rgba(0, 0, 0, 0.58);
+  --booklet-open-offset: 105px;
+  --booklet-open-scale: 0.96;
+  --booklet-open-tilt: -0.35deg;
+  --booklet-open-duration: 620ms;
 }
