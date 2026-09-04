@@ -57,14 +57,28 @@
 }
 
 .bookletOuter.isOpen .bookletTab {
-  left: -8px;
-  bottom: 18px;
-  width: 32px;
-  height: 96px;
+  left: -12px;
+  bottom: 128px;
+  width: 28px;
+  height: 72px;
   gap: 0;
   padding: 0;
 
-  border-radius: var(--radius-xs) 0 0 var(--radius-xs);
+  justify-content: center;
+
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-dark),
+    var(--color-surface)
+  );
+
+  border: var(--border-thin);
+  border-right: 0;
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+
+  box-shadow:
+    -2px 5px 12px rgba(0, 0, 0, 0.42),
+    var(--shadow-inset-dark);
 }
 
 .bookletOuter.isOpen .bookletTab .bookletCover,
@@ -73,9 +87,14 @@
 }
 
 .bookletOuter.isOpen .bookletTab .bookletTabLabel {
-  writing-mode: vertical-rl;
-  transform: rotate(180deg);
-  letter-spacing: 1px;
+  display: block;
+  width: 100%;
+  text-align: center;
+  font-size: 18px;
+  line-height: 1;
+  letter-spacing: 0;
+  color: var(--color-phosphor);
+  text-shadow: 0 0 7px var(--color-phosphor-glow);
 }
 
 .bookletCover {
