@@ -1,7 +1,7 @@
 .discStage {
   position: relative;
-  width: clamp(420px, 42vw, 640px);
-  height: clamp(420px, 42vw, 640px);
+  width: clamp(460px, 36vw, 560px);
+  height: clamp(460px, 36vw, 560px);
   flex-shrink: 0;
 }
 
