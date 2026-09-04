@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, type CSSProperties, type MouseEvent } from "react";
 import type { SpotifyTrack } from "@/types/spotify";
 import styles from "./LyricsBooklet.module.css";
 
@@ -20,7 +20,7 @@ export function LyricsBooklet({
   const [lyrics, setLyrics] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
-  const style = { "--booklet-accent": accentColor } as React.CSSProperties;
+  const style = { "--booklet-accent": accentColor } as CSSProperties;
 
   useEffect(() => {
     if (!track) {
@@ -89,6 +89,12 @@ export function LyricsBooklet({
   const currentSpread = Math.floor(currentPage / 2) + 1;
   const coverUrl = track.album.images[0]?.url;
 
+  const handleToggle = (event: MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    onToggle();
+  };
+
   return (
     <div
       className={`${styles.bookletOuter} ${isOpen ? styles.isOpen : ""}`}
@@ -96,7 +102,7 @@ export function LyricsBooklet({
     >
       <button
         type="button"
-        onClick={onToggle}
+        onClick={handleToggle}
         className={styles.bookletTab}
         aria-label={isOpen ? "Cerrar letras" : "Abrir letras"}
       >
