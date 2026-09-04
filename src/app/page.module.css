@@ -138,6 +138,7 @@
 
 /* =========================================================
    BOOKLET OVERLAY
+   The trigger must remain above the full-width player dock.
    ========================================================= */
 
 .bookletOverlayLayer {
@@ -146,7 +147,7 @@
   bottom: 118px;
   width: 570px;
   height: 370px;
-  z-index: var(--z-overlay);
+  z-index: calc(var(--z-controls) + 1);
   pointer-events: auto;
 }
 
