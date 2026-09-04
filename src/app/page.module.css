@@ -138,13 +138,13 @@
 
 /* =========================================================
    BOOKLET OVERLAY
-   The trigger must remain above the full-width player dock.
+   Independent of hero layout.
    ========================================================= */
 
 .bookletOverlayLayer {
   position: absolute;
-  left: 32px;
-  bottom: 118px;
+  left: 34px;
+  bottom: 116px;
   width: 570px;
   height: 370px;
   z-index: calc(var(--z-controls) + 1);
