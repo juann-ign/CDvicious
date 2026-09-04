@@ -1,0 +1,18 @@
+@font-face {
+  font-family: "Punktype";
+  src: url("../../public/fonts/Punktype.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Neon";
+  src: url("../../public/fonts/neon.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Krinkes";
+  src: url("../../public/fonts/KrinkesRegularPERSONAL.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+}
