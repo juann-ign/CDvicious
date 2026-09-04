@@ -57,28 +57,31 @@
 }
 
 .bookletOuter.isOpen .bookletTab {
-  left: -12px;
-  bottom: 128px;
-  width: 28px;
-  height: 72px;
-  gap: 0;
+  left: -10px;
+  bottom: 50%;
+  width: 34px;
+  height: 52px;
   padding: 0;
+  transform: translateY(50%);
 
+  align-items: center;
   justify-content: center;
 
   background: linear-gradient(
-    90deg,
-    var(--color-surface-dark),
-    var(--color-surface)
+    to right,
+    var(--color-surface-dark) 0%,
+    var(--color-surface-raised) 55%,
+    var(--color-surface-dark) 100%
   );
 
-  border: var(--border-thin);
+  border: 1px solid #090909;
   border-right: 0;
   border-radius: var(--radius-sm) 0 0 var(--radius-sm);
 
   box-shadow:
-    -2px 5px 12px rgba(0, 0, 0, 0.42),
-    var(--shadow-inset-dark);
+    -4px 3px 10px rgba(0, 0, 0, 0.38),
+    inset 0 1px 1px rgba(255, 255, 255, 0.08),
+    inset 0 -2px 5px rgba(0, 0, 0, 0.55);
 }
 
 .bookletOuter.isOpen .bookletTab .bookletCover,
@@ -87,10 +90,14 @@
 }
 
 .bookletOuter.isOpen .bookletTab .bookletTabLabel {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 100%;
-  text-align: center;
-  font-size: 18px;
+  height: 100%;
+  font-family: var(--font-ui);
+  font-size: 20px;
+  font-weight: var(--weight-bold);
   line-height: 1;
   letter-spacing: 0;
   color: var(--color-phosphor);
