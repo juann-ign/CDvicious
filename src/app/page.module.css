@@ -148,7 +148,7 @@
   width: 570px;
   height: 370px;
   z-index: calc(var(--z-controls) + 1);
-  pointer-events: auto;
+  pointer-events: none;
 }
 
 @media (max-width: 900px) {
