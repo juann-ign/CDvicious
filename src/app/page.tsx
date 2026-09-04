@@ -55,7 +55,6 @@ function HomeContent() {
 
   return (
     <main className={styles.stageMain} style={stageStyle}>
-      {/* HEADER UNIFICADO DE PUNTA A PUNTA */}
       <header className={styles.topControlBar}>
         <div className={styles.brandCorner}>
           CD<span>vicious</span>
@@ -71,19 +70,8 @@ function HomeContent() {
         </div>
       </header>
 
-      {/* ZONA CENTRAL: centra Disc + Booklet a igual distancia de nav y VFD */}
       <div className={styles.centerStage}>
-        {/* ESCENARIO BILATERAL SIMÉTRICO */}
-        <div
-          className={`${styles.mainContentCore} ${isBookletOpen ? styles.isOpen : ""}`}
-        >
-          {" "}
-          <LyricsBooklet
-            track={data?.track ?? null}
-            isOpen={isBookletOpen}
-            onToggle={() => setIsBookletOpen(!isBookletOpen)}
-            accentColor={accentColor}
-          />
+        <div className={styles.discHero}>
           <Disc
             track={data?.track ?? null}
             isPlaying={data?.isPlaying ?? false}
@@ -92,14 +80,20 @@ function HomeContent() {
         </div>
       </div>
 
-      {/* REPRODUCTOR VFD FIJO ABAJO */}
-      <div className={styles.nowPlayingDock}>
-        <NowPlayingCard
+      <NowPlayingCard
+        track={data?.track ?? null}
+        isPlaying={data?.isPlaying ?? false}
+        error={error}
+        progressMs={data?.progressMs ?? null}
+        durationMs={data?.durationMs ?? null}
+      />
+
+      <div className={styles.bookletOverlayLayer} aria-hidden={!isBookletOpen}>
+        <LyricsBooklet
           track={data?.track ?? null}
-          isPlaying={data?.isPlaying ?? false}
-          error={error}
-          progressMs={data?.progressMs ?? null}
-          durationMs={data?.durationMs ?? null}
+          isOpen={isBookletOpen}
+          onToggle={() => setIsBookletOpen(!isBookletOpen)}
+          accentColor={accentColor}
         />
       </div>
     </main>
