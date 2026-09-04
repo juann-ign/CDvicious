@@ -141,43 +141,31 @@
 
 /* =========================================================
    CENTER STAGE
-   Main visual composition area
    ========================================================= */
 
 .centerStage {
   flex: 1 1 auto;
 
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
 
   width: 100%;
-
   min-height: 0;
 }
 
 /* =========================================================
-   MAIN CONTENT CORE
-   Disc + Lyrics Booklet relationship
+   DISC HERO
+   The CD owns the hero flow and never moves when the booklet opens.
    ========================================================= */
 
-.mainContentCore {
+.discHero {
   display: flex;
-  flex-direction: row;
   align-items: center;
   justify-content: center;
 
   width: 100%;
-  max-width: var(--content-max-width);
-
-  gap: 0;
-
-  transition: gap var(--transition-mechanical);
-}
-
-.mainContentCore.isOpen {
-  gap: clamp(var(--space-5), 6vw, var(--gap-stage));
+  height: 100%;
 }
 
 /* =========================================================
@@ -196,4 +184,26 @@
   padding: var(--space-6);
 
   z-index: var(--z-controls);
+}
+
+/* =========================================================
+   BOOKLET OVERLAY
+   The booklet is secondary content and must not affect the hero layout.
+   ========================================================= */
+
+.bookletOverlayLayer {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+
+  width: 0;
+  height: 0;
+
+  z-index: calc(var(--z-controls) + 5);
+
+  pointer-events: none;
+}
+
+.bookletOverlayLayer > * {
+  pointer-events: auto;
 }
