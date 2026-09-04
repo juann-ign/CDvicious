@@ -3,8 +3,12 @@
 import dynamic from "next/dynamic";
 import type { CSSProperties } from "react";
 import type { SpotifyTrack } from "@/types/spotify";
-import { DiscCanvas } from "./three/DiscCanvas";
 import styles from "./Disc/Disc.module.css";
+
+const DiscCanvas = dynamic(
+  () => import("./three/DiscCanvas").then((m) => m.DiscCanvas),
+  { ssr: false },
+);
 
 interface DiscProps {
   track: SpotifyTrack | null;
