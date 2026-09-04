@@ -94,15 +94,19 @@
 }
 
 .centerStage {
+  position: relative;
   flex: 1 1 auto;
   display: flex;
   align-items: center;
   justify-content: center;
   width: 100%;
   min-height: 0;
+  padding: var(--space-4) var(--space-8);
 }
 
 .discHero {
+  position: relative;
+  z-index: var(--z-content);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -111,31 +115,48 @@
 }
 
 .nowPlayingDock {
+  position: relative;
   flex-shrink: 0;
   display: flex;
   justify-content: center;
   width: 100%;
-  padding: var(--space-6);
+  padding: var(--space-4) var(--space-6) var(--space-5);
   z-index: var(--z-controls);
 }
 
-/* =========================================================
-   BOOKLET OVERLAY
-   Secondary content. It never participates in hero layout.
-   ========================================================= */
-
 .bookletOverlayLayer {
   position: absolute;
-  left: 0;
-  bottom: 0;
-
-  width: 680px;
-  height: 460px;
-
-  z-index: calc(var(--z-controls) + 5);
+  left: 32px;
+  bottom: 118px;
+  width: 570px;
+  height: 370px;
+  z-index: var(--z-overlay);
   pointer-events: none;
+}
+
+.bookletOverlayLayer > * {
+  width: 100%;
+  height: 100%;
 }
 
 .bookletOverlayLayer > *:not([aria-hidden="true"]) {
   pointer-events: auto;
+}
+
+@media (max-width: 900px) {
+  .bookletOverlayLayer {
+    left: 20px;
+    bottom: 104px;
+    width: min(540px, calc(100vw - 40px));
+    height: 340px;
+  }
+}
+
+@media (max-width: 640px) {
+  .bookletOverlayLayer {
+    left: 12px;
+    bottom: 96px;
+    width: calc(100vw - 24px);
+    height: 320px;
+  }
 }
