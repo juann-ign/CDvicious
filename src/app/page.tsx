@@ -80,19 +80,21 @@ function HomeContent() {
         </div>
       </div>
 
-      <NowPlayingCard
-        track={data?.track ?? null}
-        isPlaying={data?.isPlaying ?? false}
-        error={error}
-        progressMs={data?.progressMs ?? null}
-        durationMs={data?.durationMs ?? null}
-      />
+      <div className={styles.nowPlayingDock}>
+        <NowPlayingCard
+          track={data?.track ?? null}
+          isPlaying={data?.isPlaying ?? false}
+          error={error}
+          progressMs={data?.progressMs ?? null}
+          durationMs={data?.durationMs ?? null}
+        />
+      </div>
 
       <div className={styles.bookletOverlayLayer} aria-hidden={!isBookletOpen}>
         <LyricsBooklet
           track={data?.track ?? null}
           isOpen={isBookletOpen}
-          onToggle={() => setIsBookletOpen(!isBookletOpen)}
+          onToggle={() => setIsBookletOpen((open) => !open)}
           accentColor={accentColor}
         />
       </div>
