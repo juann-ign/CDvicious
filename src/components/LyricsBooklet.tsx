@@ -87,20 +87,35 @@ export function LyricsBooklet({
   const rightPageIdx = currentPage + 1;
   const totalSpreads = Math.ceil(pages.length / 2);
   const currentSpread = Math.floor(currentPage / 2) + 1;
+  const coverUrl = track.album.images[0]?.url;
 
   return (
     <div
       className={`${styles.bookletOuter} ${isOpen ? styles.isOpen : ""}`}
       style={style}
     >
-      {" "}
       <button
+        type="button"
         onClick={onToggle}
         className={styles.bookletTab}
-        aria-label={isOpen ? "Cerrar Booklet" : "Abrir Booklet"}
+        aria-label={isOpen ? "Cerrar letras" : "Abrir letras"}
       >
-        {isOpen ? "CERRAR BOOKLET" : "VER BOOKLET"}
+        {coverUrl ? (
+          <img
+            src={coverUrl}
+            alt=""
+            className={styles.bookletCover}
+          />
+        ) : (
+          <span className={styles.bookletIcon} aria-hidden="true">
+            ▣
+          </span>
+        )}
+        <span className={styles.bookletTabLabel}>
+          {isOpen ? "CLOSE" : "LYRICS"}
+        </span>
       </button>
+
       <div className={styles.bookletPageSpread}>
         <div className={styles.bookletCenterSpine} />
 
