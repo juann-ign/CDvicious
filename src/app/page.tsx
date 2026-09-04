@@ -90,7 +90,7 @@ function HomeContent() {
         />
       </div>
 
-      <div className={styles.bookletOverlayLayer} aria-hidden={!isBookletOpen}>
+      <div className={styles.bookletOverlayLayer}>
         <LyricsBooklet
           track={data?.track ?? null}
           isOpen={isBookletOpen}
