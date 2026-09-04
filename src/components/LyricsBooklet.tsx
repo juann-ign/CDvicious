@@ -117,8 +117,8 @@ export function LyricsBooklet({
             ▣
           </span>
         )}
-        <span className={styles.bookletTabLabel}>
-          {isOpen ? "CLOSE" : "LYRICS"}
+        <span className={styles.bookletTabLabel} aria-hidden={isOpen}>
+          {isOpen ? "×" : "LYRICS"}
         </span>
       </button>
 
