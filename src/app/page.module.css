@@ -139,6 +139,8 @@
 /* =========================================================
    BOOKLET OVERLAY
    Independent of hero layout.
+   The layer owns the hit area; the spread decides when it
+   can intercept pointer input.
    ========================================================= */
 
 .bookletOverlayLayer {
@@ -148,7 +150,7 @@
   width: 570px;
   height: 370px;
   z-index: calc(var(--z-controls) + 1);
-  pointer-events: none;
+  pointer-events: auto;
 }
 
 @media (max-width: 900px) {
