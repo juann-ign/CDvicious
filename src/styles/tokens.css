@@ -50,7 +50,7 @@
   --leading-loose: 1.5;
 
   /* BOOKLET TYPOGRAPHY */
-  --booklet-title-size: clamp(16px, 1.45vw, 19px);
+  --booklet-title-size: clamp(16px, 1.45vw, 18px);
   --booklet-meta-size: var(--text-sm);
   --booklet-body-size: 15px;
   --booklet-body-line-height: 1.42;
