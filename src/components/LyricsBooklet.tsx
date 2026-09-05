@@ -96,7 +96,17 @@ export function LyricsBooklet({
       return;
     }
 
-    const paginate = () => {
+    let cancelled = false;
+
+    const paginate = async () => {
+      // Wait for the editorial font before measuring. Otherwise the first
+      // pagination pass can use fallback metrics and create false page breaks.
+      if (document.fonts?.ready) {
+        await document.fonts.ready;
+      }
+
+      if (cancelled) return;
+
       const physicalPageHeight = spread.offsetHeight;
 
       /* firstPageMeasure is the lyrics box; its parent owns the padding. */
@@ -143,6 +153,13 @@ export function LyricsBooklet({
 
       lineMeasure.replaceChildren();
 
+      const lineStyles = window.getComputedStyle(lineMeasure);
+      const parsedLineHeight = parseFloat(lineStyles.lineHeight);
+      const fontSize = parseFloat(lineStyles.fontSize) || 15;
+      const lineHeight = Number.isFinite(parsedLineHeight)
+        ? parsedLineHeight
+        : fontSize * 1.18;
+
       const lineElements = lines.map((line) => {
         const element = document.createElement("div");
         element.textContent = line === "" ? "\u00A0" : line;
@@ -156,14 +173,23 @@ export function LyricsBooklet({
         return element;
       });
 
-      const lineHeights = lineElements.map((element) =>
-        element.getBoundingClientRect().height,
-      );
+      /*
+       * getBoundingClientRect() measures the glyph/container box, which can
+       * be substantially taller with a decorative editorial font. What the
+       * page actually consumes is the number of CSS line boxes. Range gives
+       * us one rect per wrapped visual line, so long source lines are still
+       * measured correctly without inflating every normal line.
+       */
+      const heights = lineElements.map((element, index) => {
+        if (lines[index] === "") return 6;
 
-      const fallbackLineHeight = 15 * 1.18;
-      const heights = lineHeights.map((height) =>
-        height > 0 ? height : fallbackLineHeight,
-      );
+        const range = document.createRange();
+        range.selectNodeContents(element);
+        const visualLineCount = Math.max(1, range.getClientRects().length);
+        range.detach();
+
+        return visualLineCount * lineHeight;
+      });
 
       const result: string[] = [];
       let currentLines: string[] = [];
@@ -212,7 +238,9 @@ export function LyricsBooklet({
         return;
       }
 
-      setPages(result.length > 0 ? result : [lyrics]);
+      if (!cancelled) {
+        setPages(result.length > 0 ? result : [lyrics]);
+      }
     };
 
     paginate();
@@ -225,6 +253,7 @@ export function LyricsBooklet({
     resizeObserver.observe(firstPageMeasure);
 
     return () => {
+      cancelled = true;
       resizeObserver.disconnect();
     };
   }, [lyrics, track]);
