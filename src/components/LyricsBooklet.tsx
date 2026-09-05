@@ -97,59 +97,28 @@ export function LyricsBooklet({
     }
 
     const paginate = () => {
-      /*
-       * IMPORTANT:
-       * Measure the physical page itself, not the synthetic flex
-       * content wrapper. The wrapper can resolve to a smaller
-       * intrinsic height and was the reason pagination was stopping
-       * well before the real bottom of the paper.
-       *
-       * offsetHeight is intentionally used here because it gives us
-       * the layout height before the booklet's visual transform/scale.
-       */
       const physicalPageHeight = spread.offsetHeight;
 
-      const firstPageStyles = window.getComputedStyle(firstPageMeasure);
-      const firstPagePaddingTop = parseFloat(firstPageStyles.paddingTop) || 0;
-      const firstPagePaddingBottom =
-        parseFloat(firstPageStyles.paddingBottom) || 0;
-
-      /*
-       * The measurement page itself does not own the visible padding;
-       * bookletMeasureContent does. Read those exact values from the
-       * measurement content so the pagination follows the current CSS.
-       */
-      const measureContent = firstPageMeasure.firstElementChild as HTMLElement | null;
+      /* firstPageMeasure is the lyrics box; its parent owns the padding. */
+      const measureContent = firstPageMeasure.parentElement;
 
       if (!measureContent) return;
 
       const contentStyles = window.getComputedStyle(measureContent);
-      const paddingTop = parseFloat(contentStyles.paddingTop) || firstPagePaddingTop;
-      const paddingBottom =
-        parseFloat(contentStyles.paddingBottom) || firstPagePaddingBottom;
+      const paddingTop = parseFloat(contentStyles.paddingTop) || 0;
+      const paddingBottom = parseFloat(contentStyles.paddingBottom) || 0;
 
       const headerStyles = window.getComputedStyle(firstHeaderMeasure);
       const headerMarginBottom = parseFloat(headerStyles.marginBottom) || 0;
-
       const firstPageHeaderHeight =
         firstHeaderMeasure.getBoundingClientRect().height + headerMarginBottom;
 
-      /*
-       * First page:
-       * physical height minus the real content padding and the
-       * title/artist header.
-       */
       const firstPageHeight =
         physicalPageHeight -
         paddingTop -
         paddingBottom -
         firstPageHeaderHeight;
 
-      /*
-       * Pages 2+:
-       * no header placeholder is present anymore, so the whole
-       * remaining content area is available to lyrics.
-       */
       const regularPageHeight =
         physicalPageHeight - paddingTop - paddingBottom;
 
@@ -172,10 +141,6 @@ export function LyricsBooklet({
 
       const lines = normalizedLyrics.split("\n");
 
-      /*
-       * Measure every original source line using the exact
-       * typography and width used by the visible lyric column.
-       */
       lineMeasure.replaceChildren();
 
       const lineElements = lines.map((line) => {
@@ -239,15 +204,10 @@ export function LyricsBooklet({
 
       pushCurrentPage();
 
-      /*
-       * The paginator must never silently lose content.
-       * Compare the normalized source with the concatenated pages
-       * after removing only page-boundary line breaks.
-       */
       const reconstructed = result.join("\n").trim();
       const source = normalizedLyrics.trim();
 
-      if (!reconstructed || !reconstructed.startsWith(source.slice(0, 64))) {
+      if (reconstructed !== source) {
         setPages([lyrics]);
         return;
       }
