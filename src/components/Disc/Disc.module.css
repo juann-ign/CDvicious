@@ -1,7 +1,7 @@
 .discStage {
   position: relative;
-  width: clamp(460px, 36vw, 560px);
-  height: clamp(460px, 36vw, 560px);
+  width: clamp(var(--disc-min-size), 36vw, var(--disc-max-size));
+  height: clamp(var(--disc-min-size), 36vw, var(--disc-max-size));
   flex-shrink: 0;
 }
 
@@ -30,4 +30,11 @@
   display: block;
   width: 100% !important;
   height: 100% !important;
+}
+
+@media (max-height: 800px) {
+  .discStage {
+    width: clamp(400px, 34vw, 500px);
+    height: clamp(400px, 34vw, 500px);
+  }
 }

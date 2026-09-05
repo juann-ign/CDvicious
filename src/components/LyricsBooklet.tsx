@@ -1,6 +1,15 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import {
+  useState,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  type CSSProperties,
+  type MouseEvent,
+  type KeyboardEvent,
+} from "react";
+
 import type { SpotifyTrack } from "@/types/spotify";
 import styles from "./LyricsBooklet.module.css";
 
@@ -19,18 +28,32 @@ export function LyricsBooklet({
 }: LyricsBookletProps) {
   const [lyrics, setLyrics] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [pages, setPages] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(0);
-  const style = { "--booklet-accent": accentColor } as React.CSSProperties;
+
+  const spreadRef = useRef<HTMLDivElement>(null);
+  const firstPageMeasureRef = useRef<HTMLDivElement>(null);
+  const firstHeaderMeasureRef = useRef<HTMLDivElement>(null);
+  const lineMeasureRef = useRef<HTMLDivElement>(null);
+
+  const style = {
+    "--booklet-accent": accentColor,
+  } as CSSProperties;
 
   useEffect(() => {
     if (!track) {
       setLyrics(null);
+      setPages([]);
+      setCurrentPage(0);
       return;
     }
 
     const fetchLyrics = async () => {
       setLoading(true);
+      setLyrics(null);
+      setPages([]);
       setCurrentPage(0);
+
       try {
         const artist = track.artists[0]?.name || "";
         const title = track.name || "";
@@ -38,9 +61,15 @@ export function LyricsBooklet({
         const duration = Math.round((track.duration_ms || 0) / 1000);
 
         const res = await fetch(
-          `/api/lyrics?artist=${encodeURIComponent(artist)}&title=${encodeURIComponent(title)}&album=${encodeURIComponent(album)}&duration=${duration}`,
+          `/api/lyrics?artist=${encodeURIComponent(
+            artist,
+          )}&title=${encodeURIComponent(title)}&album=${encodeURIComponent(
+            album,
+          )}&duration=${duration}`,
         );
+
         const data = await res.json();
+
         setLyrics(data.lyrics || "Pista instrumental / Letra no encontrada.");
       } catch {
         setLyrics("Error de lectura del archivo.");
@@ -52,42 +81,278 @@ export function LyricsBooklet({
     fetchLyrics();
   }, [track?.id]);
 
-  const pages = useMemo(() => {
-    if (!lyrics) return [];
-    const lines = lyrics.split("\n");
-    const maxPageWeight = 12;
-    const result: string[] = [];
-    let currentPageLines: string[] = [];
-    let currentWeight = 0;
-
-    lines.forEach((line) => {
-      const lineWeight = line.length > 50 ? 2 : 1;
-      if (currentWeight + lineWeight <= maxPageWeight) {
-        currentPageLines.push(line);
-        currentWeight += lineWeight;
-      } else {
-        if (currentPageLines.length > 0) {
-          result.push(currentPageLines.join("\n"));
-        }
-        currentPageLines = [line];
-        currentWeight = lineWeight;
-      }
-    });
-
-    if (currentPageLines.length > 0) {
-      result.push(currentPageLines.join("\n"));
+  useLayoutEffect(() => {
+    if (!lyrics || !track) {
+      setPages([]);
+      return;
     }
 
-    return result.length > 0 ? result : [lyrics];
-  }, [lyrics]);
+    const spread = spreadRef.current;
+    const firstPageMeasure = firstPageMeasureRef.current;
+    const firstHeaderMeasure = firstHeaderMeasureRef.current;
+    const lineMeasure = lineMeasureRef.current;
+
+    if (!spread || !firstPageMeasure || !firstHeaderMeasure || !lineMeasure) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const paginate = async () => {
+      // Wait for the editorial font before measuring. Otherwise the first
+      // pagination pass can use fallback metrics and create false page breaks.
+      if (document.fonts?.ready) {
+        await document.fonts.ready;
+      }
+
+      if (cancelled) return;
+
+      const physicalPageHeight = spread.offsetHeight;
+
+      /* firstPageMeasure is the lyrics box; its parent owns the padding. */
+      const measureContent = firstPageMeasure.parentElement;
+
+      if (!measureContent) return;
+
+      const contentStyles = window.getComputedStyle(measureContent);
+      const paddingTop = parseFloat(contentStyles.paddingTop) || 0;
+      const paddingBottom = parseFloat(contentStyles.paddingBottom) || 0;
+
+      const headerStyles = window.getComputedStyle(firstHeaderMeasure);
+      const headerMarginBottom = parseFloat(headerStyles.marginBottom) || 0;
+      const firstPageHeaderHeight =
+        firstHeaderMeasure.getBoundingClientRect().height + headerMarginBottom;
+
+      const firstPageHeight =
+        physicalPageHeight -
+        paddingTop -
+        paddingBottom -
+        firstPageHeaderHeight;
+
+      const regularPageHeight =
+        physicalPageHeight - paddingTop - paddingBottom;
+
+      const lineWidth = lineMeasure.clientWidth;
+
+      if (
+        firstPageHeight <= 0 ||
+        regularPageHeight <= 0 ||
+        lineWidth <= 0
+      ) {
+        return;
+      }
+
+      const normalizedLyrics = lyrics
+        .replace(/\r\n/g, "\n")
+        .replace(/\r/g, "\n")
+        .replace(/[ \t]+$/gm, "")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
+
+      const lines = normalizedLyrics.split("\n");
+
+      lineMeasure.replaceChildren();
+
+      const lineStyles = window.getComputedStyle(lineMeasure);
+      const parsedLineHeight = parseFloat(lineStyles.lineHeight);
+      const fontSize = parseFloat(lineStyles.fontSize) || 15;
+      const lineHeight = Number.isFinite(parsedLineHeight)
+        ? parsedLineHeight
+        : fontSize * 1.18;
+
+      const lineElements = lines.map((line) => {
+        const element = document.createElement("div");
+        element.textContent = line === "" ? "\u00A0" : line;
+
+        if (line === "") {
+          element.style.height = "6px";
+          element.style.minHeight = "6px";
+        }
+
+        lineMeasure.appendChild(element);
+        return element;
+      });
+
+      /*
+       * getBoundingClientRect() measures the glyph/container box, which can
+       * be substantially taller with a decorative editorial font. What the
+       * page actually consumes is the number of CSS line boxes. Range gives
+       * us one rect per wrapped visual line, so long source lines are still
+       * measured correctly without inflating every normal line.
+       */
+      const heights = lineElements.map((element, index) => {
+        if (lines[index] === "") return 6;
+
+        const range = document.createRange();
+        range.selectNodeContents(element);
+        const visualLineCount = Math.max(1, range.getClientRects().length);
+        range.detach();
+
+        return visualLineCount * lineHeight;
+      });
+
+      const result: string[] = [];
+      let currentLines: string[] = [];
+      let currentHeight = 0;
+      let availableHeight = firstPageHeight;
+
+      const pushCurrentPage = () => {
+        if (currentLines.length === 0) return;
+
+        result.push(currentLines.join("\n"));
+        currentLines = [];
+        currentHeight = 0;
+        availableHeight = regularPageHeight;
+      };
+
+      const addLine = (line: string, height: number) => {
+        if (currentLines.length === 0 && height > availableHeight) {
+          currentLines.push(line);
+          currentHeight += height;
+          pushCurrentPage();
+          return;
+        }
+
+        if (currentHeight + height <= availableHeight) {
+          currentLines.push(line);
+          currentHeight += height;
+          return;
+        }
+
+        pushCurrentPage();
+        currentLines.push(line);
+        currentHeight += height;
+      };
+
+      lines.forEach((line, index) => {
+        addLine(line, heights[index]);
+      });
+
+      pushCurrentPage();
+
+      const reconstructed = result.join("\n").trim();
+      const source = normalizedLyrics.trim();
+
+      if (reconstructed !== source) {
+        setPages([lyrics]);
+        return;
+      }
+
+      if (!cancelled) {
+        setPages(result.length > 0 ? result : [lyrics]);
+      }
+    };
+
+    paginate();
+
+    const resizeObserver = new ResizeObserver(() => {
+      paginate();
+    });
+
+    resizeObserver.observe(spread);
+    resizeObserver.observe(firstPageMeasure);
+
+    return () => {
+      cancelled = true;
+      resizeObserver.disconnect();
+    };
+  }, [lyrics, track]);
+
+  useEffect(() => {
+    if (pages.length === 0) {
+      setCurrentPage(0);
+      return;
+    }
+
+    const lastValidPage = Math.max(0, pages.length - 2);
+    setCurrentPage((page) => Math.min(page, lastValidPage));
+  }, [pages.length]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyboardNavigation = (event: globalThis.KeyboardEvent) => {
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        setCurrentPage((page) => Math.max(0, page - 2));
+      }
+
+      if (event.key === "ArrowRight") {
+        event.preventDefault();
+        setCurrentPage((page) =>
+          Math.min(Math.max(0, pages.length - 2), page + 2),
+        );
+      }
+
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onToggle();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyboardNavigation);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyboardNavigation);
+    };
+  }, [isOpen, onToggle, pages.length]);
 
   if (!track) return null;
 
   const leftPageIdx = currentPage;
   const rightPageIdx = currentPage + 1;
-  const totalSpreads = Math.ceil(pages.length / 2);
-  const currentSpread = Math.floor(currentPage / 2) + 1;
+
+  const hasPreviousPage = currentPage > 0;
+  const hasNextPage = rightPageIdx < pages.length - 1;
+
+  const leftPageNumber = leftPageIdx + 1;
+  const rightPageNumber =
+    rightPageIdx < pages.length ? rightPageIdx + 1 : null;
+
   const coverUrl = track.album.images[0]?.url;
+
+  const handleToggle = (event: MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    onToggle();
+  };
+
+  const goPrevious = () => {
+    if (!hasPreviousPage) return;
+    setCurrentPage((page) => Math.max(0, page - 2));
+  };
+
+  const goNext = () => {
+    if (!hasNextPage) return;
+    setCurrentPage((page) =>
+      Math.min(Math.max(0, pages.length - 2), page + 2),
+    );
+  };
+
+  const handlePageClick = (event: MouseEvent<HTMLDivElement>) => {
+    if (!isOpen || loading) return;
+
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const clickX = event.clientX - bounds.left;
+
+    if (clickX < bounds.width / 2) {
+      goPrevious();
+    } else {
+      goNext();
+    }
+  };
+
+  const handlePageKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      goPrevious();
+    }
+
+    if (event.key === "ArrowRight") {
+      event.preventDefault();
+      goNext();
+    }
+  };
 
   return (
     <div
@@ -96,80 +361,157 @@ export function LyricsBooklet({
     >
       <button
         type="button"
-        onClick={onToggle}
+        onClick={handleToggle}
         className={styles.bookletTab}
-        aria-label={isOpen ? "Cerrar letras" : "Abrir letras"}
+        aria-label={
+          isOpen ? "Cerrar booklet de letras" : "Abrir booklet de letras"
+        }
       >
         {coverUrl ? (
-          <img
-            src={coverUrl}
-            alt=""
-            className={styles.bookletCover}
-          />
+          <img src={coverUrl} alt="" className={styles.bookletCover} />
         ) : (
           <span className={styles.bookletIcon} aria-hidden="true">
             ▣
           </span>
         )}
-        <span className={styles.bookletTabLabel}>
-          {isOpen ? "CLOSE" : "LYRICS"}
+
+        <span className={styles.bookletTabLabel} aria-hidden="true">
+          {track.album.name}
+        </span>
+
+        <span className={styles.bookletTabHint} aria-hidden="true">
+          LYRICS
         </span>
       </button>
 
-      <div className={styles.bookletPageSpread}>
+      <div
+        ref={spreadRef}
+        className={styles.bookletPageSpread}
+        onClick={handlePageClick}
+        onKeyDown={handlePageKeyDown}
+        role="region"
+        tabIndex={isOpen ? 0 : -1}
+        aria-label="Booklet de letras"
+      >
+        <div className={styles.bookletPageStack} />
         <div className={styles.bookletCenterSpine} />
 
-        <div className={styles.bookletPageHalf}>
+        <div
+          className={`${styles.bookletPageHalf} ${styles.bookletPageLeft}`}
+        >
           <div className={styles.bookletContent}>
             {leftPageIdx === 0 ? (
               <div className={styles.bookletHeader}>
                 <h4>{track.name}</h4>
-                <span>{track.artists.map((a) => a.name).join(", ")}</span>
+                <span>
+                  {track.artists.map((artist) => artist.name).join(", ")}
+                </span>
               </div>
-            ) : (
-              <div
-                className={styles.bookletHeaderPlaceholder}
-                aria-hidden="true"
-              />
-            )}
+            ) : null}
+
             <div className={styles.bookletLyrics}>
               {loading ? "[ CARGANDO... ]" : pages[leftPageIdx] || ""}
             </div>
           </div>
         </div>
 
-        <div className={styles.bookletPageHalf}>
+        <div
+          className={`${styles.bookletPageHalf} ${styles.bookletPageRight}`}
+        >
           <div className={styles.bookletContent}>
-            <div
-              className={styles.bookletHeaderPlaceholder}
-              aria-hidden="true"
-            />
-
             <div className={styles.bookletLyrics}>
               {loading ? "" : pages[rightPageIdx] || ""}
             </div>
           </div>
         </div>
 
-        {!loading && pages.length > 2 && (
-          <div className={styles.bookletPagination}>
-            <button
-              disabled={currentPage === 0}
-              onClick={() => setCurrentPage((p) => Math.max(0, p - 2))}
+        {!loading && pages.length > 0 && (
+          <>
+            <span
+              className={styles.bookletPageNumberLeft}
+              aria-hidden="true"
             >
-              ◄ PREV
-            </button>
-            <span>
-              SPREAD {currentSpread}/{totalSpreads}
+              {String(leftPageNumber).padStart(2, "0")}
             </span>
-            <button
-              disabled={rightPageIdx >= pages.length - 1}
-              onClick={() => setCurrentPage((p) => p + 2)}
-            >
-              NEXT ►
-            </button>
-          </div>
+
+            {rightPageNumber !== null && (
+              <span
+                className={styles.bookletPageNumberRight}
+                aria-hidden="true"
+              >
+                {String(rightPageNumber).padStart(2, "0")}
+              </span>
+            )}
+          </>
         )}
+
+        {hasPreviousPage && (
+          <button
+            type="button"
+            className={`${styles.bookletEdgeButton} ${styles.bookletEdgePrevious}`}
+            onClick={(event) => {
+              event.stopPropagation();
+              goPrevious();
+            }}
+            aria-label="Páginas anteriores"
+          >
+            <span aria-hidden="true">‹</span>
+          </button>
+        )}
+
+        {hasNextPage && (
+          <button
+            type="button"
+            className={`${styles.bookletEdgeButton} ${styles.bookletEdgeNext}`}
+            onClick={(event) => {
+              event.stopPropagation();
+              goNext();
+            }}
+            aria-label="Páginas siguientes"
+          >
+            <span aria-hidden="true">›</span>
+          </button>
+        )}
+
+        <div className={styles.bookletNavigationHint} aria-hidden="true">
+          <span>‹</span>
+          <span>›</span>
+        </div>
+
+        <div
+          className={styles.bookletPaginationMeasure}
+          aria-hidden="true"
+        >
+          <div className={styles.bookletMeasurePage}>
+            <div className={styles.bookletMeasureContent}>
+              <div
+                ref={firstHeaderMeasureRef}
+                className={styles.bookletHeader}
+              >
+                <h4>{track.name}</h4>
+                <span>
+                  {track.artists.map((artist) => artist.name).join(", ")}
+                </span>
+              </div>
+
+              <div
+                ref={firstPageMeasureRef}
+                className={styles.bookletMeasureLyrics}
+              />
+            </div>
+          </div>
+
+          <div className={styles.bookletMeasurePage}>
+            <div className={styles.bookletMeasureContent}>
+              <div className={styles.bookletMeasureLyrics} />
+            </div>
+          </div>
+
+          <div
+            ref={lineMeasureRef}
+            className={styles.bookletLineMeasureSource}
+          />
+        </div>
       </div>
     </div>
   );
