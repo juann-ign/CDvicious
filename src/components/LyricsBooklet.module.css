@@ -702,7 +702,7 @@
   width: 100%;
   height: 100%;
 
-  padding: 30px 26px 0px;
+  padding: 24px 26px 20px;
 
   display: flex;
   flex-direction: column;
@@ -1053,7 +1053,7 @@
   width: 100%;
   height: 100%;
 
-  padding: 30px 26px 0;
+  padding: 24px 26px 28px;
 
   display: flex;
   flex-direction: column;
