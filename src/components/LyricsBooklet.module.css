@@ -1,347 +1,1133 @@
+/* =========================================================
+   CDVICIOUS — LYRICS BOOKLET
+   Stage C — physical editorial object
+   ========================================================= */
+
 .bookletOuter {
   position: relative;
+
   width: 100%;
   height: 100%;
+
   pointer-events: auto;
+
+  perspective: 1500px;
+  perspective-origin: 18% 72%;
 }
+
+/* =========================================================
+   CLOSED COVER
+   ========================================================= */
 
 .bookletTab {
   position: absolute;
-  left: 0;
-  bottom: 0;
-  width: 96px;
-  height: 112px;
+
+  left: 18px;
+  bottom: 16px;
+
+  z-index: 30;
+
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 5px;
-  padding: 0 0 8px;
-  background: linear-gradient(to bottom, var(--color-surface-dark), var(--color-surface));
-  border: var(--border-thin);
-  border-radius: var(--radius-sm);
-  color: var(--color-phosphor);
+  align-items: stretch;
+  justify-content: flex-start;
+
+  width: 104px;
+  height: 118px;
+
+  padding: 6px;
+
+  overflow: hidden;
+
   cursor: pointer;
-  box-shadow: 6px 8px 18px rgba(0, 0, 0, 0.5), var(--shadow-inset-dark);
-  z-index: calc(var(--z-controls) + 2);
+
+  background:
+    linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.12),
+      rgba(255, 255, 255, 0.025) 40%,
+      rgba(0, 0, 0, 0.22)
+    ),
+    #292b2d;
+
+  border: 1px solid #090909;
+  border-radius: 2px;
+
+  box-shadow:
+    2px 3px 0 rgba(0, 0, 0, 0.28),
+    6px 9px 0 rgba(0, 0, 0, 0.13),
+    10px 16px 24px rgba(0, 0, 0, 0.48),
+    inset 0 1px rgba(255, 255, 255, 0.12),
+    inset 0 -5px 9px rgba(0, 0, 0, 0.42);
+
+  transform-origin: bottom left;
+
+  /*
+   * Same visual direction as the open booklet.
+   */
+  transform: rotateZ(-4deg) rotateY(-4deg);
+
   transition:
-    left var(--transition-mechanical),
-    bottom var(--transition-mechanical),
-    width var(--transition-mechanical),
-    height var(--transition-mechanical),
-    gap var(--transition-mechanical),
-    padding var(--transition-mechanical),
-    box-shadow var(--transition-standard);
+    transform 620ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 300ms ease,
+    opacity 300ms ease;
+}
+
+.bookletTab::after {
+  content: "";
+
+  position: absolute;
+  inset: 0;
+
+  pointer-events: none;
+
+  background:
+    radial-gradient(
+      circle at 18% 24%,
+      rgba(255, 255, 255, 0.12) 0 1px,
+      transparent 2px
+    ),
+    radial-gradient(
+      circle at 78% 72%,
+      rgba(0, 0, 0, 0.2) 0 1px,
+      transparent 2px
+    );
+
+  background-size:
+    29px 31px,
+    41px 37px;
+
+  opacity: 0.5;
 }
 
 .bookletTab:hover {
+  transform: translateY(-3px) rotateZ(-4deg) rotateY(-4deg);
+
   box-shadow:
-    6px 8px 22px rgba(0, 0, 0, 0.65),
-    0 0 10px var(--color-phosphor-soft),
-    var(--shadow-inset-dark);
+    2px 4px 0 rgba(0, 0, 0, 0.28),
+    7px 11px 0 rgba(0, 0, 0, 0.13),
+    12px 20px 27px rgba(0, 0, 0, 0.52),
+    inset 0 1px rgba(255, 255, 255, 0.14),
+    inset 0 -5px 9px rgba(0, 0, 0, 0.4);
 }
 
-.bookletOuter.isOpen .bookletTab {
-  bottom: 85.5%;
-  width: 55px;
-  height: 30px;
-  padding: 0;
-  z-index: 0;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(
-    to right,
-    var(--color-surface-dark) 0%,
-    var(--color-surface-raised) 55%,
-    var(--color-surface-dark) 100%
-  );
-  border: 1px solid var(--booklet-paper-border);
-  border-right: 0;
-  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
-  box-shadow:
-    -4px 3px 10px rgba(0, 0, 0, 0.38),
-    inset 0 1px 1px rgba(255, 255, 255, 0.08),
-    inset 0 -2px 5px rgba(0, 0, 0, 0.55);
+.bookletTab:focus-visible {
+  outline: 2px solid var(--booklet-accent);
+  outline-offset: 3px;
 }
 
-.bookletOuter.isOpen .bookletTab .bookletCover,
-.bookletOuter.isOpen .bookletTab .bookletIcon {
-  display: none;
-}
-
-.bookletOuter.isOpen .bookletTab .bookletTabLabel {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-  font-family: var(--font-ui);
-  font-size: var(--text-lg);
-  font-weight: var(--weight-bold);
-  line-height: 1;
-  letter-spacing: 0;
-  color: var(--color-phosphor);
-  text-shadow: 0 0 7px var(--color-phosphor-glow);
-}
+/* =========================================================
+   COVER
+   ========================================================= */
 
 .bookletCover {
   display: block;
-  width: 72px;
-  height: 72px;
+
+  width: 100%;
+  height: 78px;
+
   object-fit: cover;
-  border: 1px solid #000000;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+
+  border: 1px solid rgba(0, 0, 0, 0.82);
+
+  filter: saturate(0.76) contrast(1.08) brightness(0.93) sepia(0.08);
+
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 2px 5px rgba(0, 0, 0, 0.35);
 }
 
 .bookletIcon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 72px;
-  height: 72px;
-  background: var(--color-surface-dark);
-  border: var(--border-thin);
-  color: var(--color-phosphor);
+  display: grid;
+  place-items: center;
+
+  width: 100%;
+  height: 78px;
+
   font-family: var(--font-ui);
-  font-size: var(--text-xl);
+  font-size: 30px;
+
+  color: var(--color-phosphor);
+
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.08),
+    rgba(0, 0, 0, 0.2)
+  );
+
+  border: 1px solid rgba(0, 0, 0, 0.7);
 }
 
 .bookletTabLabel {
+  position: relative;
+
+  margin-top: 6px;
+  padding: 0 2px;
+
+  overflow: hidden;
+
   font-family: var(--font-ui);
-  font-size: var(--text-xs);
+  font-size: 8px;
   font-weight: var(--weight-bold);
-  letter-spacing: var(--tracking-wide);
-  color: var(--color-phosphor);
+
+  line-height: 1.1;
+  letter-spacing: 0.7px;
+
+  text-align: left;
+  text-transform: uppercase;
+
+  white-space: nowrap;
+  text-overflow: ellipsis;
+
+  color: #d1d3d4;
+
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
 }
+
+.bookletTabHint {
+  position: relative;
+
+  margin-top: 2px;
+  padding: 0 2px;
+
+  font-family: var(--font-ui);
+  font-size: 7px;
+  font-weight: var(--weight-bold);
+
+  line-height: 1;
+  letter-spacing: 1.5px;
+
+  color: var(--color-phosphor);
+
+  text-shadow:
+    0 0 5px var(--color-phosphor-glow),
+    0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+/* =========================================================
+   OPEN COVER
+   =========================================================
+   IMPORTANT:
+   The cover does NOT become an X.
+   It remains the physical cover object.
+   ========================================================= */
+
+.bookletOuter.isOpen .bookletTab {
+  /*
+   * IMPORTANT:
+   * Keep the same bottom anchor as the closed state.
+   * The vertical movement is animated through transform,
+   * so the cover travels with the opening booklet.
+   */
+  left: -20px;
+  bottom: 16px;
+
+  width: 60px;
+  height: 60px;
+
+  padding: 6px;
+
+  z-index: 40;
+
+  transform-origin: bottom left;
+
+  /*
+   * Closed position is around the lower-left corner.
+   *
+   * During opening the cover travels upward until it
+   * sits against the upper-left area of the booklet.
+   */
+  transform: translateY(-305px) rotateZ(-4deg) rotateY(-4deg);
+
+  box-shadow:
+    2px 4px 0 rgba(0, 0, 0, 0.24),
+    7px 11px 17px rgba(0, 0, 0, 0.42),
+    inset 0 1px rgba(255, 255, 255, 0.1),
+    inset 0 -5px 9px rgba(0, 0, 0, 0.4);
+}
+
+.bookletOuter.isOpen .bookletTab:hover {
+  transform: translateY(-320px) rotateZ(-4deg) rotateY(-4deg);
+}
+
+.bookletOuter.isOpen .bookletCover {
+  width: 100%;
+  height: 78px;
+}
+
+.bookletOuter.isOpen .bookletTabLabel {
+  margin-top: 6px;
+
+  font-size: 8px;
+}
+
+.bookletOuter.isOpen .bookletTabHint {
+  font-size: 7px;
+}
+
+/* =========================================================
+   BOOK SPREAD
+   ========================================================= */
 
 .bookletPageSpread {
   position: absolute;
+
   left: 0;
   bottom: 0;
+
   width: var(--booklet-width);
   height: var(--booklet-height);
+
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  overflow: hidden;
-  transform-origin: bottom left;
-  transform: translateY(var(--booklet-open-offset)) scale(var(--booklet-open-scale)) rotate(var(--booklet-open-tilt));
-  background:
-    linear-gradient(
-      90deg,
-      var(--booklet-paper-light) 0%,
-      var(--booklet-paper-mid) 48%,
-      var(--booklet-paper-dark) 100%
-    ),
-    radial-gradient(
-      circle at top left,
-      color-mix(in srgb, var(--booklet-accent) 14%, transparent) 0%,
-      transparent 58%
-    ),
-    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.07'/%3E%3C/svg%3E");
-  background-color: var(--color-text);
-  border: 1px solid var(--booklet-paper-border);
-  border-radius: var(--radius-sm);
-  box-shadow: var(--booklet-shadow), 0 1px 0 rgba(255, 255, 255, 0.35) inset;
+
+  /*
+   * The actual physical faces overlap slightly.
+   */
+  grid-template-columns: 54% 52%;
+
+  transform-origin: 10% 100%;
+
+  transform-style: preserve-3d;
+
   opacity: 0;
   pointer-events: none;
-  will-change: transform, opacity;
+
+  transform: translate3d(0, 105px, 0) scale(0.96) rotateZ(-4deg) rotateX(1deg);
+
   transition:
-    opacity 220ms ease-out,
-    transform var(--booklet-open-duration) cubic-bezier(0.18, 0.9, 0.22, 1);
+    transform var(--booklet-open-duration) cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 260ms ease;
+
+  z-index: 5;
+
+  /*
+   * Prevent browser from treating the whole object
+   * as a flat rectangle.
+   */
+  isolation: isolate;
 }
 
 .bookletOuter.isOpen .bookletPageSpread {
   opacity: 1;
-  transform: translateY(0) scale(var(--booklet-open-scale)) rotate(0deg);
   pointer-events: auto;
+
+  transform: translate3d(0, 0, 0) scale(0.96) rotateZ(-4deg) rotateX(1deg);
 }
 
-.bookletPageHalf {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  min-width: 0;
-  box-sizing: border-box;
-  padding: 24px 26px 34px;
-}
+/* =========================================================
+   PHYSICAL PAGE STACK
+   ========================================================= */
 
-.bookletPageHalf:first-of-type {
-  box-shadow: inset -1px 0 0 rgba(50, 53, 58, 0.12);
-}
-
-.bookletPageHalf:last-of-type {
-  box-shadow: inset 1px 0 0 rgba(255, 255, 255, 0.5);
-}
-
-.bookletPageHalf::after {
-  content: "";
+.bookletPageStack {
   position: absolute;
-  inset: 8px;
-  border: 1px solid rgba(60, 64, 70, 0.08);
+
+  /*
+   * The stack must follow the complete physical width
+   * of the two-page booklet, including the recessed
+   * right page.
+   */
+  left: 5px;
+  right: -27px;
+
+  bottom: -8px;
+
+  height: 17px;
+
+  z-index: 1;
+
   pointer-events: none;
+
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(42, 40, 36, 0.92) 0 1px,
+    rgba(246, 243, 235, 0.95) 1px 2px,
+    rgba(104, 99, 90, 0.68) 2px 3px
+  );
+
+  /*
+   * Almost straight, with just enough irregularity
+   * to keep the 90s physical-print character.
+   */
+  clip-path: polygon(0 4%, 99% 0, 100% 82%, 97% 100%, 1% 91%);
+
+  box-shadow:
+    0 6px 10px rgba(0, 0, 0, 0.42),
+    inset 0 1px rgba(255, 255, 255, 0.45);
+
+  transform: skewX(3deg) translateX(1px);
+  opacity: 0.95;
 }
+
+.bookletPageStack::before {
+  content: "";
+
+  position: absolute;
+
+  left: 1px;
+  right: 2px;
+  top: -3px;
+
+  height: 6px;
+
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(246, 243, 235, 0.92) 0 1px,
+    rgba(70, 66, 60, 0.66) 1px 2px,
+    transparent 2px 3px
+  );
+
+  opacity: 0.72;
+
+  transform: skewX(-1deg);
+}
+
+.bookletPageStack::after {
+  content: "";
+
+  position: absolute;
+
+  left: 4px;
+  right: 5px;
+  bottom: -3px;
+
+  height: 6px;
+
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(218, 215, 207, 0.68) 0 1px,
+    rgba(54, 51, 47, 0.58) 1px 2px,
+    transparent 2px 3px
+  );
+
+  opacity: 0.48;
+
+  transform: skewX(-1deg);
+}
+/* =========================================================
+   BOOK BINDING / CENTRAL FOLD
+   ========================================================= */
 
 .bookletCenterSpine {
   position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 50%;
-  width: 20px;
-  height: 92%;
-  transform: translateX(-50%);
+
+  /*
+   * The binding sits slightly right of the mathematical
+   * center because the left page has more visual weight.
+   */
+  left: 55%;
+
+  top: 3px;
+  bottom: -2px;
+
+  width: 30px;
+
+  z-index: 2;
+
+  pointer-events: none;
+
+  transform: translateX(-50%) rotateZ(0.15deg);
+
+  /*
+   * This is not a visible "stripe".
+   * It is the dark cavity underneath the folded paper.
+   */
   background: linear-gradient(
     90deg,
-    rgba(0, 0, 0, 0.09) 0%,
-    rgba(196, 193, 193, 0.03) 40%,
-    rgba(255, 255, 255, 0.68) 50%,
-    rgba(138, 136, 136, 0.03) 60%,
-    rgba(0, 0, 0, 0.09) 100%
+    rgba(10, 10, 9, 0) 0%,
+    rgba(25, 23, 20, 0.18) 14%,
+    rgba(9, 8, 7, 0.7) 38%,
+    rgba(4, 4, 4, 0.9) 50%,
+    rgba(9, 8, 7, 0.7) 62%,
+    rgba(25, 23, 20, 0.18) 86%,
+    rgba(10, 10, 9, 0) 100%
   );
-  pointer-events: none;
-  z-index: var(--z-content);
+
+  border-radius: 50%;
+
+  box-shadow:
+    inset 7px 0 10px rgba(0, 0, 0, 0.28),
+    inset -7px 0 10px rgba(0, 0, 0, 0.28);
+
+  opacity: 0.9;
 }
 
-.bookletContent {
-  flex: 1;
+/*
+ * LEFT PAGE EDGES ENTERING THE BINDING
+ */
+.bookletCenterSpine::before {
+  content: "";
+
+  position: absolute;
+
+  left: 0;
+  top: 3%;
+  bottom: 3%;
+
+  width: 8px;
+
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(238, 235, 226, 0.78) 0 1px,
+    rgba(64, 60, 54, 0.52) 1px 2px,
+    rgba(18, 17, 15, 0.72) 2px 3px,
+    transparent 3px 5px
+  );
+
+  opacity: 0.58;
+
+  filter: blur(0.35px);
+
+  transform: skewY(-1deg) translateX(-1px);
+}
+
+/*
+ * RIGHT PAGE EDGES ENTERING THE BINDING
+ */
+.bookletCenterSpine::after {
+  content: "";
+
+  position: absolute;
+
+  right: 0;
+  top: 3%;
+  bottom: 3%;
+
+  width: 8px;
+
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(228, 225, 216, 0.68) 0 1px,
+    rgba(62, 58, 52, 0.5) 1px 2px,
+    rgba(15, 14, 13, 0.76) 2px 3px,
+    transparent 3px 5px
+  );
+
+  opacity: 0.48;
+
+  filter: blur(0.45px);
+
+  transform: skewY(1deg) translateX(1px);
+}
+
+/* =========================================================
+   PAGE FACES
+   ========================================================= */
+
+.bookletPageHalf {
+  position: relative;
+
+  min-width: 0;
   min-height: 0;
-  max-height: none;
+
+  overflow: hidden;
+
+  background:
+    radial-gradient(
+      ellipse at 13% 9%,
+      rgba(255, 255, 255, 0.72),
+      transparent 34%
+    ),
+    radial-gradient(
+      ellipse at 84% 91%,
+      rgba(73, 65, 54, 0.14),
+      transparent 42%
+    ),
+    linear-gradient(145deg, #eeeae1 0%, #e2ded4 48%, #d5d0c5 100%);
+
+  border: 0;
+
+  transform-style: preserve-3d;
+}
+
+/* =========================================================
+   LEFT PAGE — DOMINANT
+   ========================================================= */
+
+.bookletPageLeft {
+  z-index: 8;
+
+  border-radius: 4px 2px 2px 4px;
+
+  transform-origin: right center;
+
+  transform: perspective(1100px) rotateY(3deg) rotateZ(-0.2deg) translateX(2px)
+    translateZ(4px);
+
+  box-shadow:
+    -8px 14px 25px rgba(0, 0, 0, 0.25),
+    inset -22px 0 27px rgba(35, 31, 26, 0.13),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.32);
+}
+
+/* =========================================================
+   RIGHT PAGE — RECESSED BUT STILL SUBSTANTIAL
+   ========================================================= */
+
+.bookletPageRight {
+  position: relative;
+
+  z-index: 4;
+
+  /*
+   * The right page sits slightly lower and further into
+   * the binding so both faces read as one physical booklet.
+   */
+  margin-top: 0px;
+  margin-bottom: 1px;
+
+  border-radius: 1px 3px 3px 1px;
+
+  transform-origin: left center;
+
+  transform: perspective(1100px) rotateY(-7deg) rotateZ(0.35deg)
+    translateX(-10px) translateY(0px) translateZ(-0px);
+
+  box-shadow:
+    9px 11px 22px rgba(0, 0, 0, 0.18),
+    inset 20px 0 27px rgba(35, 31, 26, 0.11),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.28);
+}
+
+/* =========================================================
+   PAGE CURVATURE INTO THE BINDING
+   ========================================================= */
+
+.bookletPageLeft::before,
+.bookletPageRight::before {
+  content: "";
+
+  position: absolute;
+
+  top: 0;
+  bottom: 0;
+
+  pointer-events: none;
+
+  z-index: 1;
+
+  opacity: 0.7;
+
+  filter: blur(1px);
+}
+
+.bookletPageLeft::before {
+  right: -1px;
+  width: 24px;
+
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(64, 57, 49, 0.035) 30%,
+    rgba(42, 37, 31, 0.09) 68%,
+    rgba(15, 14, 12, 0.14) 100%
+  );
+}
+
+.bookletPageRight::before {
+  left: -1px;
+  width: 25px;
+
+  background: linear-gradient(
+    90deg,
+    rgba(12, 11, 10, 0.15) 0%,
+    rgba(48, 43, 37, 0.08) 35%,
+    transparent 100%
+  );
+}
+
+/* =========================================================
+   PAPER GRAIN
+   ========================================================= */
+
+.bookletPageHalf::after {
+  content: "";
+
+  position: absolute;
+  inset: 0;
+
+  z-index: 2;
+
+  pointer-events: none;
+
+  background:
+    radial-gradient(
+      circle at 17% 24%,
+      rgba(92, 79, 62, 0.14) 0 0.8px,
+      transparent 1.8px
+    ),
+    radial-gradient(
+      circle at 73% 18%,
+      rgba(66, 58, 48, 0.1) 0 0.7px,
+      transparent 1.6px
+    ),
+    radial-gradient(
+      circle at 82% 72%,
+      rgba(91, 77, 58, 0.12) 0 0.9px,
+      transparent 2px
+    ),
+    radial-gradient(
+      circle at 29% 84%,
+      rgba(73, 62, 49, 0.09) 0 0.8px,
+      transparent 1.8px
+    ),
+    repeating-linear-gradient(
+      91deg,
+      rgba(80, 71, 60, 0.025) 0,
+      rgba(80, 71, 60, 0.025) 1px,
+      transparent 1px,
+      transparent 5px
+    );
+
+  background-size:
+    31px 37px,
+    43px 41px,
+    53px 47px,
+    47px 53px,
+    auto;
+
+  opacity: 0.85;
+
+  mix-blend-mode: multiply;
+}
+
+/* =========================================================
+   CONTENT
+   ========================================================= */
+
+.bookletContent {
+  position: relative;
+
+  z-index: 5;
+
+  width: 100%;
+  height: 100%;
+
+  padding: 30px 26px 0px;
+
   display: flex;
   flex-direction: column;
-  position: relative;
-  z-index: var(--z-content);
+
+  min-height: 0;
 }
 
 .bookletHeader {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin-bottom: 10px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid rgba(82, 87, 95, 0.42);
+  flex-shrink: 0;
+
+  margin-bottom: 13px;
+  padding-bottom: 9px;
+
+  border-bottom: 1px solid rgba(61, 57, 51, 0.22);
 }
 
 .bookletHeader h4 {
   margin: 0;
-  max-width: 100%;
+
   font-family: var(--font-display);
+
   font-size: var(--booklet-title-size);
-  font-weight: var(--weight-regular);
-  line-height: var(--leading-tight);
-  letter-spacing: var(--tracking-tight);
-  color: var(--color-surface);
+  font-weight: var(--weight-bold);
+
+  line-height: 1.08;
+  letter-spacing: -0.2px;
+
+  color: #292824;
 }
 
 .bookletHeader span {
-  font-family: var(--font-editorial);
+  display: block;
+
+  margin-top: 4px;
+
+  font-family: var(--font-ui);
+
   font-size: var(--booklet-meta-size);
-  font-weight: var(--weight-bold);
-  line-height: var(--leading-normal);
-  color: var(--color-text-muted);
+
+  line-height: 1.1;
+
+  color: #666057;
 }
 
 .bookletHeaderPlaceholder {
-  height: 12px;
-  margin-bottom: 10px;
   flex-shrink: 0;
+
+  height: 43px;
+
+  margin-bottom: 13px;
 }
+
+/* =========================================================
+   LYRICS
+   ========================================================= */
 
 .bookletLyrics {
-  display: block;
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;
   min-height: 0;
-  max-height: none;
+
   overflow: hidden;
-  font-family: var(--font-editorial);
-  font-size: var(--booklet-body-size);
-  line-height: var(--booklet-body-line-height);
-  letter-spacing: var(--booklet-body-letter-spacing);
-  color: #3f4144;
+
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-}
 
-.bookletPagination {
+  font-family: var(--font-editorial);
+
+  font-size: 15px;
+  line-height: 1.18;
+  letter-spacing: -0.08px;
+
+  color: #45433f;
+
+  text-rendering: optimizeLegibility;
+}
+/* =========================================================
+   PAGE NUMBERS
+   ========================================================= */
+
+.bookletPageNumberLeft,
+.bookletPageNumberRight {
   position: absolute;
-  left: 24px;
-  right: 24px;
-  bottom: 10px;
+
+  top: 12px;
+
+  z-index: 25;
+
+  font-family: var(--font-ui);
+
+  font-size: 8px;
+  font-weight: var(--weight-bold);
+
+  line-height: 1;
+
+  letter-spacing: 1px;
+
+  color: rgba(67, 64, 59, 0.58);
+
+  pointer-events: none;
+}
+
+.bookletPageNumberLeft {
+  left: 20px;
+}
+
+.bookletPageNumberRight {
+  right: 20px;
+}
+
+/*
+ * The first page already contains the title,
+ * so its number stays deliberately quiet.
+ */
+.bookletPageNumberLeft {
+  opacity: 0.55;
+}
+
+/* =========================================================
+   EDGE NAVIGATION
+   ========================================================= */
+
+.bookletEdgeButton {
+  position: absolute;
+
+  top: 50%;
+
+  z-index: 35;
+
+  width: 32px;
+  height: 74px;
+
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  gap: 12px;
-  padding-top: 7px;
-  border-top: 1px solid rgba(82, 87, 95, 0.28);
-  z-index: calc(var(--z-content) + 3);
-}
+  place-items: center;
 
-.bookletPagination button {
-  min-width: 62px;
-  padding: 2px 4px;
-  background: transparent;
-  border: 1px solid transparent;
-  font-family: var(--font-ui);
-  font-size: var(--text-xs);
-  font-weight: var(--weight-bold);
-  letter-spacing: 0.5px;
-  color: #747b84;
+  padding: 0;
+
   cursor: pointer;
-  transition:
-    color var(--transition-fast),
-    border-color var(--transition-fast),
-    background-color var(--transition-fast),
-    text-shadow var(--transition-fast);
-}
 
-.bookletPagination button:first-child { justify-self: start; }
-.bookletPagination button:last-child { justify-self: end; }
+  appearance: none;
 
-.bookletPagination button:hover:not(:disabled) {
-  color: #1a1d24;
-  border-color: rgba(60, 64, 70, 0.18);
-  background-color: rgba(255, 255, 255, 0.22);
-}
+  border: 0;
 
-.bookletPagination button:focus-visible {
-  outline: 1px solid var(--booklet-accent);
-  outline-offset: 2px;
-}
+  background: transparent;
 
-.bookletPagination button:active:not(:disabled) { transform: translateY(1px); }
-.bookletPagination button:disabled { color: #b2b5ba; cursor: not-allowed; }
-
-.bookletPagination span {
-  justify-self: center;
-  padding: 0 4px;
   font-family: var(--font-ui);
-  font-size: var(--text-xs);
-  font-weight: var(--weight-bold);
-  letter-spacing: var(--tracking-wide);
-  color: var(--color-text-subtle);
+  font-size: 28px;
+  font-weight: 400;
+
+  color: rgba(35, 33, 30, 0.18);
+
+  transform: translateY(-50%);
+
+  transition:
+    color 180ms ease,
+    background 180ms ease,
+    opacity 180ms ease;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .bookletTab,
+.bookletEdgePrevious {
+  left: 0;
+}
+
+.bookletEdgeNext {
+  right: 0;
+}
+
+.bookletEdgeButton:hover {
+  color: rgba(20, 19, 17, 0.72);
+
+  background: linear-gradient(90deg, rgba(40, 37, 32, 0.08), transparent);
+}
+
+.bookletEdgeNext:hover {
+  background: linear-gradient(270deg, rgba(40, 37, 32, 0.08), transparent);
+}
+
+.bookletEdgeButton:focus-visible {
+  outline: 1px solid rgba(30, 28, 25, 0.55);
+  outline-offset: -4px;
+}
+
+/* =========================================================
+   NAVIGATION HINT
+   ========================================================= */
+
+.bookletNavigationHint {
+  position: absolute;
+
+  left: 50%;
+  bottom: 7px;
+
+  z-index: 25;
+
+  display: flex;
+  gap: 13px;
+
+  transform: translateX(-50%);
+
+  pointer-events: none;
+
+  font-family: var(--font-ui);
+  font-size: 12px;
+
+  color: rgba(50, 47, 42, 0.15);
+
+  transition:
+    color 180ms ease,
+    opacity 180ms ease;
+}
+
+.bookletPageSpread:hover .bookletNavigationHint {
+  color: rgba(50, 47, 42, 0.38);
+}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 900px) {
   .bookletPageSpread {
-    transition: none;
+    width: min(var(--booklet-width), 100%);
+
+    height: min(var(--booklet-height), 100%);
+  }
+
+  .bookletContent {
+    padding: 20px 20px 32px;
+  }
+
+  .bookletPageRight {
+    transform: perspective(900px) rotateY(-9deg) rotateZ(0.45deg)
+      translateX(-6px) translateZ(-6px);
   }
 }
 
 @media (max-width: 640px) {
+  .bookletTab {
+    left: 10px;
+    bottom: 10px;
+
+    width: 96px;
+    height: 110px;
+  }
+
+  .bookletOuter.isOpen .bookletTab {
+    width: 74px;
+    height: 82px;
+  }
+
+  .bookletOuter.isOpen .bookletCover {
+    height: 56px;
+  }
+
   .bookletPageSpread {
     width: 100%;
     height: 100%;
+
+    transform: translate3d(0, 80px, 0) scale(0.98) rotateZ(-2deg);
   }
 
-  .bookletPageHalf { padding: 18px 16px 30px; }
+  .bookletOuter.isOpen .bookletPageSpread {
+    transform: translate3d(0, 0, 0) scale(0.98) rotateZ(-2deg);
+  }
+
+  .bookletContent {
+    padding: 18px 16px 30px;
+  }
 
   .bookletLyrics {
-    font-size: 13px;
-    line-height: 1.38;
+    font-size: var(--text-sm);
   }
 
-  .bookletPagination {
-    left: 16px;
-    right: 16px;
+  .bookletPageNumberLeft,
+  .bookletPageNumberRight {
+    top: 9px;
   }
+
+  .bookletPageNumberLeft {
+    left: 14px;
+  }
+
+  .bookletPageNumberRight {
+    right: 14px;
+  }
+}
+
+/* =========================================================
+   REDUCED MOTION
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .bookletTab,
+  .bookletPageSpread,
+  .bookletEdgeButton,
+  .bookletNavigationHint {
+    transition: none;
+  }
+}
+
+/* =========================================================
+   LYRIC PAGINATION MEASUREMENT
+   ========================================================= */
+
+/*
+ * Invisible layout used only to measure the actual amount
+ * of text that fits inside the physical booklet.
+ *
+ * It must use the same page geometry, typography and
+ * padding as the visible pages.
+ */
+
+.bookletPaginationMeasure {
+  position: absolute;
+
+  left: 0;
+  top: 0;
+
+  width: 100%;
+  height: 100%;
+
+  display: grid;
+
+  grid-template-columns: 54% 52%;
+
+  visibility: hidden;
+  pointer-events: none;
+
+  overflow: hidden;
+
+  z-index: -10;
+}
+
+.bookletMeasurePage {
+  position: relative;
+
+  min-width: 0;
+  min-height: 0;
+
+  overflow: hidden;
+
+  background: transparent;
+}
+
+.bookletMeasureContent {
+  position: relative;
+
+  width: 100%;
+  height: 100%;
+
+  padding: 30px 26px 0;
+
+  display: flex;
+  flex-direction: column;
+
+  min-height: 0;
+}
+
+/*
+ * This is the exact available text region for the first
+ * page after the title + artist header.
+ */
+.bookletMeasureLyrics {
+  flex: 1 1 auto;
+
+  min-width: 0;
+  min-height: 0;
+
+  width: 100%;
+
+  overflow: hidden;
+
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+
+  font-family: var(--font-editorial);
+
+  font-size: 15px;
+  line-height: 1.18;
+  letter-spacing: -0.08px;
+
+  color: transparent;
+
+  text-rendering: optimizeLegibility;
+}
+
+/*
+ * Hidden source used to measure every original lyric line.
+ *
+ * It intentionally uses the same width and typography as the
+ * visible lyric area.
+ */
+.bookletLineMeasureSource {
+  position: absolute;
+
+  left: 0;
+  top: 0;
+
+  width: calc(54% - 52px);
+
+  padding: 0;
+  margin: 0;
+
+  visibility: hidden;
+  pointer-events: none;
+
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+
+  font-family: var(--font-editorial);
+
+  font-size: 15px;
+  line-height: 1.18;
+  letter-spacing: -0.08px;
+
+  color: transparent;
+}
+
+.bookletLineMeasureSource > div {
+  display: block;
+
+  width: 100%;
+
+  min-height: 0;
+
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
