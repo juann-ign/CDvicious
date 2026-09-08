@@ -16,16 +16,15 @@ interface DiscMeshProps {
   accentColor: string;
 }
 
-// Anatomia de un CD real, en unidades de escena. Mismas proporciones que un
-// CD fisico (120mm de diametro, agujero de 15mm) escaladas a radio 1.5.
 const OUTER_RADIUS = 1.5;
-const HOLE_RADIUS = OUTER_RADIUS * 0.125; // ~15mm/120mm de un CD real
-const BRIGHT_RING_RADIUS = HOLE_RADIUS * 1.7; // aro metalico alrededor del agujero
+const HOLE_RADIUS = OUTER_RADIUS * 0.125;
+const BRIGHT_RING_RADIUS = HOLE_RADIUS * 1.7;
 const THICKNESS = 0.04;
 
-// Intensidad del sheen cuando no hay pista cargada: ni apagado (se ve
-// muerto) ni al máximo (se confundiría con "está sonando"), sino una
-// presencia sutil y constante para el disco vacío.
+// Margen extra en el hit-target para que sea más fácil "agarrar" el disco,
+// sobre todo en los ángulos donde se ve casi de canto.
+const HIT_TARGET_MARGIN = 1.15;
+
 const IDLE_SHEEN_INTENSITY = 0.18;
 
 export function DiscMesh({ track, isPlaying, accentColor }: DiscMeshProps) {
@@ -34,7 +33,7 @@ export function DiscMesh({ track, isPlaying, accentColor }: DiscMeshProps) {
   const laserRef = useRef<Mesh>(null);
   const previousTrackId = useRef<string | null>(null);
 
-  const { onPointerDown } = useDiscDrag(groupRef, Boolean(track), isPlaying);
+  useDiscDrag(groupRef, Boolean(track), isPlaying);
   const coverUrl = track?.album.images[0]?.url;
   const FALLBACK_COVER =
     "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGPQ0TUEAAETAIvi6xJZAAAAAElFTkSuQmCC";
@@ -43,14 +42,9 @@ export function DiscMesh({ track, isPlaying, accentColor }: DiscMeshProps) {
   useEffect(() => {
     coverTexture.colorSpace = THREE.SRGBColorSpace;
     coverTexture.needsUpdate = true;
-    // 1. Centramos el pivote de la textura exactamente en el medio
     coverTexture.center.set(0.5, 0.5);
-
-    // 2. Controlamos el Zoom (Escala UV)
     const zoom = 1.28;
     coverTexture.repeat.set(zoom, zoom);
-
-    // 3. Qué hacer con el espacio vacío que sobra
     coverTexture.wrapS = coverTexture.wrapT = THREE.ClampToEdgeWrapping;
   }, [coverTexture]);
 
@@ -118,16 +112,32 @@ export function DiscMesh({ track, isPlaying, accentColor }: DiscMeshProps) {
 
   return (
     <group ref={groupRef}>
+      {/* HIT-TARGET DEDICADO PARA EL DRAG
+          Disco completo (sin agujero), invisible, siempre por delante del
+          resto. No depende del anillo visual ni del ángulo de rotación
+          instantáneo: garantiza área raycasteable máxima y constante. */}
+      <mesh
+        position={[0, THICKNESS / 2 + 0.006, 0]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        onPointerDown={(e) => {
+          e.stopPropagation();
+        }}
+      >
+        <circleGeometry args={[OUTER_RADIUS * HIT_TARGET_MARGIN, 64]} />
+        <meshBasicMaterial
+          transparent
+          opacity={0}
+          depthWrite={false}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+
       {/* 1. TAPA SUPERIOR (Cover Art, o metal liso si no hay pista) */}
       <mesh
         position={[0, THICKNESS / 2, 0]}
         rotation={[-Math.PI / 2, 0, 0]}
         castShadow
         receiveShadow
-        onPointerDown={(e) => {
-          e.stopPropagation();
-          onPointerDown(e);
-        }}
       >
         <ringGeometry args={[BRIGHT_RING_RADIUS, OUTER_RADIUS, 96, 1]} />
         <meshStandardMaterial

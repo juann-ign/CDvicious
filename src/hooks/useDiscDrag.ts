@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useCallback, useEffect } from "react";
-import { useFrame, type ThreeEvent } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 import type { Group } from "three";
 
 const Y_SCHEDULE: [number, number][] = [
@@ -50,12 +50,10 @@ export function useDiscDrag(
   active: boolean,
   isPlaying: boolean,
 ) {
+  const { gl } = useThree();
+
   const elapsed = useRef(0);
-
-  // Tiempo de la rotación idle cuando no hay track.
   const idleElapsed = useRef(0);
-
-  // Offset horizontal producido por el usuario.
   const dragOffset = useRef(0);
 
   const dragging = useRef(false);
@@ -64,7 +62,6 @@ export function useDiscDrag(
   const easeElapsed = useRef<number | null>(null);
   const easeFrom = useRef(0);
 
-  // Ángulo base del idle cuando comienza un drag.
   const idleDragBaseY = useRef(IDLE_ROTATION_Y);
 
   const wasActive = useRef(active);
@@ -82,10 +79,6 @@ export function useDiscDrag(
   useFrame((_, delta) => {
     if (!groupRef.current) return;
 
-    /*
-     * Suavizado del regreso después del drag.
-     * Esto es compartido por idle y showcase.
-     */
     if (easeElapsed.current !== null) {
       easeElapsed.current += delta;
 
@@ -98,20 +91,6 @@ export function useDiscDrag(
       }
     }
 
-    /*
-     * ============================================================
-     * IDLE — SIN TRACK
-     * ============================================================
-     *
-     * Esta es la única rama nueva/modificada.
-     *
-     * Mientras se arrastra:
-     * - congelamos el tiempo idle
-     * - no dejamos que el showcase idle pelee contra el mouse
-     *
-     * Cuando no se arrastra:
-     * - continúa la rotación idle normalmente.
-     */
     if (!active) {
       if (!dragging.current) {
         idleElapsed.current += delta;
@@ -123,11 +102,6 @@ export function useDiscDrag(
 
         groupRef.current.rotation.set(IDLE_ROTATION_X, idleRotationY, 0);
       } else {
-        /*
-         * Durante el drag conservamos exactamente el ángulo
-         * idle que había cuando comenzó el arrastre y sumamos
-         * solamente el movimiento del usuario.
-         */
         groupRef.current.rotation.set(
           IDLE_ROTATION_X,
           idleDragBaseY.current + dragOffset.current,
@@ -138,20 +112,11 @@ export function useDiscDrag(
       return;
     }
 
-    /*
-     * ============================================================
-     * TRACK / SHOWCASE
-     * ============================================================
-     *
-     * ESTA PARTE SE MANTIENE IGUAL que el comportamiento que
-     * ya funcionaba con canciones.
-     */
     if (isPlaying && !dragging.current) {
       elapsed.current += delta * 1.4;
     }
 
     const rotY = interpolate(Y_SCHEDULE, elapsed.current) + dragOffset.current;
-
     const rotX = interpolate(X_SCHEDULE, elapsed.current);
 
     groupRef.current.rotation.set(rotX, rotY, 0);
@@ -176,44 +141,43 @@ export function useDiscDrag(
     easeElapsed.current = 0;
 
     window.removeEventListener("pointermove", handleWindowPointerMove);
-
     window.removeEventListener("pointerup", stopDragging);
     window.removeEventListener("pointercancel", stopDragging);
   }, [handleWindowPointerMove]);
 
-  const onPointerDown = useCallback(
-    (e: ThreeEvent<PointerEvent>) => {
+  /*
+   * CAMBIO CLAVE: en vez de depender de que R3F le pegue con el raycast a
+   * un mesh específico (lo cual falla cuando el disco está de canto por el
+   * tilt+spin del idle), escuchamos pointerdown directo sobre el <canvas>.
+   * El canvas de DiscCanvas está dedicado 100% al disco — no hay nada más
+   * ahí para interactuar — así que "pointerdown en cualquier parte del
+   * canvas" es un proxy perfecto y 100% confiable de "el usuario quiere
+   * agarrar el disco", sin importar el ángulo 3D en el que esté.
+   */
+  useEffect(() => {
+    const canvas = gl.domElement;
+
+    function handlePointerDown(e: PointerEvent) {
       dragging.current = true;
-
       lastX.current = e.clientX;
-
       easeElapsed.current = null;
 
-      /*
-       * Si estamos en idle, congelamos la posición actual
-       * para que el movimiento del mouse parta exactamente
-       * desde donde estaba el CD.
-       */
       if (!active && groupRef.current) {
         idleDragBaseY.current = groupRef.current.rotation.y;
       }
 
       window.addEventListener("pointermove", handleWindowPointerMove);
-
       window.addEventListener("pointerup", stopDragging);
       window.addEventListener("pointercancel", stopDragging);
-    },
-    [active, groupRef, handleWindowPointerMove, stopDragging],
-  );
+    }
 
-  useEffect(() => {
+    canvas.addEventListener("pointerdown", handlePointerDown);
+
     return () => {
+      canvas.removeEventListener("pointerdown", handlePointerDown);
       window.removeEventListener("pointermove", handleWindowPointerMove);
-
       window.removeEventListener("pointerup", stopDragging);
       window.removeEventListener("pointercancel", stopDragging);
     };
-  }, [handleWindowPointerMove, stopDragging]);
-
-  return { onPointerDown };
+  }, [gl, active, groupRef, handleWindowPointerMove, stopDragging]);
 }
