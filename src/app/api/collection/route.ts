@@ -1,8 +1,31 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 
-const SPOTIFY_MAX_LIMIT = 50; // límite máximo permitido por Spotify por request
-const MAX_ALBUMS = 120; // techo total: ~5 páginas de 24 en la batea
+const SPOTIFY_MAX_LIMIT = 50;
+const MAX_ALBUMS = 120;
+
+interface SpotifyAlbum {
+  id: string;
+  name: string;
+  uri: string;
+  images: {
+    url: string;
+    width: number;
+    height: number;
+  }[];
+  artists: {
+    name: string;
+  }[];
+}
+
+interface SpotifySavedAlbumItem {
+  album: SpotifyAlbum;
+}
+
+interface SpotifySavedAlbumsResponse {
+  items?: SpotifySavedAlbumItem[];
+  next?: string | null;
+}
 
 export async function GET() {
   const session = await getSession();
@@ -11,7 +34,7 @@ export async function GET() {
     return NextResponse.json({ error: "Falta sesión" }, { status: 400 });
   }
 
-  const allAlbums: any[] = [];
+  const allAlbums: SpotifyAlbum[] = [];
   let offset = 0;
   let hasMore = true;
 
@@ -30,15 +53,15 @@ export async function GET() {
         break;
       }
 
-      const data = await res.json();
-      const items = data.items || [];
-      allAlbums.push(...items.map((item: any) => item.album));
+      const data = (await res.json()) as SpotifySavedAlbumsResponse;
+      const items = data.items ?? [];
+
+      allAlbums.push(...items.map((item) => item.album));
 
       hasMore = Boolean(data.next);
       offset += SPOTIFY_MAX_LIMIT;
     }
 
-    // Por si el último batch se pasó del techo (ej. traer 50 cuando faltaban 10)
     return NextResponse.json(allAlbums.slice(0, MAX_ALBUMS));
   } catch {
     return NextResponse.json(allAlbums.slice(0, MAX_ALBUMS));
