@@ -4,23 +4,37 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import { useSpotifyPlayer } from "@/components/SpotifyPlayerProvider";
 
+interface Album {
+  id: string;
+  name: string;
+  uri: string;
+  images: {
+    url: string;
+    width: number;
+    height: number;
+  }[];
+  artists: {
+    name: string;
+  }[];
+}
+
 export function StoreSearch() {
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<any[]>([]);
-  const [savedAlbums, setSavedAlbums] = useState<any[]>([]);
+  const [results, setResults] = useState<Album[]>([]);
+  const [savedAlbums, setSavedAlbums] = useState<Album[]>([]);
   const { deviceId, isReady } = useSpotifyPlayer();
 
-  // 1. Cargar colección al inicio
   useEffect(() => {
     fetch("/api/collection")
       .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data)) setSavedAlbums(data);
+      .then((data: unknown) => {
+        if (Array.isArray(data)) {
+          setSavedAlbums(data as Album[]);
+        }
       })
       .catch(console.error);
   }, []);
 
-  // 2. Búsqueda en vivo (Debounce)
   useEffect(() => {
     if (!query) {
       setResults([]);
@@ -29,25 +43,28 @@ export function StoreSearch() {
 
     const timer = setTimeout(async () => {
       const res = await fetch(`/api/search?q=${query}`);
+
       if (res.ok) {
-        const data = await res.json();
-        setResults(data);
+        const data: unknown = await res.json();
+
+        if (Array.isArray(data)) {
+          setResults(data as Album[]);
+        }
       }
     }, 500);
 
     return () => clearTimeout(timer);
   }, [query]);
 
-  // 3. Función de reproducción
   const handlePlayAlbum = async (uri: string) => {
     if (!deviceId) return;
+
     await fetch("/api/play", {
       method: "POST",
       body: JSON.stringify({ uri, deviceId }),
     });
   };
 
-  // 4. Lógica de renderizado: ¿Qué mostramos?
   const displayAlbums = query ? results : savedAlbums;
   const sectionTitle = query ? "Resultados de búsqueda" : "Tu Colección";
 
@@ -55,10 +72,10 @@ export function StoreSearch() {
     <div
       style={{
         position: "fixed",
-        top: "24px", // <-- Lo subimos para alinearlo con el Logo y el Perfil
+        top: "24px",
         left: "50%",
         transform: "translateX(-50%)",
-        width: "min(90vw, 420px)", // <-- Un poco más angosto para que respiren los costados
+        width: "min(90vw, 420px)",
         zIndex: 10,
       }}
     >
@@ -69,7 +86,7 @@ export function StoreSearch() {
         onChange={(e) => setQuery(e.target.value)}
         style={{
           width: "100%",
-          padding: "10px 18px", // <-- Input más bajo y elegante
+          padding: "10px 18px",
           borderRadius: "999px",
           background: "rgba(30, 32, 38, 0.75)",
           border: "1px solid rgba(255, 255, 255, 0.1)",
@@ -101,7 +118,7 @@ export function StoreSearch() {
             style={{
               display: "flex",
               overflowX: "auto",
-              gap: "12px", // <-- Menos espacio entre discos
+              gap: "12px",
               paddingBottom: "8px",
               paddingLeft: "4px",
               scrollbarWidth: "none",
@@ -112,7 +129,7 @@ export function StoreSearch() {
                 key={album.id}
                 onClick={() => handlePlayAlbum(album.uri)}
                 style={{
-                  minWidth: "85px", // <-- Discos más pequeños
+                  minWidth: "85px",
                   cursor: isReady ? "pointer" : "not-allowed",
                   opacity: isReady ? 1 : 0.5,
                   transition: "transform 0.2s ease",
@@ -127,7 +144,7 @@ export function StoreSearch() {
                 <Image
                   src={album.images[0]?.url}
                   alt={album.name}
-                  width={85} // <-- Ajuste de imagen
+                  width={85}
                   height={85}
                   style={{
                     borderRadius: "6px",
@@ -135,6 +152,7 @@ export function StoreSearch() {
                     boxShadow: "0 4px 10px rgba(0,0,0,0.4)",
                   }}
                 />
+
                 <div
                   style={{
                     fontSize: "11px",
@@ -148,6 +166,7 @@ export function StoreSearch() {
                 >
                   {album.name}
                 </div>
+
                 <div
                   style={{
                     fontSize: "9px",
