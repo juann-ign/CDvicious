@@ -16,12 +16,16 @@ interface DiscMeshProps {
   accentColor: string;
 }
 
-// Anatomia de un CD real, en unidades de escena. Mismas proporciones que un
-// CD fisico (120mm de diametro, agujero de 15mm) escaladas a radio 1.5.
 const OUTER_RADIUS = 1.5;
-const HOLE_RADIUS = OUTER_RADIUS * 0.125; // ~15mm/120mm de un CD real
-const BRIGHT_RING_RADIUS = HOLE_RADIUS * 1.7; // aro metalico alrededor del agujero
+const HOLE_RADIUS = OUTER_RADIUS * 0.125;
+const BRIGHT_RING_RADIUS = HOLE_RADIUS * 1.7;
 const THICKNESS = 0.04;
+
+// Margen extra en el hit-target para que sea más fácil "agarrar" el disco,
+// sobre todo en los ángulos donde se ve casi de canto.
+const HIT_TARGET_MARGIN = 1.15;
+
+const IDLE_SHEEN_INTENSITY = 0.18;
 
 export function DiscMesh({ track, isPlaying, accentColor }: DiscMeshProps) {
   const groupRef = useRef<Group>(null!);
@@ -29,8 +33,7 @@ export function DiscMesh({ track, isPlaying, accentColor }: DiscMeshProps) {
   const laserRef = useRef<Mesh>(null);
   const previousTrackId = useRef<string | null>(null);
 
-  const { onPointerDown, onPointerMove, onPointerUp } = useDiscDrag(groupRef);
-
+  useDiscDrag(groupRef, Boolean(track), isPlaying);
   const coverUrl = track?.album.images[0]?.url;
   const FALLBACK_COVER =
     "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGPQ0TUEAAETAIvi6xJZAAAAAElFTkSuQmCC";
@@ -39,14 +42,9 @@ export function DiscMesh({ track, isPlaying, accentColor }: DiscMeshProps) {
   useEffect(() => {
     coverTexture.colorSpace = THREE.SRGBColorSpace;
     coverTexture.needsUpdate = true;
-    // 1. Centramos el pivote de la textura exactamente en el medio
     coverTexture.center.set(0.5, 0.5);
-
-    // 2. Controlamos el Zoom (Escala UV)
     const zoom = 1.28;
     coverTexture.repeat.set(zoom, zoom);
-
-    // 3. Qué hacer con el espacio vacío que sobra
     coverTexture.wrapS = coverTexture.wrapT = THREE.ClampToEdgeWrapping;
   }, [coverTexture]);
 
@@ -54,12 +52,13 @@ export function DiscMesh({ track, isPlaying, accentColor }: DiscMeshProps) {
 
   useEffect(() => {
     if (!sheenRef.current) return;
+    const targetValue = isPlaying ? 1 : track ? 0 : IDLE_SHEEN_INTENSITY;
     gsap.to(sheenRef.current.uniforms.uActive, {
-      value: isPlaying ? 1 : 0,
+      value: targetValue,
       duration: 0.6,
       ease: "power2.out",
     });
-  }, [isPlaying]);
+  }, [isPlaying, track]);
 
   useFrame((_, delta) => {
     if (sheenRef.current) sheenRef.current.uniforms.uTime.value += delta;
@@ -112,13 +111,28 @@ export function DiscMesh({ track, isPlaying, accentColor }: DiscMeshProps) {
   }, [track]);
 
   return (
-    <group
-      ref={groupRef}
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-    >
-      {/* 1. TAPA SUPERIOR (Cover Art) */}
+    <group ref={groupRef}>
+      {/* HIT-TARGET DEDICADO PARA EL DRAG
+          Disco completo (sin agujero), invisible, siempre por delante del
+          resto. No depende del anillo visual ni del ángulo de rotación
+          instantáneo: garantiza área raycasteable máxima y constante. */}
+      <mesh
+        position={[0, THICKNESS / 2 + 0.006, 0]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        onPointerDown={(e) => {
+          e.stopPropagation();
+        }}
+      >
+        <circleGeometry args={[OUTER_RADIUS * HIT_TARGET_MARGIN, 64]} />
+        <meshBasicMaterial
+          transparent
+          opacity={0}
+          depthWrite={false}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+
+      {/* 1. TAPA SUPERIOR (Cover Art, o metal liso si no hay pista) */}
       <mesh
         position={[0, THICKNESS / 2, 0]}
         rotation={[-Math.PI / 2, 0, 0]}
@@ -127,9 +141,10 @@ export function DiscMesh({ track, isPlaying, accentColor }: DiscMeshProps) {
       >
         <ringGeometry args={[BRIGHT_RING_RADIUS, OUTER_RADIUS, 96, 1]} />
         <meshStandardMaterial
-          map={coverTexture}
-          roughness={0.35}
-          metalness={0.25}
+          map={track ? coverTexture : undefined}
+          color={track ? "#ffffff" : "#c7cad1"}
+          roughness={track ? 0.35 : 0.2}
+          metalness={track ? 0.25 : 0.85}
         />
       </mesh>
       {/* 2. BASE METÁLICA INFERIOR */}
@@ -168,11 +183,11 @@ export function DiscMesh({ track, isPlaying, accentColor }: DiscMeshProps) {
         <ringGeometry args={[HOLE_RADIUS, BRIGHT_RING_RADIUS, 64]} />
         <meshPhysicalMaterial
           color="#ffffff"
-          transmission={1} // Lo hace transparente como el vidrio
+          transmission={1}
           opacity={1}
           metalness={0.1}
           roughness={0.05}
-          ior={1.5} // Índice de refracción real del plástico/policarbonato
+          ior={1.5}
           thickness={THICKNESS}
           side={THREE.DoubleSide}
           transparent
