@@ -1,0 +1,33 @@
+name: EPIC 2 Validation
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main, 'feature/epic-2-*']
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm test
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Production build
+        run: npm run build
