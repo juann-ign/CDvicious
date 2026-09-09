@@ -2,6 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import type { CSSProperties } from "react";
+import { useDominantColor } from "@/hooks/useDominantColor";
 import styles from "./CollectionCrate.module.css";
 
 export interface CollectionAlbum {
@@ -17,7 +19,54 @@ interface CollectionCrateProps {
   totalCount?: number;
 }
 
+interface CollectionSpineProps {
+  album: CollectionAlbum;
+  index: number;
+}
+
 const DISPLAY_LIMIT = 72;
+
+function CollectionSpine({ album, index }: CollectionSpineProps) {
+  const coverUrl = album.images[0]?.url;
+  const artist = album.artists.map((item) => item.name).join(", ");
+  const accentColor = useDominantColor(coverUrl) ?? "#68717b";
+  const rotation = ((index * 17) % 7) - 3;
+  const depth = 10 + (index % 4) * 4;
+
+  const spineStyle = {
+    "--spine-accent": accentColor,
+    "--spine-rotation": `${rotation}deg`,
+    "--spine-depth": `${depth}px`,
+  } as CSSProperties;
+
+  return (
+    <Link
+      href={`/?album=${album.id}`}
+      className={styles.spine}
+      style={spineStyle}
+      title={`${album.name} — ${artist}`}
+      aria-label={`Play ${album.name} by ${artist}`}
+    >
+      <span className={styles.spineArt} aria-hidden="true">
+        {coverUrl ? (
+          <Image
+            src={coverUrl}
+            alt=""
+            fill
+            sizes="8px"
+            className={styles.spineArtImage}
+            unoptimized
+          />
+        ) : null}
+      </span>
+      <span className={styles.spineEdge} aria-hidden="true" />
+      <span className={styles.spineLabel}>
+        <strong>{album.name}</strong>
+        <small>{artist}</small>
+      </span>
+    </Link>
+  );
+}
 
 export function CollectionCrate({ albums, totalCount }: CollectionCrateProps) {
   const visibleAlbums = albums.slice(0, DISPLAY_LIMIT);
@@ -43,32 +92,9 @@ export function CollectionCrate({ albums, totalCount }: CollectionCrateProps) {
           className={styles.contents}
           aria-label={`${count} albums in collection`}
         >
-          {visibleAlbums.map((album) => {
-            const coverUrl = album.images[0]?.url;
-            const artist = album.artists.map((item) => item.name).join(", ");
-
-            return (
-              <Link
-                href={`/?album=${album.id}`}
-                className={styles.spine}
-                key={album.id}
-                title={`${album.name} — ${artist}`}
-                aria-label={`Play ${album.name} by ${artist}`}
-              >
-                {coverUrl ? (
-                  <Image
-                    src={coverUrl}
-                    alt=""
-                    fill
-                    sizes="34px"
-                    className={styles.spineImage}
-                    unoptimized
-                  />
-                ) : null}
-                <span className={styles.spineLabel}>{album.name}</span>
-              </Link>
-            );
-          })}
+          {visibleAlbums.map((album, index) => (
+            <CollectionSpine album={album} index={index} key={album.id} />
+          ))}
         </div>
         <div className={styles.rail} aria-hidden="true" />
       </div>
