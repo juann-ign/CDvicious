@@ -6,7 +6,8 @@
     "dev": "next dev -H 127.0.0.1 -p 3002",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "tsc --noEmit"
   },
   "dependencies": {
     "@react-three/drei": "^10.0.0",
