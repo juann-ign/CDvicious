@@ -133,7 +133,7 @@
   position: relative;
   flex: 0 0 46px;
   height: 232px;
-  margin-left: 6px;
+  margin-left: 7px;
   overflow: hidden;
   box-sizing: border-box;
   border: 1px solid color-mix(in srgb, var(--spine-accent) 58%, #15171a);
@@ -273,7 +273,7 @@
   }
 
   .spine-label {
-    inset-left: 9px;
+    inset: 8px 4px 8px 9px;
     gap: 5px;
   }
 
