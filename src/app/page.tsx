@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState, type CSSProperties, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { UserProfileChip } from "@/components/UserProfileChip";
@@ -74,9 +75,12 @@ function HomeContent() {
           CD<span>vicious</span>
         </div>
 
-        <div className={styles.topNavActions}>
+        <nav className={styles.topNavActions} aria-label="Main navigation">
+          <Link href="/crate" className={styles.crateNavLink}>
+            CRATE <span aria-hidden="true">↗</span>
+          </Link>
           <UserProfileChip />
-        </div>
+        </nav>
       </header>
 
       <section className={styles.playerSection} aria-label="CD player">
