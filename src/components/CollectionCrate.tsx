@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import type { CSSProperties } from "react";
 import { useDominantColor } from "@/hooks/useDominantColor";
@@ -30,9 +29,9 @@ function CollectionSpine({ album, index }: CollectionSpineProps) {
   const coverUrl = album.images[0]?.url;
   const artist = album.artists.map((item) => item.name).join(", ");
   const accentColor = useDominantColor(coverUrl) ?? "#68717b";
-  const rotation = ((index * 19) % 9) - 4;
-  const depth = index * 3;
-  const offset = index * 18;
+  const rotation = -4 + ((index * 13) % 5);
+  const depth = index * 2.5;
+  const offset = Math.min(index * 1.7, 48);
 
   const spineStyle = {
     "--spine-accent": accentColor,
@@ -49,22 +48,13 @@ function CollectionSpine({ album, index }: CollectionSpineProps) {
       title={`${album.name} — ${artist}`}
       aria-label={`Play ${album.name} by ${artist}`}
     >
-      <span className={styles.caseFace} aria-hidden="true">
-        {coverUrl ? (
-          <Image
-            src={coverUrl}
-            alt=""
-            fill
-            sizes="78px"
-            className={styles.caseArtwork}
-            unoptimized
-          />
-        ) : null}
+      <span className={styles.caseShell} aria-hidden="true">
+        <span className={styles.caseTop} />
+        <span className={styles.caseBottom} />
+        <span className={styles.caseInnerEdge} />
       </span>
-      <span className={styles.spineRail} aria-hidden="true" />
       <span className={styles.spineLabel}>
-        <strong>{album.name}</strong>
-        <small>{artist}</small>
+        <span className={styles.spineArtist}>{artist}</span>
       </span>
       <span className={styles.spineGloss} aria-hidden="true" />
     </Link>
@@ -91,20 +81,19 @@ export function CollectionCrate({ albums, totalCount }: CollectionCrateProps) {
 
       <div className={styles.body}>
         <div className={styles.rail} aria-hidden="true" />
-        <div
-          className={styles.contents}
-          aria-label={`${count} albums in collection`}
-        >
-          {visibleAlbums.map((album, index) => (
-            <CollectionSpine album={album} index={index} key={album.id} />
-          ))}
+        <div className={styles.contents} aria-label={`${count} albums in collection`}>
+          <div className={styles.stack}>
+            {visibleAlbums.map((album, index) => (
+              <CollectionSpine album={album} index={index} key={album.id} />
+            ))}
+          </div>
         </div>
         <div className={styles.rail} aria-hidden="true" />
       </div>
 
       <div className={styles.footer}>
         <span>{count} CDS IN ARCHIVE</span>
-        <span className={styles.hint}>SELECT AN ALBUM OR OPEN THE FULL BATEA</span>
+        <span className={styles.hint}>SELECT A SPINE OR OPEN THE FULL BATEA</span>
       </div>
     </section>
   );
