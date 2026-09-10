@@ -32,7 +32,7 @@ function CollectionSpine({ album, index }: CollectionSpineProps) {
   const accentColor = useDominantColor(coverUrl) ?? "#68717b";
   const rotation = ((index * 19) % 9) - 4;
   const depth = index * 3;
-  const offset = Math.min(index * 2.2, 62);
+  const offset = index * 18;
 
   const spineStyle = {
     "--spine-accent": accentColor,
@@ -55,7 +55,7 @@ function CollectionSpine({ album, index }: CollectionSpineProps) {
             src={coverUrl}
             alt=""
             fill
-            sizes="86px"
+            sizes="78px"
             className={styles.caseArtwork}
             unoptimized
           />
