@@ -30,15 +30,22 @@ function HomeContent() {
   useEffect(() => {
     if (authenticated !== true) return;
 
+    let cancelled = false;
     fetch("/api/collection")
       .then((res) => {
         if (!res.ok) throw new Error("Collection unavailable");
         return res.json();
       })
       .then((data) => {
-        if (Array.isArray(data)) setCollection(data);
+        if (!cancelled && Array.isArray(data)) setCollection(data);
       })
-      .catch(() => setCollection([]));
+      .catch(() => {
+        if (!cancelled) setCollection([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [authenticated]);
 
   useEffect(() => {
@@ -113,11 +120,11 @@ function HomeContent() {
           />
         </div>
 
-        {collection.length > 0 && (
-          <div className={styles.cratePeek} aria-hidden="true">
-            <span>THE CRATE</span>
-            <span>↓</span>
-          </div>
+        {authenticated === true && collection.length > 0 && (
+          <Link href="#crate" className={styles.cratePeek} aria-label="Scroll to The Crate">
+            <span>OPEN THE CRATE</span>
+            <span aria-hidden="true">↓</span>
+          </Link>
         )}
       </section>
 
