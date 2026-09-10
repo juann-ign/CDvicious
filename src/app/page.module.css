@@ -164,7 +164,7 @@
 /* Physical archive card: the home-page counterpart to the booklet tab. */
 .crateDockCard {
   position: absolute;
-  left: 154px;
+  left: 168px;
   bottom: 22px;
   z-index: var(--z-modal);
   display: flex;
@@ -236,9 +236,7 @@
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
 }
 
-.crateDockLabel {
-  color: #77808a;
-}
+.crateDockLabel { color: #77808a; }
 
 .crateDockTitle {
   position: relative;
@@ -287,12 +285,7 @@
   width: 100%;
   padding: 54px 0 90px;
   box-sizing: border-box;
-  background: linear-gradient(
-    180deg,
-    rgba(22, 25, 29, 0.18) 0%,
-    rgba(18, 20, 23, 0.75) 15%,
-    rgba(12, 14, 16, 0.92) 100%
-  );
+  background: linear-gradient(180deg, rgba(22, 25, 29, 0.18) 0%, rgba(18, 20, 23, 0.75) 15%, rgba(12, 14, 16, 0.92) 100%);
 }
 
 .collectionSection::before {
@@ -307,10 +300,7 @@
 }
 
 @media (max-width: 900px) {
-  .playerSection {
-    flex-basis: 76vh;
-    min-height: 580px;
-  }
+  .playerSection { flex-basis: 76vh; min-height: 580px; }
 
   .bookletOverlayLayer {
     left: 20px;
@@ -320,7 +310,7 @@
   }
 
   .crateDockCard {
-    left: 142px;
+    left: 154px;
     bottom: 18px;
     width: 210px;
     height: 102px;
@@ -328,18 +318,9 @@
 }
 
 @media (max-width: 640px) {
-  .topControlBar {
-    padding: var(--space-3) var(--space-4);
-  }
-
-  .brandCorner {
-    font-size: var(--text-2xl);
-    letter-spacing: 3px;
-  }
-
-  .topNavActions {
-    gap: var(--space-2);
-  }
+  .topControlBar { padding: var(--space-3) var(--space-4); }
+  .brandCorner { font-size: var(--text-2xl); letter-spacing: 3px; }
+  .topNavActions { gap: var(--space-2); }
 
   .crateNavLink {
     min-height: 30px;
@@ -348,14 +329,8 @@
     letter-spacing: 1.2px;
   }
 
-  .playerSection {
-    flex-basis: 78vh;
-    min-height: 540px;
-  }
-
-  .centerStage {
-    padding: var(--space-3) var(--space-4);
-  }
+  .playerSection { flex-basis: 78vh; min-height: 540px; }
+  .centerStage { padding: var(--space-3) var(--space-4); }
 
   .bookletOverlayLayer {
     left: 12px;
@@ -365,23 +340,15 @@
   }
 
   .crateDockCard {
-    left: 124px;
+    left: 140px;
     bottom: 14px;
     width: 174px;
     height: 92px;
     padding: 9px 10px;
   }
 
-  .crateDockTitle {
-    font-size: var(--text-lg);
-    letter-spacing: 2px;
-  }
-
-  .crateDockLabel,
-  .crateDockMeta {
-    font-size: 6px;
-    letter-spacing: 1px;
-  }
+  .crateDockTitle { font-size: var(--text-lg); letter-spacing: 2px; }
+  .crateDockLabel, .crateDockMeta { font-size: 6px; letter-spacing: 1px; }
 
   .crateDockSpines {
     right: 8px;
@@ -389,27 +356,16 @@
     height: 51px;
   }
 
-  .crateDockSpines i {
-    width: 6px;
-    height: 44px;
-  }
-
+  .crateDockSpines i { width: 6px; height: 44px; }
   .crateDockSpines i:nth-child(2) { height: 39px; }
   .crateDockSpines i:nth-child(3) { height: 48px; }
   .crateDockSpines i:nth-child(4) { height: 42px; }
   .crateDockSpines i:nth-child(5) { height: 46px; }
 
-  .collectionSection {
-    padding-top: 38px;
-  }
+  .collectionSection { padding-top: 38px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  :global(html) {
-    scroll-behavior: auto;
-  }
-
-  .crateDockCard {
-    transition: none;
-  }
+  :global(html) { scroll-behavior: auto; }
+  .crateDockCard { transition: none; }
 }
