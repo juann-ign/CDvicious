@@ -121,9 +121,17 @@ function HomeContent() {
         </div>
 
         {authenticated === true && collection.length > 0 && (
-          <Link href="#crate" className={styles.cratePeek} aria-label="Scroll to The Crate">
-            <span>OPEN THE CRATE</span>
-            <span aria-hidden="true">↓</span>
+          <Link href="#crate" className={styles.crateDockCard} aria-label="Open The Crate">
+            <span className={styles.crateDockLabel}>ARCHIVE / MEDIA STORAGE</span>
+            <span className={styles.crateDockTitle}>THE CRATE</span>
+            <span className={styles.crateDockMeta}>OPEN COLLECTION <span aria-hidden="true">↓</span></span>
+            <span className={styles.crateDockSpines} aria-hidden="true">
+              <i />
+              <i />
+              <i />
+              <i />
+              <i />
+            </span>
           </Link>
         )}
       </section>
