@@ -24,19 +24,21 @@ interface CollectionSpineProps {
   index: number;
 }
 
-const DISPLAY_LIMIT = 72;
+const DISPLAY_LIMIT = 30;
 
 function CollectionSpine({ album, index }: CollectionSpineProps) {
   const coverUrl = album.images[0]?.url;
   const artist = album.artists.map((item) => item.name).join(", ");
   const accentColor = useDominantColor(coverUrl) ?? "#68717b";
-  const rotation = ((index * 17) % 7) - 3;
-  const depth = 10 + (index % 4) * 4;
+  const rotation = ((index * 19) % 9) - 4;
+  const depth = index * 3;
+  const offset = Math.min(index * 2.2, 62);
 
   const spineStyle = {
     "--spine-accent": accentColor,
     "--spine-rotation": `${rotation}deg`,
     "--spine-depth": `${depth}px`,
+    "--spine-offset": `${offset}px`,
   } as CSSProperties;
 
   return (
@@ -47,23 +49,24 @@ function CollectionSpine({ album, index }: CollectionSpineProps) {
       title={`${album.name} — ${artist}`}
       aria-label={`Play ${album.name} by ${artist}`}
     >
-      <span className={styles.spineArt} aria-hidden="true">
+      <span className={styles.caseFace} aria-hidden="true">
         {coverUrl ? (
           <Image
             src={coverUrl}
             alt=""
             fill
-            sizes="8px"
-            className={styles.spineArtImage}
+            sizes="86px"
+            className={styles.caseArtwork}
             unoptimized
           />
         ) : null}
       </span>
-      <span className={styles.spineEdge} aria-hidden="true" />
+      <span className={styles.spineRail} aria-hidden="true" />
       <span className={styles.spineLabel}>
         <strong>{album.name}</strong>
         <small>{artist}</small>
       </span>
+      <span className={styles.spineGloss} aria-hidden="true" />
     </Link>
   );
 }
@@ -73,7 +76,7 @@ export function CollectionCrate({ albums, totalCount }: CollectionCrateProps) {
   const count = totalCount ?? albums.length;
 
   return (
-    <section className={styles.crate} aria-labelledby="collection-crate-title">
+    <section id="crate" className={styles.crate} aria-labelledby="collection-crate-title">
       <div className={styles.header}>
         <div>
           <span className={styles.eyebrow}>ARCHIVE / MEDIA STORAGE</span>
