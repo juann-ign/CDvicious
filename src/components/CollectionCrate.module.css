@@ -22,7 +22,9 @@
   background: #101214;
 }
 
-.header { border-bottom: 1px solid #30343a; }
+.header {
+  border-bottom: 1px solid #30343a;
+}
 
 .eyebrow,
 .footer,
@@ -32,7 +34,9 @@
   letter-spacing: 2px;
 }
 
-.eyebrow { color: #717a85; }
+.eyebrow {
+  color: #717a85;
+}
 
 .title {
   margin: 4px 0 0;
@@ -69,7 +73,13 @@
   display: grid;
   grid-template-columns: 18px 1fr 18px;
   background:
-    linear-gradient(90deg, rgba(255, 255, 255, 0.04), transparent 8%, transparent 92%, rgba(255, 255, 255, 0.04)),
+    linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.04),
+      transparent 8%,
+      transparent 92%,
+      rgba(255, 255, 255, 0.04)
+    ),
     #30353c;
   overflow: hidden;
 }
@@ -85,12 +95,22 @@
   box-shadow: inset 0 1px rgba(255, 255, 255, 0.07);
 }
 
-.body::before { top: 10px; }
-.body::after { bottom: 10px; }
+.body::before {
+  top: 10px;
+}
+.body::after {
+  bottom: 10px;
+}
 
 .rail {
   z-index: 8;
-  background: linear-gradient(90deg, #15171a, #777e87 45%, #202328 60%, #101215);
+  background: linear-gradient(
+    90deg,
+    #15171a,
+    #777e87 45%,
+    #202328 60%,
+    #101215
+  );
   box-shadow: 0 0 8px rgba(0, 0, 0, 0.8);
 }
 
@@ -103,7 +123,11 @@
   perspective: 1300px;
   transform-style: preserve-3d;
   background:
-    radial-gradient(circle at 18% 30%, rgba(255, 255, 255, 0.055), transparent 34%),
+    radial-gradient(
+      circle at 18% 30%,
+      rgba(255, 255, 255, 0.055),
+      transparent 34%
+    ),
     linear-gradient(180deg, #151719 0%, #090a0c 100%);
   box-shadow: inset 0 0 28px rgba(0, 0, 0, 0.9);
 }
@@ -129,34 +153,32 @@
 
 .spine {
   --spine-accent: #68717b;
-  --spine-rotation: -3deg;
+  --spine-rotation: -6deg;
   --spine-depth: 0px;
-  --spine-offset: 0px;
+  --spine-offset: 10px;
   position: relative;
   z-index: 2;
   flex: 0 0 58px;
   width: 58px;
   height: 224px;
-  margin-left: -46px;
+  margin-left: 0;
   box-sizing: border-box;
   overflow: visible;
   border: 1px solid color-mix(in srgb, var(--spine-accent) 62%, #111316);
   border-radius: 3px;
-  background:
-    linear-gradient(180deg,
-      color-mix(in srgb, var(--spine-accent) 72%, #24282d) 0%,
-      color-mix(in srgb, var(--spine-accent) 42%, #111316) 34%,
-      color-mix(in srgb, var(--spine-accent) 58%, #171a1e) 70%,
-      color-mix(in srgb, var(--spine-accent) 30%, #0c0e10) 100%
-    );
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--spine-accent) 72%, #24282d) 0%,
+    color-mix(in srgb, var(--spine-accent) 42%, #111316) 34%,
+    color-mix(in srgb, var(--spine-accent) 58%, #171a1e) 70%,
+    color-mix(in srgb, var(--spine-accent) 30%, #0c0e10) 100%
+  );
   box-shadow:
     4px 7px 10px rgba(0, 0, 0, 0.62),
     inset 2px 0 rgba(255, 255, 255, 0.16),
     inset -2px 0 rgba(0, 0, 0, 0.5),
     inset 0 1px rgba(255, 255, 255, 0.15);
-  transform:
-    translateX(var(--spine-offset))
-    translateZ(var(--spine-depth))
+  transform: translateX(var(--spine-offset)) translateZ(var(--spine-depth))
     rotateZ(var(--spine-rotation));
   transform-origin: left bottom;
   transition:
@@ -192,11 +214,20 @@
   right: 5px;
   height: 3px;
   border-radius: 2px;
-  background: linear-gradient(90deg, #0b0c0e, rgba(255, 255, 255, 0.24), #0b0c0e);
+  background: linear-gradient(
+    90deg,
+    #0b0c0e,
+    rgba(255, 255, 255, 0.24),
+    #0b0c0e
+  );
 }
 
-.caseTop { top: 5px; }
-.caseBottom { bottom: 5px; }
+.caseTop {
+  top: 5px;
+}
+.caseBottom {
+  bottom: 5px;
+}
 
 .caseInnerEdge {
   position: absolute;
@@ -204,7 +235,11 @@
   bottom: 12px;
   left: 7px;
   width: 2px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.25), rgba(0, 0, 0, 0.35));
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.25),
+    rgba(0, 0, 0, 0.35)
+  );
 }
 
 .spineLabel {
@@ -229,14 +264,20 @@
   flex: 0 0 190px;
   width: 190px;
   max-width: none;
-  overflow: hidden;
-  font-size: 9px;
-  font-weight: var(--weight-bold);
-  line-height: 1;
-  letter-spacing: 0.7px;
+  font-family: var(--type-vfd-font);
+  font-size: var(--text-xl);
+  font-weight: var(--type-vfd-weight);
+  letter-spacing: var(--type-vfd-spacing);
+  line-height: var(--type-vfd-leading);
+
+  color: var(--color-text);
+
+  text-shadow: 0 0 8px var(--color-phosphor-glow);
+
   white-space: nowrap;
+  overflow: hidden;
   text-overflow: ellipsis;
-  transform: rotate(-90deg);
+  transform: rotate(90deg);
   transform-origin: center;
 }
 
@@ -247,8 +288,19 @@
   pointer-events: none;
   border-radius: inherit;
   background:
-    linear-gradient(105deg, rgba(255, 255, 255, 0.14), transparent 16%, transparent 72%, rgba(0, 0, 0, 0.22)),
-    linear-gradient(90deg, transparent 0 78%, rgba(255, 255, 255, 0.08) 80%, transparent 83%);
+    linear-gradient(
+      105deg,
+      rgba(255, 255, 255, 0.14),
+      transparent 16%,
+      transparent 72%,
+      rgba(0, 0, 0, 0.22)
+    ),
+    linear-gradient(
+      90deg,
+      transparent 0 78%,
+      rgba(255, 255, 255, 0.08) 80%,
+      transparent 83%
+    );
 }
 
 .spine:hover,
@@ -256,12 +308,8 @@
   z-index: 30;
   filter: brightness(1.16);
   border-color: var(--spine-accent);
-  transform:
-    translateX(calc(var(--spine-offset) + 12px))
-    translateY(-13px)
-    translateZ(65px)
-    rotateZ(0deg)
-    scale(1.04);
+  transform: translateX(calc(var(--spine-offset) + 12px)) translateY(-13px)
+    translateZ(65px) rotateZ(0deg) scale(1.04);
 }
 
 .spine:focus-visible {
@@ -274,7 +322,9 @@
   color: #68717b;
 }
 
-.hint { color: #4c555f; }
+.hint {
+  color: #4c555f;
+}
 
 @media (max-width: 900px) {
   .spine {
@@ -292,12 +342,28 @@
 }
 
 @media (max-width: 700px) {
-  .crate { width: calc(100vw - 24px); }
-  .header, .footer { padding: 12px 14px; }
-  .hint { display: none; }
-  .body { grid-template-columns: 10px 1fr 10px; min-height: 220px; padding: 18px 8px; }
-  .contents { min-height: 182px; padding: 20px 10px; }
-  .stack { min-height: 166px; }
+  .crate {
+    width: calc(100vw - 24px);
+  }
+  .header,
+  .footer {
+    padding: 12px 14px;
+  }
+  .hint {
+    display: none;
+  }
+  .body {
+    grid-template-columns: 10px 1fr 10px;
+    min-height: 220px;
+    padding: 18px 8px;
+  }
+  .contents {
+    min-height: 182px;
+    padding: 20px 10px;
+  }
+  .stack {
+    min-height: 166px;
+  }
 
   .spine {
     flex-basis: 42px;
@@ -314,10 +380,17 @@
   }
 
   .caseTop,
-  .caseBottom { left: 4px; right: 4px; }
-  .caseInnerEdge { left: 5px; }
+  .caseBottom {
+    left: 4px;
+    right: 4px;
+  }
+  .caseInnerEdge {
+    left: 5px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .spine { transition: none; }
+  .spine {
+    transition: none;
+  }
 }

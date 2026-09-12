@@ -25,6 +25,8 @@ body {
   background-attachment: fixed;
   height: 100%;
   color: var(--color-text);
+  scroll-behavior: smooth;
+  scroll-padding-top: 24px;
 }
 
 .crate-stage,

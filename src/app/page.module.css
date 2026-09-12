@@ -2,12 +2,6 @@
    CDVICIOUS — HOME PAGE COMPOSITION
    EPIC 2.1 — PLAYER + PHYSICAL COLLECTION SHELL
    ========================================================= */
-
-:global(html) {
-  scroll-behavior: smooth;
-  scroll-padding-top: 24px;
-}
-
 .stageMain {
   position: relative;
   display: flex;
@@ -20,7 +14,11 @@
   color: var(--color-bg);
   background-color: var(--color-bg);
   background-image:
-    radial-gradient(circle at 50% 10%, rgba(210, 220, 235, 0.35) 0%, transparent 55%),
+    radial-gradient(
+      circle at 50% 10%,
+      rgba(210, 220, 235, 0.35) 0%,
+      transparent 55%
+    ),
     linear-gradient(135deg, #626c7a 0%, #3a4049 100%);
   background-attachment: fixed;
 }
@@ -164,8 +162,8 @@
 /* Physical archive card: the home-page counterpart to the booklet tab. */
 .crateDockCard {
   position: absolute;
-  left: 168px;
-  bottom: 22px;
+  right: 34px;
+  bottom: 116px;
   z-index: var(--z-modal);
   display: flex;
   flex-direction: column;
@@ -188,7 +186,7 @@
     10px 16px 24px rgba(0, 0, 0, 0.48),
     inset 0 1px rgba(255, 255, 255, 0.12),
     inset 0 -5px 9px rgba(0, 0, 0, 0.42);
-  transform: rotateZ(-3deg) rotateY(-5deg);
+  transform: rotateZ(4deg) rotateY(4deg);
   transform-origin: bottom left;
   transition:
     transform 520ms cubic-bezier(0.22, 1, 0.36, 1),
@@ -202,9 +200,19 @@
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(circle at 17% 23%, rgba(255, 255, 255, 0.1) 0 1px, transparent 2px),
-    radial-gradient(circle at 78% 72%, rgba(0, 0, 0, 0.22) 0 1px, transparent 2px);
-  background-size: 29px 31px, 41px 37px;
+    radial-gradient(
+      circle at 17% 23%,
+      rgba(255, 255, 255, 0.1) 0 1px,
+      transparent 2px
+    ),
+    radial-gradient(
+      circle at 78% 72%,
+      rgba(0, 0, 0, 0.22) 0 1px,
+      transparent 2px
+    );
+  background-size:
+    29px 31px,
+    41px 37px;
   opacity: 0.48;
 }
 
@@ -236,7 +244,9 @@
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
 }
 
-.crateDockLabel { color: #77808a; }
+.crateDockLabel {
+  color: #77808a;
+}
 
 .crateDockTitle {
   position: relative;
@@ -272,20 +282,39 @@
   height: 58px;
   border: 1px solid rgba(220, 226, 232, 0.24);
   background: linear-gradient(180deg, #66717d, #252a30 50%, #111417);
-  box-shadow: inset 1px 0 rgba(255, 255, 255, 0.15), 2px 4px 5px rgba(0, 0, 0, 0.45);
+  box-shadow:
+    inset 1px 0 rgba(255, 255, 255, 0.15),
+    2px 4px 5px rgba(0, 0, 0, 0.45);
 }
 
-.crateDockSpines i:nth-child(2) { height: 51px; background: linear-gradient(180deg, #6b3c32, #2d1c1a 52%, #111417); }
-.crateDockSpines i:nth-child(3) { height: 63px; background: linear-gradient(180deg, #5c6d47, #26301f 52%, #111417); }
-.crateDockSpines i:nth-child(4) { height: 55px; background: linear-gradient(180deg, #4d647b, #202b35 52%, #111417); }
-.crateDockSpines i:nth-child(5) { height: 61px; background: linear-gradient(180deg, #806d42, #332d1e 52%, #111417); }
+.crateDockSpines i:nth-child(2) {
+  height: 51px;
+  background: linear-gradient(180deg, #6b3c32, #2d1c1a 52%, #111417);
+}
+.crateDockSpines i:nth-child(3) {
+  height: 63px;
+  background: linear-gradient(180deg, #5c6d47, #26301f 52%, #111417);
+}
+.crateDockSpines i:nth-child(4) {
+  height: 55px;
+  background: linear-gradient(180deg, #4d647b, #202b35 52%, #111417);
+}
+.crateDockSpines i:nth-child(5) {
+  height: 61px;
+  background: linear-gradient(180deg, #806d42, #332d1e 52%, #111417);
+}
 
 .collectionSection {
   position: relative;
   width: 100%;
   padding: 54px 0 90px;
   box-sizing: border-box;
-  background: linear-gradient(180deg, rgba(22, 25, 29, 0.18) 0%, rgba(18, 20, 23, 0.75) 15%, rgba(12, 14, 16, 0.92) 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(22, 25, 29, 0.18) 0%,
+    rgba(18, 20, 23, 0.75) 15%,
+    rgba(12, 14, 16, 0.92) 100%
+  );
 }
 
 .collectionSection::before {
@@ -296,11 +325,19 @@
   width: min(900px, 70vw);
   height: 1px;
   transform: translateX(-50%);
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.16), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.16),
+    transparent
+  );
 }
 
 @media (max-width: 900px) {
-  .playerSection { flex-basis: 76vh; min-height: 580px; }
+  .playerSection {
+    flex-basis: 76vh;
+    min-height: 580px;
+  }
 
   .bookletOverlayLayer {
     left: 20px;
@@ -318,9 +355,16 @@
 }
 
 @media (max-width: 640px) {
-  .topControlBar { padding: var(--space-3) var(--space-4); }
-  .brandCorner { font-size: var(--text-2xl); letter-spacing: 3px; }
-  .topNavActions { gap: var(--space-2); }
+  .topControlBar {
+    padding: var(--space-3) var(--space-4);
+  }
+  .brandCorner {
+    font-size: var(--text-2xl);
+    letter-spacing: 3px;
+  }
+  .topNavActions {
+    gap: var(--space-2);
+  }
 
   .crateNavLink {
     min-height: 30px;
@@ -329,8 +373,13 @@
     letter-spacing: 1.2px;
   }
 
-  .playerSection { flex-basis: 78vh; min-height: 540px; }
-  .centerStage { padding: var(--space-3) var(--space-4); }
+  .playerSection {
+    flex-basis: 78vh;
+    min-height: 540px;
+  }
+  .centerStage {
+    padding: var(--space-3) var(--space-4);
+  }
 
   .bookletOverlayLayer {
     left: 12px;
@@ -347,8 +396,15 @@
     padding: 9px 10px;
   }
 
-  .crateDockTitle { font-size: var(--text-lg); letter-spacing: 2px; }
-  .crateDockLabel, .crateDockMeta { font-size: 6px; letter-spacing: 1px; }
+  .crateDockTitle {
+    font-size: var(--text-lg);
+    letter-spacing: 2px;
+  }
+  .crateDockLabel,
+  .crateDockMeta {
+    font-size: 6px;
+    letter-spacing: 1px;
+  }
 
   .crateDockSpines {
     right: 8px;
@@ -356,16 +412,24 @@
     height: 51px;
   }
 
-  .crateDockSpines i { width: 6px; height: 44px; }
-  .crateDockSpines i:nth-child(2) { height: 39px; }
-  .crateDockSpines i:nth-child(3) { height: 48px; }
-  .crateDockSpines i:nth-child(4) { height: 42px; }
-  .crateDockSpines i:nth-child(5) { height: 46px; }
+  .crateDockSpines i {
+    width: 6px;
+    height: 44px;
+  }
+  .crateDockSpines i:nth-child(2) {
+    height: 39px;
+  }
+  .crateDockSpines i:nth-child(3) {
+    height: 48px;
+  }
+  .crateDockSpines i:nth-child(4) {
+    height: 42px;
+  }
+  .crateDockSpines i:nth-child(5) {
+    height: 46px;
+  }
 
-  .collectionSection { padding-top: 38px; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  :global(html) { scroll-behavior: auto; }
-  .crateDockCard { transition: none; }
+  .collectionSection {
+    padding-top: 38px;
+  }
 }

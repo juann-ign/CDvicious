@@ -29,13 +29,11 @@ function CollectionSpine({ album, index }: CollectionSpineProps) {
   const coverUrl = album.images[0]?.url;
   const artist = album.artists.map((item) => item.name).join(", ");
   const accentColor = useDominantColor(coverUrl) ?? "#68717b";
-  const rotation = -4 + ((index * 13) % 5);
   const depth = index * 2.5;
   const offset = Math.min(index * 1.7, 48);
 
   const spineStyle = {
     "--spine-accent": accentColor,
-    "--spine-rotation": `${rotation}deg`,
     "--spine-depth": `${depth}px`,
     "--spine-offset": `${offset}px`,
   } as CSSProperties;
@@ -66,7 +64,11 @@ export function CollectionCrate({ albums, totalCount }: CollectionCrateProps) {
   const count = totalCount ?? albums.length;
 
   return (
-    <section id="crate" className={styles.crate} aria-labelledby="collection-crate-title">
+    <section
+      id="crate"
+      className={styles.crate}
+      aria-labelledby="collection-crate-title"
+    >
       <div className={styles.header}>
         <div>
           <span className={styles.eyebrow}>ARCHIVE / MEDIA STORAGE</span>
@@ -81,7 +83,10 @@ export function CollectionCrate({ albums, totalCount }: CollectionCrateProps) {
 
       <div className={styles.body}>
         <div className={styles.rail} aria-hidden="true" />
-        <div className={styles.contents} aria-label={`${count} albums in collection`}>
+        <div
+          className={styles.contents}
+          aria-label={`${count} albums in collection`}
+        >
           <div className={styles.stack}>
             {visibleAlbums.map((album, index) => (
               <CollectionSpine album={album} index={index} key={album.id} />
@@ -93,7 +98,9 @@ export function CollectionCrate({ albums, totalCount }: CollectionCrateProps) {
 
       <div className={styles.footer}>
         <span>{count} CDS IN ARCHIVE</span>
-        <span className={styles.hint}>SELECT A SPINE OR OPEN THE FULL BATEA</span>
+        <span className={styles.hint}>
+          SELECT A SPINE OR OPEN THE FULL BATEA
+        </span>
       </div>
     </section>
   );
