@@ -1,0 +1,314 @@
+.stage {
+  min-height: 100dvh;
+  width: 100%;
+  overflow-x: hidden;
+  background-color: #525a66;
+  background-image:
+    radial-gradient(circle at 50% 10%, rgba(210, 220, 235, 0.35) 0%, transparent 55%),
+    linear-gradient(135deg, #626c7a 0%, #3a4049 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 20px;
+  color: #e0e0e0;
+  box-sizing: border-box;
+}
+
+.layoutWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  width: 100%;
+  max-width: 1420px;
+  box-sizing: border-box;
+  filter: drop-shadow(0 30px 60px rgba(0, 0, 0, 0.9));
+}
+
+.console {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #141619;
+  width: 100%;
+  box-sizing: border-box;
+  box-shadow: inset 0 4px 6px rgba(0, 0, 0, 0.7);
+}
+
+.topDeck {
+  border-top-left-radius: 4px;
+  border-top-right-radius: 4px;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  border-bottom: 2px solid #2a2d33;
+  border-top: 4px solid #5e646d;
+  border-left: 4px solid #5e646d;
+  border-right: 4px solid #5e646d;
+  padding: 12px 24px;
+}
+
+.bottomDeck {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  border-bottom-left-radius: 4px;
+  border-bottom-right-radius: 4px;
+  border-top: 2px solid #2a2d33;
+  border-bottom: 4px solid #5e646d;
+  border-left: 4px solid #5e646d;
+  border-right: 4px solid #5e646d;
+  padding: 12px 24px;
+}
+
+.title {
+  margin: 0;
+  font-family: Helvetica, Arial, sans-serif;
+  font-weight: 900;
+  font-size: 15px;
+  letter-spacing: 4px;
+  color: #fff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+.searchContainer {
+  display: flex;
+  align-items: center;
+  background: #090b0d;
+  border: 1px inset #222;
+  border-radius: 2px;
+  padding: 4px 10px;
+  gap: 8px;
+  width: 280px;
+  box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.9);
+}
+
+.prompt {
+  font-family: "Courier New", monospace;
+  color: #44aa44;
+  font-size: 10px;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+.input {
+  min-width: 0;
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: "Courier New", monospace;
+  color: #7fff7f;
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-shadow: 0 0 8px rgba(127, 255, 127, 0.6);
+}
+
+.input::placeholder {
+  color: #2c552c;
+  text-shadow: none;
+}
+
+.physicalRack {
+  width: 100%;
+  background: #4a4f56;
+  border-left: 4px solid #5e646d;
+  border-right: 4px solid #5e646d;
+  border-top: 2px solid #3a3f48;
+  border-bottom: 2px solid #3a3f48;
+  border-radius: 0;
+  padding: 3px;
+  box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.rackGrid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  grid-template-rows: repeat(4, 1fr);
+  background-color: #1c1e22;
+  border: 2px solid #1a1c1e;
+  gap: 5px;
+  width: 100%;
+  aspect-ratio: 2.15 / 1;
+}
+
+.rackSlot {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  height: 100%;
+  padding: 12px 20px 6px 10px;
+  box-sizing: border-box;
+  background-color: #2b2f36;
+  box-shadow:
+    inset 3px 3px 8px rgba(0, 0, 0, 0.6),
+    inset -1px -1px 3px rgba(255, 255, 255, 0.1);
+}
+
+.rackSlot.empty {
+  background-color: #1f2227;
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 6px,
+    rgba(0, 0, 0, 0.3) 6px,
+    rgba(0, 0, 0, 0.3) 7px
+  );
+  opacity: 0.5;
+}
+
+.caseScale {
+  width: 100%;
+  transform: scale(0.9);
+  transform-origin: center left;
+}
+
+.vfdDisplay {
+  font-family: "Courier New", monospace;
+  color: #55ff55;
+  font-size: 12px;
+  letter-spacing: 4px;
+  text-shadow: 0 0 8px rgba(85, 255, 85, 0.5);
+  white-space: nowrap;
+}
+
+.vfdButton {
+  background: linear-gradient(to bottom, #22262b, #15181c);
+  border: 1px solid #3a3f4b;
+  border-bottom: 3px solid #090a0c;
+  color: #cfcfcf;
+  font-family: "Courier New", monospace;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  padding: 6px 14px;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.08s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+  white-space: nowrap;
+}
+
+.vfdButton:hover:not(:disabled) {
+  color: #fff;
+  border-color: #55ff55;
+}
+
+.vfdButton:active:not(:disabled) {
+  border-bottom-width: 1px;
+  transform: translateY(2px);
+  color: #55ff55;
+  background: #121417;
+}
+
+.vfdButton:disabled {
+  background: #181a1e;
+  border: 1px solid #282c33;
+  border-bottom: 2px solid #0e1012;
+  color: #7a828e;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.message {
+  margin-top: 10vh;
+  font-family: "Courier New", monospace;
+  color: #0f0;
+  text-shadow: 0 0 5px #0f0;
+}
+
+.error {
+  color: #f00;
+}
+
+@media (max-width: 900px) {
+  .stage {
+    justify-content: flex-start;
+    padding: 16px 12px 32px;
+  }
+
+  .topDeck,
+  .bottomDeck {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .searchContainer {
+    width: min(280px, 42vw);
+  }
+}
+
+@media (max-width: 700px) {
+  .stage {
+    padding: 12px 8px 24px;
+  }
+
+  .topDeck,
+  .bottomDeck {
+    padding: 10px 12px;
+  }
+
+  .topDeck {
+    gap: 12px;
+  }
+
+  .title {
+    font-size: 13px;
+    letter-spacing: 3px;
+  }
+
+  .searchContainer {
+    width: 45vw;
+    max-width: 280px;
+  }
+
+  .rackGrid {
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(8, 1fr);
+    aspect-ratio: auto;
+  }
+
+  .rackSlot {
+    min-height: 150px;
+    padding: 10px 8px;
+  }
+
+  .caseScale {
+    transform: scale(0.78);
+    transform-origin: center;
+  }
+
+  .vfdDisplay {
+    font-size: 10px;
+    letter-spacing: 2px;
+  }
+
+  .vfdButton {
+    padding: 6px 9px;
+  }
+}
+
+@media (max-width: 460px) {
+  .topDeck {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .searchContainer {
+    width: 100%;
+    max-width: none;
+    box-sizing: border-box;
+  }
+
+  .bottomDeck {
+    gap: 8px;
+  }
+
+  .vfdDisplay {
+    font-size: 9px;
+    letter-spacing: 1px;
+  }
+}

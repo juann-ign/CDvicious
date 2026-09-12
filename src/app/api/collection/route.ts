@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 
 const SPOTIFY_MAX_LIMIT = 50;
-const MAX_ALBUMS = 120;
+const MAX_ALBUMS = 500;
 
 interface SpotifyAlbum {
   id: string;
