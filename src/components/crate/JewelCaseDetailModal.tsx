@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { AlbumItem, AlbumTrack } from "@/types/crate";
 import styles from "./JewelCaseDetailModal.module.css";
 
@@ -16,14 +16,11 @@ interface JewelCaseDetailModalProps {
   onLoad: (originEl: HTMLElement) => void;
 }
 
-export function JewelCaseDetailModal({
-  album,
-  onClose,
-  onLoad,
-}: JewelCaseDetailModalProps) {
+export function JewelCaseDetailModal({ album, onClose, onLoad }: JewelCaseDetailModalProps) {
   const [tracks, setTracks] = useState<AlbumTrack[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
+  const caseRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -39,7 +36,6 @@ export function JewelCaseDetailModal({
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
-
     return () => {
       cancelled = true;
     };
@@ -56,6 +52,10 @@ export function JewelCaseDetailModal({
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
+  const handleLoad = () => {
+    if (caseRef.current) onLoad(caseRef.current);
+  };
+
   return (
     <div
       className={styles.overlay}
@@ -63,12 +63,7 @@ export function JewelCaseDetailModal({
       aria-modal="true"
       aria-label={`${album.name} — ${album.artists.map((a) => a.name).join(", ")}`}
     >
-      <button
-        type="button"
-        className={styles.scrim}
-        onClick={onClose}
-        aria-label="Cerrar"
-      />
+      <button type="button" className={styles.scrim} onClick={onClose} aria-label="Cerrar" />
 
       <div className={`${styles.sheet} ${isOpen ? styles.sheetOpen : ""}`}>
         <header className={styles.header}>
@@ -86,17 +81,11 @@ export function JewelCaseDetailModal({
         </header>
 
         <div className={styles.casePerspective}>
-          <div className={styles.caseShell}>
+          <div ref={caseRef} className={styles.caseShell}>
             <section className={styles.leftLeaf} aria-label="Portada y lista de canciones">
               <div className={styles.leftArt}>
                 {album.images[0]?.url && (
-                  <Image
-                    src={album.images[0].url}
-                    alt={album.name}
-                    fill
-                    unoptimized
-                    className={styles.cover}
-                  />
+                  <Image src={album.images[0].url} alt={album.name} fill unoptimized className={styles.cover} />
                 )}
                 <span className={styles.interiorGlare} />
                 <span className={styles.leftEdge} />
@@ -109,14 +98,13 @@ export function JewelCaseDetailModal({
                 </div>
                 <ul className={styles.tracklist}>
                   {loading && <li className={styles.trackRow}>LEYENDO TOC...</li>}
-                  {!loading &&
-                    tracks?.map((t, i) => (
-                      <li key={`${t.name}-${i}`} className={styles.trackRow}>
-                        <span className={styles.trackIndex}>{String(i + 1).padStart(2, "0")}</span>
-                        <span className={styles.trackName}>{t.name}</span>
-                        <span className={styles.trackDuration}>{fmt(t.duration_ms)}</span>
-                      </li>
-                    ))}
+                  {!loading && tracks?.map((t, i) => (
+                    <li key={`${t.name}-${i}`} className={styles.trackRow}>
+                      <span className={styles.trackIndex}>{String(i + 1).padStart(2, "0")}</span>
+                      <span className={styles.trackName}>{t.name}</span>
+                      <span className={styles.trackDuration}>{fmt(t.duration_ms)}</span>
+                    </li>
+                  ))}
                 </ul>
               </div>
             </section>
@@ -129,19 +117,11 @@ export function JewelCaseDetailModal({
                 </div>
                 <div className={styles.disc}>
                   {album.images[0]?.url && (
-                    <Image
-                      src={album.images[0].url}
-                      alt=""
-                      fill
-                      unoptimized
-                      className={styles.discArt}
-                    />
+                    <Image src={album.images[0].url} alt="" fill unoptimized className={styles.discArt} />
                   )}
                   <span className={styles.discSheen} />
                   <span className={styles.discHub} />
-                  <span className={styles.discLabel}>
-                    {album.artists[0]?.name || "CDVICIOUS"}
-                  </span>
+                  <span className={styles.discLabel}>{album.artists[0]?.name || "CDVICIOUS"}</span>
                 </div>
               </div>
             </section>
@@ -152,25 +132,11 @@ export function JewelCaseDetailModal({
         </div>
 
         <footer className={styles.actions}>
-          <button
-            type="button"
-            className={styles.playBtn}
-            onClick={() => {
-              const origin = document.querySelector<HTMLElement>(`[data-album-origin="${album.id}"]`);
-              onLoad(origin ?? document.documentElement);
-            }}
-          >
+          <button type="button" className={styles.playBtn} onClick={handleLoad}>
             <span className={styles.playIcon}>▶</span>
             <span>REPRODUCIR ÁLBUM</span>
           </button>
-          <button
-            type="button"
-            className={styles.loadBtn}
-            onClick={() => {
-              const origin = document.querySelector<HTMLElement>(`[data-album-origin="${album.id}"]`);
-              onLoad(origin ?? document.documentElement);
-            }}
-          >
+          <button type="button" className={styles.loadBtn} onClick={handleLoad}>
             CARGAR EN DECK ▲
           </button>
           <button type="button" className={styles.closeBtnBottom} onClick={onClose}>
