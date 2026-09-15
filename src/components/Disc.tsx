@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import type { CSSProperties } from "react";
 import type { SpotifyTrack } from "@/types/spotify";
+import { discRegistry } from "@/lib/discRegistry";
 import styles from "./Disc/Disc.module.css";
 
 const DiscCanvas = dynamic(
@@ -20,7 +21,12 @@ export function Disc({ track, isPlaying, accentColor }: DiscProps) {
   const glowStyle = { "--accent-color": accentColor } as CSSProperties;
 
   return (
-    <div className={styles.discStage}>
+    <div
+      className={styles.discStage}
+      ref={(el) => {
+        discRegistry.discTarget = el;
+      }}
+    >
       <div
         className={`${styles.discGlow} ${isPlaying ? styles.isActive : ""}`}
         style={glowStyle}
