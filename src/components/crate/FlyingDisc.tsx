@@ -69,7 +69,9 @@ export function FlyingDisc({ coverUrl, originRect, onDone }: FlyingDiscProps) {
     });
     tl.to(el, { opacity: 0, duration: 0.14, ease: "power1.in" }, "-=0.08");
 
-    return () => tl.kill();
+    return () => {
+      tl.kill();
+    };
   }, [originRect, onDone]);
 
   return (
