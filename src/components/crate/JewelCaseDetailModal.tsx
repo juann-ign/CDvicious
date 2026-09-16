@@ -20,7 +20,7 @@ export function JewelCaseDetailModal({ album, onClose, onLoad }: JewelCaseDetail
   const [tracks, setTracks] = useState<AlbumTrack[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
-  const caseRef = useRef<HTMLDivElement>(null);
+  const discRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -53,7 +53,7 @@ export function JewelCaseDetailModal({ album, onClose, onLoad }: JewelCaseDetail
   }, [onClose]);
 
   const handleLoad = () => {
-    if (caseRef.current) onLoad(caseRef.current);
+    if (discRef.current) onLoad(discRef.current);
   };
 
   return (
@@ -68,7 +68,7 @@ export function JewelCaseDetailModal({ album, onClose, onLoad }: JewelCaseDetail
       <div className={`${styles.sheet} ${isOpen ? styles.sheetOpen : ""}`}>
         <header className={styles.header}>
           <div>
-            <p className={styles.eyebrow}>ALBUM / JEWEL CASE</p>
+            <p className={styles.eyebrow}>álbum / jewel case</p>
             <h2 className={styles.title}>{album.name}</h2>
             <p className={styles.artist}>
               {album.artists.map((a) => a.name).join(", ")}
@@ -76,71 +76,87 @@ export function JewelCaseDetailModal({ album, onClose, onLoad }: JewelCaseDetail
             </p>
           </div>
           <button type="button" className={styles.closeBtn} onClick={onClose}>
-            CERRAR ✕
+            cerrar <span aria-hidden="true">×</span>
           </button>
         </header>
 
         <div className={styles.casePerspective}>
-          <div ref={caseRef} className={styles.caseShell}>
+          <div className={styles.caseShell}>
             <section className={styles.leftLeaf} aria-label="Portada y lista de canciones">
-              <div className={styles.leftArt}>
-                {album.images[0]?.url && (
-                  <Image src={album.images[0].url} alt={album.name} fill unoptimized className={styles.cover} />
-                )}
-                <span className={styles.interiorGlare} />
-                <span className={styles.leftEdge} />
-              </div>
-
-              <div className={styles.trackPanel}>
-                <div className={styles.trackHeader}>
-                  <span>TRACKLIST</span>
-                  <span>{tracks?.length ?? 0} PISTAS</span>
+              <div className={styles.paperbackPanel}>
+                <div className={styles.coverPanel}>
+                  {album.images[0]?.url && (
+                    <Image src={album.images[0].url} alt={album.name} fill unoptimized className={styles.cover} />
+                  )}
+                  <span className={styles.coverGlare} aria-hidden="true" />
                 </div>
-                <ul className={styles.tracklist}>
-                  {loading && <li className={styles.trackRow}>LEYENDO TOC...</li>}
-                  {!loading && tracks?.map((t, i) => (
-                    <li key={`${t.name}-${i}`} className={styles.trackRow}>
-                      <span className={styles.trackIndex}>{String(i + 1).padStart(2, "0")}</span>
-                      <span className={styles.trackName}>{t.name}</span>
-                      <span className={styles.trackDuration}>{fmt(t.duration_ms)}</span>
-                    </li>
-                  ))}
-                </ul>
+
+                <div className={styles.trackPanel}>
+                  <div className={styles.trackMeta}>
+                    <span>{album.artists[0]?.name ?? "CDVICIOUS"}</span>
+                    <strong>{album.name}</strong>
+                  </div>
+                  <div className={styles.trackHeader}>
+                    <span>TRACKLIST</span>
+                    <span>{tracks?.length ?? 0} PISTAS</span>
+                  </div>
+                  <ul className={styles.tracklist}>
+                    {loading && <li className={styles.trackRow}>LEYENDO TOC...</li>}
+                    {!loading && tracks?.map((t, i) => (
+                      <li key={`${t.name}-${i}`} className={styles.trackRow}>
+                        <span className={styles.trackIndex}>{String(i + 1).padStart(2, "0")}</span>
+                        <span className={styles.trackName}>{t.name}</span>
+                        <span className={styles.trackDuration}>{fmt(t.duration_ms)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </div>
             </section>
 
             <section className={styles.rightLeaf} aria-label="Disco">
               <div className={styles.tray}>
-                <div className={styles.trayRings} />
-                <div className={styles.hub}>
+                <div className={styles.trayTexture} aria-hidden="true" />
+                <div className={styles.trayClips} aria-hidden="true">
+                  <span />
+                  <span />
+                  <span />
                   <span />
                 </div>
-                <div className={styles.disc}>
+                <div ref={discRef} className={styles.disc}>
                   {album.images[0]?.url && (
                     <Image src={album.images[0].url} alt="" fill unoptimized className={styles.discArt} />
                   )}
-                  <span className={styles.discSheen} />
-                  <span className={styles.discHub} />
+                  <span className={styles.discSheen} aria-hidden="true" />
+                  <span className={styles.discRing} aria-hidden="true" />
+                  <span className={styles.discHub} aria-hidden="true" />
                   <span className={styles.discLabel}>{album.artists[0]?.name || "CDVICIOUS"}</span>
                 </div>
               </div>
             </section>
 
-            <div className={styles.centerHinge} aria-hidden="true" />
+            <div className={styles.hinge} aria-hidden="true">
+              <span />
+              <span />
+              <span />
+            </div>
             <div className={styles.acrylicReflection} aria-hidden="true" />
           </div>
         </div>
 
         <footer className={styles.actions}>
           <button type="button" className={styles.playBtn} onClick={handleLoad}>
-            <span className={styles.playIcon}>▶</span>
-            <span>REPRODUCIR ÁLBUM</span>
+            <span className={styles.playIcon} aria-hidden="true">▶</span>
+            <span>
+              <strong>reproducir álbum</strong>
+              <small>{tracks?.length ?? 0} canciones · colección</small>
+            </span>
           </button>
           <button type="button" className={styles.loadBtn} onClick={handleLoad}>
-            CARGAR EN DECK ▲
+            cargar en deck ▲
           </button>
           <button type="button" className={styles.closeBtnBottom} onClick={onClose}>
-            DEJAR EN LA BATEA
+            agregar a colección +
           </button>
         </footer>
       </div>
