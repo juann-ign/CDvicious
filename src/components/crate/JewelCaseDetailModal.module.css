@@ -132,7 +132,7 @@
 .casePerspective {
   position: relative;
   z-index: 2;
-  perspective: 1400px;
+  perspective: 1200px;
   padding: 5px 6px 6px;
 }
 .caseShell {
@@ -170,7 +170,7 @@
     inset -16px 0 28px rgba(0, 0, 0, 0.34),
     0 0 18px rgba(226, 238, 245, 0.075);
   transform-origin: right center;
-  transform: rotateY(5deg) translateZ(2px);
+  transform: rotateY(14deg) translateZ(2px);
 }
 .rightLeaf {
   z-index: 2;
@@ -188,7 +188,7 @@
     inset 16px 0 28px rgba(0, 0, 0, 0.28),
     0 0 18px rgba(226, 238, 245, 0.075);
   transform-origin: left center;
-  transform: rotateY(-16deg) translateZ(1px);
+  transform: rotateY(-20deg) translateZ(1px);
 }
 
 .leftLeaf::before,
