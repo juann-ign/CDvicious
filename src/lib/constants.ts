@@ -12,3 +12,5 @@ export const SPOTIFY_TOKEN_URL = "https://accounts.spotify.com/api/token";
 export const SPOTIFY_NOW_PLAYING_URL =
   "https://api.spotify.com/v1/me/player/currently-playing";
 export const SPOTIFY_ME_URL = "https://api.spotify.com/v1/me";
+export const SPOTIFY_ARTISTS_URL = "https://api.spotify.com/v1/artists";
+export const SPOTIFY_ARTISTS_BATCH = 50;

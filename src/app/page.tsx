@@ -1,22 +1,21 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useState, type CSSProperties, Suspense } from "react";
+import { useEffect, useState, type CSSProperties, Suspense, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { UserProfileChip } from "@/components/UserProfileChip";
 import { Disc } from "@/components/Disc";
 import { NowPlayingCard } from "@/components/NowPlayingCard";
 import { LyricsBooklet } from "@/components/LyricsBooklet";
-import { CollectionCrate, type CollectionAlbum } from "@/components/CollectionCrate";
+import { CrateTeaser } from "@/components/crate/CrateTeaser";
 import { useNowPlaying } from "@/hooks/useNowPlaying";
 import { useDominantColor } from "@/hooks/useDominantColor";
 import { useSpotifyPlayer } from "@/components/SpotifyPlayerProvider";
+import type { AlbumItem } from "@/types/crate";
 import styles from "./page.module.css";
 
 function HomeContent() {
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
   const [isBookletOpen, setIsBookletOpen] = useState(false);
-  const [collection, setCollection] = useState<CollectionAlbum[]>([]);
   const searchParams = useSearchParams();
   const albumId = searchParams.get("album");
   const { deviceId, isReady } = useSpotifyPlayer();
@@ -27,52 +26,41 @@ function HomeContent() {
       .then((d) => setAuthenticated(d.authenticated));
   }, []);
 
-  useEffect(() => {
-    if (authenticated !== true) return;
-
-    let cancelled = false;
-    fetch("/api/collection")
-      .then((res) => {
-        if (!res.ok) throw new Error("Collection unavailable");
-        return res.json();
-      })
-      .then((data) => {
-        if (!cancelled && Array.isArray(data)) setCollection(data);
-      })
-      .catch(() => {
-        if (!cancelled) setCollection([]);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [authenticated]);
-
-  useEffect(() => {
-    if (!albumId || !deviceId || !isReady || authenticated !== true) return;
-
-    const playSelectedAlbum = async () => {
+  const loadAlbumToDeck = useCallback(
+    async (uri: string) => {
+      if (!deviceId || !isReady) return;
       try {
-        const albumUri = albumId.startsWith("spotify:album:")
-          ? albumId
-          : `spotify:album:${albumId}`;
-
         await fetch("/api/play", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ uri: albumUri, deviceId }),
+          body: JSON.stringify({ uri, deviceId }),
         });
       } catch (err) {
         console.error("Error al iniciar reproducción:", err);
       }
-    };
+    },
+    [deviceId, isReady],
+  );
 
-    playSelectedAlbum();
-  }, [albumId, deviceId, isReady, authenticated]);
+  useEffect(() => {
+    if (!albumId || !deviceId || !isReady || authenticated !== true) return;
+    const albumUri = albumId.startsWith("spotify:album:")
+      ? albumId
+      : `spotify:album:${albumId}`;
+    loadAlbumToDeck(albumUri);
+  }, [albumId, deviceId, isReady, authenticated, loadAlbumToDeck]);
+
+  const handleLoadAlbumFromCrate = useCallback(
+    (album: AlbumItem) => {
+      loadAlbumToDeck(album.uri);
+    },
+    [loadAlbumToDeck],
+  );
 
   const { data, error } = useNowPlaying(authenticated === true);
   const coverUrl = data?.track?.album.images[0]?.url;
   const accentColor = useDominantColor(coverUrl) ?? "#1DB954";
+
   const stageStyle = { "--accent-color": accentColor } as CSSProperties;
 
   return (
@@ -81,66 +69,41 @@ function HomeContent() {
         <div className={styles.brandCorner}>
           CD<span>vicious</span>
         </div>
-
-        <nav className={styles.topNavActions} aria-label="Main navigation">
-          <Link href="/crate" className={styles.crateNavLink}>
-            CRATE <span aria-hidden="true">↗</span>
-          </Link>
+        <div className="top-nav-actions">
           <UserProfileChip />
-        </nav>
+        </div>
       </header>
 
-      <section className={styles.playerSection} aria-label="CD player">
-        <div className={styles.centerStage}>
-          <div className={styles.discHero}>
-            <Disc
-              track={data?.track ?? null}
-              isPlaying={data?.isPlaying ?? false}
-              accentColor={accentColor}
-            />
-          </div>
-        </div>
-
-        <div className={styles.nowPlayingDock}>
-          <NowPlayingCard
+      <div className={styles.centerStage}>
+        <div className={styles.discHero}>
+          <Disc
             track={data?.track ?? null}
             isPlaying={data?.isPlaying ?? false}
-            error={error}
-            progressMs={data?.progressMs ?? null}
-            durationMs={data?.durationMs ?? null}
-          />
-        </div>
-
-        <div className={styles.bookletOverlayLayer}>
-          <LyricsBooklet
-            track={data?.track ?? null}
-            isOpen={isBookletOpen}
-            onToggle={() => setIsBookletOpen((open) => !open)}
             accentColor={accentColor}
           />
         </div>
+      </div>
 
-        {authenticated === true && collection.length > 0 && (
-          <Link href="#crate" className={styles.crateDockCard} aria-label="Open The Crate">
-            <span className={styles.crateDockLabel}>ARCHIVE / MEDIA STORAGE</span>
-            <span className={styles.crateDockTitle}>THE CRATE</span>
-            <span className={styles.crateDockMeta}>OPEN COLLECTION <span aria-hidden="true">↓</span></span>
-            <span className={styles.crateDockSpines} aria-hidden="true">
-              <i />
-              <i />
-              <i />
-              <i />
-              <i />
-            </span>
-          </Link>
-        )}
-      </section>
+      <div className={styles.nowPlayingDock}>
+        <NowPlayingCard
+          track={data?.track ?? null}
+          isPlaying={data?.isPlaying ?? false}
+          error={error}
+          progressMs={data?.progressMs ?? null}
+          durationMs={data?.durationMs ?? null}
+        />
+      </div>
 
-      {authenticated === true && collection.length > 0 && (
-        <section className={styles.collectionSection}>
-          <CollectionCrate albums={collection} totalCount={collection.length} />
-        </section>
-      )}
+      <div className={styles.bookletOverlayLayer}>
+        <LyricsBooklet
+          track={data?.track ?? null}
+          isOpen={isBookletOpen}
+          onToggle={() => setIsBookletOpen((open) => !open)}
+          accentColor={accentColor}
+        />
+      </div>
+
+      <CrateTeaser onLoadAlbum={handleLoadAlbumFromCrate} />
     </main>
   );
 }

@@ -1,0 +1,132 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+}
+
+.scrim {
+  position: absolute;
+  inset: 0;
+  border: none;
+  cursor: default;
+  background: rgba(4, 5, 8, 0.85);
+  backdrop-filter: blur(4px);
+}
+
+.sheet {
+  position: relative;
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: var(--space-6);
+  width: min(840px, 100%);
+  background: var(--color-surface);
+  border: var(--border-thin);
+  padding: var(--space-5);
+  box-shadow: var(--shadow-hardware-heavy);
+}
+
+.caseArt {
+  position: relative;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+}
+
+.cover {
+  object-fit: cover;
+}
+
+.glare {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    rgba(255, 255, 255, 0.16) 0%,
+    transparent 40%
+  );
+  pointer-events: none;
+}
+
+.artist {
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  letter-spacing: var(--tracking-wide-2);
+  color: var(--color-phosphor-dim);
+  text-transform: uppercase;
+}
+
+.title {
+  font-family: var(--font-ui);
+  font-size: var(--text-3xl);
+  color: var(--color-text);
+  margin: var(--space-1) 0 var(--space-4);
+  letter-spacing: 1px;
+}
+
+.tracklist {
+  list-style: none;
+  border-top: 1px solid var(--color-border-subtle);
+  border-bottom: 1px solid var(--color-border-subtle);
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.trackRow {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  font-family: var(--font-ui);
+  font-size: var(--text-md);
+  letter-spacing: 1px;
+  color: var(--color-text-secondary);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.trackName {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.loadBtn {
+  flex: 1;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-phosphor-soft);
+  border: 1px solid var(--color-phosphor);
+  color: var(--color-phosphor);
+  font-family: var(--font-ui);
+  letter-spacing: var(--tracking-wide);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.loadBtn:hover {
+  background: var(--color-phosphor-dim);
+  color: var(--color-bg);
+}
+
+.closeBtn {
+  padding: var(--space-3) var(--space-4);
+  background: transparent;
+  border: var(--border-thin);
+  color: var(--color-text-muted);
+  font-family: var(--font-ui);
+  cursor: pointer;
+}
+
+@media (max-width: 640px) {
+  .sheet {
+    grid-template-columns: 1fr;
+  }
+}

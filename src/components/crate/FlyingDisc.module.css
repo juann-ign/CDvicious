@@ -1,0 +1,31 @@
+.disc {
+  z-index: var(--z-modal);
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  box-shadow: 0 0 40px -8px var(--color-phosphor-glow);
+  overflow: hidden;
+  pointer-events: none;
+  transform-style: preserve-3d;
+}
+
+.discInner {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background-size: cover;
+  background-position: center;
+  filter: saturate(1.1);
+}
+
+.hub {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 22%;
+  height: 22%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: var(--color-bg);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.25);
+}

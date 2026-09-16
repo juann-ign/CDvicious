@@ -4,6 +4,8 @@ import {
   SPOTIFY_SCOPES,
   SPOTIFY_NOW_PLAYING_URL,
   SPOTIFY_ME_URL,
+  SPOTIFY_ARTISTS_BATCH,
+  SPOTIFY_ARTISTS_URL,
 } from "./constants";
 
 export function buildAuthUrl(state: string) {
@@ -120,4 +122,27 @@ export async function fetchUserProfile(accessToken: string) {
     displayName: data.display_name ?? "Usuario Spotify",
     avatarUrl: data.images?.[0]?.url ?? null,
   };
+}
+
+export async function fetchArtistGenres(
+  accessToken: string,
+  artistIds: string[],
+): Promise<Record<string, string[]>> {
+  const unique = Array.from(new Set(artistIds)).filter(Boolean);
+  const map: Record<string, string[]> = {};
+
+  for (let i = 0; i < unique.length; i += SPOTIFY_ARTISTS_BATCH) {
+    const batch = unique.slice(i, i + SPOTIFY_ARTISTS_BATCH);
+    const res = await fetch(`${SPOTIFY_ARTISTS_URL}?ids=${batch.join(",")}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!res.ok) continue;
+
+    const data = await res.json();
+    for (const artist of data.artists ?? []) {
+      if (artist?.id) map[artist.id] = artist.genres ?? [];
+    }
+  }
+
+  return map;
 }

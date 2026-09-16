@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { shaderMaterial } from "@react-three/drei";
-import { extend } from "@react-three/fiber";
+import { extend, type ThreeElement } from "@react-three/fiber";
 
 export const DiscSheenMaterial = shaderMaterial(
   {
@@ -92,6 +92,6 @@ extend({ DiscSheenMaterial });
 
 declare module "@react-three/fiber" {
   interface ThreeElements {
-    discSheenMaterial: any;
+    discSheenMaterial: ThreeElement<typeof DiscSheenMaterial>;
   }
 }

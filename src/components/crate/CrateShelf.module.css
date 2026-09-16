@@ -1,0 +1,168 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  justify-content: center;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.pageNav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.chevBtn {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  background: var(--color-surface);
+  border: var(--border-thin);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: 11px;
+}
+
+.chevBtn:hover {
+  border-color: var(--color-phosphor);
+  color: var(--color-phosphor);
+}
+
+.pageLabel {
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  letter-spacing: var(--tracking-wide);
+  color: var(--color-text-muted);
+  min-width: 92px;
+  text-align: center;
+}
+
+.beltToggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  background: var(--color-surface);
+  border: var(--border-thin);
+  color: var(--color-text-secondary);
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-wide);
+  cursor: pointer;
+}
+
+.beltToggle:hover {
+  border-color: var(--color-phosphor);
+}
+
+.beltDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-text-subtle);
+}
+
+.beltDotOn {
+  background: var(--color-phosphor);
+  box-shadow: 0 0 6px var(--color-phosphor-glow);
+}
+
+.stage {
+  position: relative;
+  overflow: hidden;
+  height: 256px;
+  padding: var(--space-3) 0;
+  background: linear-gradient(
+    180deg,
+    var(--color-surface-dark),
+    var(--color-bg) 60%
+  );
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+  box-shadow: var(--shadow-inset-dark);
+}
+
+.viewport {
+  position: absolute;
+  inset: 0;
+  cursor: grab;
+  touch-action: pan-y;
+}
+
+.viewport.dragging {
+  cursor: grabbing;
+}
+
+.track {
+  position: absolute;
+  bottom: var(--space-3);
+  left: 0;
+  display: flex;
+  align-items: flex-end;
+  will-change: transform;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+
+.copy {
+  display: flex;
+  align-items: flex-end;
+}
+
+.fadeLeft,
+.fadeRight {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 70px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.fadeLeft {
+  left: 0;
+  background: linear-gradient(90deg, var(--color-bg), transparent);
+}
+
+.fadeRight {
+  right: 0;
+  background: linear-gradient(270deg, var(--color-bg), transparent);
+}
+
+.dots {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 1px;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  padding: 0;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.dot:hover {
+  background: var(--color-text-subtle);
+}
+
+.dotActive {
+  width: 20px;
+  background: var(--color-phosphor);
+  border-color: transparent;
+  box-shadow: 0 0 8px -1px var(--color-phosphor-glow);
+}

@@ -24,6 +24,28 @@ export function DiscCanvas({ track, isPlaying, accentColor }: DiscCanvasProps) {
       document.removeEventListener("visibilitychange", handleVisibility);
   }, []);
 
+  useEffect(() => {
+    const canvas = document.querySelector("canvas");
+    if (!canvas) return;
+
+    const handleLost = (e: Event) => {
+      e.preventDefault();
+      console.error("[DiscCanvas] WebGL context lost — pausando frameloop");
+      setFrameloop("never");
+    };
+    const handleRestored = () => {
+      console.warn("[DiscCanvas] WebGL context restored");
+      setFrameloop("always");
+    };
+
+    canvas.addEventListener("webglcontextlost", handleLost);
+    canvas.addEventListener("webglcontextrestored", handleRestored);
+    return () => {
+      canvas.removeEventListener("webglcontextlost", handleLost);
+      canvas.removeEventListener("webglcontextrestored", handleRestored);
+    };
+  }, []);
+
   return (
     <Canvas
       shadows
@@ -35,7 +57,10 @@ export function DiscCanvas({ track, isPlaying, accentColor }: DiscCanvasProps) {
     >
       <ambientLight intensity={1.4} />
 
-      <Environment preset="studio" environmentIntensity={0.35} />
+      <Environment
+        files="/hdri/studio_small_03_1k.hdr"
+        environmentIntensity={0.35}
+      />
 
       <directionalLight
         position={[3, 5, 4]}

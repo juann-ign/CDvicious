@@ -9,7 +9,6 @@
   align-items: center;
   width: 100%;
   min-height: 100vh;
-  overflow-x: hidden;
   box-sizing: border-box;
   color: var(--color-bg);
   background-color: var(--color-bg);
@@ -149,8 +148,9 @@
 }
 
 .bookletOverlayLayer {
-  position: absolute;
-  left: 34px;
+  position: relative;
+  left: -560px;
+  top: -500px;
   bottom: 116px;
   width: 570px;
   height: 370px;

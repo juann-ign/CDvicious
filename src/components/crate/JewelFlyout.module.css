@@ -1,0 +1,92 @@
+.flyout {
+  position: fixed;
+  z-index: var(--z-modal);
+  width: 210px;
+  pointer-events: none;
+}
+
+.stemDown,
+.stemUp {
+  display: block;
+  width: 1px;
+  height: 14px;
+  margin: 0 auto;
+  background: linear-gradient(180deg, var(--color-border), transparent);
+}
+
+.stemUp {
+  background: linear-gradient(0deg, var(--color-border), transparent);
+}
+
+.card {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-2);
+  background: linear-gradient(
+    180deg,
+    var(--color-surface-raised),
+    var(--color-surface-dark)
+  );
+  border: var(--border-thin);
+  border-radius: var(--radius-xs);
+  box-shadow: var(--shadow-hardware);
+}
+
+.art {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.7);
+}
+
+.artImg {
+  object-fit: cover;
+}
+
+.artGloss {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    115deg,
+    rgba(255, 255, 255, 0.28) 0%,
+    transparent 40%
+  );
+}
+
+.meta {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  gap: 2px;
+}
+
+.artist {
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-wide);
+  color: var(--color-phosphor-dim);
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.year {
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  letter-spacing: var(--tracking-wide);
+}
