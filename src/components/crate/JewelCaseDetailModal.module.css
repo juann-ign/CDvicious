@@ -56,11 +56,9 @@
 .cover{object-fit:cover;object-position:center;transform:scale(.94);transform-origin:center}
 .coverGlare{position:absolute;inset:0;pointer-events:none;background:linear-gradient(112deg,rgba(255,255,255,.3),transparent 16%,transparent 62%,rgba(255,255,255,.075)),linear-gradient(180deg,rgba(255,255,255,.04),transparent 30%,rgba(0,0,0,.17));mix-blend-mode:screen;z-index:3}
 
-.trackPanel{display:flex;flex-direction:column;padding:11px 12px 8px 15px;background:linear-gradient(105deg,rgba(7,9,12,.22),rgba(9,11,14,.78) 27%),radial-gradient(circle at 20% 0%,rgba(255,255,255,.045),transparent 40%)}
+.trackPanel{display:flex;align-items:center;justify-content:center;padding:12px 15px;background:linear-gradient(105deg,rgba(7,9,12,.22),rgba(9,11,14,.78) 27%),radial-gradient(circle at 20% 0%,rgba(255,255,255,.045),transparent 40%)}
 .trackPanel::before{content:"";position:absolute;left:-4px;top:0;bottom:0;width:30px;pointer-events:none;background:linear-gradient(90deg,transparent,rgba(255,255,255,.055),transparent)}
-.trackMeta{display:grid;gap:3px;margin-bottom:8px;font-size:8px;line-height:1.15;color:var(--color-text-muted);text-transform:uppercase}.trackMeta strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--font-display);font-size:13px;font-weight:400;color:var(--color-text)}
-.trackHeader{display:flex;justify-content:space-between;padding-bottom:5px;border-bottom:1px solid rgba(255,255,255,.12);font-size:8px;color:var(--color-phosphor-dim);text-transform:uppercase}
-.tracklist{list-style:none;flex:1;min-height:0;overflow-y:auto;margin:0;padding:0;scrollbar-width:thin;scrollbar-color:rgba(148,255,0,.45) transparent}
+.tracklist{list-style:none;flex:0 1 auto;width:100%;max-height:100%;min-height:0;overflow-y:auto;margin:0;padding:0;scrollbar-width:thin;scrollbar-color:rgba(148,255,0,.45) transparent}
 .trackRow{display:grid;grid-template-columns:24px minmax(0,1fr) 38px;gap:7px;align-items:center;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.055);color:var(--color-text-secondary);font-family:var(--font-ui);font-size:9px;line-height:1.15}.trackIndex,.trackDuration{color:var(--color-text-muted);font-size:8px}.trackName{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 .tray{position:relative;width:100%;height:100%;display:grid;place-items:center;border:1px solid rgba(240,246,249,.28);border-radius:2px;background:linear-gradient(145deg,rgba(255,255,255,.075),transparent 20%),radial-gradient(circle at 50% 48%,#171a1e 0%,#0c0e11 62%,#07090b 100%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.06),inset 0 0 28px rgba(0,0,0,.95),inset 0 1px rgba(255,255,255,.09),0 14px 25px rgba(0,0,0,.58),0 0 14px rgba(232,242,247,.055);overflow:hidden}
