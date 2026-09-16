@@ -92,14 +92,6 @@ export function JewelCaseDetailModal({ album, onClose, onLoad }: JewelCaseDetail
                 </div>
 
                 <div className={styles.trackPanel}>
-                  <div className={styles.trackMeta}>
-                    <span>{album.artists[0]?.name ?? "CDVICIOUS"}</span>
-                    <strong>{album.name}</strong>
-                  </div>
-                  <div className={styles.trackHeader}>
-                    <span>TRACKLIST</span>
-                    <span>{tracks?.length ?? 0} PISTAS</span>
-                  </div>
                   <ul className={styles.tracklist}>
                     {loading && <li className={styles.trackRow}>LEYENDO TOC...</li>}
                     {!loading && tracks?.map((t, i) => (
