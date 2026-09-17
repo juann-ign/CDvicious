@@ -114,7 +114,7 @@ export function JewelCaseDetailModal({ album, onClose, onLoad }: JewelCaseDetail
       >
         <header className={styles.header}>
           <div>
-            <p className={styles.eyebrow}>álbum / jewel case</p>
+            <p className={styles.eyebrow}>álbum / caja de CD</p>
             <h2 className={styles.title}>{album.name}</h2>
             <p className={styles.artist}>
               {album.artists.map((a) => a.name).join(", ")}
