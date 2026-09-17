@@ -22,6 +22,7 @@ export function JewelCaseDetailModal({ album, onClose, onLoad }: JewelCaseDetail
   const [tracks, setTracks] = useState<AlbumTrack[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
+  const [isCaseOpen, setIsCaseOpen] = useState(false);
   const discRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -55,11 +56,13 @@ export function JewelCaseDetailModal({ album, onClose, onLoad }: JewelCaseDetail
   }, [onClose]);
 
   const handleLoad = () => {
+    setIsCaseOpen(true);
     if (discRef.current) onLoad(discRef.current);
   };
 
   const denseTracklist = !loading && (tracks?.length ?? 0) > 14;
   const trackRows = Math.ceil((tracks?.length ?? 0) / 2);
+  const totalDuration = tracks?.reduce((total, track) => total + track.duration_ms, 0) ?? 0;
 
   return (
     <div
@@ -144,20 +147,34 @@ export function JewelCaseDetailModal({ album, onClose, onLoad }: JewelCaseDetail
           </div>
         </div>
 
-        <footer className={styles.actions}>
-          <button type="button" className={styles.playBtn} onClick={handleLoad}>
-            <span className={styles.playIcon} aria-hidden="true">▶</span>
-            <span>
-              <strong>reproducir álbum</strong>
-              <small>{tracks?.length ?? 0} canciones · colección</small>
+        <footer className={`${styles.actions} ${polishStyles.vfdFooter}`}>
+          <div className={polishStyles.vfdStatus} aria-live="polite">
+            <span className={polishStyles.vfdStatusTop}>
+              {isCaseOpen ? "CASE OPEN / DISC READY" : "READY / CASE CLOSED"}
             </span>
-          </button>
-          <button type="button" className={styles.loadBtn} onClick={handleLoad}>
-            cargar en deck ▲
-          </button>
-          <button type="button" className={styles.closeBtnBottom} onClick={onClose}>
-            agregar a colección +
-          </button>
+            <strong>{album.name}</strong>
+            <span className={polishStyles.vfdStatusMeta}>
+              {tracks?.length ?? 0} TRK · {loading ? "--:--" : fmt(totalDuration)}
+            </span>
+          </div>
+
+          <div className={polishStyles.hardwareControls}>
+            <button type="button" className={polishStyles.hwBtn} onClick={handleLoad} aria-label="Reproducir álbum">
+              PLAY
+            </button>
+            <button type="button" className={polishStyles.hwBtn} onClick={handleLoad} aria-label="Cargar en deck">
+              LOAD ▲
+            </button>
+            <button
+              type="button"
+              className={`${polishStyles.hwBtn} ${isCaseOpen ? polishStyles.hwBtnActive : ""}`}
+              onClick={() => setIsCaseOpen(true)}
+              disabled={isCaseOpen}
+              aria-label="Abrir caja"
+            >
+              OPEN
+            </button>
+          </div>
         </footer>
       </div>
     </div>
