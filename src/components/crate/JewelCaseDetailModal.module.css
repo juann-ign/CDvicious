@@ -591,29 +591,7 @@
   z-index: 8;
   inset: 0;
   pointer-events: none;
-  background:
-    linear-gradient(
-      113deg,
-      rgba(255, 255, 255, 0.085),
-      transparent 18%,
-      transparent 54%,
-      rgba(255, 255, 255, 0.03) 70%,
-      transparent 82%
-    ),
-    linear-gradient(
-      90deg,
-      transparent 0 48%,
-      rgba(255, 255, 255, 0.085) 49%,
-      rgba(255, 255, 255, 0.015) 50%,
-      transparent 51%
-    ),
-    linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.055),
-      transparent 11%,
-      transparent 85%,
-      rgba(255, 255, 255, 0.025)
-    );
+  background: none;
   mix-blend-mode: screen;
 }
 
