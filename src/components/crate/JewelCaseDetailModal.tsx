@@ -6,6 +6,7 @@ import type { AlbumItem, AlbumTrack } from "@/types/crate";
 import styles from "./JewelCaseDetailModal.module.css";
 import polishStyles from "./JewelCaseDetailModal.polish.module.css";
 import densityStyles from "./JewelCaseDetailModal.density.module.css";
+import motionStyles from "./JewelCaseDetailModal.motion.module.css";
 
 function fmt(ms: number) {
   const totalSeconds = Math.floor(ms / 1000);
@@ -56,13 +57,30 @@ export function JewelCaseDetailModal({ album, onClose, onLoad }: JewelCaseDetail
   }, [onClose]);
 
   const handleLoad = () => {
-    setIsCaseOpen(true);
+    if (!isCaseOpen) {
+      setIsCaseOpen(true);
+      window.setTimeout(() => {
+        if (discRef.current) onLoad(discRef.current);
+      }, 720);
+      return;
+    }
+
     if (discRef.current) onLoad(discRef.current);
   };
 
   const denseTracklist = !loading && (tracks?.length ?? 0) > 14;
   const trackRows = Math.ceil((tracks?.length ?? 0) / 2);
   const totalDuration = tracks?.reduce((total, track) => total + track.duration_ms, 0) ?? 0;
+
+  const leftTransform = isCaseOpen
+    ? "perspective(1500px) rotateY(9deg)"
+    : "perspective(1500px) rotateY(0deg)";
+  const rightTransform = isCaseOpen
+    ? "perspective(1500px) rotateY(-9deg)"
+    : "perspective(1500px) rotateY(0deg)";
+  const discTransform = isCaseOpen
+    ? "translate(-50%, -50%) translateZ(10px) scale(1) rotate(-25deg)"
+    : "translate(-50%, -50%) translateZ(-6px) scale(0.82) rotate(-8deg)";
 
   return (
     <div
@@ -90,7 +108,11 @@ export function JewelCaseDetailModal({ album, onClose, onLoad }: JewelCaseDetail
 
         <div className={styles.casePerspective}>
           <div className={styles.caseShell}>
-            <section className={styles.leftLeaf} aria-label="Portada y lista de canciones">
+            <section
+              className={`${styles.leftLeaf} ${motionStyles.motionLeaf}`}
+              style={{ transform: leftTransform }}
+              aria-label="Portada y lista de canciones"
+            >
               <div className={styles.paperbackPanel}>
                 <div className={styles.coverPanel}>
                   {album.images[0]?.url && (
@@ -117,7 +139,11 @@ export function JewelCaseDetailModal({ album, onClose, onLoad }: JewelCaseDetail
               </div>
             </section>
 
-            <section className={styles.rightLeaf} aria-label="Disco">
+            <section
+              className={`${styles.rightLeaf} ${motionStyles.motionLeaf}`}
+              style={{ transform: rightTransform }}
+              aria-label="Disco"
+            >
               <div className={styles.tray}>
                 <div className={styles.trayTexture} aria-hidden="true" />
                 <div className={styles.trayClips} aria-hidden="true">
@@ -126,7 +152,14 @@ export function JewelCaseDetailModal({ album, onClose, onLoad }: JewelCaseDetail
                   <span />
                   <span />
                 </div>
-                <div ref={discRef} className={styles.disc}>
+                <div
+                  ref={discRef}
+                  className={`${styles.disc} ${motionStyles.motionDisc} ${isCaseOpen ? motionStyles.motionDiscOpen : ""}`}
+                  style={{
+                    transform: discTransform,
+                    opacity: isCaseOpen ? 1 : 0,
+                  }}
+                >
                   {album.images[0]?.url && (
                     <Image src={album.images[0].url} alt="" fill unoptimized className={styles.discArt} />
                   )}
