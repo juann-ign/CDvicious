@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
-import type { CSSProperties } from "react";
+import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent } from "react";
 import type { AlbumItem, AlbumTrack } from "@/types/crate";
 import styles from "./JewelCaseDetailModal.module.css";
 import polishStyles from "./JewelCaseDetailModal.polish.module.css";
@@ -63,7 +63,7 @@ export function JewelCaseDetailModal({ album, onClose, onLoad }: JewelCaseDetail
     if (!isCaseOpen) setIsCaseOpen(true);
   };
 
-  const handleCaseKeyDown = (e: React.KeyboardEvent<HTMLElement>) => {
+  const handleCaseKeyDown = (e: ReactKeyboardEvent<HTMLElement>) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       handleOpenCase();
