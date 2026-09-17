@@ -118,11 +118,11 @@ export function JewelCaseDetailModal({ album, onClose, onLoad }: JewelCaseDetail
         <div className={styles.casePerspective}>
           <div className={styles.caseShell}>
             <section
-              className={`${styles.leftLeaf} ${motionStyles.motionLeaf}`}
-              style={{ transform: leftTransform }}
-              aria-label="Portada y lista de canciones"
+              className={`${motionStyles.closedFace} ${isCaseOpen ? motionStyles.closedFaceOpen : ""}`}
+              aria-label="Portada del álbum"
+              aria-hidden={isCaseOpen}
             >
-              <div className={styles.paperbackPanel}>
+              <div className={motionStyles.closedFacePanel}>
                 <div className={styles.coverPanel}>
                   {album.images[0]?.url && (
                     <Image
@@ -135,72 +135,98 @@ export function JewelCaseDetailModal({ album, onClose, onLoad }: JewelCaseDetail
                   )}
                   <span className={styles.coverGlare} aria-hidden="true" />
                 </div>
-
-                <div className={styles.trackPanel}>
-                  <ul
-                    className={`${styles.tracklist} ${denseTracklist ? densityStyles.trackGridDense : ""}`}
-                    style={
-                      denseTracklist
-                        ? ({ "--track-rows": trackRows } as CSSProperties)
-                        : undefined
-                    }
-                  >
-                    {loading && (
-                      <li className={styles.trackRow}>LEYENDO TOC...</li>
-                    )}
-                    {!loading &&
-                      tracks?.map((t, i) => (
-                        <li key={`${t.name}-${i}`} className={styles.trackRow}>
-                          <span className={styles.trackIndex}>
-                            {String(i + 1).padStart(2, "0")}
-                          </span>
-                          <span className={styles.trackName}>{t.name}</span>
-                          <span className={styles.trackDuration}>
-                            {fmt(t.duration_ms)}
-                          </span>
-                        </li>
-                      ))}
-                  </ul>
-                </div>
               </div>
             </section>
 
-            <section
-              className={`${styles.rightLeaf} ${motionStyles.motionLeaf}`}
-              style={{ transform: rightTransform }}
-              aria-label="Disco"
+            <div
+              className={`${motionStyles.caseSpread} ${isCaseOpen ? motionStyles.caseSpreadOpen : ""}`}
+              aria-hidden={!isCaseOpen}
             >
-              <div className={styles.tray}>
-                <div className={styles.trayTexture} aria-hidden="true" />
-                <div className={styles.trayClips} aria-hidden="true">
-                  <span />
-                  <span />
-                  <span />
-                  <span />
+              <section
+                className={`${styles.leftLeaf} ${motionStyles.motionLeaf}`}
+                style={{ transform: leftTransform }}
+                aria-label="Portada y lista de canciones"
+              >
+                <div className={styles.paperbackPanel}>
+                  <div className={styles.coverPanel}>
+                    {album.images[0]?.url && (
+                      <Image
+                        src={album.images[0].url}
+                        alt={album.name}
+                        fill
+                        unoptimized
+                        className={styles.cover}
+                      />
+                    )}
+                    <span className={styles.coverGlare} aria-hidden="true" />
+                  </div>
+
+                  <div className={styles.trackPanel}>
+                    <ul
+                      className={`${styles.tracklist} ${denseTracklist ? densityStyles.trackGridDense : ""}`}
+                      style={
+                        denseTracklist
+                          ? ({ "--track-rows": trackRows } as CSSProperties)
+                          : undefined
+                      }
+                    >
+                      {loading && (
+                        <li className={styles.trackRow}>LEYENDO TOC...</li>
+                      )}
+                      {!loading &&
+                        tracks?.map((t, i) => (
+                          <li key={`${t.name}-${i}`} className={styles.trackRow}>
+                            <span className={styles.trackIndex}>
+                              {String(i + 1).padStart(2, "0")}
+                            </span>
+                            <span className={styles.trackName}>{t.name}</span>
+                            <span className={styles.trackDuration}>
+                              {fmt(t.duration_ms)}
+                            </span>
+                          </li>
+                        ))}
+                    </ul>
+                  </div>
                 </div>
-                <div
-                  ref={discRef}
-                  className={`${styles.disc} ${motionStyles.motionDisc} ${isCaseOpen ? motionStyles.motionDiscOpen : ""}`}
-                  style={{ transform: discTransform, opacity: isCaseOpen ? 1 : 0 }}
-                >
-                  {album.images[0]?.url && (
-                    <Image
-                      src={album.images[0].url}
-                      alt=""
-                      fill
-                      unoptimized
-                      className={styles.discArt}
-                    />
-                  )}
-                  <span className={styles.discSheen} aria-hidden="true" />
-                  <span className={styles.discRing} aria-hidden="true" />
-                  <span className={styles.discHub} aria-hidden="true" />
-                  <span className={styles.discLabel}>
-                    {album.artists[0]?.name || "CDVICIOUS"}
-                  </span>
+              </section>
+
+              <section
+                className={`${styles.rightLeaf} ${motionStyles.motionLeaf}`}
+                style={{ transform: rightTransform }}
+                aria-label="Disco"
+              >
+                <div className={styles.tray}>
+                  <div className={styles.trayTexture} aria-hidden="true" />
+                  <div className={styles.trayClips} aria-hidden="true">
+                    <span />
+                    <span />
+                    <span />
+                    <span />
+                  </div>
+                  <div
+                    ref={discRef}
+                    className={`${styles.disc} ${motionStyles.motionDisc} ${isCaseOpen ? motionStyles.motionDiscOpen : ""}`}
+                    style={{ transform: discTransform, opacity: isCaseOpen ? 1 : 0 }}
+                  >
+                    {album.images[0]?.url && (
+                      <Image
+                        src={album.images[0].url}
+                        alt=""
+                        fill
+                        unoptimized
+                        className={styles.discArt}
+                      />
+                    )}
+                    <span className={styles.discSheen} aria-hidden="true" />
+                    <span className={styles.discRing} aria-hidden="true" />
+                    <span className={styles.discHub} aria-hidden="true" />
+                    <span className={styles.discLabel}>
+                      {album.artists[0]?.name || "CDVICIOUS"}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            </section>
+              </section>
+            </div>
 
             <div className={styles.hinge} aria-hidden="true">
               <span />
@@ -241,11 +267,11 @@ export function JewelCaseDetailModal({ album, onClose, onLoad }: JewelCaseDetail
             <button
               type="button"
               className={`${polishStyles.hwBtn} ${isCaseOpen ? polishStyles.hwBtnActive : ""}`}
-              onClick={() => setIsCaseOpen(true)}
-              disabled={isCaseOpen}
-              aria-label="Abrir caja"
+              onClick={() => setIsCaseOpen((open) => !open)}
+              aria-expanded={isCaseOpen}
+              aria-label={isCaseOpen ? "Cerrar caja" : "Abrir caja"}
             >
-              OPEN
+              {isCaseOpen ? "CLOSE" : "OPEN"}
             </button>
           </div>
         </footer>
