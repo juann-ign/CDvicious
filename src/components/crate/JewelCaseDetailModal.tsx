@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import type { AlbumItem, AlbumTrack } from "@/types/crate";
 import styles from "./JewelCaseDetailModal.module.css";
 import polishStyles from "./JewelCaseDetailModal.polish.module.css";
+import densityStyles from "./JewelCaseDetailModal.density.module.css";
 
 function fmt(ms: number) {
   const totalSeconds = Math.floor(ms / 1000);
@@ -57,6 +58,9 @@ export function JewelCaseDetailModal({ album, onClose, onLoad }: JewelCaseDetail
     if (discRef.current) onLoad(discRef.current);
   };
 
+  const denseTracklist = !loading && (tracks?.length ?? 0) > 14;
+  const trackRows = Math.ceil((tracks?.length ?? 0) / 2);
+
   return (
     <div
       className={styles.overlay}
@@ -93,7 +97,10 @@ export function JewelCaseDetailModal({ album, onClose, onLoad }: JewelCaseDetail
                 </div>
 
                 <div className={styles.trackPanel}>
-                  <ul className={styles.tracklist}>
+                  <ul
+                    className={`${styles.tracklist} ${denseTracklist ? densityStyles.trackGridDense : ""}`}
+                    style={denseTracklist ? ({ "--track-rows": trackRows } as React.CSSProperties) : undefined}
+                  >
                     {loading && <li className={styles.trackRow}>LEYENDO TOC...</li>}
                     {!loading && tracks?.map((t, i) => (
                       <li key={`${t.name}-${i}`} className={styles.trackRow}>
