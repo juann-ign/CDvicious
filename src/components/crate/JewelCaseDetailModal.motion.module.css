@@ -36,10 +36,10 @@
   position: absolute;
   top: 0;
   bottom: 0;
-  left: 25%;
-  width: 50%;
-  z-index: 8;
-  transform-origin: 100% 50%;
+  left: 0;
+  width: 100%;
+  z-index: 20;
+  transform-origin: 50% 50%;
   transform: perspective(1500px) rotateY(0deg);
   transform-style: preserve-3d;
   transition:
@@ -51,7 +51,7 @@
 .closedFaceOpen {
   opacity: 0;
   pointer-events: none;
-  transform: perspective(1500px) translateX(-18px) translateZ(-8px) rotateY(-72deg);
+  transform: perspective(1500px) translateX(-24%) translateZ(-8px) rotateY(-72deg);
 }
 
 .closedFacePanel {
