@@ -2,9 +2,12 @@
 
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import type { AlbumItem, AlbumTrack } from "@/types/crate";
 import styles from "./JewelCaseDetailModal.module.css";
 import polishStyles from "./JewelCaseDetailModal.polish.module.css";
+import densityStyles from "./JewelCaseDetailModal.density.module.css";
+import motionStyles from "./JewelCaseDetailModal.motion.module.css";
 
 function fmt(ms: number) {
   const totalSeconds = Math.floor(ms / 1000);
@@ -17,14 +20,11 @@ interface JewelCaseDetailModalProps {
   onLoad: (originEl: HTMLElement) => void;
 }
 
-export function JewelCaseDetailModal({
-  album,
-  onClose,
-  onLoad,
-}: JewelCaseDetailModalProps) {
+export function JewelCaseDetailModal({ album, onClose, onLoad }: JewelCaseDetailModalProps) {
   const [tracks, setTracks] = useState<AlbumTrack[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
+  const [isCaseOpen, setIsCaseOpen] = useState(false);
   const discRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -58,8 +58,29 @@ export function JewelCaseDetailModal({
   }, [onClose]);
 
   const handleLoad = () => {
+    if (!isCaseOpen) {
+      setIsCaseOpen(true);
+      window.setTimeout(() => {
+        if (discRef.current) onLoad(discRef.current);
+      }, 720);
+      return;
+    }
     if (discRef.current) onLoad(discRef.current);
   };
+
+  const denseTracklist = !loading && (tracks?.length ?? 0) > 14;
+  const trackRows = Math.ceil((tracks?.length ?? 0) / 2);
+  const totalDuration = tracks?.reduce((total, track) => total + track.duration_ms, 0) ?? 0;
+
+  const leftTransform = isCaseOpen
+    ? "perspective(1500px) rotateY(9deg)"
+    : "perspective(1500px) rotateY(0deg)";
+  const rightTransform = isCaseOpen
+    ? "perspective(1500px) rotateY(-9deg)"
+    : "perspective(1500px) rotateY(0deg)";
+  const discTransform = isCaseOpen
+    ? "translate(-50%, -50%) translateZ(10px) scale(1) rotate(-25deg)"
+    : "translate(-50%, -50%) translateZ(-6px) scale(0.82) rotate(-8deg)";
 
   return (
     <div
@@ -97,7 +118,8 @@ export function JewelCaseDetailModal({
         <div className={styles.casePerspective}>
           <div className={styles.caseShell}>
             <section
-              className={styles.leftLeaf}
+              className={`${styles.leftLeaf} ${motionStyles.motionLeaf}`}
+              style={{ transform: leftTransform }}
               aria-label="Portada y lista de canciones"
             >
               <div className={styles.paperbackPanel}>
@@ -115,7 +137,14 @@ export function JewelCaseDetailModal({
                 </div>
 
                 <div className={styles.trackPanel}>
-                  <ul className={styles.tracklist}>
+                  <ul
+                    className={`${styles.tracklist} ${denseTracklist ? densityStyles.trackGridDense : ""}`}
+                    style={
+                      denseTracklist
+                        ? ({ "--track-rows": trackRows } as CSSProperties)
+                        : undefined
+                    }
+                  >
                     {loading && (
                       <li className={styles.trackRow}>LEYENDO TOC...</li>
                     )}
@@ -136,7 +165,11 @@ export function JewelCaseDetailModal({
               </div>
             </section>
 
-            <section className={styles.rightLeaf} aria-label="Disco">
+            <section
+              className={`${styles.rightLeaf} ${motionStyles.motionLeaf}`}
+              style={{ transform: rightTransform }}
+              aria-label="Disco"
+            >
               <div className={styles.tray}>
                 <div className={styles.trayTexture} aria-hidden="true" />
                 <div className={styles.trayClips} aria-hidden="true">
@@ -145,7 +178,11 @@ export function JewelCaseDetailModal({
                   <span />
                   <span />
                 </div>
-                <div ref={discRef} className={styles.disc}>
+                <div
+                  ref={discRef}
+                  className={`${styles.disc} ${motionStyles.motionDisc} ${isCaseOpen ? motionStyles.motionDiscOpen : ""}`}
+                  style={{ transform: discTransform, opacity: isCaseOpen ? 1 : 0 }}
+                >
                   {album.images[0]?.url && (
                     <Image
                       src={album.images[0].url}
@@ -174,25 +211,43 @@ export function JewelCaseDetailModal({
           </div>
         </div>
 
-        <footer className={styles.actions}>
-          <button type="button" className={styles.playBtn} onClick={handleLoad}>
-            <span className={styles.playIcon} aria-hidden="true">
-              ▶
+        <footer className={`${styles.actions} ${polishStyles.vfdFooter}`}>
+          <div className={polishStyles.vfdStatus} aria-live="polite">
+            <span className={polishStyles.vfdStatusTop}>
+              {isCaseOpen ? "CASE OPEN / DISC READY" : "READY / CASE CLOSED"}
             </span>
-            <span>
-              <strong>reproducir álbum</strong>
+            <strong>{album.name}</strong>
+            <span className={polishStyles.vfdStatusMeta}>
+              {tracks?.length ?? 0} TRK · {loading ? "--:--" : fmt(totalDuration)}
             </span>
-          </button>
-          <button type="button" className={styles.loadBtn} onClick={handleLoad}>
-            cargar en deck ▲
-          </button>
-          <button
-            type="button"
-            className={styles.closeBtnBottom}
-            onClick={onClose}
-          >
-            agregar a colección +
-          </button>
+          </div>
+          <div className={polishStyles.hardwareControls}>
+            <button
+              type="button"
+              className={polishStyles.hwBtn}
+              onClick={handleLoad}
+              aria-label="Reproducir álbum"
+            >
+              PLAY
+            </button>
+            <button
+              type="button"
+              className={polishStyles.hwBtn}
+              onClick={handleLoad}
+              aria-label="Cargar en deck"
+            >
+              LOAD ▲
+            </button>
+            <button
+              type="button"
+              className={`${polishStyles.hwBtn} ${isCaseOpen ? polishStyles.hwBtnActive : ""}`}
+              onClick={() => setIsCaseOpen(true)}
+              disabled={isCaseOpen}
+              aria-label="Abrir caja"
+            >
+              OPEN
+            </button>
+          </div>
         </footer>
       </div>
     </div>
