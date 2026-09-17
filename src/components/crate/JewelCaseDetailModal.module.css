@@ -566,6 +566,7 @@
     0 0 0 1px rgba(255, 255, 255, 0.05),
     0 0 15px rgba(0, 0, 0, 0.7);
   pointer-events: none;
+  transition: opacity 220ms ease;
 }
 .hinge span {
   position: absolute;
@@ -586,6 +587,17 @@
 .hinge span:nth-child(3) {
   top: 80%;
 }
+
+.hingeClosed {
+  opacity: 1;
+  left: 25%;
+  transition: opacity 220ms ease;
+}
+
+.hingeOpen {
+  opacity: 1;
+}
+
 .acrylicReflection {
   position: absolute;
   z-index: 8;

@@ -22,7 +22,11 @@ interface JewelCaseDetailModalProps {
   onLoad: (originEl: HTMLElement) => void;
 }
 
-export function JewelCaseDetailModal({ album, onClose, onLoad }: JewelCaseDetailModalProps) {
+export function JewelCaseDetailModal({
+  album,
+  onClose,
+  onLoad,
+}: JewelCaseDetailModalProps) {
   const [tracks, setTracks] = useState<AlbumTrack[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
@@ -83,7 +87,8 @@ export function JewelCaseDetailModal({ album, onClose, onLoad }: JewelCaseDetail
 
   const denseTracklist = !loading && (tracks?.length ?? 0) > 14;
   const trackRows = Math.ceil((tracks?.length ?? 0) / 2);
-  const totalDuration = tracks?.reduce((total, track) => total + track.duration_ms, 0) ?? 0;
+  const totalDuration =
+    tracks?.reduce((total, track) => total + track.duration_ms, 0) ?? 0;
 
   const leftTransform = isCaseOpen
     ? "perspective(1500px) rotateY(9deg)"
@@ -152,10 +157,18 @@ export function JewelCaseDetailModal({ album, onClose, onLoad }: JewelCaseDetail
                   )}
                 </div>
                 <div className={motionStyles.closedAcrylic} aria-hidden="true">
-                  <span className={`${motionStyles.closedClip} ${motionStyles.closedClipTopLeft}`} />
-                  <span className={`${motionStyles.closedClip} ${motionStyles.closedClipTopRight}`} />
-                  <span className={`${motionStyles.closedClip} ${motionStyles.closedClipBottomLeft}`} />
-                  <span className={`${motionStyles.closedClip} ${motionStyles.closedClipBottomRight}`} />
+                  <span
+                    className={`${motionStyles.closedClip} ${motionStyles.closedClipTopLeft}`}
+                  />
+                  <span
+                    className={`${motionStyles.closedClip} ${motionStyles.closedClipTopRight}`}
+                  />
+                  <span
+                    className={`${motionStyles.closedClip} ${motionStyles.closedClipBottomLeft}`}
+                  />
+                  <span
+                    className={`${motionStyles.closedClip} ${motionStyles.closedClipBottomRight}`}
+                  />
                 </div>
               </div>
             </section>
@@ -197,7 +210,10 @@ export function JewelCaseDetailModal({ album, onClose, onLoad }: JewelCaseDetail
                       )}
                       {!loading &&
                         tracks?.map((t, i) => (
-                          <li key={`${t.name}-${i}`} className={styles.trackRow}>
+                          <li
+                            key={`${t.name}-${i}`}
+                            className={styles.trackRow}
+                          >
                             <span className={styles.trackIndex}>
                               {String(i + 1).padStart(2, "0")}
                             </span>
@@ -228,7 +244,10 @@ export function JewelCaseDetailModal({ album, onClose, onLoad }: JewelCaseDetail
                   <div
                     ref={discRef}
                     className={`${styles.disc} ${motionStyles.motionDisc} ${isCaseOpen ? motionStyles.motionDiscOpen : ""}`}
-                    style={{ transform: discTransform, opacity: isCaseOpen ? 1 : 0 }}
+                    style={{
+                      transform: discTransform,
+                      opacity: isCaseOpen ? 1 : 0,
+                    }}
                   >
                     {album.images[0]?.url && (
                       <Image
@@ -250,7 +269,12 @@ export function JewelCaseDetailModal({ album, onClose, onLoad }: JewelCaseDetail
               </section>
             </div>
 
-            <div className={styles.hinge} aria-hidden="true">
+            <div
+              className={`${styles.hinge} ${
+                isCaseOpen ? styles.hingeOpen : styles.hingeClosed
+              }`}
+              aria-hidden="true"
+            >
               <span />
               <span />
               <span />
