@@ -123,17 +123,22 @@ export function JewelCaseDetailModal({ album, onClose, onLoad }: JewelCaseDetail
               aria-hidden={isCaseOpen}
             >
               <div className={motionStyles.closedFacePanel}>
-                <div className={styles.coverPanel}>
+                <div className={motionStyles.closedArtwork}>
                   {album.images[0]?.url && (
                     <Image
                       src={album.images[0].url}
                       alt={album.name}
                       fill
                       unoptimized
-                      className={styles.cover}
+                      className={motionStyles.closedArtworkImage}
                     />
                   )}
-                  <span className={styles.coverGlare} aria-hidden="true" />
+                </div>
+                <div className={motionStyles.closedAcrylic} aria-hidden="true">
+                  <span className={`${motionStyles.closedClip} ${motionStyles.closedClipTopLeft}`} />
+                  <span className={`${motionStyles.closedClip} ${motionStyles.closedClipTopRight}`} />
+                  <span className={`${motionStyles.closedClip} ${motionStyles.closedClipBottomLeft}`} />
+                  <span className={`${motionStyles.closedClip} ${motionStyles.closedClipBottomRight}`} />
                 </div>
               </div>
             </section>
