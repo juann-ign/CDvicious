@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import type { AlbumItem, AlbumTrack } from "@/types/crate";
 import styles from "./JewelCaseDetailModal.module.css";
+import polishStyles from "./JewelCaseDetailModal.polish.module.css";
 
 function fmt(ms: number) {
   const totalSeconds = Math.floor(ms / 1000);
@@ -65,7 +66,7 @@ export function JewelCaseDetailModal({ album, onClose, onLoad }: JewelCaseDetail
     >
       <button type="button" className={styles.scrim} onClick={onClose} aria-label="Cerrar" />
 
-      <div className={`${styles.sheet} ${isOpen ? styles.sheetOpen : ""}`}>
+      <div className={`${styles.sheet} ${polishStyles.modalPolish} ${isOpen ? styles.sheetOpen : ""}`}>
         <header className={styles.header}>
           <div>
             <p className={styles.eyebrow}>álbum / jewel case</p>

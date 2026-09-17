@@ -1,0 +1,183 @@
+/* Final visual pass for the jewel case modal chrome. */
+.modalPolish {
+  padding: 14px 18px 12px;
+}
+
+.modalPolish > header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 6px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.modalPolish > header > div {
+  min-width: 0;
+}
+
+.modalPolish > header > div > p:first-child {
+  margin-bottom: 2px;
+  font-size: 8px;
+}
+
+.modalPolish > header h2 {
+  max-width: 720px;
+  font-size: clamp(17px, 1.9vw, 25px);
+  line-height: 1;
+  font-weight: 500;
+  text-wrap: balance;
+}
+
+.modalPolish > header > div > p:last-child {
+  margin-top: 3px;
+  font-size: 9px;
+}
+
+.modalPolish > header > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 68px;
+  min-height: 30px;
+  padding: 6px 9px;
+  font-size: 9px;
+  line-height: 1;
+}
+
+.modalPolish > header > button span {
+  margin-left: 0;
+  font-size: 15px;
+  line-height: 1;
+}
+
+.modalPolish > header > button:hover {
+  background: rgba(20, 25, 18, 0.78);
+}
+
+.modalPolish > footer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: stretch;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.modalPolish > footer > button {
+  min-height: 40px;
+  padding: 8px 13px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  font-size: 9px;
+  line-height: 1.1;
+  white-space: nowrap;
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast),
+    border-color var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.modalPolish > footer > button:first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  text-align: left;
+  background:
+    linear-gradient(180deg, rgba(148, 255, 0, 0.12), rgba(148, 255, 0, 0.05)),
+    rgba(12, 17, 10, 0.88);
+  border-color: var(--color-phosphor);
+  color: var(--color-phosphor);
+}
+
+.modalPolish > footer > button:first-child strong,
+.modalPolish > footer > button:first-child small {
+  display: block;
+}
+
+.modalPolish > footer > button:first-child strong {
+  font-size: 10px;
+}
+
+.modalPolish > footer > button:first-child small {
+  margin-top: 1px;
+  color: var(--color-phosphor-dim);
+  font-size: 8px;
+}
+
+.modalPolish > footer > button:first-child > span:first-child {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-size: 9px;
+}
+
+.modalPolish > footer > button:nth-child(2),
+.modalPolish > footer > button:nth-child(3) {
+  min-width: 138px;
+  background: rgba(8, 10, 13, 0.74);
+  color: var(--color-text-secondary);
+}
+
+.modalPolish > footer > button:nth-child(3) {
+  min-width: 154px;
+  background: rgba(8, 10, 13, 0.42);
+  color: var(--color-text-muted);
+}
+
+.modalPolish > footer > button:hover {
+  transform: translateY(-1px);
+}
+
+.modalPolish > footer > button:first-child:hover {
+  background: var(--color-phosphor);
+  color: var(--color-bg);
+}
+
+.modalPolish > footer > button:first-child:hover small {
+  color: var(--color-bg);
+  opacity: 0.72;
+}
+
+.modalPolish > footer > button:nth-child(2):hover,
+.modalPolish > footer > button:nth-child(3):hover {
+  background: rgba(148, 255, 0, 0.08);
+  border-color: var(--color-phosphor);
+  color: var(--color-phosphor);
+}
+
+@media (max-width: 760px) {
+  .modalPolish {
+    padding: 14px;
+  }
+
+  .modalPolish > header {
+    gap: 10px;
+  }
+
+  .modalPolish > header h2 {
+    font-size: clamp(16px, 5vw, 22px);
+  }
+
+  .modalPolish > footer {
+    grid-template-columns: 1fr;
+  }
+
+  .modalPolish > footer > button {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modalPolish > footer > button,
+  .modalPolish > header > button {
+    transition: none;
+  }
+}
