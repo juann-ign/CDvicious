@@ -1,0 +1,24 @@
+.motionLeaf {
+  transition:
+    transform 620ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 620ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+}
+
+.motionDisc {
+  transition:
+    transform 680ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 360ms ease;
+  will-change: transform, opacity;
+}
+
+.motionDiscOpen {
+  filter: saturate(1.02) brightness(1.03);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .motionLeaf,
+  .motionDisc {
+    transition: none;
+  }
+}
