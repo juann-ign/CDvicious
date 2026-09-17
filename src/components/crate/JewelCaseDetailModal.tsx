@@ -9,6 +9,8 @@ import polishStyles from "./JewelCaseDetailModal.polish.module.css";
 import densityStyles from "./JewelCaseDetailModal.density.module.css";
 import motionStyles from "./JewelCaseDetailModal.motion.module.css";
 
+const CASE_OPEN_DURATION_MS = 1000;
+
 function fmt(ms: number) {
   const totalSeconds = Math.floor(ms / 1000);
   return `${Math.floor(totalSeconds / 60)}:${String(totalSeconds % 60).padStart(2, "0")}`;
@@ -57,12 +59,23 @@ export function JewelCaseDetailModal({ album, onClose, onLoad }: JewelCaseDetail
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
+  const handleOpenCase = () => {
+    if (!isCaseOpen) setIsCaseOpen(true);
+  };
+
+  const handleCaseKeyDown = (e: React.KeyboardEvent<HTMLElement>) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      handleOpenCase();
+    }
+  };
+
   const handleLoad = () => {
     if (!isCaseOpen) {
       setIsCaseOpen(true);
       window.setTimeout(() => {
         if (discRef.current) onLoad(discRef.current);
-      }, 720);
+      }, CASE_OPEN_DURATION_MS);
       return;
     }
     if (discRef.current) onLoad(discRef.current);
@@ -119,8 +132,12 @@ export function JewelCaseDetailModal({ album, onClose, onLoad }: JewelCaseDetail
           <div className={styles.caseShell}>
             <section
               className={`${motionStyles.closedFace} ${isCaseOpen ? motionStyles.closedFaceOpen : ""}`}
-              aria-label="Portada del álbum"
+              aria-label="Abrir caja de CD"
               aria-hidden={isCaseOpen}
+              role="button"
+              tabIndex={isCaseOpen ? -1 : 0}
+              onClick={handleOpenCase}
+              onKeyDown={handleCaseKeyDown}
             >
               <div className={motionStyles.closedFacePanel}>
                 <div className={motionStyles.closedArtwork}>
@@ -243,40 +260,36 @@ export function JewelCaseDetailModal({ album, onClose, onLoad }: JewelCaseDetail
         </div>
 
         <footer className={`${styles.actions} ${polishStyles.vfdFooter}`}>
-          <div className={polishStyles.vfdStatus} aria-live="polite">
-            <span className={polishStyles.vfdStatusTop}>
-              {isCaseOpen ? "CASE OPEN / DISC READY" : "READY / CASE CLOSED"}
+          <button
+            type="button"
+            className={polishStyles.vfdMainAction}
+            onClick={handleLoad}
+            aria-label={`Reproducir ${album.name}`}
+          >
+            <span className={polishStyles.vfdMainInfo}>
+              <strong>{album.name}</strong>
+              <small>{album.artists.map((a) => a.name).join(", ")}</small>
             </span>
-            <strong>{album.name}</strong>
-            <span className={polishStyles.vfdStatusMeta}>
-              {tracks?.length ?? 0} TRK · {loading ? "--:--" : fmt(totalDuration)}
-            </span>
-          </div>
+            <span className={polishStyles.vfdMainHover}>REPRODUCIR CD</span>
+          </button>
+
           <div className={polishStyles.hardwareControls}>
             <button
               type="button"
-              className={polishStyles.hwBtn}
-              onClick={handleLoad}
-              aria-label="Reproducir álbum"
+              className={`${polishStyles.hwBtn} ${polishStyles.hwBtnTray}`}
+              onClick={onClose}
+              aria-label="Dejar en batea"
             >
-              PLAY
+              DEJAR EN BATEA
             </button>
             <button
               type="button"
-              className={polishStyles.hwBtn}
-              onClick={handleLoad}
-              aria-label="Cargar en deck"
-            >
-              LOAD ▲
-            </button>
-            <button
-              type="button"
-              className={`${polishStyles.hwBtn} ${isCaseOpen ? polishStyles.hwBtnActive : ""}`}
+              className={`${polishStyles.hwBtn} ${polishStyles.hwBtnCase}`}
               onClick={() => setIsCaseOpen((open) => !open)}
               aria-expanded={isCaseOpen}
               aria-label={isCaseOpen ? "Cerrar caja" : "Abrir caja"}
             >
-              {isCaseOpen ? "CLOSE" : "OPEN"}
+              {isCaseOpen ? "CERRAR CAJA" : "ABRIR CAJA"}
             </button>
           </div>
         </footer>
