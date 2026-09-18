@@ -341,6 +341,9 @@ export function JewelCaseDetailModal({
               >
                 <div className={styles.tray}>
                   <div className={styles.trayTexture} aria-hidden="true" />
+                  <div className={styles.trayHub} aria-hidden="true">
+                    <span />
+                  </div>
                   <div className={styles.trayClips} aria-hidden="true">
                     <span />
                     <span />
