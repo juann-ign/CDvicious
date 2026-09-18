@@ -116,7 +116,6 @@ export function JewelCaseDetailModal({
     if (!isCaseOpen) setIsCaseOpen(true);
   };
 
-
   const handleLoad = () => {
     if (!isCaseOpen) {
       setIsCaseOpen(true);
@@ -179,77 +178,105 @@ export function JewelCaseDetailModal({
         <div className={styles.casePerspective}>
           <div className={styles.caseShell}>
             <div className={motionStyles.closedStage}>
-            {!isCaseOpen && (
-              <button
-                type="button"
-                className={motionStyles.closedHitArea}
-                onClick={handleOpenCase}
-                aria-label={`Abrir caja de CD de ${album.name}`}
-              />
-            )}
+              {!isCaseOpen && (
+                <button
+                  type="button"
+                  className={motionStyles.closedHitArea}
+                  onClick={handleOpenCase}
+                  aria-label={`Abrir caja de CD de ${album.name}`}
+                />
+              )}
 
-            <aside
-              className={`${motionStyles.closedMeta} ${isCaseOpen ? motionStyles.closedMetaOpen : ""}`}
-              aria-hidden={isCaseOpen}
-            >
-              <div className={motionStyles.closedMetaPanel}>
-                <div className={motionStyles.closedMetaHeader}>
-                  <span>RELEASE DATA</span>
-                  <span>{releaseMeta?.format ?? "COMPACT DISC"}</span>
+              <aside
+                className={`${motionStyles.closedMeta} ${isCaseOpen ? motionStyles.closedMetaOpen : ""}`}
+                aria-hidden={isCaseOpen}
+              >
+                <div className={motionStyles.closedMetaPanel}>
+                  <div className={motionStyles.closedMetaHeader}>
+                    <span>RELEASE DATA</span>
+                    <span>{releaseMeta?.format ?? "COMPACT DISC"}</span>
+                  </div>
+                  <div className={motionStyles.closedMetaGrid}>
+                    <div>
+                      <small>YEAR</small>
+                      <strong>
+                        {releaseMeta?.year ??
+                          album.release_date?.slice(0, 4) ??
+                          "—"}
+                      </strong>
+                    </div>
+                    <div>
+                      <small>COUNTRY</small>
+                      <strong>{releaseMeta?.country ?? "—"}</strong>
+                    </div>
+                    <div>
+                      <small>LABEL</small>
+                      <strong>{releaseMeta?.label ?? "—"}</strong>
+                    </div>
+                    <div>
+                      <small>GENRE</small>
+                      <strong>
+                        {releaseMeta.tags?.slice(0, 2).join(" · ") || "—"}
+                      </strong>
+                    </div>
+                  </div>
+                  <div className={motionStyles.closedMetaTags}>
+                    {(releaseMeta?.tags?.length
+                      ? releaseMeta.tags
+                      : (album.genres ?? [])
+                    )
+                      .slice(0, 3)
+                      .map((tag) => (
+                        <span key={tag}>{tag}</span>
+                      ))}
+                  </div>
+                  <div
+                    className={motionStyles.closedMetaCode}
+                    aria-hidden="true"
+                  />
                 </div>
-                <div className={motionStyles.closedMetaGrid}>
-                  <div><small>YEAR</small><strong>{releaseMeta?.year ?? album.release_date?.slice(0, 4) ?? "—"}</strong></div>
-                  <div><small>COUNTRY</small><strong>{releaseMeta?.country ?? "—"}</strong></div>
-                  <div><small>LABEL</small><strong>{releaseMeta?.label ?? "—"}</strong></div>
-                  <div><small>GENRE</small><strong>{releaseMeta.tags?.slice(0, 2).join(" · ") || "—"}</strong></div>
-                </div>
-                <div className={motionStyles.closedMetaTags}>
-                  {(releaseMeta?.tags?.length ? releaseMeta.tags : album.genres ?? []).slice(0, 3).map((tag) => (
-                    <span key={tag}>{tag}</span>
-                  ))}
-                </div>
-                <div className={motionStyles.closedMetaCode} aria-hidden="true" />
-              </div>
-            </aside>
+              </aside>
 
-            <section
-              className={`${motionStyles.closedFace} ${isCaseOpen ? motionStyles.closedFaceOpen : ""}`}
-              aria-hidden="true"
-            >
-              <div className={motionStyles.closedFacePanel}>
-                <div className={motionStyles.closedArtwork}>
-                  {album.images[0]?.url && (
-                    <Image
-                      src={album.images[0].url}
-                      alt={album.name}
-                      fill
-                      unoptimized
-                      className={motionStyles.closedArtworkImage}
+              <section
+                className={`${motionStyles.closedFace} ${isCaseOpen ? motionStyles.closedFaceOpen : ""}`}
+                aria-hidden="true"
+              >
+                <div className={motionStyles.closedFacePanel}>
+                  <div className={motionStyles.closedArtwork}>
+                    {album.images[0]?.url && (
+                      <Image
+                        src={album.images[0].url}
+                        alt={album.name}
+                        fill
+                        unoptimized
+                        className={motionStyles.closedArtworkImage}
+                      />
+                    )}
+                  </div>
+                  <div
+                    className={motionStyles.closedAcrylic}
+                    aria-hidden="true"
+                  >
+                    <span
+                      className={`${motionStyles.closedClip} ${motionStyles.closedClipTopLeft}`}
                     />
-                  )}
+                    <span
+                      className={`${motionStyles.closedClip} ${motionStyles.closedClipTopRight}`}
+                    />
+                    <span
+                      className={`${motionStyles.closedClip} ${motionStyles.closedClipBottomLeft}`}
+                    />
+                    <span
+                      className={`${motionStyles.closedClip} ${motionStyles.closedClipBottomRight}`}
+                    />
+                  </div>
                 </div>
-                <div className={motionStyles.closedAcrylic} aria-hidden="true">
-                  <span
-                    className={`${motionStyles.closedClip} ${motionStyles.closedClipTopLeft}`}
-                  />
-                  <span
-                    className={`${motionStyles.closedClip} ${motionStyles.closedClipTopRight}`}
-                  />
-                  <span
-                    className={`${motionStyles.closedClip} ${motionStyles.closedClipBottomLeft}`}
-                  />
-                  <span
-                    className={`${motionStyles.closedClip} ${motionStyles.closedClipBottomRight}`}
-                  />
+                <div className={motionStyles.closedSpine} aria-hidden="true">
+                  <span />
+                  <span />
+                  <span />
                 </div>
-              </div>
-              <div className={motionStyles.closedSpine} aria-hidden="true">
-                <span />
-                <span />
-                <span />
-              </div>
-            </section>
-
+              </section>
             </div>
 
             <div
@@ -340,9 +367,6 @@ export function JewelCaseDetailModal({
                     <span className={styles.discSheen} aria-hidden="true" />
                     <span className={styles.discRing} aria-hidden="true" />
                     <span className={styles.discHub} aria-hidden="true" />
-                    <span className={styles.discLabel}>
-                      {album.artists[0]?.name || "CDVICIOUS"}
-                    </span>
                   </div>
                 </div>
               </section>

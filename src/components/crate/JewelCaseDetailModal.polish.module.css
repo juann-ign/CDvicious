@@ -26,13 +26,14 @@
   max-width: 720px;
   font-size: clamp(17px, 1.9vw, 25px);
   line-height: 1;
-  font-weight: 500;
+  font-weight: 100;
   text-wrap: balance;
 }
 
 .modalPolish > header > div > p:last-child {
   margin-top: 3px;
   font-size: 12px;
+  transform: translateX(2px);
 }
 
 .modalPolish > header > button {

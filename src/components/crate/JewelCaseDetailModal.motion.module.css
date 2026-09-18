@@ -85,8 +85,7 @@
 .closedFaceOpen {
   opacity: 1;
   pointer-events: none;
-  transform: perspective(1600px) translateZ(8px)
-    rotateY(-168deg) rotateX(-3deg);
+  transform: perspective(1600px) translateZ(8px) rotateY(-168deg) rotateX(-3deg);
 }
 
 .closedMeta {
@@ -99,99 +98,117 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  padding: 18px 26px 18px 24px;
+  padding: 18px 62px 18px 24px;
   pointer-events: none;
   cursor: default;
   transition: opacity 420ms ease;
 }
-.closedMetaOpen { opacity: 0; }
+.closedMetaOpen {
+  opacity: 0;
+}
 .closedMetaPanel {
   position: relative;
   width: min(300px, 92%);
   padding: 14px 16px 13px;
   border: 1px solid rgba(232, 240, 245, 0.13);
-  background: linear-gradient(180deg, rgba(11,14,17,.72), rgba(8,10,12,.5));
+  background: linear-gradient(
+    180deg,
+    rgba(11, 14, 17, 0.72),
+    rgba(8, 10, 12, 0.5)
+  );
   box-shadow:
-    inset 0 1px rgba(255,255,255,.07),
-    inset -1px 0 rgba(255,255,255,.04),
-    0 10px 24px rgba(0,0,0,.22);
+    inset 0 1px rgba(255, 255, 255, 0.07),
+    inset -1px 0 rgba(255, 255, 255, 0.04),
+    0 10px 24px rgba(0, 0, 0, 0.22);
 }
 .closedMetaPanel::after {
   content: "";
   position: absolute;
-  inset: 0  -1px 0 auto;
+  inset: 0 -1px 0 auto;
   width: 1px;
-  background: linear-gradient(180deg, transparent, rgba(232,240,245,.28), transparent);
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(232, 240, 245, 0.28),
+    transparent
+  );
 }
 .closedMetaHeader {
-  display:flex;
-  justify-content:space-between;
-  gap:8px;
-  padding-bottom:7px;
-  margin-bottom:8px;
-  border-bottom:1px solid rgba(255,255,255,.055);
-  color:var(--color-phosphor);
-  font-family:var(--font-ui);
-  font-size:8px;
-  letter-spacing:1.4px;
-  text-transform:uppercase;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 7px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.055);
+  color: var(--color-phosphor);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
 }
 .closedMetaGrid {
-  display:grid;
-  grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:8px 12px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 12px;
 }
-.closedMetaGrid div { min-width:0; }
+.closedMetaGrid div {
+  min-width: 0;
+}
 .closedMetaGrid small {
-  display:block;
-  margin-bottom:2px;
-  color:rgba(232,240,245,.62);
-  font-family:var(--font-ui);
-  font-size:7px;
-  letter-spacing:1.4px;
+  display: block;
+  margin-bottom: 2px;
+  color: rgba(232, 240, 245, 0.62);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  letter-spacing: 1.4px;
 }
 .closedMetaGrid strong {
-  display:block;
-  min-width:0;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-  color:rgba(232,240,245,.92);
-  font-family:var(--font-ui);
-  font-size:10px;
-  letter-spacing:.9px;
-  font-weight:500;
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: rgba(232, 240, 245, 0.92);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  letter-spacing: 0.9px;
+  font-weight: 500;
 }
 .closedMetaTags {
-  display:flex;
-  flex-wrap:wrap;
-  gap:4px;
-  margin-top:10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 10px;
 }
 .closedMetaTags span {
-  padding:3px 5px;
-  border:1px solid rgba(148,255,0,.24);
-  color:var(--color-phosphor-dim);
-  background:rgba(148,255,0,.04);
-  font-family:var(--font-ui);
-  font-size:6px;
-  letter-spacing:.9px;
-  text-transform:uppercase;
+  padding: 3px 5px;
+  border: 1px solid rgba(148, 255, 0, 0.24);
+  color: var(--color-phosphor-dim);
+  background: rgba(148, 255, 0, 0.04);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  letter-spacing: 0.9px;
+  text-transform: uppercase;
 }
 .closedMetaCode {
-  width:100%;
-  height:18px;
-  margin-top:12px;
-  opacity:.7;
-  background:repeating-linear-gradient(90deg, rgba(255,255,255,.35) 0 1px, transparent 1px 3px, rgba(255,255,255,.16) 3px 5px, transparent 5px 8px);
+  width: 100%;
+  height: 18px;
+  margin-top: 12px;
+  opacity: 0.7;
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.35) 0 1px,
+    transparent 1px 3px,
+    rgba(255, 255, 255, 0.16) 3px 5px,
+    transparent 5px 8px
+  );
 }
-
 
 .closedSpine {
   position: absolute;
-  left: -8px;
-  top: 4px;
-  bottom: 4px;
+  left: -13px;
+  top: 0;
+  bottom: 0;
   width: 16px;
   z-index: 24;
   border-left: 2px solid rgba(255, 255, 255, 0.28);
@@ -217,9 +234,15 @@
   background: linear-gradient(90deg, #0a0c0f, #5a6066 50%, #0a0c0f);
   box-shadow: 0 0 6px rgba(255, 255, 255, 0.05);
 }
-.closedSpine span:nth-child(1) { top: 12%; }
-.closedSpine span:nth-child(2) { top: 46%; }
-.closedSpine span:nth-child(3) { top: 80%; }
+.closedSpine span:nth-child(1) {
+  top: 12%;
+}
+.closedSpine span:nth-child(2) {
+  top: 46%;
+}
+.closedSpine span:nth-child(3) {
+  top: 80%;
+}
 
 .closedFacePanel {
   position: relative;

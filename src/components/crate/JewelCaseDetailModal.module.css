@@ -88,7 +88,7 @@
 }
 .eyebrow {
   margin: 0 0 3px;
-  font-size: 9px;
+  font-size: 12px;
   color: var(--color-text-muted);
   text-transform: lowercase;
 }
@@ -97,10 +97,11 @@
   max-width: 520px;
   font-family: var(--font-display);
   font-size: clamp(18px, 2vw, 27px);
+  font-weight: 900;
   line-height: 0.98;
   color: var(--color-text);
-  font-weight: 100;
-  letter-spacing: var(--tracking-display);
+  /* letter-spacing: var(--tracking-display); */
+  letter-spacing: 1px;
 }
 .artist {
   margin: 6px 0 0;
