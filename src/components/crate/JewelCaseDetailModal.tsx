@@ -22,6 +22,15 @@ interface JewelCaseDetailModalProps {
   onLoad: (originEl: HTMLElement) => void;
 }
 
+interface ReleaseMeta {
+  year?: string;
+  label?: string;
+  catalogNumber?: string;
+  format?: string;
+  country?: string;
+  tags?: string[];
+}
+
 export function JewelCaseDetailModal({
   album,
   onClose,
@@ -31,6 +40,7 @@ export function JewelCaseDetailModal({
   const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
   const [isCaseOpen, setIsCaseOpen] = useState(false);
+  const [releaseMeta, setReleaseMeta] = useState<ReleaseMeta | null>(null);
   const discRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -47,6 +57,24 @@ export function JewelCaseDetailModal({
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
+    return () => {
+      cancelled = true;
+    };
+  }, [album.id]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setReleaseMeta(null);
+
+    fetch(`/api/album/${encodeURIComponent(album.id)}/release-meta`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: ReleaseMeta | null) => {
+        if (!cancelled) setReleaseMeta(data);
+      })
+      .catch(() => {
+        if (!cancelled) setReleaseMeta(null);
+      });
+
     return () => {
       cancelled = true;
     };
@@ -137,6 +165,30 @@ export function JewelCaseDetailModal({
                 aria-label={`Abrir caja de CD de ${album.name}`}
               />
             )}
+
+            <aside
+              className={`${motionStyles.closedMeta} ${isCaseOpen ? motionStyles.closedMetaOpen : ""}`}
+              aria-hidden={isCaseOpen}
+            >
+              <div className={motionStyles.closedMetaPanel}>
+                <div className={motionStyles.closedMetaHeader}>
+                  <span>RELEASE DATA</span>
+                  <span>{releaseMeta?.format ?? "COMPACT DISC"}</span>
+                </div>
+                <div className={motionStyles.closedMetaGrid}>
+                  <div><small>YEAR</small><strong>{releaseMeta?.year ?? album.release_date?.slice(0, 4) ?? "—"}</strong></div>
+                  <div><small>COUNTRY</small><strong>{releaseMeta?.country ?? "—"}</strong></div>
+                  <div><small>LABEL</small><strong>{releaseMeta?.label ?? "—"}</strong></div>
+                  <div><small>CAT. NO.</small><strong>{releaseMeta?.catalogNumber ?? "—"}</strong></div>
+                </div>
+                <div className={motionStyles.closedMetaTags}>
+                  {(releaseMeta?.tags?.length ? releaseMeta.tags : album.genres ?? []).slice(0, 3).map((tag) => (
+                    <span key={tag}>{tag}</span>
+                  ))}
+                </div>
+                <div className={motionStyles.closedMetaCode} aria-hidden="true" />
+              </div>
+            </aside>
 
             <section
               className={`${motionStyles.closedFace} ${isCaseOpen ? motionStyles.closedFaceOpen : ""}`}

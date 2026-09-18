@@ -141,7 +141,9 @@
   position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  width: 92%;
   min-height: 355px;
+  margin: 0 auto;
   overflow: visible;
   transform-style: preserve-3d;
 }
