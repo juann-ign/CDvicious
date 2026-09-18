@@ -364,7 +364,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 12px;
+  font-size: clamp(10px, 1vw, 12px);
   letter-spacing: 1.5px;
 }
 
@@ -596,15 +596,6 @@
 
 .hingeOpen {
   opacity: 1;
-}
-
-.acrylicReflection {
-  position: absolute;
-  z-index: 8;
-  inset: 0;
-  pointer-events: none;
-  background: none;
-  mix-blend-mode: screen;
 }
 
 .actions {
