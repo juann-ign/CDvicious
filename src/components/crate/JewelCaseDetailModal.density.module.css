@@ -1,0 +1,159 @@
+.paperbackPanelDense {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #111417;
+}
+
+.paperbackPanelDense .coverPanel {
+  position: absolute;
+  top: 5%;
+  bottom: 5%;
+  left: 0;
+  width: 40%;
+  z-index: 0;
+  opacity: 0.32;
+  pointer-events: none;
+  overflow: hidden;
+  filter: saturate(0.78) contrast(1.02);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.055),
+    0 0 22px rgba(0, 0, 0, 0.22);
+}
+
+.paperbackPanelDense .coverPanel::after {
+  inset: -1px -22px -1px -1px;
+  width: auto;
+  background:
+    linear-gradient(
+      90deg,
+      rgba(8, 10, 12, 0.22),
+      rgba(8, 10, 12, 0.08) 58%,
+      rgba(8, 10, 12, 0.72)
+    ),
+    linear-gradient(
+      180deg,
+      rgba(8, 10, 12, 0.04),
+      rgba(8, 10, 12, 0.34)
+    );
+}
+
+.paperbackPanelDense .cover {
+  transform: scale(0.98);
+  object-fit: cover;
+  object-position: center;
+}
+
+.paperbackPanelDense .trackPanel {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 14px 16px;
+  background:
+    linear-gradient(
+      90deg,
+      rgba(9, 11, 14, 0.18) 0%,
+      rgba(9, 11, 14, 0.24) 42%,
+      rgba(9, 11, 14, 0.74) 54%,
+      rgba(9, 11, 14, 0.84) 100%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(9, 11, 14, 0.08),
+      rgba(9, 11, 14, 0.3)
+    );
+}
+
+.paperbackPanelDense .trackPanel::before {
+  left: 50%;
+  width: 1px;
+  opacity: 0.82;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(255, 255, 255, 0.12) 12%,
+    rgba(255, 255, 255, 0.12) 88%,
+    transparent
+  );
+}
+
+.trackGridDense {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(var(--track-rows), 22px);
+  grid-auto-flow: column;
+  align-content: center;
+  justify-content: center;
+  align-items: center;
+  gap: 2px 14px;
+  flex: 0 1 auto !important;
+  width: 100%;
+  height: auto;
+  max-height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden !important;
+  background: transparent;
+}
+
+.trackGridDense .trackRow {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  align-items: center;
+  min-width: 0;
+  min-height: 22px;
+  height: 22px;
+  padding: 3px 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(238, 238, 235, 0.92);
+  font-family: var(--font-ui);
+  font-size: 11px;
+  line-height: 1.1;
+}
+
+.trackGridDense .trackIndex {
+  font-size: 10px;
+  line-height: 1;
+  color: rgba(232, 240, 245, 0.62);
+}
+
+.trackGridDense .trackDuration {
+  display: none;
+}
+
+.trackGridDense .trackName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  line-height: 1.1;
+  letter-spacing: 0.7px;
+  color: rgba(238, 238, 235, 0.94);
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.58);
+}
+
+@media (max-width: 760px) {
+  .paperbackPanelDense {
+    min-height: 300px;
+  }
+
+  .paperbackPanelDense .coverPanel {
+    left: 0;
+    width: 92%;
+    opacity: 0.12;
+  }
+
+  .trackGridDense {
+    grid-template-columns: 1fr;
+    grid-template-rows: repeat(var(--track-rows), 22px);
+    grid-auto-flow: row;
+    gap: 0;
+  }
+}
