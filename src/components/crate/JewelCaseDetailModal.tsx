@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
-import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent } from "react";
+import type { CSSProperties } from "react";
 import type { AlbumItem, AlbumTrack } from "@/types/crate";
 import styles from "./JewelCaseDetailModal.module.css";
 import polishStyles from "./JewelCaseDetailModal.polish.module.css";
@@ -67,12 +67,6 @@ export function JewelCaseDetailModal({
     if (!isCaseOpen) setIsCaseOpen(true);
   };
 
-  const handleCaseKeyDown = (e: ReactKeyboardEvent<HTMLElement>) => {
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      handleOpenCase();
-    }
-  };
 
   const handleLoad = () => {
     if (!isCaseOpen) {
@@ -135,14 +129,18 @@ export function JewelCaseDetailModal({
 
         <div className={styles.casePerspective}>
           <div className={styles.caseShell}>
+            {!isCaseOpen && (
+              <button
+                type="button"
+                className={motionStyles.closedHitArea}
+                onClick={handleOpenCase}
+                aria-label={`Abrir caja de CD de ${album.name}`}
+              />
+            )}
+
             <section
               className={`${motionStyles.closedFace} ${isCaseOpen ? motionStyles.closedFaceOpen : ""}`}
-              aria-label="Abrir caja de CD"
-              aria-hidden={isCaseOpen}
-              role="button"
-              tabIndex={isCaseOpen ? -1 : 0}
-              onClick={handleOpenCase}
-              onKeyDown={handleCaseKeyDown}
+              aria-hidden="true"
             >
               <div className={motionStyles.closedFacePanel}>
                 <div className={motionStyles.closedArtwork}>
