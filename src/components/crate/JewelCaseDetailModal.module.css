@@ -174,7 +174,6 @@
   position: relative;
   z-index: 2;
   padding: 8px 9px 9px 10px;
-  cursor: grab;
   background:
     linear-gradient(
       132deg,
@@ -204,10 +203,6 @@
   transform: perspective(1500px) rotateY(-9deg);
   transform-style: preserve-3d;
   overflow: visible;
-}
-
-.rightLeaf:active {
-  cursor: grabbing;
 }
 
 .leftLeaf::before {
@@ -594,7 +589,14 @@
     0 0 10px rgba(231, 239, 244, 0.09);
   transform: translate(-50%, -50%) translateZ(10px) rotate(-25deg);
   transform-origin: center center;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
 }
+.discIsDragging {
+  cursor: grabbing;
+}
+
 .discArt {
   object-fit: cover;
   opacity: 0.76;
@@ -665,24 +667,6 @@
   letter-spacing: 1.2px;
   color: rgba(255, 255, 255, 0.82);
   text-transform: uppercase;
-}
-
-.rightLeaf:hover .disc {
-  transform:
-    translate(-38%, -50%)
-    translateZ(24px)
-    scale(1.035)
-    rotate(335deg) !important;
-  box-shadow:
-    0 13px 24px rgba(0, 0, 0, 0.6),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.72),
-    inset 0 0 25px rgba(255, 255, 255, 0.18),
-    0 0 16px rgba(231, 239, 244, 0.12);
-}
-
-.rightLeaf:hover .discSheen {
-  opacity: 1;
-  filter: brightness(1.16);
 }
 
 .hinge {

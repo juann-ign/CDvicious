@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import type { AlbumItem, AlbumTrack } from "@/types/crate";
+import { useDiscSurfaceDrag } from "@/hooks/useDiscSurfaceDrag";
 import styles from "./JewelCaseDetailModal.module.css";
 import polishStyles from "./JewelCaseDetailModal.polish.module.css";
 import densityStyles from "./JewelCaseDetailModal.density.module.css";
@@ -47,6 +48,7 @@ export function JewelCaseDetailModal({
     tags: album.genres ?? [],
   }));
   const discRef = useRef<HTMLDivElement>(null);
+  const { rotation: discDragRotation, isDragging: isDiscDragging } = useDiscSurfaceDrag(discRef, !isCaseOpen);
 
   useEffect(() => {
     let cancelled = false;
@@ -288,7 +290,7 @@ export function JewelCaseDetailModal({
                 style={{ transform: leftTransform }}
                 aria-label="Portada y lista de canciones"
               >
-                <div className={styles.paperbackPanel}>
+                <div className={`${styles.paperbackPanel} ${denseTracklist ? densityStyles.paperbackPanelDense : ""}`}>
                   <div className={styles.coverPanel}>
                     {album.images[0]?.url && (
                       <Image
@@ -352,9 +354,11 @@ export function JewelCaseDetailModal({
                   </div>
                   <div
                     ref={discRef}
-                    className={`${styles.disc} ${motionStyles.motionDisc} ${isCaseOpen ? motionStyles.motionDiscOpen : ""}`}
+                    className={`${styles.disc} ${motionStyles.motionDisc} ${isDiscDragging ? styles.discIsDragging : ""}`}
                     style={{
-                      transform: discTransform,
+                      transform: isCaseOpen
+                        ? `translate(-50%, -50%) translateZ(10px) rotate(calc(-25deg + ${discDragRotation}deg))`
+                        : discTransform,
                       opacity: isCaseOpen ? 1 : 0,
                     }}
                   >
