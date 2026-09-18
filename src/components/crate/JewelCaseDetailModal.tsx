@@ -157,6 +157,7 @@ export function JewelCaseDetailModal({
 
         <div className={styles.casePerspective}>
           <div className={styles.caseShell}>
+            <div className={motionStyles.closedStage}>
             {!isCaseOpen && (
               <button
                 type="button"
@@ -222,6 +223,8 @@ export function JewelCaseDetailModal({
                 </div>
               </div>
             </section>
+
+            </div>
 
             <div
               className={`${motionStyles.caseSpread} ${isCaseOpen ? motionStyles.caseSpreadOpen : ""}`}

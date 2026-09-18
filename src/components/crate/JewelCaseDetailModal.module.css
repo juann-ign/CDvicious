@@ -139,6 +139,7 @@
 }
 .caseShell {
   position: relative;
+  isolation: isolate;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   width: 92%;
@@ -591,8 +592,8 @@
 }
 
 .hingeClosed {
-  opacity: 1;
-  left: 25%;
+  opacity: 0;
+  left: 50%;
   transition: opacity 220ms ease;
 }
 
