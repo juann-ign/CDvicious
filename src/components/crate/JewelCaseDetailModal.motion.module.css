@@ -1,3 +1,23 @@
+.closedHitArea {
+  position: absolute;
+  top: -6px;
+  bottom: -6px;
+  left: calc(25% - 6px);
+  width: calc(50% + 12px);
+  z-index: 40;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  appearance: none;
+  cursor: pointer;
+}
+
+.closedHitArea:focus-visible {
+  outline: 1px solid var(--color-phosphor);
+  outline-offset: 3px;
+}
+
 .motionLeaf {
   transition:
     transform 620ms cubic-bezier(0.16, 1, 0.3, 1),
@@ -48,10 +68,10 @@
   will-change: transform, opacity;
   filter: saturate(0.98);
   opacity: 0.94;
-  cursor: pointer;
+  pointer-events: none;
 }
 
-.closedFace:hover {
+.closedHitArea:hover + .closedFace {
   filter: saturate(1) brightness(1.025);
 }
 
@@ -282,6 +302,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .closedHitArea,
   .motionLeaf,
   .motionDisc,
   .caseSpread,
