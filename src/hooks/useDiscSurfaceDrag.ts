@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { PointerEventHandler } from "react";
+import type { KeyboardEventHandler, PointerEventHandler } from "react";
 
 const DRAG_SENSITIVITY = 0.42;
+const KEY_STEP = 15;
 const EASE_BACK_MS = 900;
 
 interface DiscSurfacePointerHandlers {
@@ -11,6 +12,7 @@ interface DiscSurfacePointerHandlers {
   onPointerMove: PointerEventHandler<HTMLDivElement>;
   onPointerUp: PointerEventHandler<HTMLDivElement>;
   onPointerCancel: PointerEventHandler<HTMLDivElement>;
+  onKeyDown: KeyboardEventHandler<HTMLDivElement>;
 }
 
 export function useDiscSurfaceDrag(disabled: boolean) {
@@ -45,6 +47,7 @@ export function useDiscSurfaceDrag(disabled: boolean) {
       const progress = Math.min(1, (now - startedAt) / EASE_BACK_MS);
       const eased = 1 - Math.pow(1 - progress, 3);
       const next = from * (1 - eased);
+
       rotationRef.current = next;
       setRotation(next);
 
@@ -107,11 +110,49 @@ export function useDiscSurfaceDrag(disabled: boolean) {
     [disabled, easeBack],
   );
 
+  const onKeyDown = useCallback<KeyboardEventHandler<HTMLDivElement>>(
+    (event) => {
+      if (disabled) return;
+
+      if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+        event.preventDefault();
+        stopEase();
+
+        const direction = event.key === "ArrowRight" ? 1 : -1;
+        const next = Math.max(
+          -180,
+          Math.min(180, rotationRef.current + direction * KEY_STEP),
+        );
+
+        rotationRef.current = next;
+        setRotation(next);
+        return;
+      }
+
+      if (event.key === "Home") {
+        event.preventDefault();
+        stopEase();
+        rotationRef.current = -180;
+        setRotation(-180);
+        return;
+      }
+
+      if (event.key === "End") {
+        event.preventDefault();
+        stopEase();
+        rotationRef.current = 180;
+        setRotation(180);
+      }
+    },
+    [disabled, stopEase],
+  );
+
   const pointerHandlers: DiscSurfacePointerHandlers = {
     onPointerDown,
     onPointerMove,
     onPointerUp: finishDrag,
     onPointerCancel: finishDrag,
+    onKeyDown,
   };
 
   useEffect(() => () => stopEase(), [stopEase]);
