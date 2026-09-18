@@ -242,11 +242,11 @@ export function JewelCaseDetailModal({
                     className={`${motionStyles.closedClip} ${motionStyles.closedClipBottomRight}`}
                   />
                 </div>
-                <div className={motionStyles.closedSpine} aria-hidden="true">
-                  <span />
-                  <span />
-                  <span />
-                </div>
+              </div>
+              <div className={motionStyles.closedSpine} aria-hidden="true">
+                <span />
+                <span />
+                <span />
               </div>
             </section>
 

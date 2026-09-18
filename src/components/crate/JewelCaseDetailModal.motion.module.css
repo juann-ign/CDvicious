@@ -189,11 +189,11 @@
 
 .closedSpine {
   position: absolute;
-  left: -1px;
+  left: -8px;
   top: 4px;
   bottom: 4px;
   width: 16px;
-  z-index: 7;
+  z-index: 24;
   border-left: 2px solid rgba(255, 255, 255, 0.28);
   border-right: 2px solid rgba(0, 0, 0, 0.72);
   background: linear-gradient(
