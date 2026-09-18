@@ -6,7 +6,7 @@
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   grid-template-rows: 1fr;
   transform-style: preserve-3d;
-  pointer-events: none;
+  pointer-events: auto;
 }
 
 .closedHitArea {
@@ -19,6 +19,7 @@
   background: transparent;
   appearance: none;
   cursor: pointer;
+  pointer-events: auto;
 }
 
 .closedHitArea:focus-visible {
@@ -100,6 +101,7 @@
   justify-content: flex-end;
   padding: 18px 26px 18px 24px;
   pointer-events: none;
+  cursor: default;
   transition: opacity 420ms ease;
 }
 .closedMetaOpen { opacity: 0; }
@@ -183,6 +185,41 @@
   opacity:.7;
   background:repeating-linear-gradient(90deg, rgba(255,255,255,.35) 0 1px, transparent 1px 3px, rgba(255,255,255,.16) 3px 5px, transparent 5px 8px);
 }
+
+
+.closedSpine {
+  position: absolute;
+  left: -1px;
+  top: 4px;
+  bottom: 4px;
+  width: 16px;
+  z-index: 7;
+  border-left: 2px solid rgba(255, 255, 255, 0.28);
+  border-right: 2px solid rgba(0, 0, 0, 0.72);
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.82),
+    rgba(78, 84, 90, 0.5) 42%,
+    rgba(7, 8, 10, 0.9)
+  );
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.05),
+    0 0 12px rgba(0, 0, 0, 0.62);
+  pointer-events: none;
+}
+.closedSpine span {
+  position: absolute;
+  left: 50%;
+  width: 4px;
+  height: 28px;
+  transform: translateX(-50%);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: linear-gradient(90deg, #0a0c0f, #5a6066 50%, #0a0c0f);
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.05);
+}
+.closedSpine span:nth-child(1) { top: 12%; }
+.closedSpine span:nth-child(2) { top: 46%; }
+.closedSpine span:nth-child(3) { top: 80%; }
 
 .closedFacePanel {
   position: relative;

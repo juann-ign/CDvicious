@@ -87,6 +87,9 @@ async function getLastFmTags(artist: string, album: string) {
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const url = new URL(_request.url);
+  const queryArtist = url.searchParams.get("artist")?.trim() ?? "";
+  const queryAlbum = url.searchParams.get("album")?.trim() ?? "";
   const cached = META_CACHE.get(id);
   if (cached && cached.expiresAt > Date.now()) return NextResponse.json(cached.value);
 
@@ -94,23 +97,28 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   if (!accessToken) return NextResponse.json({}, { status: 401 });
 
   try {
-    const spotifyAlbum = await getSpotifyAlbum(id, accessToken);
-    if (!spotifyAlbum) return NextResponse.json({}, { status: 502 });
+    let spotifyAlbum: SpotifyAlbumDetails | null = null;
+    let artist = queryArtist;
+    let album = queryAlbum;
 
-    const artist = spotifyAlbum.artists?.[0]?.name ?? "";
-    const album = spotifyAlbum.name ?? "";
+    if (!artist || !album) {
+      spotifyAlbum = await getSpotifyAlbum(id, accessToken);
+      if (!spotifyAlbum) return NextResponse.json({}, { status: 502 });
+      artist = spotifyAlbum.artists?.[0]?.name ?? "";
+      album = spotifyAlbum.name ?? "";
+    }
     const [musicBrainz, lastFmTags] = await Promise.all([
       getMusicBrainzRelease(artist, album),
       getLastFmTags(artist, album),
     ]);
 
     const meta: ReleaseMeta = {
-      year: musicBrainz?.date?.slice(0, 4) ?? spotifyAlbum.release_date?.slice(0, 4),
-      label: musicBrainz?.["label-info"]?.[0]?.label?.name ?? spotifyAlbum.label,
+      year: musicBrainz?.date?.slice(0, 4) ?? spotifyAlbum?.release_date?.slice(0, 4),
+      label: musicBrainz?.["label-info"]?.[0]?.label?.name ?? spotifyAlbum?.label,
       catalogNumber: musicBrainz?.["label-info"]?.find((info) => info["catalog-number"])?.["catalog-number"],
       format: musicBrainz?.media?.[0]?.format ?? "COMPACT DISC",
       country: musicBrainz?.country,
-      tags: lastFmTags.length > 0 ? lastFmTags : spotifyAlbum.genres ?? [],
+      tags: lastFmTags.length > 0 ? lastFmTags : spotifyAlbum?.genres ?? [],
     };
 
     META_CACHE.set(id, { expiresAt: Date.now() + CACHE_TTL_MS, value: meta });
