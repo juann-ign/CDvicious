@@ -48,8 +48,14 @@ export function JewelCaseDetailModal({
     tags: album.genres ?? [],
   }));
   const discRef = useRef<HTMLDivElement>(null);
-  const { rotation: discDragRotation, isDragging: isDiscDragging, pointerHandlers: discPointerHandlers } = useDiscSurfaceDrag(!isCaseOpen);
-  const coverUrl = [...album.images].sort((a, b) => b.width - a.width)[0]?.url ?? album.images[0]?.url;
+  const {
+    rotation: discDragRotation,
+    isDragging: isDiscDragging,
+    pointerHandlers: discPointerHandlers,
+  } = useDiscSurfaceDrag(!isCaseOpen);
+  const coverUrl =
+    [...album.images].sort((a, b) => b.width - a.width)[0]?.url ??
+    album.images[0]?.url;
 
   useEffect(() => {
     let cancelled = false;
@@ -295,14 +301,9 @@ export function JewelCaseDetailModal({
                 style={{ transform: leftTransform }}
                 aria-label="Portada y lista de canciones"
               >
-                <button
-                  type="button"
-                  className={motionStyles.leftLeafCloseHitArea}
-                  onClick={handleCloseCase}
-                  aria-label="Cerrar caja de CD"
-                  tabIndex={isCaseOpen ? 0 : -1}
-                />
-                <div className={`${styles.paperbackPanel} ${denseTracklist ? densityStyles.paperbackPanelDense : ""}`}>
+                <div
+                  className={`${styles.paperbackPanel} ${denseTracklist ? densityStyles.paperbackPanelDense : ""}`}
+                >
                   <div className={styles.coverPanel}>
                     {coverUrl && (
                       <Image
@@ -345,6 +346,13 @@ export function JewelCaseDetailModal({
                         ))}
                     </ul>
                   </div>
+                  <button
+                    type="button"
+                    className={motionStyles.leftLeafCloseHitArea}
+                    onClick={handleCloseCase}
+                    aria-label="Cerrar caja de CD"
+                    tabIndex={isCaseOpen ? 0 : -1}
+                  />
                 </div>
               </section>
 
@@ -376,7 +384,7 @@ export function JewelCaseDetailModal({
                     {...discPointerHandlers}
                     style={{
                       transform: isCaseOpen
-                        ? `translate(-50%, -50%) translateZ(10px) rotate(calc(-25deg + ${discDragRotation}deg))`
+                        ? ` translateZ(10px) rotate(calc(-45deg + ${discDragRotation}deg))`
                         : discTransform,
                       opacity: isCaseOpen ? 1 : 0,
                     }}

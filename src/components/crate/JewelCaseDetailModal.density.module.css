@@ -5,33 +5,40 @@
   background: #111417;
 }
 
-.paperbackPanelDense .coverPanel {
-  position: absolute;
-  top: 5%;
-  bottom: 5%;
-  left: 0;
-  width: 48%;
-  z-index: 0;
-  opacity: 0.29;
-  pointer-events: none;
-  overflow: hidden;
-  filter: saturate(0.78) contrast(1.02);
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.055),
-    0 0 22px rgba(0, 0, 0, 0.22);
+.paperbackPanelDense .trackPanel {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 14px 16px;
+  background: linear-gradient(
+    90deg,
+    rgba(9, 11, 14, 0.28) 0%,
+    rgba(9, 11, 14, 0.34) 46%,
+    rgba(9, 11, 14, 0.78) 52%,
+    rgba(9, 11, 14, 0.86) 100%
+  );
 }
-
 .paperbackPanelDense .coverPanel::after {
   inset: -1px -22px -1px -1px;
   width: auto;
   background:
-    linear-gradient(90deg, rgba(8, 10, 12, 0.34), rgba(8, 10, 12, 0.12) 58%, rgba(8, 10, 12, 0.72)),
+    linear-gradient(
+      90deg,
+      rgba(8, 10, 12, 0.34),
+      rgba(8, 10, 12, 0.12) 58%,
+      rgba(8, 10, 12, 0.72)
+    ),
     linear-gradient(180deg, rgba(8, 10, 12, 0.05), rgba(8, 10, 12, 0.36));
 }
 
 .paperbackPanelDense .cover {
   transform: scale(1.03);
   object-fit: cover;
+  object-position: center;
 }
 
 .paperbackPanelDense .trackPanel {
@@ -44,7 +51,13 @@
   height: 100%;
   padding: 14px 16px;
   background:
-    linear-gradient(90deg, rgba(9, 11, 14, 0.16) 0%, rgba(9, 11, 14, 0.38) 44%, rgba(9, 11, 14, 0.72) 54%, rgba(9, 11, 14, 0.82) 100%),
+    linear-gradient(
+      90deg,
+      rgba(9, 11, 14, 0.16) 0%,
+      rgba(9, 11, 14, 0.38) 44%,
+      rgba(9, 11, 14, 0.72) 54%,
+      rgba(9, 11, 14, 0.82) 100%
+    ),
     linear-gradient(180deg, rgba(9, 11, 14, 0.08), rgba(9, 11, 14, 0.34));
 }
 
@@ -52,37 +65,41 @@
   left: 50%;
   width: 1px;
   opacity: 0.82;
-  background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.12) 12%, rgba(255, 255, 255, 0.12) 88%, transparent);
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(255, 255, 255, 0.12) 12%,
+    rgba(255, 255, 255, 0.12) 88%,
+    transparent
+  );
+}
+
+.trackRow {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) 38px;
+  align-items: center;
+  padding: 3px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.055);
+  color: var(--color-text-secondary);
+  font-family: var(--font-ui);
+  font-size: 9px;
+  line-height: 1.15;
 }
 
 .trackGridDense {
-  display: grid !important;
+  display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   grid-template-rows: repeat(var(--track-rows), auto);
   grid-auto-flow: column;
-  align-content: center;
-  justify-content: center;
-  align-items: center;
-  gap: 3px 24px;
+  gap: 3px 10px;
   overflow: hidden !important;
-  flex: none !important;
-  width: 100%;
+  width: 95%;
   max-height: none;
-  background: transparent;
-}
-
-.trackGridDense .trackRow {
-  min-height: 24px;
-  padding: 5px 6px;
-  font-size: 12px;
-  line-height: 1.2;
-  border-bottom-color: rgba(255, 255, 255, 0.09);
-  grid-template-columns: 30px minmax(0, 1fr);
-  align-items: center;
+  position: absolute;
 }
 
 .trackGridDense .trackIndex {
-  font-size: 10px;
+  font-size: 16px;
   line-height: 1;
   color: rgba(232, 240, 245, 0.62);
 }
