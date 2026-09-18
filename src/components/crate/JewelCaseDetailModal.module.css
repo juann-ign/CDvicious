@@ -595,36 +595,43 @@
 }
 .discIsDragging {
   cursor: grabbing;
+  transition: none !important;
 }
 
 .discArt {
   object-fit: cover;
-  opacity: 0.76;
-  mix-blend-mode: screen;
-  filter: saturate(0.92) contrast(1.02);
+  opacity: 0.9;
+  mix-blend-mode: normal;
+  filter: saturate(0.88) contrast(1.04);
 }
 .discSheen {
   position: absolute;
   inset: 0;
+  opacity: 0.58;
   background:
+    radial-gradient(circle at 32% 26%, rgba(185, 232, 255, 0.14), transparent 28%),
+    radial-gradient(circle at 72% 34%, rgba(255, 192, 230, 0.13), transparent 31%),
+    radial-gradient(circle at 66% 74%, rgba(154, 255, 225, 0.12), transparent 30%),
+    radial-gradient(circle at 25% 72%, rgba(177, 190, 255, 0.1), transparent 28%),
     conic-gradient(
-      from 8deg,
-      transparent 0 10%,
-      rgba(255, 255, 255, 0.34) 14%,
-      transparent 20% 34%,
-      rgba(161, 255, 228, 0.18) 39%,
-      transparent 48% 62%,
-      rgba(255, 255, 255, 0.25) 69%,
-      transparent 78% 100%
+      from 210deg at 50% 50%,
+      rgba(103, 231, 255, 0.09) 0deg 52deg,
+      rgba(255, 180, 225, 0.08) 52deg 104deg,
+      rgba(255, 224, 144, 0.075) 104deg 158deg,
+      rgba(159, 255, 220, 0.075) 158deg 214deg,
+      rgba(176, 174, 255, 0.08) 214deg 270deg,
+      rgba(103, 231, 255, 0.09) 270deg 360deg
     ),
-    linear-gradient(
-      112deg,
-      transparent 36%,
-      rgba(255, 255, 255, 0.2) 48%,
-      transparent 60%
+    radial-gradient(
+      circle at 50% 50%,
+      transparent 0 14%,
+      rgba(255, 255, 255, 0.035) 15% 23%,
+      transparent 36% 100%
     );
   mix-blend-mode: screen;
+  pointer-events: none;
 }
+
 .discRing {
   position: absolute;
   inset: 3.5%;

@@ -1,122 +1,120 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { PointerEventHandler } from "react";
 
 const DRAG_SENSITIVITY = 0.42;
 const EASE_BACK_MS = 900;
 
-export function useDiscSurfaceDrag<T extends HTMLElement>(
-  targetRef: React.RefObject<T | null>,
-  disabled: boolean,
-) {
+interface DiscSurfacePointerHandlers {
+  onPointerDown: PointerEventHandler<HTMLDivElement>;
+  onPointerMove: PointerEventHandler<HTMLDivElement>;
+  onPointerUp: PointerEventHandler<HTMLDivElement>;
+  onPointerCancel: PointerEventHandler<HTMLDivElement>;
+}
+
+export function useDiscSurfaceDrag(disabled: boolean) {
   const [rotation, setRotation] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
+
   const rotationRef = useRef(0);
-  const rafRef = useRef<number | null>(null);
+  const lastXRef = useRef(0);
+  const easeFrameRef = useRef<number | null>(null);
+
+  const stopEase = useCallback(() => {
+    if (easeFrameRef.current !== null) {
+      cancelAnimationFrame(easeFrameRef.current);
+      easeFrameRef.current = null;
+    }
+  }, []);
 
   useEffect(() => {
     if (!disabled) return;
-
+    stopEase();
     rotationRef.current = 0;
     setRotation(0);
     setIsDragging(false);
+  }, [disabled, stopEase]);
 
-    if (rafRef.current !== null) {
-      cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-    }
-  }, [disabled]);
+  const easeBack = useCallback(() => {
+    const from = rotationRef.current;
+    const startedAt = performance.now();
+    stopEase();
 
-  useEffect(() => {
-    const target = targetRef.current;
-    if (!target || disabled) return;
+    const frame = (now: number) => {
+      const progress = Math.min(1, (now - startedAt) / EASE_BACK_MS);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const next = from * (1 - eased);
+      rotationRef.current = next;
+      setRotation(next);
 
-    let lastX = 0;
-
-    const stopEase = () => {
-      if (rafRef.current !== null) {
-        cancelAnimationFrame(rafRef.current);
-        rafRef.current = null;
+      if (progress < 1) {
+        easeFrameRef.current = requestAnimationFrame(frame);
+      } else {
+        rotationRef.current = 0;
+        setRotation(0);
+        easeFrameRef.current = null;
       }
     };
 
-    const easeBack = () => {
-      const from = rotationRef.current;
-      const startedAt = performance.now();
-      stopEase();
+    easeFrameRef.current = requestAnimationFrame(frame);
+  }, [stopEase]);
 
-      const frame = (now: number) => {
-        const progress = Math.min(1, (now - startedAt) / EASE_BACK_MS);
-        const eased = 1 - Math.pow(1 - progress, 3);
-        const next = from * (1 - eased);
-
-        rotationRef.current = next;
-        setRotation(next);
-
-        if (progress < 1) {
-          rafRef.current = requestAnimationFrame(frame);
-        } else {
-          rotationRef.current = 0;
-          setRotation(0);
-          rafRef.current = null;
-        }
-      };
-
-      rafRef.current = requestAnimationFrame(frame);
-    };
-
-    const onPointerDown = (event: PointerEvent) => {
-      if (event.button !== 0) return;
-
+  const onPointerDown = useCallback<PointerEventHandler<HTMLDivElement>>(
+    (event) => {
+      if (disabled || event.button !== 0) return;
       event.preventDefault();
       stopEase();
-      lastX = event.clientX;
+      lastXRef.current = event.clientX;
       setIsDragging(true);
+      event.currentTarget.setPointerCapture(event.pointerId);
+    },
+    [disabled, stopEase],
+  );
 
-      try {
-        target.setPointerCapture(event.pointerId);
-      } catch {
-        // Pointer capture can be unavailable in embedded browser contexts.
+  const onPointerMove = useCallback<PointerEventHandler<HTMLDivElement>>(
+    (event) => {
+      if (
+        disabled ||
+        !event.currentTarget.hasPointerCapture(event.pointerId)
+      ) {
+        return;
       }
-    };
 
-    const onPointerMove = (event: PointerEvent) => {
-      if (!target.hasPointerCapture?.(event.pointerId)) return;
-
-      const dx = event.clientX - lastX;
-      lastX = event.clientX;
+      const dx = event.clientX - lastXRef.current;
+      lastXRef.current = event.clientX;
 
       const next = rotationRef.current + dx * DRAG_SENSITIVITY;
       rotationRef.current = next;
       setRotation(next);
-    };
+    },
+    [disabled],
+  );
 
-    const onPointerUp = (event: PointerEvent) => {
-      if (!target.hasPointerCapture?.(event.pointerId)) return;
-
-      try {
-        target.releasePointerCapture(event.pointerId);
-      } catch {
-        // Ignore browsers that release capture automatically.
+  const finishDrag = useCallback<PointerEventHandler<HTMLDivElement>>(
+    (event) => {
+      if (
+        disabled ||
+        !event.currentTarget.hasPointerCapture(event.pointerId)
+      ) {
+        return;
       }
 
+      event.currentTarget.releasePointerCapture(event.pointerId);
       setIsDragging(false);
       easeBack();
-    };
+    },
+    [disabled, easeBack],
+  );
 
-    target.addEventListener("pointerdown", onPointerDown);
-    target.addEventListener("pointermove", onPointerMove);
-    target.addEventListener("pointerup", onPointerUp);
-    target.addEventListener("pointercancel", onPointerUp);
+  const pointerHandlers: DiscSurfacePointerHandlers = {
+    onPointerDown,
+    onPointerMove,
+    onPointerUp: finishDrag,
+    onPointerCancel: finishDrag,
+  };
 
-    return () => {
-      stopEase();
-      target.removeEventListener("pointerdown", onPointerDown);
-      target.removeEventListener("pointermove", onPointerMove);
-      target.removeEventListener("pointerup", onPointerUp);
-      target.removeEventListener("pointercancel", onPointerUp);
-    };
-  }, [disabled, targetRef]);
+  useEffect(() => () => stopEase(), [stopEase]);
 
-  return { rotation, isDragging };
+  return { rotation, isDragging, pointerHandlers };
 }

@@ -48,7 +48,7 @@ export function JewelCaseDetailModal({
     tags: album.genres ?? [],
   }));
   const discRef = useRef<HTMLDivElement>(null);
-  const { rotation: discDragRotation, isDragging: isDiscDragging } = useDiscSurfaceDrag(discRef, !isCaseOpen);
+  const { rotation: discDragRotation, isDragging: isDiscDragging, pointerHandlers: discPointerHandlers } = useDiscSurfaceDrag(!isCaseOpen);
 
   useEffect(() => {
     let cancelled = false;
@@ -355,6 +355,13 @@ export function JewelCaseDetailModal({
                   <div
                     ref={discRef}
                     className={`${styles.disc} ${motionStyles.motionDisc} ${isDiscDragging ? styles.discIsDragging : ""}`}
+                    role="slider"
+                    tabIndex={isCaseOpen ? 0 : -1}
+                    aria-label="Girar CD"
+                    aria-valuemin={-180}
+                    aria-valuemax={180}
+                    aria-valuenow={Math.round(discDragRotation)}
+                    {...discPointerHandlers}
                     style={{
                       transform: isCaseOpen
                         ? `translate(-50%, -50%) translateZ(10px) rotate(calc(-25deg + ${discDragRotation}deg))`
