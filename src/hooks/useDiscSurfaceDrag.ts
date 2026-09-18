@@ -87,7 +87,10 @@ export function useDiscSurfaceDrag(disabled: boolean) {
       const dx = event.clientX - lastXRef.current;
       lastXRef.current = event.clientX;
 
-      const next = rotationRef.current + dx * DRAG_SENSITIVITY;
+      const next = Math.max(
+        -180,
+        Math.min(180, rotationRef.current + dx * DRAG_SENSITIVITY),
+      );
       rotationRef.current = next;
       setRotation(next);
     },
