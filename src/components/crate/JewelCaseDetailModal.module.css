@@ -589,6 +589,8 @@
     0 0 10px rgba(231, 239, 244, 0.09);
   transform: translate(-50%, -50%) translateZ(10px) rotate(-25deg);
   transform-origin: center center;
+  z-index: 4;
+  pointer-events: auto;
   cursor: grab;
   touch-action: none;
   user-select: none;
