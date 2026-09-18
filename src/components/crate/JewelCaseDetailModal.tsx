@@ -49,6 +49,7 @@ export function JewelCaseDetailModal({
   }));
   const discRef = useRef<HTMLDivElement>(null);
   const { rotation: discDragRotation, isDragging: isDiscDragging, pointerHandlers: discPointerHandlers } = useDiscSurfaceDrag(!isCaseOpen);
+  const coverUrl = [...album.images].sort((a, b) => b.width - a.width)[0]?.url ?? album.images[0]?.url;
 
   useEffect(() => {
     let cancelled = false;
@@ -118,6 +119,10 @@ export function JewelCaseDetailModal({
     if (!isCaseOpen) setIsCaseOpen(true);
   };
 
+  const handleCloseCase = () => {
+    if (isCaseOpen) setIsCaseOpen(false);
+  };
+
   const handleLoad = () => {
     if (!isCaseOpen) {
       setIsCaseOpen(true);
@@ -141,8 +146,8 @@ export function JewelCaseDetailModal({
     ? "perspective(1500px) rotateY(-9deg)"
     : "perspective(1500px) rotateY(0deg)";
   const discTransform = isCaseOpen
-    ? "translate(-50%, -50%) translateZ(10px) scale(1) rotate(-25deg)"
-    : "translate(-50%, -50%) translateZ(-6px) scale(0.82) rotate(-8deg)";
+    ? "translateZ(12px) scale(1) rotate(-25deg)"
+    : "translateZ(-6px) scale(0.82) rotate(-8deg)";
 
   return (
     <div
@@ -245,9 +250,9 @@ export function JewelCaseDetailModal({
               >
                 <div className={motionStyles.closedFacePanel}>
                   <div className={motionStyles.closedArtwork}>
-                    {album.images[0]?.url && (
+                    {coverUrl && (
                       <Image
-                        src={album.images[0].url}
+                        src={coverUrl}
                         alt={album.name}
                         fill
                         unoptimized
@@ -290,11 +295,18 @@ export function JewelCaseDetailModal({
                 style={{ transform: leftTransform }}
                 aria-label="Portada y lista de canciones"
               >
+                <button
+                  type="button"
+                  className={motionStyles.leftLeafCloseHitArea}
+                  onClick={handleCloseCase}
+                  aria-label="Cerrar caja de CD"
+                  tabIndex={isCaseOpen ? 0 : -1}
+                />
                 <div className={`${styles.paperbackPanel} ${denseTracklist ? densityStyles.paperbackPanelDense : ""}`}>
                   <div className={styles.coverPanel}>
-                    {album.images[0]?.url && (
+                    {coverUrl && (
                       <Image
-                        src={album.images[0].url}
+                        src={coverUrl}
                         alt={album.name}
                         fill
                         unoptimized
@@ -369,9 +381,9 @@ export function JewelCaseDetailModal({
                       opacity: isCaseOpen ? 1 : 0,
                     }}
                   >
-                    {album.images[0]?.url && (
+                    {coverUrl && (
                       <Image
-                        src={album.images[0].url}
+                        src={coverUrl}
                         alt=""
                         fill
                         unoptimized

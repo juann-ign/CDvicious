@@ -247,6 +247,7 @@
 }
 
 .rightLeaf::after {
+  pointer-events: none;
   inset: 5px;
   border: 1px solid rgba(255, 255, 255, 0.2);
   background:
@@ -568,28 +569,21 @@
 
 .disc {
   position: absolute;
-  left: calc(50% - 0px);
-  top: calc(50% - 0px);
-  z-index: 2;
+  inset: 0;
+  margin: auto;
+  z-index: 30;
   width: 64%;
   aspect-ratio: 1;
   overflow: hidden;
   border-radius: 50%;
-  background: linear-gradient(
-    145deg,
-    #aab0b6,
-    #666c73 43%,
-    #d6dade 76%,
-    #60656b
-  );
+  background: linear-gradient(145deg, #aab0b6, #666c73 43%, #d6dade 76%, #60656b);
   box-shadow:
     0 9px 20px rgba(0, 0, 0, 0.58),
     inset 0 0 0 1px rgba(255, 255, 255, 0.62),
     inset 0 0 25px rgba(255, 255, 255, 0.13),
     0 0 10px rgba(231, 239, 244, 0.09);
-  transform: translate(-50%, -50%) translateZ(10px) rotate(-25deg);
+  transform: translateZ(12px) rotate(-25deg);
   transform-origin: center center;
-  z-index: 4;
   pointer-events: auto;
   cursor: grab;
   touch-action: none;
@@ -599,41 +593,45 @@
   cursor: grabbing;
   transition: none !important;
 }
+.discIsDragging {
+  cursor: grabbing;
+  transition: none !important;
+}
 
 .discArt {
   object-fit: cover;
-  opacity: 0.9;
+  opacity: 0.96;
   mix-blend-mode: normal;
-  filter: saturate(0.88) contrast(1.04);
+  filter: saturate(0.96) contrast(1.04);
+  transform: scale(1.01);
 }
 .discSheen {
   position: absolute;
   inset: 0;
-  opacity: 0.58;
+  opacity: 0.72;
   background:
-    radial-gradient(circle at 32% 26%, rgba(185, 232, 255, 0.14), transparent 28%),
-    radial-gradient(circle at 72% 34%, rgba(255, 192, 230, 0.13), transparent 31%),
-    radial-gradient(circle at 66% 74%, rgba(154, 255, 225, 0.12), transparent 30%),
-    radial-gradient(circle at 25% 72%, rgba(177, 190, 255, 0.1), transparent 28%),
+    radial-gradient(circle at 30% 24%, rgba(165, 224, 255, 0.17) 0%, transparent 29%),
+    radial-gradient(circle at 73% 31%, rgba(255, 180, 220, 0.16) 0%, transparent 31%),
+    radial-gradient(circle at 68% 74%, rgba(148, 255, 220, 0.15) 0%, transparent 30%),
+    radial-gradient(circle at 23% 72%, rgba(174, 182, 255, 0.13) 0%, transparent 29%),
     conic-gradient(
-      from 210deg at 50% 50%,
-      rgba(103, 231, 255, 0.09) 0deg 52deg,
-      rgba(255, 180, 225, 0.08) 52deg 104deg,
-      rgba(255, 224, 144, 0.075) 104deg 158deg,
-      rgba(159, 255, 220, 0.075) 158deg 214deg,
-      rgba(176, 174, 255, 0.08) 214deg 270deg,
-      rgba(103, 231, 255, 0.09) 270deg 360deg
+      from 202deg at 50% 50%,
+      rgba(70, 215, 255, 0.13) 0deg 48deg,
+      rgba(255, 167, 216, 0.1) 48deg 100deg,
+      rgba(255, 220, 146, 0.095) 100deg 154deg,
+      rgba(141, 255, 211, 0.1) 154deg 210deg,
+      rgba(169, 166, 255, 0.1) 210deg 268deg,
+      rgba(70, 215, 255, 0.12) 268deg 360deg
     ),
     radial-gradient(
       circle at 50% 50%,
-      transparent 0 14%,
-      rgba(255, 255, 255, 0.035) 15% 23%,
-      transparent 36% 100%
+      transparent 0 13%,
+      rgba(255, 255, 255, 0.045) 14% 22%,
+      transparent 35% 100%
     );
   mix-blend-mode: screen;
   pointer-events: none;
 }
-
 .discRing {
   position: absolute;
   inset: 3.5%;
@@ -647,20 +645,48 @@
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 17%;
+  width: 18%;
   aspect-ratio: 1;
   transform: translate(-50%, -50%);
+  z-index: 5;
   border-radius: 50%;
-  background: radial-gradient(
-    circle at 50% 50%,
-    #d8dde1 0 20%,
-    #646b73 20% 32%,
-    #1a1d21 32% 64%,
-    #080a0d 65% 100%
-  );
+  background:
+    radial-gradient(circle, #090b0d 0 15%, #2b3136 16% 29%, #0b0e11 30% 50%, #626a70 51% 57%, #0b0d10 58% 100%);
+  border: 1px solid rgba(255, 255, 255, 0.22);
   box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.22),
-    inset 0 0 7px rgba(0, 0, 0, 0.75);
+    inset 0 0 0 1px rgba(0, 0, 0, 0.74),
+    inset 0 0 10px rgba(0, 0, 0, 0.8),
+    0 0 0 1px rgba(255, 255, 255, 0.06),
+    0 0 7px rgba(255, 255, 255, 0.05);
+}
+
+.discHub::before {
+  content: "";
+  position: absolute;
+  inset: 12%;
+  border-radius: 50%;
+  background:
+    repeating-conic-gradient(
+      from 0deg,
+      rgba(8, 10, 12, 0.98) 0deg 9deg,
+      rgba(91, 99, 106, 0.82) 9deg 15deg,
+      rgba(8, 10, 12, 0.98) 15deg 30deg
+    );
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.07),
+    0 0 0 1px rgba(0, 0, 0, 0.5);
+}
+
+.discHub::after {
+  content: "";
+  position: absolute;
+  inset: 32%;
+  border-radius: 50%;
+  background: radial-gradient(circle, #7c858c 0 15%, #14181b 16% 55%, #050608 56% 100%);
+  border: 1px solid rgba(232, 240, 245, 0.2);
+  box-shadow:
+    inset 0 0 5px rgba(0, 0, 0, 0.9),
+    0 0 3px rgba(255, 255, 255, 0.05);
 }
 .discLabel {
   position: absolute;

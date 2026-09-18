@@ -3,23 +3,20 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { KeyboardEventHandler, PointerEventHandler } from "react";
 
-const DRAG_SENSITIVITY = 0.42;
+const DRAG_SENSITIVITY = 0.5;
 const KEY_STEP = 15;
 const EASE_BACK_MS = 900;
 
 interface DiscSurfacePointerHandlers {
   onPointerDown: PointerEventHandler<HTMLDivElement>;
-  onPointerMove: PointerEventHandler<HTMLDivElement>;
-  onPointerUp: PointerEventHandler<HTMLDivElement>;
-  onPointerCancel: PointerEventHandler<HTMLDivElement>;
   onKeyDown: KeyboardEventHandler<HTMLDivElement>;
 }
 
 export function useDiscSurfaceDrag(disabled: boolean) {
   const [rotation, setRotation] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
-
   const rotationRef = useRef(0);
+  const draggingRef = useRef(false);
   const lastXRef = useRef(0);
   const easeFrameRef = useRef<number | null>(null);
 
@@ -30,15 +27,19 @@ export function useDiscSurfaceDrag(disabled: boolean) {
     }
   }, []);
 
-  useEffect(() => {
-    if (!disabled) return;
-    stopEase();
-    rotationRef.current = 0;
-    setRotation(0);
-    setIsDragging(false);
-  }, [disabled, stopEase]);
+  const handlePointerMove = useCallback((event: PointerEvent) => {
+    if (!draggingRef.current) return;
+    const dx = event.clientX - lastXRef.current;
+    lastXRef.current = event.clientX;
+    const next = Math.max(-180, Math.min(180, rotationRef.current + dx * DRAG_SENSITIVITY));
+    rotationRef.current = next;
+    setRotation(next);
+  }, []);
 
-  const easeBack = useCallback(() => {
+  const handlePointerUp = useCallback(() => {
+    if (!draggingRef.current) return;
+    draggingRef.current = false;
+    setIsDragging(false);
     const from = rotationRef.current;
     const startedAt = performance.now();
     stopEase();
@@ -47,10 +48,8 @@ export function useDiscSurfaceDrag(disabled: boolean) {
       const progress = Math.min(1, (now - startedAt) / EASE_BACK_MS);
       const eased = 1 - Math.pow(1 - progress, 3);
       const next = from * (1 - eased);
-
       rotationRef.current = next;
       setRotation(next);
-
       if (progress < 1) {
         easeFrameRef.current = requestAnimationFrame(frame);
       } else {
@@ -59,106 +58,63 @@ export function useDiscSurfaceDrag(disabled: boolean) {
         easeFrameRef.current = null;
       }
     };
-
     easeFrameRef.current = requestAnimationFrame(frame);
-  }, [stopEase]);
+
+    window.removeEventListener("pointermove", handlePointerMove);
+    window.removeEventListener("pointerup", handlePointerUp);
+    window.removeEventListener("pointercancel", handlePointerUp);
+  }, [handlePointerMove, stopEase]);
 
   const onPointerDown = useCallback<PointerEventHandler<HTMLDivElement>>(
     (event) => {
       if (disabled || event.button !== 0) return;
       event.preventDefault();
       stopEase();
-      lastXRef.current = event.clientX;
+      draggingRef.current = true;
       setIsDragging(true);
-      event.currentTarget.setPointerCapture(event.pointerId);
-    },
-    [disabled, stopEase],
-  );
-
-  const onPointerMove = useCallback<PointerEventHandler<HTMLDivElement>>(
-    (event) => {
-      if (
-        disabled ||
-        !event.currentTarget.hasPointerCapture(event.pointerId)
-      ) {
-        return;
-      }
-
-      const dx = event.clientX - lastXRef.current;
       lastXRef.current = event.clientX;
-
-      const next = Math.max(
-        -180,
-        Math.min(180, rotationRef.current + dx * DRAG_SENSITIVITY),
-      );
-      rotationRef.current = next;
-      setRotation(next);
+      window.addEventListener("pointermove", handlePointerMove);
+      window.addEventListener("pointerup", handlePointerUp);
+      window.addEventListener("pointercancel", handlePointerUp);
     },
-    [disabled],
-  );
-
-  const finishDrag = useCallback<PointerEventHandler<HTMLDivElement>>(
-    (event) => {
-      if (
-        disabled ||
-        !event.currentTarget.hasPointerCapture(event.pointerId)
-      ) {
-        return;
-      }
-
-      event.currentTarget.releasePointerCapture(event.pointerId);
-      setIsDragging(false);
-      easeBack();
-    },
-    [disabled, easeBack],
+    [disabled, handlePointerMove, handlePointerUp, stopEase],
   );
 
   const onKeyDown = useCallback<KeyboardEventHandler<HTMLDivElement>>(
     (event) => {
       if (disabled) return;
-
-      if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
-        event.preventDefault();
-        stopEase();
-
-        const direction = event.key === "ArrowRight" ? 1 : -1;
-        const next = Math.max(
-          -180,
-          Math.min(180, rotationRef.current + direction * KEY_STEP),
-        );
-
-        rotationRef.current = next;
-        setRotation(next);
-        return;
-      }
-
-      if (event.key === "Home") {
-        event.preventDefault();
-        stopEase();
-        rotationRef.current = -180;
-        setRotation(-180);
-        return;
-      }
-
-      if (event.key === "End") {
-        event.preventDefault();
-        stopEase();
-        rotationRef.current = 180;
-        setRotation(180);
-      }
+      if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+      event.preventDefault();
+      stopEase();
+      const direction = event.key === "ArrowRight" ? 1 : -1;
+      const next = Math.max(-180, Math.min(180, rotationRef.current + direction * KEY_STEP));
+      rotationRef.current = next;
+      setRotation(next);
     },
     [disabled, stopEase],
   );
 
-  const pointerHandlers: DiscSurfacePointerHandlers = {
-    onPointerDown,
-    onPointerMove,
-    onPointerUp: finishDrag,
-    onPointerCancel: finishDrag,
-    onKeyDown,
+  useEffect(() => {
+    if (disabled) {
+      stopEase();
+      rotationRef.current = 0;
+      setRotation(0);
+      setIsDragging(false);
+      draggingRef.current = false;
+      return;
+    }
+    return () => {
+      draggingRef.current = false;
+      stopEase();
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+      window.removeEventListener("pointercancel", handlePointerUp);
+    };
+  }, [disabled, handlePointerMove, handlePointerUp, stopEase]);
+
+  return {
+    rotation,
+    isDragging,
+    pointerHandlers: { onPointerDown, onKeyDown },
   };
-
-  useEffect(() => () => stopEase(), [stopEase]);
-
-  return { rotation, isDragging, pointerHandlers };
 }
