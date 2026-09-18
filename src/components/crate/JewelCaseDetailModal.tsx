@@ -384,7 +384,7 @@ export function JewelCaseDetailModal({
                     {...discPointerHandlers}
                     style={{
                       transform: isCaseOpen
-                        ? ` translateZ(10px) rotate(calc(-45deg + ${discDragRotation}deg))`
+                        ? `translateZ(10px) rotate(calc(-45deg + ${discDragRotation}deg))`
                         : discTransform,
                       opacity: isCaseOpen ? 1 : 0,
                     }}

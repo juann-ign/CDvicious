@@ -1,6 +1,6 @@
 .leftLeafCloseHitArea {
   position: absolute;
-  inset: 0;
+  inset: -8px -3px -2px -9px;
   z-index: 100;
   margin: 0;
   padding: 0;
@@ -9,7 +9,6 @@
   cursor: pointer;
   pointer-events: auto;
   appearance: none;
-  background: rgba(255, 0, 0, 0.08);
 }
 
 .leftLeafCloseHitArea:focus-visible {
