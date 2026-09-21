@@ -121,9 +121,8 @@
   box-shadow: inset 0 1px rgba(255, 255, 255, 0.035);
 }
 .closeBtn span {
-  margin-left: 8px;
-  font-size: 17px;
-  line-height: 0;
+  margin-left: 0;
+  line-height: 1;
 }
 .closeBtn:hover,
 .closeBtnBottom:hover {

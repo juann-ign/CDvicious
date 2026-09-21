@@ -183,8 +183,16 @@ export function JewelCaseDetailModal({
                 : ""}
             </p>
           </div>
-          <button type="button" className={styles.closeBtn} onClick={onClose}>
-            cerrar <span aria-hidden="true">×</span>
+          <button
+            type="button"
+            className={styles.closeBtn}
+            onClick={onClose}
+            aria-label="Cerrar"
+          >
+            <span className={polishStyles.closeIcon} aria-hidden="true">
+              ×
+            </span>
+            <span className={polishStyles.closeLabel}>cerrar</span>
           </button>
         </header>
 
