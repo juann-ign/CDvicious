@@ -341,15 +341,35 @@ export function JewelCaseDetailModal({
                         tracks?.map((t, i) => (
                           <li
                             key={`${t.name}-${i}`}
-                            className={styles.trackRow}
+                            className={
+                              denseTracklist
+                                ? densityStyles.trackRowDense
+                                : styles.trackRow
+                            }
                           >
-                            <span className={styles.trackIndex}>
+                            <span
+                              className={
+                                denseTracklist
+                                  ? densityStyles.trackIndexDense
+                                  : styles.trackIndex
+                              }
+                            >
                               {String(i + 1).padStart(2, "0")}
                             </span>
-                            <span className={styles.trackName}>{t.name}</span>
-                            <span className={styles.trackDuration}>
-                              {fmt(t.duration_ms)}
+                            <span
+                              className={
+                                denseTracklist
+                                  ? densityStyles.trackNameDense
+                                  : styles.trackName
+                              }
+                            >
+                              {t.name}
                             </span>
+                            {!denseTracklist && (
+                              <span className={styles.trackDuration}>
+                                {fmt(t.duration_ms)}
+                              </span>
+                            )}
                           </li>
                         ))}
                     </ul>
