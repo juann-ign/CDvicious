@@ -335,7 +335,7 @@ export function JewelCaseDetailModal({
                       }
                     >
                       {loading && (
-                        <li className={styles.trackRow}>LEYENDO TOC...</li>
+                        <li className={`${styles.trackRow} ${densityStyles.loadingRow}`}>LEYENDO TOC...</li>
                       )}
                       {!loading &&
                         tracks?.map((t, i) => (
