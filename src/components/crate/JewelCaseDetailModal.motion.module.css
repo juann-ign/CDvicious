@@ -121,7 +121,7 @@
   align-items: stretch;
   justify-content: stretch;
   box-sizing: border-box;
-  padding: 8px 0 9px;
+  padding: 8px 14px 9px 12px;
   pointer-events: none;
   cursor: default;
   transition: opacity 420ms ease;
@@ -138,8 +138,8 @@
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  justify-content: stretch;
-  padding: 0 16px 0 12px;
+  min-height: 0;
+  padding: 0;
   border: 0;
   background: transparent;
   box-shadow: none;
@@ -150,12 +150,12 @@
 }
 
 .closedMetaHeader {
-  flex: 0 0 33px;
+  flex: 0 0 34px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 0 0 7px;
+  padding: 0 0 8px;
   margin: 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   color: var(--color-phosphor);
@@ -173,23 +173,36 @@
 
 .closedMetaGrid {
   flex: 1 1 auto;
+  min-height: 0;
   display: grid;
-  grid-template-rows: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
   width: 100%;
   margin: 0;
 }
 
 .closedMetaGrid div {
-  display: grid;
-  grid-template-columns: minmax(66px, 0.72fr) minmax(0, 1.28fr);
-  align-items: center;
-  gap: 16px;
   min-width: 0;
-  padding: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 5px;
+  padding: 10px 14px 10px 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.055);
 }
 
-.closedMetaGrid div:last-child {
+.closedMetaGrid div:nth-child(odd) {
+  padding-right: 18px;
+  border-right: 1px solid rgba(255, 255, 255, 0.055);
+}
+
+.closedMetaGrid div:nth-child(even) {
+  padding-left: 18px;
+}
+
+.closedMetaGrid div:nth-child(3),
+.closedMetaGrid div:nth-child(4) {
   border-bottom: 0;
 }
 
@@ -199,22 +212,25 @@
   color: rgba(232, 240, 245, 0.5);
   font-family: var(--font-ui);
   font-size: 9px;
+  line-height: 1;
   letter-spacing: 1.5px;
   text-transform: uppercase;
 }
 
 .closedMetaGrid strong {
   display: block;
+  width: 100%;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   color: rgba(232, 240, 245, 0.92);
   font-family: var(--font-ui);
-  font-size: 11px;
+  font-size: 12px;
+  line-height: 1.05;
   letter-spacing: 1.05px;
   font-weight: 500;
-  text-align: right;
+  text-align: left;
 }
 
 .closedMetaTags {
@@ -224,7 +240,7 @@
   align-items: center;
   gap: 5px;
   min-height: 26px;
-  margin-top: 4px;
+  margin-top: 8px;
 }
 
 .closedMetaTags span {
@@ -234,6 +250,7 @@
   background: rgba(148, 255, 0, 0.035);
   font-family: var(--font-ui);
   font-size: 9px;
+  line-height: 1;
   letter-spacing: 1px;
   text-transform: uppercase;
 }
