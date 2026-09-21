@@ -1,20 +1,11 @@
 .paperbackPanelDense {
-  display: flex;
+  position: relative;
+  display: block;
   width: 100%;
   height: 100%;
   overflow: hidden;
-  justify-content: center;
-  align-items: center;
 }
 
-/*
- * Cover art as a background wash behind column 1 was prototyped here
- * before (opacity: 0 on desktop, 0.12 on mobile) and deliberately left
- * off — a partial image under only one of two symmetric columns reads
- * lopsided, and any wash strong enough to be "notoria" fights the
- * tracklist for contrast. Long albums get the plain typographic
- * treatment; short ones keep the full cover in .paperbackPanel.
- */
 .paperbackPanelDense .coverPanel {
   display: none;
 }
@@ -27,16 +18,11 @@
   justify-content: center;
   width: 100%;
   height: 100%;
-  padding: 12px 18px;
-  background: linear-gradient(
-    180deg,
-    rgba(9, 11, 14, 0.24),
-    rgba(9, 11, 14, 0.46)
-  );
+  box-sizing: border-box;
+  padding: 12px 24px 12px 22px;
+  background: transparent;
 }
 
-/* Center divider between the two columns — phosphor-tinted to match
-   the VFD accent instead of a plain white hairline. */
 .paperbackPanelDense .trackPanel::before {
   left: 50%;
   width: 1px;
@@ -56,9 +42,9 @@
   grid-template-rows: repeat(var(--track-rows), minmax(0, auto));
   grid-auto-flow: column;
   align-content: center;
-  justify-content: center;
+  justify-content: stretch;
   row-gap: 1px;
-  column-gap: 22px;
+  column-gap: 24px;
   flex: 0 1 auto !important;
   width: 100%;
   height: auto;
@@ -69,17 +55,10 @@
   background: transparent;
 }
 
-/*
- * Applied directly on each row/cell (not as ".trackGridDense .trackRow"
- * descendant selectors) — CSS Modules scopes class names per file, so a
- * selector here referencing a class name owned by the sibling
- * JewelCaseDetailModal.module.css never matches the actual DOM node.
- * That's why duration used to keep showing even in dense mode.
- */
 .trackRowDense {
   display: grid;
-  grid-template-columns: 20px minmax(0, 1fr);
-  column-gap: 7px;
+  grid-template-columns: 18px minmax(0, 1fr);
+  column-gap: 6px;
   align-items: baseline;
   min-width: 0;
   padding: 1.5px 0;
@@ -92,7 +71,7 @@
   text-align: right;
   font-variant-numeric: tabular-nums;
   font-family: var(--font-ui);
-  font-size: 12px; /* unchanged from .trackIndex in the base module */
+  font-size: 12px;
   line-height: 1.15;
   letter-spacing: var(--tracking-wide);
   color: var(--color-text-muted);
@@ -104,9 +83,9 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-family: var(--font-ui);
-  font-size: clamp(10px, 1vw, 12px); /* unchanged from .trackName */
+  font-size: clamp(10px, 1vw, 12px);
   line-height: 1.15;
-  letter-spacing: 1.2px; /* base is 1.5px — the only value tightened, name width gains from it and from dropping the duration column, not from smaller type */
+  letter-spacing: 1.2px;
   color: var(--color-text-secondary);
   text-shadow: 0 1px 8px rgba(0, 0, 0, 0.5);
 }
