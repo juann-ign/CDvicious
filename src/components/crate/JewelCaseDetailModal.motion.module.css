@@ -24,7 +24,11 @@
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   grid-template-rows: 1fr;
   transform-style: preserve-3d;
-  pointer-events: auto;
+  /* Transparent, always-mounted wrapper: must not swallow pointer events
+     for the layers beneath it (open spread + disc). Only the actual
+     hit-target children (.closedHitArea, .leftLeafCloseHitArea) opt
+     back in with their own pointer-events: auto. */
+  pointer-events: none;
 }
 
 .closedHitArea {
