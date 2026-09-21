@@ -390,6 +390,7 @@ export function JewelCaseDetailModal({
                     aria-valuemax={180}
                     aria-valuenow={Math.round(discDragRotation)}
                     {...discPointerHandlers}
+                    aria-hidden="true"
                     style={{
                       transform: isCaseOpen
                         ? `translateZ(10px) rotate(calc(-45deg + ${discDragRotation}deg))`
@@ -410,6 +411,16 @@ export function JewelCaseDetailModal({
                     <span className={styles.discRing} aria-hidden="true" />
                     <span className={styles.discHub} aria-hidden="true" />
                   </div>
+                  <div
+                    className={`${styles.discGrabSurface} ${isDiscDragging ? styles.discGrabSurfaceActive : ""}`}
+                    role="slider"
+                    tabIndex={isCaseOpen ? 0 : -1}
+                    aria-label="Girar CD"
+                    aria-valuemin={-180}
+                    aria-valuemax={180}
+                    aria-valuenow={Math.round(discDragRotation)}
+                    {...discPointerHandlers}
+                  />
                 </div>
               </section>
             </div>
