@@ -100,7 +100,7 @@
   margin: 0 !important;
   color: rgba(255, 255, 255, 0.96);
   font-family: Arial, sans-serif;
-  font-size: 22px !important;
+  font-size: 22px;
   font-weight: 400;
   line-height: 1;
   text-shadow:
@@ -122,9 +122,9 @@
   justify-content: center;
   margin: 0 !important;
   color: var(--color-phosphor);
-  font-size: 10px !important;
+  font-size: 14px;
   font-weight: 700;
-  letter-spacing: 1.5px;
+  letter-spacing: 2px;
   text-transform: lowercase;
   opacity: 0;
   transform: translateY(2px);
