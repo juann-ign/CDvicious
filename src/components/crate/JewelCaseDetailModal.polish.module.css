@@ -19,20 +19,21 @@
 
 .modalPolish > header > div > p:first-child {
   margin-bottom: 2px;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .modalPolish > header h2 {
   max-width: 720px;
-  font-size: clamp(17px, 1.9vw, 25px);
+  font-size: clamp(17px, 1.9vw, 24px);
   line-height: 1;
   font-weight: 100;
+  letter-spacing: 2px;
   text-wrap: balance;
 }
 
 .modalPolish > header > div > p:last-child {
   margin-top: 3px;
-  font-size: 12px;
+  font-size: 14px;
   transform: translateX(2px);
 }
 
@@ -47,12 +48,11 @@
   justify-content: center;
   padding: 0;
   overflow: hidden;
-  background:
-    linear-gradient(
-      180deg,
-      rgba(34, 38, 42, 0.96),
-      rgba(15, 18, 21, 0.98)
-    );
+  background: linear-gradient(
+    180deg,
+    rgba(34, 38, 42, 0.96),
+    rgba(15, 18, 21, 0.98)
+  );
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-top-color: rgba(255, 255, 255, 0.24);
   color: rgba(245, 247, 248, 0.94);
@@ -78,12 +78,11 @@
   position: absolute;
   inset: 5px;
   border-radius: 2px;
-  background:
-    radial-gradient(
-      circle at 50% 50%,
-      rgba(205, 72, 72, 0.18),
-      transparent 68%
-    );
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(205, 72, 72, 0.18),
+    transparent 68%
+  );
   opacity: 0.9;
   transition:
     opacity var(--transition-fast),
@@ -136,12 +135,11 @@
 }
 
 .modalPolish > header > button:hover {
-  background:
-    linear-gradient(
-      180deg,
-      rgba(28, 34, 24, 0.98),
-      rgba(13, 18, 12, 0.98)
-    );
+  background: linear-gradient(
+    180deg,
+    rgba(28, 34, 24, 0.98),
+    rgba(13, 18, 12, 0.98)
+  );
   border-color: var(--color-phosphor);
   color: var(--color-phosphor);
   box-shadow:
@@ -245,7 +243,7 @@
 .vfdMainInfo small {
   color: var(--type-vfd-secondary-color);
   font-family: var(--type-vfd-secondary-font);
-  font-size: 10px;
+  font-size: 13px;
   letter-spacing: 1.2px;
   text-transform: uppercase;
 }
@@ -300,9 +298,9 @@
   border-top: 1px solid var(--color-surface-raised);
   color: var(--color-phosphor-dim);
   font-family: var(--font-ui);
-  font-size: 11px;
-  line-height: 1.1;
-  letter-spacing: 1.1px;
+  font-size: 14px;
+  line-height: 1.2;
+  letter-spacing: var(--type-vfd-secondary-spacing);
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.6);
   cursor: pointer;
   transition:

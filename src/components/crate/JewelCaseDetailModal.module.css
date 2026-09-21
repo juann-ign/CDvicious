@@ -329,14 +329,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 12px 0px 12px 12px;
-  background:
-    linear-gradient(105deg, rgba(7, 9, 12, 0.22), rgba(9, 11, 14, 0.78) 27%),
-    radial-gradient(
-      circle at 20% 0%,
-      rgba(255, 255, 255, 0.045),
-      transparent 40%
-    );
+  padding: 6px 0px 12px 6px;
 }
 .trackPanel::before {
   content: "";
@@ -374,6 +367,7 @@
   font-family: var(--font-ui);
   font-size: 9px;
   line-height: 1.15;
+  margin: 0;
 }
 .trackIndex,
 .trackDuration {

@@ -177,8 +177,8 @@
   margin-bottom: 2px;
   color: rgba(232, 240, 245, 0.62);
   font-family: var(--font-ui);
-  font-size: 12px;
-  letter-spacing: 1.4px;
+  font-size: 14px;
+  letter-spacing: 1.5px;
 }
 .closedMetaGrid strong {
   display: block;
@@ -189,7 +189,7 @@
   color: rgba(232, 240, 245, 0.92);
   font-family: var(--font-ui);
   font-size: 12px;
-  letter-spacing: 0.9px;
+  letter-spacing: 1.5px;
   font-weight: 500;
 }
 .closedMetaTags {
