@@ -48,7 +48,7 @@ export function LyricsBooklet({
   const trackDuration = Math.round((track?.duration_ms || 0) / 1000);
 
   useEffect(() => {
-    if (!track) {
+    if (!trackId) {
       setLyrics(null);
       setPages([]);
       setCurrentPage(0);
