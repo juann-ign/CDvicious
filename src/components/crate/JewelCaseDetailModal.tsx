@@ -71,7 +71,7 @@ export function JewelCaseDetailModal({
     pointerHandlers: discPointerHandlers,
   } = useDiscSurfaceDrag(!isCaseOpen || isLaunching);
   const coverUrl =
-    [...album.images].sort((a, b) => b.width - a.width)[0]?.url ??
+    [...album.images].sort((a, b) => (b.width ?? 0) - (a.width ?? 0))[0]?.url ??
     album.images[0]?.url;
 
   useEffect(() => {
@@ -125,7 +125,7 @@ export function JewelCaseDetailModal({
     return () => {
       cancelled = true;
     };
-  }, [album.id]);
+  }, [album.id, album.artists, album.name, album.release_date, album.label, album.genres]);
 
   useEffect(() => {
     const raf = requestAnimationFrame(() => setIsOpen(true));
@@ -266,9 +266,6 @@ export function JewelCaseDetailModal({
 
   const denseTracklist = !loading && (tracks?.length ?? 0) > 14;
   const trackRows = Math.ceil((tracks?.length ?? 0) / 2);
-  const totalDuration =
-    tracks?.reduce((total, track) => total + track.duration_ms, 0) ?? 0;
-
   const leftTransform = isCaseOpen
     ? "perspective(1500px) rotateY(9deg)"
     : "perspective(1500px) rotateY(0deg)";
