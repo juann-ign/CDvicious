@@ -11,6 +11,7 @@ import polishStyles from "./JewelCaseDetailModal.polish.module.css";
 import densityStyles from "./JewelCaseDetailModal.density.module.css";
 import motionStyles from "./JewelCaseDetailModal.motion.module.css";
 
+const CASE_OPEN_DURATION_MS = 900;
 const CASE_CLOSE_START_MS = 240;
 const CASE_CLOSE_MS = 620;
 const POST_CLOSE_HOLD_MS = 160;
@@ -180,11 +181,9 @@ export function JewelCaseDetailModal({
 
     pendingLaunchRef.current = false;
 
-    const raf = window.requestAnimationFrame(() => {
-      beginLaunch();
-    });
+    const timer = window.setTimeout(beginLaunch, CASE_OPEN_DURATION_MS);
 
-    return () => window.cancelAnimationFrame(raf);
+    return () => window.clearTimeout(timer);
   }, [beginLaunch, isCaseOpen, isLaunching]);
 
   useEffect(() => {
