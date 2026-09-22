@@ -9,6 +9,7 @@ on:
       - main
 
 jobs:
+  # Keep the Next.js cache warm between CI builds.
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 10
