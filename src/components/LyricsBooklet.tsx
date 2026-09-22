@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import {
   useState,
   useEffect,
@@ -40,6 +41,12 @@ export function LyricsBooklet({
     "--booklet-accent": accentColor,
   } as CSSProperties;
 
+  const trackId = track?.id;
+  const trackArtist = track?.artists[0]?.name || "";
+  const trackTitle = track?.name || "";
+  const trackAlbum = track?.album?.name || "";
+  const trackDuration = Math.round((track?.duration_ms || 0) / 1000);
+
   useEffect(() => {
     if (!track) {
       setLyrics(null);
@@ -55,17 +62,12 @@ export function LyricsBooklet({
       setCurrentPage(0);
 
       try {
-        const artist = track.artists[0]?.name || "";
-        const title = track.name || "";
-        const album = track.album?.name || "";
-        const duration = Math.round((track.duration_ms || 0) / 1000);
-
         const res = await fetch(
           `/api/lyrics?artist=${encodeURIComponent(
-            artist,
-          )}&title=${encodeURIComponent(title)}&album=${encodeURIComponent(
-            album,
-          )}&duration=${duration}`,
+            trackArtist,
+          )}&title=${encodeURIComponent(trackTitle)}&album=${encodeURIComponent(
+            trackAlbum,
+          )}&duration=${trackDuration}`,
         );
 
         const data = await res.json();
@@ -79,7 +81,7 @@ export function LyricsBooklet({
     };
 
     fetchLyrics();
-  }, [track?.id]);
+  }, [trackId, trackArtist, trackTitle, trackAlbum, trackDuration]);
 
   useLayoutEffect(() => {
     if (!lyrics || !track) {
@@ -368,7 +370,14 @@ export function LyricsBooklet({
         }
       >
         {coverUrl ? (
-          <img src={coverUrl} alt="" className={styles.bookletCover} />
+          <Image
+            src={coverUrl}
+            alt=""
+            width={104}
+            height={78}
+            unoptimized
+            className={styles.bookletCover}
+          />
         ) : (
           <span className={styles.bookletIcon} aria-hidden="true">
             ▣
