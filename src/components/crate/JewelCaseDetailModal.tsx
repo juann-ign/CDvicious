@@ -295,7 +295,7 @@ export function JewelCaseDetailModal({
       />
 
       <div
-        className={`${styles.sheet} ${polishStyles.modalPolish} ${isOpen ? styles.sheetOpen : ""}`}
+        className={[styles.sheet, polishStyles.modalPolish, isOpen ? styles.sheetOpen : "", isLaunching ? styles.sheetLaunching : ""].filter(Boolean).join(" ")}
       >
         <header className={styles.header}>
           <div>
