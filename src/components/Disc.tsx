@@ -19,9 +19,10 @@ interface DiscProps {
 
 export function Disc({ track, isPlaying, accentColor }: DiscProps) {
   const [isTrackRevealed, setIsTrackRevealed] = useState(true);
+  const trackId = track?.id;
 
   useEffect(() => {
-    if (!track) {
+    if (!trackId) {
       setIsTrackRevealed(true);
       return;
     }
@@ -30,7 +31,7 @@ export function Disc({ track, isPlaying, accentColor }: DiscProps) {
     const frame = window.requestAnimationFrame(() => setIsTrackRevealed(true));
 
     return () => window.cancelAnimationFrame(frame);
-  }, [track?.id]);
+  }, [trackId]);
 
   const glowStyle = { "--accent-color": accentColor } as CSSProperties;
 
