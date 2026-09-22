@@ -64,7 +64,7 @@ export function JewelCaseDetailModal({
   const discRef = useRef<HTMLDivElement>(null);
   const launchDiscRef = useRef<HTMLDivElement>(null);
   const launchSpinnerRef = useRef<HTMLDivElement>(null);
-  const launchTimerRef = useRef<number | null>(null);
+  const pendingLaunchRef = useRef(false);
   const launchTimelineRef = useRef<gsap.core.Timeline | null>(null);
   const handedOffRef = useRef(false);
   const {
@@ -149,36 +149,44 @@ export function JewelCaseDetailModal({
     if (isCaseOpen) setIsCaseOpen(false);
   };
 
+  const beginLaunch = () => {
+    const disc = discRef.current;
+    if (!disc || isLaunching) return;
+
+    const rect = disc.getBoundingClientRect();
+    setLaunchOrigin({
+      left: rect.left,
+      top: rect.top,
+      width: rect.width,
+      height: rect.height,
+    });
+    setIsLaunching(true);
+    setIsLifting(true);
+  };
+
   const handleLoad = () => {
-    if (isLaunching || launchTimerRef.current !== null) return;
-
-    const beginLaunch = () => {
-      launchTimerRef.current = null;
-      const disc = discRef.current;
-      if (!disc) return;
-
-      const rect = disc.getBoundingClientRect();
-      setLaunchOrigin({
-        left: rect.left,
-        top: rect.top,
-        width: rect.width,
-        height: rect.height,
-      });
-      setIsLaunching(true);
-      setIsLifting(true);
-    };
+    if (isLaunching) return;
 
     if (!isCaseOpen) {
+      pendingLaunchRef.current = true;
       setIsCaseOpen(true);
-      launchTimerRef.current = window.setTimeout(
-        beginLaunch,
-        CASE_OPEN_DURATION_MS,
-      );
       return;
     }
 
     beginLaunch();
   };
+
+  useEffect(() => {
+    if (!isCaseOpen || !pendingLaunchRef.current || isLaunching) return;
+
+    pendingLaunchRef.current = false;
+
+    const raf = window.requestAnimationFrame(() => {
+      beginLaunch();
+    });
+
+    return () => window.cancelAnimationFrame(raf);
+  }, [isCaseOpen, isLaunching]);
 
   useEffect(() => {
     if (
@@ -281,9 +289,7 @@ export function JewelCaseDetailModal({
   useEffect(() => {
     return () => {
       launchTimelineRef.current?.kill();
-      if (launchTimerRef.current !== null) {
-        window.clearTimeout(launchTimerRef.current);
-      }
+      pendingLaunchRef.current = false;
     };
   }, []);
 
