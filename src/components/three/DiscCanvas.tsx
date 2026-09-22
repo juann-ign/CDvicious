@@ -4,7 +4,7 @@ import { Canvas } from "@react-three/fiber";
 import { Suspense, useEffect, useState } from "react";
 import type { SpotifyTrack } from "@/types/spotify";
 import { DiscMesh } from "./DiscMesh";
-import { Environment, OrbitControls } from "@react-three/drei";
+import { Environment } from "@react-three/drei";
 
 interface DiscCanvasProps {
   track: SpotifyTrack | null;
