@@ -7,11 +7,6 @@ const DRAG_SENSITIVITY = 0.5;
 const KEY_STEP = 15;
 const EASE_BACK_MS = 900;
 
-interface DiscSurfacePointerHandlers {
-  onPointerDown: PointerEventHandler<HTMLDivElement>;
-  onKeyDown: KeyboardEventHandler<HTMLDivElement>;
-}
-
 export function useDiscSurfaceDrag(disabled: boolean) {
   const [rotation, setRotation] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
