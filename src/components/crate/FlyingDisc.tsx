@@ -57,11 +57,24 @@ export function FlyingDisc({
       return target ? target.getBoundingClientRect() : null;
     };
 
+    const viewportHeight = () =>
+      window.visualViewport?.height ?? window.innerHeight;
     const fallbackToX = window.innerWidth / 2;
-    const fallbackToY = window.innerHeight * 0.22;
-    const fallbackToSize = Math.max(280, fromSize * 0.62);
+    const fallbackToY = viewportHeight() * 0.5;
+    const fallbackToSize = Math.max(280, fromSize * 0.54);
 
-    const DURATION = 1.85;
+    const getTargetScrollY = () => {
+      const target = readTarget();
+      if (!target) return 0;
+
+      const viewportCenterY = viewportHeight() * 0.5;
+      const targetDocumentCenter =
+        window.scrollY + target.top + target.height / 2;
+
+      return Math.max(0, targetDocumentCenter - viewportCenterY);
+    };
+
+    const DURATION = 2.6;
     const path = { p: 0 };
     let lastX = fromX;
     let lastY = fromY;
@@ -83,8 +96,11 @@ export function FlyingDisc({
     gsap.set(spinner, { rotate: 0 });
 
     const scrollTween = gsap.to(window, {
-      duration: DURATION * 0.92,
-      scrollTo: { y: 0, autoKill: false },
+      duration: DURATION,
+      scrollTo: {
+        y: getTargetScrollY(),
+        autoKill: false,
+      },
       ease: "power2.inOut",
     });
 
@@ -104,7 +120,9 @@ export function FlyingDisc({
           const toY = targetRect
             ? targetRect.top + targetRect.height / 2
             : fallbackToY;
-          const toSize = targetRect ? targetRect.width : fallbackToSize;
+          const toSize = targetRect
+            ? targetRect.width * 0.86
+            : fallbackToSize;
 
           const p = path.p;
           const midX =
