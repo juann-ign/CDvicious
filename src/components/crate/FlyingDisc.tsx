@@ -61,21 +61,12 @@ export function FlyingDisc({
       window.visualViewport?.height ?? window.innerHeight;
     const fallbackToX = window.innerWidth / 2;
     const fallbackToY = viewportHeight() * 0.5;
-    const fallbackToSize = Math.max(280, fromSize * 0.54);
+    const fallbackToSize = Math.max(280, fromSize * 0.5);
 
-    const getTargetScrollY = () => {
-      const target = readTarget();
-      if (!target) return 0;
-
-      const viewportCenterY = viewportHeight() * 0.5;
-      const targetDocumentCenter =
-        window.scrollY + target.top + target.height / 2;
-
-      return Math.max(0, targetDocumentCenter - viewportCenterY);
-    };
-
-    const DURATION = 2.6;
+    const DURATION = 3.2;
     const path = { p: 0 };
+    const scrollProgress = { p: 0 };
+    const scrollStartY = window.scrollY;
     let lastX = fromX;
     let lastY = fromY;
     let spinAccum = 0;
@@ -95,13 +86,31 @@ export function FlyingDisc({
     });
     gsap.set(spinner, { rotate: 0 });
 
-    const scrollTween = gsap.to(window, {
+    const scrollTween = gsap.to(scrollProgress, {
+      p: 1,
       duration: DURATION,
-      scrollTo: {
-        y: getTargetScrollY(),
-        autoKill: false,
-      },
       ease: "power2.inOut",
+      onUpdate: () => {
+        const target = readTarget();
+        if (!target) return;
+
+        const viewportCenterY = viewportHeight() * 0.5;
+        const targetDocumentCenter =
+          window.scrollY + target.top + target.height / 2;
+        const desiredScrollY = Math.max(
+          0,
+          targetDocumentCenter - viewportCenterY,
+        );
+        const scrollY =
+          scrollStartY + (desiredScrollY - scrollStartY) * scrollProgress.p;
+
+        gsap.set(window, {
+          scrollTo: {
+            y: scrollY,
+            autoKill: false,
+          },
+        });
+      },
     });
 
     const tl = gsap.timeline({ onComplete: onDone });
@@ -117,11 +126,9 @@ export function FlyingDisc({
           const toX = targetRect
             ? targetRect.left + targetRect.width / 2
             : fallbackToX;
-          const toY = targetRect
-            ? targetRect.top + targetRect.height / 2
-            : fallbackToY;
+          const toY = viewportHeight() * 0.5;
           const toSize = targetRect
-            ? targetRect.width * 0.86
+            ? targetRect.width * 0.78
             : fallbackToSize;
 
           const p = path.p;
@@ -195,8 +202,8 @@ export function FlyingDisc({
       el,
       {
         rotate: 0,
-        scaleX: 1.06,
-        scaleY: 1.06,
+        scaleX: 1.03,
+        scaleY: 1.03,
         duration: 0.14,
         ease: "power1.out",
       },
