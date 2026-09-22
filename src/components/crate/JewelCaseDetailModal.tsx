@@ -133,10 +133,11 @@ export function JewelCaseDetailModal({
   }, []);
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const onKey = (e: KeyboardEvent) =>
+      e.key === "Escape" && !isLaunching && onClose();
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, [isLaunching, onClose]);
 
   const handleOpenCase = () => {
     if (!isCaseOpen) setIsCaseOpen(true);
@@ -307,7 +308,8 @@ export function JewelCaseDetailModal({
           <button
             type="button"
             className={styles.closeBtn}
-            onClick={onClose}
+            onClick={() => !isLaunching && onClose()}
+            disabled={isLaunching}
             aria-label="Cerrar"
           >
             <span className={polishStyles.closeIcon} aria-hidden="true">
@@ -610,6 +612,7 @@ export function JewelCaseDetailModal({
             type="button"
             className={polishStyles.vfdMainAction}
             onClick={handleLoad}
+            disabled={isLaunching}
             aria-label={`Reproducir ${album.name}`}
           >
             <span className={polishStyles.vfdMainInfo}>
@@ -623,7 +626,8 @@ export function JewelCaseDetailModal({
             <button
               type="button"
               className={`${polishStyles.hwBtn} ${polishStyles.hwBtnTray}`}
-              onClick={onClose}
+              onClick={() => !isLaunching && onClose()}
+              disabled={isLaunching}
               aria-label="Dejar en batea"
             >
               DEJAR EN BATEA
@@ -631,7 +635,8 @@ export function JewelCaseDetailModal({
             <button
               type="button"
               className={`${polishStyles.hwBtn} ${polishStyles.hwBtnCase}`}
-              onClick={() => setIsCaseOpen((open) => !open)}
+              onClick={() => !isLaunching && setIsCaseOpen((open) => !open)}
+              disabled={isLaunching}
               aria-expanded={isCaseOpen}
               aria-label={isCaseOpen ? "Cerrar caja" : "Abrir caja"}
             >
