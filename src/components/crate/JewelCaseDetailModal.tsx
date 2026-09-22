@@ -11,6 +11,7 @@ import polishStyles from "./JewelCaseDetailModal.polish.module.css";
 import densityStyles from "./JewelCaseDetailModal.density.module.css";
 import motionStyles from "./JewelCaseDetailModal.motion.module.css";
 
+const CASE_OPEN_DURATION_MS = 900;
 const CASE_CLOSE_START_MS = 240;
 const CASE_CLOSE_MS = 620;
 const POST_CLOSE_HOLD_MS = 160;
@@ -63,6 +64,7 @@ export function JewelCaseDetailModal({
   const discRef = useRef<HTMLDivElement>(null);
   const launchDiscRef = useRef<HTMLDivElement>(null);
   const launchSpinnerRef = useRef<HTMLDivElement>(null);
+  const launchTimerRef = useRef<number | null>(null);
   const launchTimelineRef = useRef<gsap.core.Timeline | null>(null);
   const handedOffRef = useRef(false);
   const {
@@ -148,17 +150,34 @@ export function JewelCaseDetailModal({
   };
 
   const handleLoad = () => {
-    if (isLaunching || !isCaseOpen || !discRef.current) return;
+    if (isLaunching || launchTimerRef.current !== null) return;
 
-    const rect = discRef.current.getBoundingClientRect();
-    setLaunchOrigin({
-      left: rect.left,
-      top: rect.top,
-      width: rect.width,
-      height: rect.height,
-    });
-    setIsLaunching(true);
-    setIsLifting(true);
+    const beginLaunch = () => {
+      launchTimerRef.current = null;
+      const disc = discRef.current;
+      if (!disc) return;
+
+      const rect = disc.getBoundingClientRect();
+      setLaunchOrigin({
+        left: rect.left,
+        top: rect.top,
+        width: rect.width,
+        height: rect.height,
+      });
+      setIsLaunching(true);
+      setIsLifting(true);
+    };
+
+    if (!isCaseOpen) {
+      setIsCaseOpen(true);
+      launchTimerRef.current = window.setTimeout(
+        beginLaunch,
+        CASE_OPEN_DURATION_MS,
+      );
+      return;
+    }
+
+    beginLaunch();
   };
 
   useEffect(() => {
@@ -262,6 +281,9 @@ export function JewelCaseDetailModal({
   useEffect(() => {
     return () => {
       launchTimelineRef.current?.kill();
+      if (launchTimerRef.current !== null) {
+        window.clearTimeout(launchTimerRef.current);
+      }
     };
   }, []);
 
