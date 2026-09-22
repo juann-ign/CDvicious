@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import gsap from "gsap";
 import { ScrollToPlugin } from "gsap/ScrollToPlugin";
 import { discRegistry } from "@/lib/discRegistry";
@@ -249,7 +249,7 @@ export function FlyingDisc({
                   "--dx": particle.dx + "px",
                   "--dy": particle.dy + "px",
                   animationDelay: particle.delay + "s",
-                } as React.CSSProperties
+                } as CSSProperties
               }
             />
           ))}
