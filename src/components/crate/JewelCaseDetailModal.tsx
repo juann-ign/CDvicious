@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import type { CSSProperties } from "react";
 import type { AlbumItem, AlbumTrack } from "@/types/crate";
@@ -11,7 +11,6 @@ import polishStyles from "./JewelCaseDetailModal.polish.module.css";
 import densityStyles from "./JewelCaseDetailModal.density.module.css";
 import motionStyles from "./JewelCaseDetailModal.motion.module.css";
 
-const CASE_OPEN_DURATION_MS = 900;
 const CASE_CLOSE_START_MS = 240;
 const CASE_CLOSE_MS = 620;
 const POST_CLOSE_HOLD_MS = 160;
@@ -149,7 +148,7 @@ export function JewelCaseDetailModal({
     if (isCaseOpen) setIsCaseOpen(false);
   };
 
-  const beginLaunch = () => {
+  const beginLaunch = useCallback(() => {
     const disc = discRef.current;
     if (!disc || isLaunching) return;
 
@@ -162,7 +161,7 @@ export function JewelCaseDetailModal({
     });
     setIsLaunching(true);
     setIsLifting(true);
-  };
+  }, [isLaunching]);
 
   const handleLoad = () => {
     if (isLaunching) return;
@@ -186,7 +185,7 @@ export function JewelCaseDetailModal({
     });
 
     return () => window.cancelAnimationFrame(raf);
-  }, [isCaseOpen, isLaunching]);
+  }, [beginLaunch, isCaseOpen, isLaunching]);
 
   useEffect(() => {
     if (
