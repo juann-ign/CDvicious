@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
+import gsap from "gsap";
 import type { CSSProperties } from "react";
 import type { AlbumItem, AlbumTrack } from "@/types/crate";
 import { useDiscSurfaceDrag } from "@/hooks/useDiscSurfaceDrag";
@@ -11,6 +12,10 @@ import densityStyles from "./JewelCaseDetailModal.density.module.css";
 import motionStyles from "./JewelCaseDetailModal.motion.module.css";
 
 const CASE_OPEN_DURATION_MS = 1000;
+const CASE_CLOSE_START_MS = 240;
+const CASE_CLOSE_MS = 620;
+const POST_CLOSE_HOLD_MS = 160;
+const EXIT_MS = 340;
 
 function fmt(ms: number) {
   const totalSeconds = Math.floor(ms / 1000);
@@ -41,6 +46,15 @@ export function JewelCaseDetailModal({
   const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
   const [isCaseOpen, setIsCaseOpen] = useState(false);
+  const [isLaunching, setIsLaunching] = useState(false);
+  const [isLifting, setIsLifting] = useState(false);
+  const [isExiting, setIsExiting] = useState(false);
+  const [launchOrigin, setLaunchOrigin] = useState<{
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  } | null>(null);
   const [releaseMeta, setReleaseMeta] = useState<ReleaseMeta>(() => ({
     year: album.release_date?.slice(0, 4),
     label: album.label,
@@ -48,11 +62,15 @@ export function JewelCaseDetailModal({
     tags: album.genres ?? [],
   }));
   const discRef = useRef<HTMLDivElement>(null);
+  const launchDiscRef = useRef<HTMLDivElement>(null);
+  const launchSpinnerRef = useRef<HTMLDivElement>(null);
+  const launchTimelineRef = useRef<gsap.core.Timeline | null>(null);
+  const handedOffRef = useRef(false);
   const {
     rotation: discDragRotation,
     isDragging: isDiscDragging,
     pointerHandlers: discPointerHandlers,
-  } = useDiscSurfaceDrag(!isCaseOpen);
+  } = useDiscSurfaceDrag(!isCaseOpen || isLaunching);
   const coverUrl =
     [...album.images].sort((a, b) => b.width - a.width)[0]?.url ??
     album.images[0]?.url;
@@ -130,15 +148,122 @@ export function JewelCaseDetailModal({
   };
 
   const handleLoad = () => {
-    if (!isCaseOpen) {
-      setIsCaseOpen(true);
-      window.setTimeout(() => {
-        if (discRef.current) onLoad(discRef.current);
-      }, CASE_OPEN_DURATION_MS);
+    if (isLaunching || !isCaseOpen || !discRef.current) return;
+
+    const rect = discRef.current.getBoundingClientRect();
+    setLaunchOrigin({
+      left: rect.left,
+      top: rect.top,
+      width: rect.width,
+      height: rect.height,
+    });
+    setIsLaunching(true);
+    setIsLifting(true);
+  };
+
+  useEffect(() => {
+    if (
+      !isLaunching ||
+      !launchOrigin ||
+      !launchDiscRef.current ||
+      !launchSpinnerRef.current
+    ) {
       return;
     }
-    if (discRef.current) onLoad(discRef.current);
-  };
+
+    const disc = launchDiscRef.current;
+    const spinner = launchSpinnerRef.current;
+    handedOffRef.current = false;
+    launchTimelineRef.current?.kill();
+
+    gsap.set(disc, {
+      left: launchOrigin.left + launchOrigin.width / 2,
+      top: launchOrigin.top + launchOrigin.height / 2,
+      width: launchOrigin.width,
+      height: launchOrigin.height,
+      xPercent: -50,
+      yPercent: -50,
+      y: 0,
+      scale: 0.92,
+      opacity: 1,
+      rotate: 0,
+    });
+    gsap.set(spinner, { rotate: 0 });
+
+    const tl = gsap.timeline();
+    launchTimelineRef.current = tl;
+
+    tl.fromTo(
+      disc,
+      { scale: 0.92, y: 0 },
+      {
+        scale: 1.14,
+        y: -56,
+        duration: 0.2,
+        ease: "back.out(3.2)",
+      },
+    );
+    tl.to(disc, {
+      scale: 1,
+      y: -40,
+      duration: 0.16,
+      ease: "power1.out",
+    });
+    tl.to(
+      spinner,
+      {
+        rotate: 1080,
+        duration: 1.36,
+        ease: "none",
+      },
+      0,
+    );
+    tl.call(() => setIsCaseOpen(false), [], CASE_CLOSE_START_MS / 1000);
+    tl.to(
+      disc,
+      {
+        y: -72,
+        duration: (CASE_CLOSE_MS + POST_CLOSE_HOLD_MS) / 1000,
+        ease: "sine.inOut",
+      },
+      CASE_CLOSE_START_MS / 1000,
+    );
+    tl.call(
+      () => setIsExiting(true),
+      [],
+      (CASE_CLOSE_START_MS + CASE_CLOSE_MS + POST_CLOSE_HOLD_MS) / 1000,
+    );
+    tl.to(
+      disc,
+      {
+        y: -82,
+        duration: EXIT_MS / 1000,
+        ease: "sine.inOut",
+      },
+      (CASE_CLOSE_START_MS + CASE_CLOSE_MS + POST_CLOSE_HOLD_MS) / 1000,
+    );
+    tl.call(
+      () => {
+        if (handedOffRef.current || !launchDiscRef.current) return;
+        handedOffRef.current = true;
+        onLoad(launchDiscRef.current);
+      },
+      [],
+      (CASE_CLOSE_START_MS + CASE_CLOSE_MS + POST_CLOSE_HOLD_MS + EXIT_MS) /
+        1000,
+    );
+
+    return () => {
+      tl.kill();
+      launchTimelineRef.current = null;
+    };
+  }, [isLaunching, launchOrigin, onLoad]);
+
+  useEffect(() => {
+    return () => {
+      launchTimelineRef.current?.kill();
+    };
+  }, []);
 
   const denseTracklist = !loading && (tracks?.length ?? 0) > 14;
   const trackRows = Math.ceil((tracks?.length ?? 0) / 2);
@@ -157,7 +282,7 @@ export function JewelCaseDetailModal({
 
   return (
     <div
-      className={styles.overlay}
+      className={[styles.overlay, isExiting ? styles.overlayExiting : ""].filter(Boolean).join(" ")}
       role="dialog"
       aria-modal="true"
       aria-label={`${album.name} — ${album.artists.map((a) => a.name).join(", ")}`}
@@ -165,7 +290,7 @@ export function JewelCaseDetailModal({
       <button
         type="button"
         className={styles.scrim}
-        onClick={onClose}
+        onClick={() => !isLaunching && onClose()}
         aria-label="Cerrar"
       />
 
@@ -402,7 +527,7 @@ export function JewelCaseDetailModal({
                   </div>
                   <div
                     ref={discRef}
-                    className={`${styles.disc} ${motionStyles.motionDisc} ${isDiscDragging ? styles.discIsDragging : ""}`}
+                    className={[styles.disc, motionStyles.motionDisc, isDiscDragging ? styles.discIsDragging : "", isLaunching ? styles.discLaunchHidden : ""].filter(Boolean).join(" ")}
                     role="slider"
                     tabIndex={isCaseOpen ? 0 : -1}
                     aria-label="Girar CD"
@@ -415,7 +540,7 @@ export function JewelCaseDetailModal({
                       transform: isCaseOpen
                         ? `translateZ(10px) rotate(calc(-45deg + ${discDragRotation}deg))`
                         : discTransform,
-                      opacity: isCaseOpen ? 1 : 0,
+                      opacity: isCaseOpen && !isLaunching ? 1 : 0,
                     }}
                   >
                     {coverUrl && (
@@ -459,7 +584,32 @@ export function JewelCaseDetailModal({
           </div>
         </div>
 
-        <footer className={`${styles.actions} ${polishStyles.vfdFooter}`}>
+        {isLaunching && launchOrigin && (
+          <div className={styles.launchDiscLayer} aria-hidden="true">
+            <div
+              ref={launchDiscRef}
+              className={[styles.launchDisc, isLifting ? styles.launchDiscLifting : ""].filter(Boolean).join(" ")}
+            >
+              <div className={styles.launchDiscHalo} />
+              <div ref={launchSpinnerRef} className={styles.launchDiscSpinner}>
+                {coverUrl && (
+                  <Image
+                    src={coverUrl}
+                    alt=""
+                    fill
+                    unoptimized
+                    className={styles.launchDiscArt}
+                  />
+                )}
+                <span className={styles.launchDiscSheen} />
+                <span className={styles.launchDiscRing} />
+                <span className={styles.launchDiscHub} />
+              </div>
+            </div>
+          </div>
+        )}
+
+        <footer className={[styles.actions, polishStyles.vfdFooter].join(" ")}>
           <button
             type="button"
             className={polishStyles.vfdMainAction}
