@@ -29,3 +29,138 @@
   background: var(--color-bg);
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.25);
 }
+
+.spinner {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  transform-origin: center center;
+  will-change: transform;
+}
+
+.grooves {
+  position: absolute;
+  inset: 5%;
+  border-radius: 50%;
+  background: repeating-radial-gradient(
+    circle at center,
+    rgba(255, 255, 255, 0.06) 0 1px,
+    transparent 1px 3px
+  );
+  mix-blend-mode: overlay;
+  pointer-events: none;
+}
+
+.sheen {
+  position: absolute;
+  inset: -12%;
+  border-radius: 50%;
+  background:
+    linear-gradient(
+      118deg,
+      transparent 29%,
+      rgba(255, 255, 255, 0.44) 47%,
+      transparent 62%
+    ),
+    conic-gradient(
+      from 12deg,
+      rgba(70, 215, 255, 0.1),
+      rgba(255, 167, 216, 0.08),
+      rgba(255, 220, 146, 0.08),
+      rgba(141, 255, 211, 0.08),
+      rgba(70, 215, 255, 0.1)
+    );
+  mix-blend-mode: screen;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.burstLayer {
+  position: fixed;
+  z-index: 1200;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
+.burstRing {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  transform: translate(-50%, -50%);
+  border: 2px solid var(--color-phosphor);
+  border-radius: 50%;
+  box-shadow:
+    0 0 18px var(--color-phosphor-glow),
+    0 0 32px rgba(148, 255, 0, 0.25);
+  animation: burstRing 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.burstFlash {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 34px;
+  height: 34px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.72) 0%,
+    rgba(148, 255, 0, 0.22) 24%,
+    transparent 72%
+  );
+  filter: blur(2px);
+  animation: burstFlash 0.42s ease-out forwards;
+}
+
+.burstParticle {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--color-phosphor);
+  box-shadow: 0 0 8px 2px var(--color-phosphor-glow);
+  transform: translate(-50%, -50%);
+  animation: burstParticle 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes burstRing {
+  0% {
+    width: 14px;
+    height: 14px;
+    opacity: 0.95;
+  }
+  100% {
+    width: 330px;
+    height: 330px;
+    opacity: 0;
+  }
+}
+
+@keyframes burstFlash {
+  0% {
+    transform: translate(-50%, -50%) scale(0.35);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.6);
+    opacity: 0;
+  }
+}
+
+@keyframes burstParticle {
+  0% {
+    transform: translate(-50%, -50%) translate(0, 0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) translate(var(--dx), var(--dy)) scale(0.2);
+    opacity: 0;
+  }
+}

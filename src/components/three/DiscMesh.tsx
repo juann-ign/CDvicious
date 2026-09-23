@@ -72,14 +72,17 @@ export function DiscMesh({ track, isPlaying, accentColor }: DiscMeshProps) {
   });
 
   useEffect(() => {
+    const sheen = sheenRef.current;
+    const laser = laserRef.current;
+
     return () => {
-      if (sheenRef.current) {
-        gsap.killTweensOf(sheenRef.current.uniforms.uActive);
-        sheenRef.current.dispose();
+      if (sheen) {
+        gsap.killTweensOf(sheen.uniforms.uActive);
+        sheen.dispose();
       }
-      if (laserRef.current) {
-        gsap.killTweensOf(laserRef.current.rotation);
-        gsap.killTweensOf(laserRef.current.scale);
+      if (laser) {
+        gsap.killTweensOf(laser.rotation);
+        gsap.killTweensOf(laser.scale);
       }
     };
   }, []);

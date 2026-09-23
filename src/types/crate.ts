@@ -5,6 +5,7 @@ export interface AlbumItem {
   images: { url: string; width?: number; height?: number }[];
   uri: string;
   release_date?: string;
+  label?: string;
   genres?: string[];
 }
 

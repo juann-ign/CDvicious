@@ -1,0 +1,533 @@
+.leftLeafCloseHitArea {
+  position: absolute;
+  inset: -8px -3px -2px -9px;
+  z-index: 100;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  pointer-events: auto;
+  appearance: none;
+}
+
+.leftLeafCloseHitArea:focus-visible {
+  outline: 1px solid var(--color-phosphor);
+  outline-offset: -3px;
+}
+
+.closedStage {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: 1fr;
+  transform-style: preserve-3d;
+  /* Transparent, always-mounted wrapper: must not swallow pointer events
+     for the layers beneath it (open spread + disc). Only the actual
+     hit-target children (.closedHitArea, .leftLeafCloseHitArea) opt
+     back in with their own pointer-events: auto. */
+  pointer-events: none;
+}
+
+.closedHitArea {
+  position: absolute;
+  inset: -8px -8px -8px 50%;
+  z-index: 40;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  appearance: none;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.closedHitArea:focus-visible {
+  outline: 1px solid var(--color-phosphor);
+  outline-offset: 3px;
+}
+
+.motionLeaf {
+  transition:
+    transform 620ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 620ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+}
+
+.caseSpread {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  opacity: 0;
+  visibility: visible;
+  pointer-events: none;
+  transform: translateY(0);
+  transform-style: preserve-3d;
+  transition:
+    opacity 760ms cubic-bezier(0.22, 1, 0.36, 1) 120ms,
+    transform 760ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.caseSpreadOpen {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0);
+  transition:
+    opacity 760ms cubic-bezier(0.22, 1, 0.36, 1) 120ms,
+    transform 760ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.closedFace {
+  position: relative;
+  grid-column: 2;
+  grid-row: 1;
+  width: 100%;
+  height: 100%;
+  z-index: 20;
+  transform-origin: 0% 50%;
+  transform: perspective(1600px) rotateY(-3deg) rotateX(1deg) translateZ(6px);
+  transform-style: preserve-3d;
+  transition:
+    transform 1000ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 260ms ease 720ms;
+  will-change: transform, opacity;
+  filter: saturate(0.98);
+  opacity: 0.94;
+  pointer-events: none;
+}
+
+.closedHitArea:hover + .closedFace {
+  filter: saturate(1) brightness(1.025);
+}
+
+.closedFaceOpen {
+  opacity: 1;
+  pointer-events: none;
+  transform: perspective(1600px) translateZ(8px) rotateY(-168deg) rotateX(-3deg);
+}
+
+.closedMeta {
+  grid-column: 1;
+  grid-row: 1;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  z-index: 4;
+  box-sizing: border-box;
+  padding: 8px 14px 9px 12px;
+  pointer-events: none;
+  cursor: default;
+  transition: opacity 420ms ease;
+}
+
+.closedMetaOpen {
+  opacity: 0;
+}
+
+.closedMetaPanel {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 10px 22px 11px 18px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.closedMetaPanel::after {
+  display: none;
+}
+
+.closedMetaHeader {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 0 10px;
+  margin: 0 0 2px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--color-phosphor);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  line-height: 1;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+.closedMetaHeader span:last-child {
+  color: var(--color-text-muted);
+  font-size: 10px;
+  letter-spacing: 1.2px;
+}
+
+.closedMetaGrid {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 100%;
+  margin: 0;
+}
+
+.closedMetaGrid div {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  min-width: 0;
+  padding: 11px 0 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.055);
+}
+
+.closedMetaGrid div:last-child {
+  border-bottom: 0;
+}
+
+.closedMetaGrid small {
+  display: block;
+  margin: 0 0 6px;
+  color: rgba(232, 240, 245, 0.5);
+  font-family: var(--font-ui);
+  font-size: 10px;
+  line-height: 1;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+}
+
+.closedMetaGrid strong {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: rgba(232, 240, 245, 0.94);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  line-height: 1.05;
+  letter-spacing: 1.15px;
+  font-weight: 500;
+  text-align: left;
+}
+
+.closedMetaTags {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-height: 26px;
+  margin-top: 10px;
+}
+
+.closedMetaTags span {
+  padding: 4px 7px;
+  border: 1px solid rgba(148, 255, 0, 0.24);
+  color: var(--color-phosphor-dim);
+  background: rgba(148, 255, 0, 0.035);
+  font-family: var(--font-ui);
+  font-size: 10px;
+  line-height: 1;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.closedMetaCode {
+  flex: 0 0 auto;
+  width: 100%;
+  height: 12px;
+  margin-top: 8px;
+  opacity: 0.58;
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.3) 0 1px,
+    transparent 1px 3px,
+    rgba(255, 255, 255, 0.13) 3px 5px,
+    transparent 5px 8px
+  );
+}
+
+.closedSpine {
+  position: absolute;
+  left: -13px;
+  top: 0;
+  bottom: 0;
+  width: 16px;
+  z-index: 24;
+  border-left: 2px solid rgba(255, 255, 255, 0.28);
+  border-right: 2px solid rgba(0, 0, 0, 0.72);
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.82),
+    rgba(78, 84, 90, 0.5) 42%,
+    rgba(7, 8, 10, 0.9)
+  );
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.05),
+    0 0 12px rgba(0, 0, 0, 0.62);
+  pointer-events: none;
+}
+.closedSpine span {
+  position: absolute;
+  left: 50%;
+  width: 4px;
+  height: 28px;
+  transform: translateX(-50%);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: linear-gradient(90deg, #0a0c0f, #5a6066 50%, #0a0c0f);
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.05);
+}
+.closedSpine span:nth-child(1) {
+  top: 12%;
+}
+.closedSpine span:nth-child(2) {
+  top: 46%;
+}
+.closedSpine span:nth-child(3) {
+  top: 80%;
+}
+
+.closedFacePanel {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: transparent;
+  border: 2px solid rgba(232, 240, 245, 0.55);
+  border-radius: 3px;
+  box-shadow:
+    0 18px 28px rgba(0, 0, 0, 0.42),
+    0 0 20px rgba(226, 238, 245, 0.08),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.13),
+    inset 2px 0 0 rgba(255, 255, 255, 0.15),
+    inset -2px 0 0 rgba(0, 0, 0, 0.34),
+    inset 0 2px 0 rgba(255, 255, 255, 0.11),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.3),
+    inset 0 0 18px rgba(255, 255, 255, 0.025);
+  backface-visibility: visible;
+}
+
+.closedArtwork {
+  position: absolute;
+  inset: 7px;
+  z-index: 1;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background: #090b0f;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.07),
+    inset 0 0 18px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+  transition: opacity 420ms ease;
+}
+
+.closedFaceOpen .closedArtwork {
+  opacity: 0;
+}
+
+.closedArtworkImage {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain;
+  object-position: center;
+  filter: contrast(1.03) saturate(0.96);
+}
+
+.closedArtwork::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      112deg,
+      rgba(255, 255, 255, 0.11),
+      transparent 18%,
+      transparent 67%,
+      rgba(255, 255, 255, 0.035)
+    ),
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.035),
+      transparent 24%,
+      rgba(0, 0, 0, 0.1)
+    );
+  mix-blend-mode: screen;
+  opacity: 0.72;
+}
+
+.closedAcrylic {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      113deg,
+      rgba(255, 255, 255, 0.09),
+      transparent 16%,
+      transparent 58%,
+      rgba(255, 255, 255, 0.025) 72%,
+      transparent 83%
+    ),
+    linear-gradient(
+      90deg,
+      transparent 0 48%,
+      rgba(255, 255, 255, 0.055) 49%,
+      rgba(255, 255, 255, 0.015) 50%,
+      transparent 51%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.045),
+      transparent 11%,
+      transparent 85%,
+      rgba(255, 255, 255, 0.02)
+    ),
+    repeating-linear-gradient(
+      96deg,
+      transparent 0 64px,
+      rgba(255, 255, 255, 0.025) 65px,
+      transparent 66px 118px
+    );
+  mix-blend-mode: screen;
+}
+
+.closedAcrylic::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.16),
+    inset 4px 0 0 rgba(255, 255, 255, 0.045),
+    inset -3px 0 0 rgba(0, 0, 0, 0.24),
+    inset 0 4px 0 rgba(255, 255, 255, 0.035),
+    inset 0 -4px 0 rgba(0, 0, 0, 0.2);
+}
+
+.closedAcrylic::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 12px;
+  border-right: 1px solid rgba(255, 255, 255, 0.2);
+  background:
+    linear-gradient(
+      90deg,
+      rgba(0, 0, 0, 0.7),
+      rgba(25, 28, 32, 0.88) 42%,
+      rgba(255, 255, 255, 0.09) 43%,
+      rgba(255, 255, 255, 0.02) 55%,
+      rgba(0, 0, 0, 0.35)
+    ),
+    repeating-linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.1) 0 1px,
+      transparent 1px 7px
+    );
+  opacity: 0.78;
+}
+
+.closedClip {
+  position: absolute;
+  z-index: 5;
+  width: 31px;
+  height: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-bottom: 0;
+  border-radius: 10px 10px 0 0;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.055),
+    rgba(14, 16, 19, 0.32)
+  );
+  box-shadow:
+    0 0 7px rgba(255, 255, 255, 0.06),
+    inset 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.closedClipTopLeft {
+  top: 7px;
+  left: 24%;
+}
+
+.closedClipTopRight {
+  top: 7px;
+  right: 8%;
+}
+
+.closedClipBottomLeft {
+  bottom: 7px;
+  left: 24%;
+  transform: rotate(180deg);
+}
+
+.closedClipBottomRight {
+  bottom: 7px;
+  right: 8%;
+  transform: rotate(180deg);
+}
+
+.closedFacePanel::before,
+.closedFacePanel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.closedFacePanel::before {
+  inset: 0;
+  border: 2px solid rgba(232, 240, 245, 0.6);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.52),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.18),
+    inset 0 0 10px rgba(255, 255, 255, 0.055),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.03),
+    0 0 10px rgba(226, 238, 245, 0.1);
+}
+
+.closedFacePanel::after {
+  inset: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.16),
+    inset 0 0 8px rgba(255, 255, 255, 0.025);
+}
+
+.motionDisc {
+  transition:
+    transform 680ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 360ms ease 180ms;
+  will-change: transform, opacity;
+}
+
+.motionDiscOpen {
+  filter: saturate(1.02) brightness(1.03);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .closedHitArea,
+  .closedMeta,
+  .motionLeaf,
+  .motionDisc,
+  .caseSpread,
+  .closedFace {
+    transition: none;
+  }
+}
