@@ -87,7 +87,7 @@ export function FlyingDisc({
 
     const FINAL_TILT_X = 38;
     const FINAL_SIZE_SCALE = 0.92;
-    const FINAL_Y_OFFSET = -30;
+    const FINAL_Y_OFFSET = -100;
 
     const HERO_ARC_HEIGHT = 120;
     const Y_SLOW_FACTOR = 1.35;
