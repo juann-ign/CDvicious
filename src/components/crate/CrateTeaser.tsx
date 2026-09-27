@@ -35,11 +35,14 @@ export function CrateTeaser({ onLoadAlbum }: CrateTeaserProps) {
     setFlight({ album, rect });
   }, []);
 
-  const handleFlightDone = useCallback(() => {
+  const handleFlightArrive = useCallback(() => {
     if (!flight) return;
     onLoadAlbum(flight.album);
-    setFlight(null);
   }, [flight, onLoadAlbum]);
+
+  const handleFlightDone = useCallback(() => {
+    setFlight(null);
+  }, []);
 
   const teaserAlbums = albums.slice(0, TEASER_COUNT);
 
@@ -76,6 +79,7 @@ export function CrateTeaser({ onLoadAlbum }: CrateTeaserProps) {
         <FlyingDisc
           coverUrl={flight.album.images[0]?.url || ""}
           originRect={flight.rect}
+          onArrive={handleFlightArrive}
           onDone={handleFlightDone}
         />
       )}

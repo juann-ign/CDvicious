@@ -158,7 +158,7 @@ export function CollectionOverlay({
         </div>
 
         <p className={styles.resultCount}>
-          {filtered.length} DISCOS · PÁGINA {page + 1}/{totalPages}
+          {filtered.length} DISCOS · PAGINA {page + 1}/{totalPages}
         </p>
 
         <div className={styles.gridScroll}>

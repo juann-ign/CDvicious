@@ -18,6 +18,7 @@ interface SpotifyAlbum {
   name: string;
   uri: string;
   release_date: string;
+  label?: string;
   images: { url: string; width: number; height: number }[];
   artists: SpotifyArtistRef[];
 }

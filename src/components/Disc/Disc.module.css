@@ -3,6 +3,11 @@
   width: clamp(var(--disc-min-size), 36vw, var(--disc-max-size));
   height: clamp(var(--disc-min-size), 36vw, var(--disc-max-size));
   flex-shrink: 0;
+  transition: opacity 300ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.discStageEntering {
+  opacity: 0;
 }
 
 .discGlow {
@@ -37,5 +42,22 @@
   .discStage {
     width: clamp(400px, 34vw, 500px);
     height: clamp(400px, 34vw, 500px);
+  }
+}
+
+
+.dockPulse {
+  animation: dockPulse 900ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes dockPulse {
+  0% {
+    filter: brightness(1);
+  }
+  32% {
+    filter: brightness(1.22) drop-shadow(0 0 24px var(--color-phosphor-glow));
+  }
+  100% {
+    filter: brightness(1);
   }
 }
