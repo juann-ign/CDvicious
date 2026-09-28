@@ -7,6 +7,8 @@ interface Options {
   paused?: boolean;
   length: number;
   pages?: number;
+  onGrabStart?: () => void;
+  onGrabEnd?: () => void;
 }
 
 const DRAG_THRESHOLD_PX = 6;
@@ -41,7 +43,11 @@ export function useMarqueeBelt({
   const speedRef = useRef(speed);
   const lenRef = useRef(length);
   const pagesRef = useRef(pages);
+  const onGrabStartRef = useRef(onGrabStart);
+  const onGrabEndRef = useRef(onGrabEnd);
   pausedRef.current = paused;
+  onGrabStartRef.current = onGrabStart;
+  onGrabEndRef.current = onGrabEnd;
   speedRef.current = speed;
   lenRef.current = length;
   pagesRef.current = pages;
@@ -109,6 +115,7 @@ export function useMarqueeBelt({
     if (!el) return;
 
     const down = (e: PointerEvent) => {
+      onGrabStartRef.current?.();
       dragging.current = true;
       captured.current = false;
       pointerId.current = e.pointerId;
@@ -141,6 +148,7 @@ export function useMarqueeBelt({
     };
 
     const up = () => {
+      onGrabEndRef.current?.();
       if (captured.current && pointerId.current !== null) {
         el.releasePointerCapture?.(pointerId.current);
       }
