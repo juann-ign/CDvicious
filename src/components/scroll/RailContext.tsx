@@ -56,9 +56,9 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
       wrapper,
       content,
       orientation: "horizontal",
-      // Hardware scroll stays vertical: Lenis maps wheel deltaY to the
-      // horizontal rail and ignores horizontal gesture deltas.
-      gestureOrientation: "vertical",
+      // Vertical wheel input drives the horizontal rail. "both" also keeps
+      // trackpad horizontal gestures working when the device emits deltaX.
+      gestureOrientation: "both",
       autoRaf: false,
       smoothWheel: true,
     });
