@@ -53,6 +53,7 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
     const lenis = new Lenis({
       wrapper,
       content,
+      eventsTarget: root,
       orientation: "horizontal",
       gestureOrientation: "horizontal",
       smoothWheel: true,
