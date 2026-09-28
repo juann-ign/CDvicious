@@ -14,6 +14,7 @@ import styles from "./RailProvider.module.css";
 
 type RailContextValue = {
   isReady: boolean;
+  splitProgress: number;
   start: () => void;
   stop: () => void;
   scrollToX: (px: number) => void;
@@ -33,6 +34,7 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
   const lenisRef = useRef<Lenis | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const [isReady, setIsReady] = useState(false);
+  const [splitProgress, setSplitProgress] = useState(0);
 
   useEffect(() => {
     const wrapper = wrapperRef.current;
@@ -60,6 +62,30 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
     lenisRef.current = lenis;
     setIsReady(true);
 
+    const updateSplitProgress = (scroll: number) => {
+      const firstChapter = content.children[0] as HTMLElement | undefined;
+      const splitDistance = firstChapter?.offsetWidth || wrapper.clientWidth;
+
+      if (splitDistance <= 0) {
+        return;
+      }
+
+      const progress = Math.min(
+        1,
+        Math.max(0, scroll / splitDistance),
+      );
+
+      setSplitProgress(progress);
+    };
+
+    updateSplitProgress(lenis.scroll);
+
+    const handleScroll = ({ scroll }: { scroll: number }) => {
+      updateSplitProgress(scroll);
+    };
+
+    lenis.on("scroll", handleScroll);
+
     const raf = (time: number) => {
       lenis.raf(time);
       animationFrameRef.current = window.requestAnimationFrame(raf);
@@ -73,9 +99,11 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
         animationFrameRef.current = null;
       }
 
+      lenis.off("scroll", handleScroll);
       lenis.destroy();
       lenisRef.current = null;
       setIsReady(false);
+      setSplitProgress(0);
 
       document.documentElement.style.overflow = previousHtmlOverflow;
       document.body.style.overflow = previousBodyOverflow;
@@ -119,6 +147,7 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
 
   const value: RailContextValue = {
     isReady,
+    splitProgress,
     start,
     stop,
     scrollToX,
