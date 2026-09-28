@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { useMarqueeBelt } from "@/hooks/useMarqueeBelt";
 import { JewelSpine } from "./JewelSpine";
 import { JewelFlyout } from "./JewelFlyout";
@@ -52,22 +52,9 @@ export function CrateShelf({
       paused: !driftEnabled || hovering || albums.length === 0,
       length,
       pages,
+      onGrabStart,
+      onGrabEnd,
     });
-
-  const wasDraggingRef = useRef(false);
-
-  useEffect(() => {
-    if (isDragging && !wasDraggingRef.current) {
-      wasDraggingRef.current = true;
-      onGrabStart?.();
-      return;
-    }
-
-    if (!isDragging && wasDraggingRef.current) {
-      wasDraggingRef.current = false;
-      onGrabEnd?.();
-    }
-  }, [isDragging, onGrabEnd, onGrabStart]);
 
   if (albums.length === 0) return null;
 
