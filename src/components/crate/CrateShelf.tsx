@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useMarqueeBelt } from "@/hooks/useMarqueeBelt";
 import { JewelSpine } from "./JewelSpine";
 import { JewelFlyout } from "./JewelFlyout";
@@ -10,13 +10,20 @@ import styles from "./CrateShelf.module.css";
 interface CrateShelfProps {
   albums: AlbumItem[];
   onSelect: (album: AlbumItem) => void;
+  onGrabStart?: () => void;
+  onGrabEnd?: () => void;
 }
 
 const COPIES = 3;
 const GAP = 8;
 const MAX_PAGES = 6;
 
-export function CrateShelf({ albums, onSelect }: CrateShelfProps) {
+export function CrateShelf({
+  albums,
+  onSelect,
+  onGrabStart,
+  onGrabEnd,
+}: CrateShelfProps) {
   const [hovering, setHovering] = useState(false);
   const [driftEnabled, setDriftEnabled] = useState(true);
   const [length, setLength] = useState(0);
@@ -46,6 +53,21 @@ export function CrateShelf({ albums, onSelect }: CrateShelfProps) {
       length,
       pages,
     });
+
+  const wasDraggingRef = useRef(false);
+
+  useEffect(() => {
+    if (isDragging && !wasDraggingRef.current) {
+      wasDraggingRef.current = true;
+      onGrabStart?.();
+      return;
+    }
+
+    if (!isDragging && wasDraggingRef.current) {
+      wasDraggingRef.current = false;
+      onGrabEnd?.();
+    }
+  }, [isDragging, onGrabEnd, onGrabStart]);
 
   if (albums.length === 0) return null;
 
