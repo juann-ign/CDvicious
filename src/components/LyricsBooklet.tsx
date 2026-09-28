@@ -19,6 +19,7 @@ interface LyricsBookletProps {
   isOpen: boolean;
   onToggle: () => void;
   accentColor: string;
+  showTab?: boolean;
 }
 
 export function LyricsBooklet({
@@ -26,6 +27,7 @@ export function LyricsBooklet({
   isOpen,
   onToggle,
   accentColor,
+  showTab = true,
 }: LyricsBookletProps) {
   const [lyrics, setLyrics] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -361,14 +363,15 @@ export function LyricsBooklet({
       className={`${styles.bookletOuter} ${isOpen ? styles.isOpen : ""}`}
       style={style}
     >
-      <button
-        type="button"
-        onClick={handleToggle}
-        className={styles.bookletTab}
-        aria-label={
-          isOpen ? "Cerrar booklet de letras" : "Abrir booklet de letras"
-        }
-      >
+      {showTab && (
+        <button
+          type="button"
+          onClick={handleToggle}
+          className={styles.bookletTab}
+          aria-label={
+            isOpen ? "Cerrar booklet de letras" : "Abrir booklet de letras"
+          }
+        >
         {coverUrl ? (
           <Image
             src={coverUrl}
@@ -388,10 +391,11 @@ export function LyricsBooklet({
           {track.album.name}
         </span>
 
-        <span className={styles.bookletTabHint} aria-hidden="true">
-          LYRICS
-        </span>
-      </button>
+          <span className={styles.bookletTabHint} aria-hidden="true">
+            LYRICS
+          </span>
+        </button>
+      )}
 
       <div
         ref={spreadRef}
