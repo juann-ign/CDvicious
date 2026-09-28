@@ -64,7 +64,10 @@ export function DeckPinnedLayer() {
       </div>
 
       {data?.track && (
-        <div className={styles.bookletLayer + " " + styles.interactive}>
+        <div
+          className={styles.bookletLayer + " " + styles.interactive}
+          style={{ pointerEvents: splitProgress > 0.05 ? "auto" : "none" }}
+        >
           <LyricsBooklet
             track={data.track}
             isOpen
