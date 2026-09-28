@@ -1,27 +1,3 @@
-.wrapper {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  width: 100vw;
-  height: 100dvh;
-  overflow-x: auto;
-  overflow-y: hidden;
-  overscroll-behavior: none;
-  scrollbar-width: none;
-  background: #111;
-}
-
-.wrapper::-webkit-scrollbar {
-  display: none;
-}
-
-.content {
-  display: flex;
-  width: max-content;
-  min-width: max-content;
-  height: 100%;
-}
-
 .panel {
   position: relative;
   display: grid;
