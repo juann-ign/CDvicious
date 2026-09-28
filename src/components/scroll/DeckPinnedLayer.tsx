@@ -13,7 +13,7 @@ import styles from "./DeckPinnedLayer.module.css";
 
 export function DeckPinnedLayer() {
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
-  const { splitProgress } = useRail();
+  const { splitProgress, hideDeckProgress } = useRail();
 
   useEffect(() => {
     fetch("/api/auth/session")
@@ -28,10 +28,15 @@ export function DeckPinnedLayer() {
   const stageStyle = {
     "--accent-color": accentColor,
     "--pSplit": splitProgress,
+    "--pHideDeck": hideDeckProgress,
   } as CSSProperties;
 
   return (
-    <div className={styles.layer} style={stageStyle}>
+    <div
+      className={styles.layer}
+      style={stageStyle}
+      data-deck-hidden={hideDeckProgress >= 0.98}
+    >
       <header className={pageStyles.topControlBar + " " + styles.interactive}>
         <div className={pageStyles.brandCorner}>
           CD<span>vicious</span>
