@@ -9,10 +9,16 @@
   pointer-events: none;
   perspective: 1600px;
   overflow: hidden;
+  opacity: calc(1 - var(--pHideDeck));
+  transition: opacity 120ms linear;
 }
 
 .interactive {
   pointer-events: auto;
+}
+
+.layer[data-deck-hidden="true"] .interactive {
+  pointer-events: none;
 }
 
 .deckCluster {
