@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
+import { CrateChapter } from "@/components/crate/CrateChapter";
 import { DeckPinnedLayer } from "./DeckPinnedLayer";
 import { RailProvider } from "./RailContext";
 import styles from "./HorizontalRail.module.css";
@@ -10,7 +11,6 @@ const DESKTOP_QUERY = "(min-width: 761px)";
 const PANELS = [
   { number: "01", title: "Deck limpio", detail: "Rail base" },
   { number: "02", title: "Split / Booklet", detail: "Placeholder" },
-  { number: "03", title: "La Batea", detail: "Placeholder" },
 ];
 
 function useIsDesktop() {
@@ -52,6 +52,16 @@ export function HorizontalRail({ fallback }: { fallback: ReactNode }) {
           </div>
         </section>
       ))}
+
+      <section
+        className={styles.panel + " " + styles.panelChapter}
+        aria-label="La Batea"
+      >
+        <div className={styles.panelIndex}>03</div>
+        <div className={styles.chapterContent}>
+          <CrateChapter />
+        </div>
+      </section>
     </RailProvider>
   );
 }
