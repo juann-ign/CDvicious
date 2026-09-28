@@ -4,7 +4,8 @@
   z-index: 0;
   width: 100vw;
   height: 100dvh;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   overscroll-behavior: none;
   scrollbar-width: none;
   background-color: var(--color-bg);
