@@ -10,6 +10,7 @@ import { CrateTeaser } from "@/components/crate/CrateTeaser";
 import { useNowPlaying } from "@/hooks/useNowPlaying";
 import { useDominantColor } from "@/hooks/useDominantColor";
 import { useSpotifyPlayer } from "@/components/SpotifyPlayerProvider";
+import { HorizontalRail } from "@/components/scroll/HorizontalRail";
 import type { AlbumItem } from "@/types/crate";
 import styles from "./page.module.css";
 
@@ -108,10 +109,12 @@ function HomeContent() {
   );
 }
 
+const RAIL_ENABLED = process.env.NEXT_PUBLIC_ENABLE_RAIL === "1";
+
 export default function Home() {
   return (
     <Suspense fallback={null}>
-      <HomeContent />
+      {RAIL_ENABLED ? <HorizontalRail fallback={<HomeContent />} /> : <HomeContent />}
     </Suspense>
   );
 }
