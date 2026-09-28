@@ -37,24 +37,21 @@ export function HorizontalRail({ fallback }: { fallback: ReactNode }) {
   }
 
   return (
-    <>
-      <RailProvider>
-        {PANELS.map((panel) => (
-          <section
-            key={panel.number}
-            className={styles.panel}
-            aria-label={panel.title}
-          >
-            <div className={styles.panelIndex}>{panel.number}</div>
-            <div>
-              <p className={styles.eyebrow}>CDvicious / EPIC A</p>
-              <h1>{panel.title}</h1>
-              <p className={styles.detail}>{panel.detail}</p>
-            </div>
-          </section>
-        ))}
-      </RailProvider>
-      <DeckPinnedLayer />
-    </>
+    <RailProvider overlay={<DeckPinnedLayer />}>
+      {PANELS.map((panel) => (
+        <section
+          key={panel.number}
+          className={styles.panel}
+          aria-label={panel.title}
+        >
+          <div className={styles.panelIndex}>{panel.number}</div>
+          <div>
+            <p className={styles.eyebrow}>CDvicious / EPIC A</p>
+            <h1>{panel.title}</h1>
+            <p className={styles.detail}>{panel.detail}</p>
+          </div>
+        </section>
+      ))}
+    </RailProvider>
   );
 }
