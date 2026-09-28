@@ -208,10 +208,6 @@
     grid-template-columns: minmax(220px, 300px) minmax(0, 1fr);
   }
 
-  .grid {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-  }
-
   .grid > * {
     max-width: 150px;
   }
@@ -226,11 +222,7 @@
     grid-template-columns: 1fr;
   }
 
-  .grid {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-  }
-
   .grid > * {
-    max-width: 128px;
+    max-width: 110px;
   }
 }
