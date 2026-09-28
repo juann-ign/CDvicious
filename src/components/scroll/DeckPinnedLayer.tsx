@@ -71,7 +71,12 @@ export function DeckPinnedLayer() {
       {data?.track && (
         <div
           className={styles.bookletLayer + " " + styles.interactive}
-          style={{ pointerEvents: splitProgress > 0.05 ? "auto" : "none" }}
+          style={{
+            pointerEvents:
+              splitProgress > 0.05 && hideDeckProgress < 0.98
+                ? "auto"
+                : "none",
+          }}
         >
           <LyricsBooklet
             track={data.track}
