@@ -7,13 +7,11 @@ import { NowPlayingCard } from "@/components/NowPlayingCard";
 import { LyricsBooklet } from "@/components/LyricsBooklet";
 import { useNowPlaying } from "@/hooks/useNowPlaying";
 import { useDominantColor } from "@/hooks/useDominantColor";
-import { useRail } from "./RailContext";
 import pageStyles from "@/app/page.module.css";
 import styles from "./DeckPinnedLayer.module.css";
 
 export function DeckPinnedLayer() {
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
-  const { splitProgress, hideDeckProgress } = useRail();
 
   useEffect(() => {
     fetch("/api/auth/session")
@@ -27,15 +25,13 @@ export function DeckPinnedLayer() {
   const accentColor = useDominantColor(coverUrl) ?? "#1DB954";
   const stageStyle = {
     "--accent-color": accentColor,
-    "--pSplit": splitProgress,
-    "--pHideDeck": hideDeckProgress,
   } as CSSProperties;
 
   return (
     <div
       className={styles.layer}
       style={stageStyle}
-      data-deck-hidden={hideDeckProgress >= 0.98}
+      data-rail-overlay
     >
       <header className={pageStyles.topControlBar + " " + styles.interactive}>
         <div className={pageStyles.brandCorner}>
@@ -71,12 +67,7 @@ export function DeckPinnedLayer() {
       {data?.track && (
         <div
           className={styles.bookletLayer + " " + styles.interactive}
-          style={{
-            pointerEvents:
-              splitProgress > 0.05 && hideDeckProgress < 0.98
-                ? "auto"
-                : "none",
-          }}
+          data-rail-booklet
         >
           <LyricsBooklet
             track={data.track}
