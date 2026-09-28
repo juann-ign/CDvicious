@@ -24,7 +24,7 @@ type RailProviderProps = {
   children: ReactNode;
 };
 
-const RailContext = createContext<RailContextValue | null>(null);
+export const RailContext = createContext<RailContextValue | null>(null);
 
 export function RailProvider({ children }: RailProviderProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
