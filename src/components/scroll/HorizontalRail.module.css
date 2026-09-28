@@ -23,6 +23,7 @@
 }
 
 .panel {
+  position: relative;
   display: grid;
   grid-template-columns: 1fr minmax(320px, 720px) 1fr;
   align-items: center;
