@@ -14,8 +14,6 @@ import styles from "./RailProvider.module.css";
 
 type RailContextValue = {
   isReady: boolean;
-  splitProgress: number;
-  hideDeckProgress: number;
   start: () => void;
   stop: () => void;
   scrollToX: (px: number) => void;
@@ -30,19 +28,19 @@ type RailProviderProps = {
 export const RailContext = createContext<RailContextValue | null>(null);
 
 export function RailProvider({ children, overlay }: RailProviderProps) {
+  const rootRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const lenisRef = useRef<Lenis | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const [isReady, setIsReady] = useState(false);
-  const [splitProgress, setSplitProgress] = useState(0);
-  const [hideDeckProgress, setHideDeckProgress] = useState(0);
 
   useEffect(() => {
+    const root = rootRef.current;
     const wrapper = wrapperRef.current;
     const content = contentRef.current;
 
-    if (!wrapper || !content) {
+    if (!root || !wrapper || !content) {
       return;
     }
 
@@ -56,11 +54,21 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
       wrapper,
       content,
       orientation: "horizontal",
-      // Vertical wheel input drives the horizontal rail. "both" also keeps
-      // trackpad horizontal gestures working when the device emits deltaX.
-      gestureOrientation: "both",
-      autoRaf: false,
+      gestureOrientation: "horizontal",
       smoothWheel: true,
+      lerp: 0.075,
+      wheelMultiplier: 0.85,
+      virtualScroll: (data) => {
+        if (data.event.type === "wheel") {
+          if (Math.abs(data.deltaY) >= Math.abs(data.deltaX)) {
+            data.deltaX = data.deltaY;
+            data.deltaY = 0;
+          }
+        }
+
+        return true;
+      },
+      autoRaf: false,
     });
 
     lenisRef.current = lenis;
@@ -85,17 +93,19 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
       const splitDistance = Math.max(1, splitEnd - splitStart);
       const hideDistance = Math.max(1, hideEnd - hideStart);
 
-      const nextSplitProgress = Math.min(
+      const splitProgress = Math.min(
         1,
         Math.max(0, (scroll - splitStart) / splitDistance),
       );
-      const nextHideDeckProgress = Math.min(
+      const hideDeckProgress = Math.min(
         1,
         Math.max(0, (scroll - hideStart) / hideDistance),
       );
 
-      setSplitProgress(nextSplitProgress);
-      setHideDeckProgress(nextHideDeckProgress);
+      root.style.setProperty("--pSplit", String(splitProgress));
+      root.style.setProperty("--pHideDeck", String(hideDeckProgress));
+      root.dataset.splitActive = splitProgress > 0.05 ? "true" : "false";
+      root.dataset.deckHidden = hideDeckProgress >= 0.98 ? "true" : "false";
     };
 
     updateRailProgress(lenis.scroll);
@@ -123,8 +133,11 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
       lenis.destroy();
       lenisRef.current = null;
       setIsReady(false);
-      setSplitProgress(0);
-      setHideDeckProgress(0);
+
+      root.style.removeProperty("--pSplit");
+      root.style.removeProperty("--pHideDeck");
+      delete root.dataset.splitActive;
+      delete root.dataset.deckHidden;
 
       document.documentElement.style.overflow = previousHtmlOverflow;
       document.body.style.overflow = previousBodyOverflow;
@@ -168,8 +181,6 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
 
   const value: RailContextValue = {
     isReady,
-    splitProgress,
-    hideDeckProgress,
     start,
     stop,
     scrollToX,
@@ -178,12 +189,18 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
 
   return (
     <RailContext.Provider value={value}>
-      <div ref={wrapperRef} className={styles.wrapper} aria-label="Horizontal rail">
-        <div ref={contentRef} className={styles.content}>
-          {children}
+      <div ref={rootRef} className={styles.root}>
+        <div
+          ref={wrapperRef}
+          className={styles.wrapper}
+          aria-label="Horizontal rail"
+        >
+          <div ref={contentRef} className={styles.content}>
+            {children}
+          </div>
         </div>
+        {overlay}
       </div>
-      {overlay}
     </RailContext.Provider>
   );
 }
