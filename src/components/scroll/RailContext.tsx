@@ -15,6 +15,7 @@ import styles from "./RailProvider.module.css";
 type RailContextValue = {
   isReady: boolean;
   splitProgress: number;
+  hideDeckProgress: number;
   start: () => void;
   stop: () => void;
   scrollToX: (px: number) => void;
@@ -35,6 +36,7 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
   const animationFrameRef = useRef<number | null>(null);
   const [isReady, setIsReady] = useState(false);
   const [splitProgress, setSplitProgress] = useState(0);
+  const [hideDeckProgress, setHideDeckProgress] = useState(0);
 
   useEffect(() => {
     const wrapper = wrapperRef.current;
@@ -62,26 +64,42 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
     lenisRef.current = lenis;
     setIsReady(true);
 
-    const updateSplitProgress = (scroll: number) => {
-      const firstChapter = content.children[0] as HTMLElement | undefined;
-      const splitDistance = firstChapter?.offsetWidth || wrapper.clientWidth;
+    const updateRailProgress = (scroll: number) => {
+      const chapters = Array.from(content.children) as HTMLElement[];
+      const firstChapter = chapters[0];
+      const secondChapter = chapters[1];
+      const thirdChapter = chapters[2];
 
-      if (splitDistance <= 0) {
-        return;
-      }
+      const splitStart = firstChapter?.offsetLeft ?? 0;
+      const splitEnd =
+        secondChapter?.offsetLeft ??
+        splitStart + (firstChapter?.offsetWidth || wrapper.clientWidth);
 
-      const progress = Math.min(
+      const hideStart = secondChapter?.offsetLeft ?? splitEnd;
+      const hideEnd =
+        thirdChapter?.offsetLeft ??
+        hideStart + (secondChapter?.offsetWidth || wrapper.clientWidth);
+
+      const splitDistance = Math.max(1, splitEnd - splitStart);
+      const hideDistance = Math.max(1, hideEnd - hideStart);
+
+      const nextSplitProgress = Math.min(
         1,
-        Math.max(0, scroll / splitDistance),
+        Math.max(0, (scroll - splitStart) / splitDistance),
+      );
+      const nextHideDeckProgress = Math.min(
+        1,
+        Math.max(0, (scroll - hideStart) / hideDistance),
       );
 
-      setSplitProgress(progress);
+      setSplitProgress(nextSplitProgress);
+      setHideDeckProgress(nextHideDeckProgress);
     };
 
-    updateSplitProgress(lenis.scroll);
+    updateRailProgress(lenis.scroll);
 
     const handleScroll = ({ scroll }: { scroll: number }) => {
-      updateSplitProgress(scroll);
+      updateRailProgress(scroll);
     };
 
     lenis.on("scroll", handleScroll);
@@ -104,6 +122,7 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
       lenisRef.current = null;
       setIsReady(false);
       setSplitProgress(0);
+      setHideDeckProgress(0);
 
       document.documentElement.style.overflow = previousHtmlOverflow;
       document.body.style.overflow = previousBodyOverflow;
@@ -148,6 +167,7 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
   const value: RailContextValue = {
     isReady,
     splitProgress,
+    hideDeckProgress,
     start,
     stop,
     scrollToX,
