@@ -7,8 +7,65 @@
   width: 100%;
   height: 100%;
   pointer-events: none;
+  perspective: 1600px;
+  overflow: hidden;
 }
 
 .interactive {
   pointer-events: auto;
+}
+
+.deckCluster {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  width: 100%;
+  min-height: 0;
+  transform: translate3d(calc(-13vw * var(--pSplit)), 0, 0);
+  transform-origin: center center;
+  will-change: transform;
+}
+
+.bookletLayer {
+  position: absolute;
+  right: 4vw;
+  bottom: 12vh;
+  z-index: 6;
+  width: min(570px, 42vw);
+  height: 370px;
+
+  opacity: var(--pSplit);
+  filter: blur(calc(7px * (1 - var(--pSplit))));
+  transform-origin: 100% 58%;
+  transform:
+    translate3d(calc((1 - var(--pSplit)) * 38vw), 0, 0)
+    rotateY(calc(18deg * (1 - var(--pSplit))))
+    rotateZ(-0.8deg)
+    scale(calc(0.96 + (0.04 * var(--pSplit))));
+
+  will-change: transform, opacity, filter;
+}
+
+@media (max-width: 1200px) {
+  .bookletLayer {
+    right: 2vw;
+    width: min(540px, 44vw);
+  }
+}
+
+@media (max-width: 900px) {
+  .bookletLayer {
+    right: 16px;
+    bottom: 10vh;
+    width: min(500px, 52vw);
+    height: 350px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .deckCluster,
+  .bookletLayer {
+    will-change: auto;
+  }
 }
