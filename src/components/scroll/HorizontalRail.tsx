@@ -3,6 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { CollectionChapter } from "@/components/crate/CollectionChapter";
 import { CrateChapter } from "@/components/crate/CrateChapter";
+import { MixtapeChapter } from "@/components/crate/MixtapeChapter";
 import { DeckPinnedLayer } from "./DeckPinnedLayer";
 import { RailProvider } from "./RailContext";
 import styles from "./HorizontalRail.module.css";
@@ -71,6 +72,16 @@ export function HorizontalRail({ fallback }: { fallback: ReactNode }) {
         <div className={styles.panelIndex}>04</div>
         <div className={styles.chapterContent}>
           <CollectionChapter />
+        </div>
+      </section>
+
+      <section
+        className={styles.panel + " " + styles.panelChapter}
+        aria-label="Mixtape Lab"
+      >
+        <div className={styles.panelIndex}>05</div>
+        <div className={styles.chapterContent}>
+          <MixtapeChapter />
         </div>
       </section>
     </RailProvider>
