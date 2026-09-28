@@ -22,11 +22,12 @@ type RailContextValue = {
 
 type RailProviderProps = {
   children: ReactNode;
+  overlay?: ReactNode;
 };
 
 export const RailContext = createContext<RailContextValue | null>(null);
 
-export function RailProvider({ children }: RailProviderProps) {
+export function RailProvider({ children, overlay }: RailProviderProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const lenisRef = useRef<Lenis | null>(null);
@@ -131,6 +132,7 @@ export function RailProvider({ children }: RailProviderProps) {
           {children}
         </div>
       </div>
+      {overlay}
     </RailContext.Provider>
   );
 }
