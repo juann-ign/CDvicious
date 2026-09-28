@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
+import { DeckPinnedLayer } from "./DeckPinnedLayer";
 import { RailProvider } from "./RailContext";
 import styles from "./HorizontalRail.module.css";
 
@@ -51,6 +52,7 @@ export function HorizontalRail({ fallback }: { fallback: ReactNode }) {
           </div>
         </section>
       ))}
+      <DeckPinnedLayer />
     </RailProvider>
   );
 }
