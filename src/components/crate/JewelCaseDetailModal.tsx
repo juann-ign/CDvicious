@@ -43,6 +43,7 @@ interface ReleaseMeta {
 export function JewelCaseDetailModal({
   album,
   onClose,
+  onLoad,
   onPlay,
 }: JewelCaseDetailModalProps) {
   const [tracks, setTracks] = useState<AlbumTrack[] | null>(null);
