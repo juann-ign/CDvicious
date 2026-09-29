@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRail } from "@/components/scroll/RailContext";
 import { JewelCaseDetailModal } from "./JewelCaseDetailModal";
+import { RailFlyingDisc } from "./RailFlyingDisc";
 import { CrateShelf } from "./CrateShelf";
 import type { AlbumItem } from "@/types/crate";
 import styles from "./CrateChapter.module.css";
@@ -14,6 +15,10 @@ export function CrateChapter() {
   const [albums, setAlbums] = useState<AlbumItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<AlbumItem | null>(null);
+  const [flight, setFlight] = useState<{
+    album: AlbumItem;
+    originRect: DOMRect;
+  } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -49,6 +54,18 @@ export function CrateChapter() {
     setSelected(album);
   }, []);
 
+  const handlePlay = useCallback((album: AlbumItem, originEl: HTMLElement) => {
+    setFlight({
+      album,
+      originRect: originEl.getBoundingClientRect(),
+    });
+    setSelected(null);
+  }, []);
+
+  const handleFlightDone = useCallback(() => {
+    setFlight(null);
+  }, []);
+
   const statusLabel = loading ? "INDEXANDO..." : albums.length + " DISCS";
 
   return (
@@ -81,6 +98,16 @@ export function CrateChapter() {
           album={selected}
           onClose={() => setSelected(null)}
           onLoad={() => setSelected(null)}
+          onPlay={(originEl) => handlePlay(selected, originEl)}
+        />
+      )}
+
+      {flight && (
+        <RailFlyingDisc
+          coverUrl={flight.album.images[0]?.url ?? ""}
+          originRect={flight.originRect}
+          onArrive={() => undefined}
+          onDone={handleFlightDone}
         />
       )}
     </div>
