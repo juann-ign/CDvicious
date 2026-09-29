@@ -17,7 +17,7 @@ type RailContextValue = {
   start: () => void;
   stop: () => void;
   scrollToX: (px: number) => void;
-  scrollToChapter: (index: number) => void;
+  scrollToChapter: (index: number, duration?: number) => void;
 };
 
 type RailProviderProps = {
@@ -163,7 +163,7 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
     lenis.scrollTo(Math.max(0, px));
   }, []);
 
-  const scrollToChapter = useCallback((index: number) => {
+  const scrollToChapter = useCallback((index: number, duration = 0.9) => {
     const lenis = lenisRef.current;
     const content = contentRef.current;
 
@@ -177,7 +177,9 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
     );
     const chapter = content.children[safeIndex] as HTMLElement;
 
-    lenis.scrollTo(chapter.offsetLeft);
+    lenis.scrollTo(chapter.offsetLeft, {
+      duration: Math.max(0, duration),
+    });
   }, []);
 
   const value: RailContextValue = {
