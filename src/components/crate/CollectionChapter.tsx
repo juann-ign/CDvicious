@@ -124,6 +124,8 @@ export function CollectionChapter() {
     setSelected(null);
   }, []);
 
+  const handleFlightArrive = useCallback(() => {}, []);
+
   const handleFlightDone = useCallback(() => {
     setFlight(null);
   }, []);
@@ -264,7 +266,7 @@ export function CollectionChapter() {
         <RailFlyingDisc
           coverUrl={flight.album.images[0]?.url ?? ""}
           originRect={flight.originRect}
-          onArrive={() => undefined}
+          onArrive={handleFlightArrive}
           onDone={handleFlightDone}
         />
       )}
