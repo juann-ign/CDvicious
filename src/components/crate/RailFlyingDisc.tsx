@@ -38,6 +38,7 @@ export function RailFlyingDisc({
   const arrivedRef = useRef(false);
   const doneRef = useRef(false);
   const impactTimelineRef = useRef<gsap.core.Timeline | null>(null);
+  const pulseTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!rail.isReady) return;
@@ -80,6 +81,7 @@ export function RailFlyingDisc({
     });
 
     gsap.set(spinner, { rotate: 0 });
+    rail.start();
     rail.scrollToChapter(0, duration);
 
     const finish = () => {
@@ -143,7 +145,10 @@ export function RailFlyingDisc({
             dockTarget.classList.remove(discStyles.dockPulse);
             void dockTarget.offsetWidth;
             dockTarget.classList.add(discStyles.dockPulse);
-            window.setTimeout(() => dockTarget.classList.remove(discStyles.dockPulse), 650);
+            pulseTimeoutRef.current = window.setTimeout(() => {
+              dockTarget.classList.remove(discStyles.dockPulse);
+              pulseTimeoutRef.current = null;
+            }, 650);
           }
 
           if (impactRef.current && dockRect) {
@@ -192,6 +197,10 @@ export function RailFlyingDisc({
     return () => {
       tween.kill();
       impactTimelineRef.current?.kill();
+      if (pulseTimeoutRef.current !== null) {
+        window.clearTimeout(pulseTimeoutRef.current);
+        pulseTimeoutRef.current = null;
+      }
       gsap.killTweensOf(el);
       gsap.killTweensOf(spinner);
     };
