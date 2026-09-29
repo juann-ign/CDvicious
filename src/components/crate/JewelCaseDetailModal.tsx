@@ -6,6 +6,7 @@ import gsap from "gsap";
 import type { CSSProperties } from "react";
 import type { AlbumItem, AlbumTrack } from "@/types/crate";
 import { useDiscSurfaceDrag } from "@/hooks/useDiscSurfaceDrag";
+import { useSpotifyPlayer } from "@/components/SpotifyPlayerProvider";
 import { RailContext } from "@/components/scroll/RailContext";
 import styles from "./JewelCaseDetailModal.module.css";
 import polishStyles from "./JewelCaseDetailModal.polish.module.css";
@@ -41,7 +42,6 @@ interface ReleaseMeta {
 export function JewelCaseDetailModal({
   album,
   onClose,
-  onLoad,
 }: JewelCaseDetailModalProps) {
   const [tracks, setTracks] = useState<AlbumTrack[] | null>(null);
   const [loading, setLoading] = useState(true);
@@ -57,6 +57,7 @@ export function JewelCaseDetailModal({
     height: number;
   } | null>(null);
   const rail = useContext(RailContext);
+  const { deviceId, isReady } = useSpotifyPlayer();
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [releaseMeta, setReleaseMeta] = useState<ReleaseMeta>(() => ({
     year: album.release_date?.slice(0, 4),
@@ -179,17 +180,28 @@ export function JewelCaseDetailModal({
     setIsLifting(true);
   }, [isLaunching]);
 
-  const handleLoad = () => {
+  const handlePlay = useCallback(() => {
     if (isLaunching) return;
 
-    if (!isCaseOpen) {
-      pendingLaunchRef.current = true;
-      setIsCaseOpen(true);
-      return;
+    if (deviceId && isReady) {
+      fetch("/api/play", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ uri: album.uri, deviceId }),
+      }).catch((error) => {
+        console.error("Error al iniciar reproducción:", error);
+      });
     }
 
-    beginLaunch();
-  };
+    onClose();
+    rail?.start();
+
+    if (rail) {
+      window.requestAnimationFrame(() => {
+        rail.scrollToChapter(0, 1.15);
+      });
+    }
+  }, [album.uri, deviceId, isReady, isLaunching, onClose, rail]);
 
   useEffect(() => {
     if (!isCaseOpen || !pendingLaunchRef.current || isLaunching) return;
@@ -653,7 +665,7 @@ export function JewelCaseDetailModal({
           <button
             type="button"
             className={polishStyles.vfdMainAction}
-            onClick={handleLoad}
+            onClick={handlePlay}
             disabled={isLaunching}
             aria-label={`Reproducir ${album.name}`}
           >
