@@ -110,11 +110,9 @@ export function CollectionChapter() {
     safePage * PAGE_SIZE + PAGE_SIZE,
   );
 
-  const handleSelect = useCallback(
-    (album: AlbumItem) => {
-      setSelected(album);
-    },
-  );
+  const handleSelect = useCallback((album: AlbumItem) => {
+    setSelected(album);
+  }, []);
 
   const handlePlay = useCallback((album: AlbumItem, originEl: HTMLElement) => {
     setFlight({
