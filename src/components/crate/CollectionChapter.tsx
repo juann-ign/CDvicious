@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { JewelCaseDetailModal } from "./JewelCaseDetailModal";
 import { JewelCaseFront } from "./JewelCaseFront";
-import { useRail } from "@/components/scroll/RailContext";
 import type { AlbumItem } from "@/types/crate";
 import styles from "./CollectionChapter.module.css";
 
@@ -29,7 +28,6 @@ function decadeOf(album: AlbumItem): DecadeFilter {
 }
 
 export function CollectionChapter() {
-  const { stop, start } = useRail();
   const [albums, setAlbums] = useState<AlbumItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
@@ -109,21 +107,17 @@ export function CollectionChapter() {
 
   const handleSelect = useCallback(
     (album: AlbumItem) => {
-      stop();
       setSelected(album);
     },
-    [stop],
   );
 
   const handleClose = useCallback(() => {
     setSelected(null);
-    start();
-  }, [start]);
+  }, []);
 
   const handleLoad = useCallback(() => {
     setSelected(null);
-    start();
-  }, [start]);
+  }, []);
 
   return (
     <div className={styles.chapter}>
