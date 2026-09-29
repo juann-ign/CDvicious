@@ -28,6 +28,7 @@ interface JewelCaseDetailModalProps {
   album: AlbumItem;
   onClose: () => void;
   onLoad: (originEl: HTMLElement) => void;
+  onPlay?: (originEl: HTMLElement) => void;
 }
 
 interface ReleaseMeta {
@@ -42,6 +43,7 @@ interface ReleaseMeta {
 export function JewelCaseDetailModal({
   album,
   onClose,
+  onPlay,
 }: JewelCaseDetailModalProps) {
   const [tracks, setTracks] = useState<AlbumTrack[] | null>(null);
   const [loading, setLoading] = useState(true);
@@ -69,6 +71,7 @@ export function JewelCaseDetailModal({
   const launchDiscRef = useRef<HTMLDivElement>(null);
   const launchSpinnerRef = useRef<HTMLDivElement>(null);
   const pendingLaunchRef = useRef(false);
+  const pendingPlayRef = useRef(false);
   const launchTimelineRef = useRef<gsap.core.Timeline | null>(null);
   const handedOffRef = useRef(false);
   const {
@@ -180,38 +183,58 @@ export function JewelCaseDetailModal({
     setIsLifting(true);
   }, [isLaunching]);
 
+  const beginPlay = useCallback(() => {
+    if (isLaunching) return;
+
+    const disc = discRef.current;
+    if (!disc) return;
+
+    if (onPlay) {
+      if (deviceId && isReady) {
+        fetch("/api/play", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ uri: album.uri, deviceId }),
+        }).catch((error) => {
+          console.error("Error al iniciar reproducción:", error);
+        });
+      }
+
+      onPlay(disc);
+      onClose();
+      return;
+    }
+
+    beginLaunch();
+  }, [album.uri, beginLaunch, deviceId, isLaunching, isReady, onClose, onPlay]);
+
   const handlePlay = useCallback(() => {
     if (isLaunching) return;
 
-    if (deviceId && isReady) {
-      fetch("/api/play", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ uri: album.uri, deviceId }),
-      }).catch((error) => {
-        console.error("Error al iniciar reproducción:", error);
-      });
+    if (!isCaseOpen) {
+      pendingPlayRef.current = true;
+      setIsCaseOpen(true);
+      return;
     }
 
-    onClose();
-    rail?.start();
-
-    if (rail) {
-      window.requestAnimationFrame(() => {
-        rail.scrollToChapter(0, 1.15);
-      });
-    }
-  }, [album.uri, deviceId, isReady, isLaunching, onClose, rail]);
+    beginPlay();
+  }, [beginPlay, isCaseOpen, isLaunching]);
 
   useEffect(() => {
-    if (!isCaseOpen || !pendingLaunchRef.current || isLaunching) return;
+    if (!isCaseOpen || isLaunching) return;
 
-    pendingLaunchRef.current = false;
+    if (pendingLaunchRef.current) {
+      pendingLaunchRef.current = false;
+      const timer = window.setTimeout(beginLaunch, CASE_OPEN_DURATION_MS);
+      return () => window.clearTimeout(timer);
+    }
 
-    const timer = window.setTimeout(beginLaunch, CASE_OPEN_DURATION_MS);
-
-    return () => window.clearTimeout(timer);
-  }, [beginLaunch, isCaseOpen, isLaunching]);
+    if (pendingPlayRef.current) {
+      pendingPlayRef.current = false;
+      const timer = window.setTimeout(beginPlay, CASE_OPEN_DURATION_MS);
+      return () => window.clearTimeout(timer);
+    }
+  }, [beginLaunch, beginPlay, isCaseOpen, isLaunching]);
 
   useEffect(() => {
     if (
@@ -315,6 +338,7 @@ export function JewelCaseDetailModal({
     return () => {
       launchTimelineRef.current?.kill();
       pendingLaunchRef.current = false;
+      pendingPlayRef.current = false;
     };
   }, []);
 
