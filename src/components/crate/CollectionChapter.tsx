@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { JewelCaseDetailModal } from "./JewelCaseDetailModal";
 import { JewelCaseFront } from "./JewelCaseFront";
+import { RailFlyingDisc } from "./RailFlyingDisc";
 import type { AlbumItem } from "@/types/crate";
 import styles from "./CollectionChapter.module.css";
 
@@ -35,6 +36,10 @@ export function CollectionChapter() {
   const [genre, setGenre] = useState("all");
   const [page, setPage] = useState(0);
   const [selected, setSelected] = useState<AlbumItem | null>(null);
+  const [flight, setFlight] = useState<{
+    album: AlbumItem;
+    originRect: DOMRect;
+  } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -110,6 +115,18 @@ export function CollectionChapter() {
       setSelected(album);
     },
   );
+
+  const handlePlay = useCallback((album: AlbumItem, originEl: HTMLElement) => {
+    setFlight({
+      album,
+      originRect: originEl.getBoundingClientRect(),
+    });
+    setSelected(null);
+  }, []);
+
+  const handleFlightDone = useCallback(() => {
+    setFlight(null);
+  }, []);
 
   const handleClose = useCallback(() => {
     setSelected(null);
@@ -239,6 +256,16 @@ export function CollectionChapter() {
           album={selected}
           onClose={handleClose}
           onLoad={handleLoad}
+          onPlay={(originEl) => handlePlay(selected, originEl)}
+        />
+      )}
+
+      {flight && (
+        <RailFlyingDisc
+          coverUrl={flight.album.images[0]?.url ?? ""}
+          originRect={flight.originRect}
+          onArrive={() => undefined}
+          onDone={handleFlightDone}
         />
       )}
     </div>
