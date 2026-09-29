@@ -1,11 +1,12 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import type { CSSProperties } from "react";
 import type { AlbumItem, AlbumTrack } from "@/types/crate";
 import { useDiscSurfaceDrag } from "@/hooks/useDiscSurfaceDrag";
+import { RailContext } from "@/components/scroll/RailContext";
 import styles from "./JewelCaseDetailModal.module.css";
 import polishStyles from "./JewelCaseDetailModal.polish.module.css";
 import densityStyles from "./JewelCaseDetailModal.density.module.css";
@@ -55,6 +56,8 @@ export function JewelCaseDetailModal({
     width: number;
     height: number;
   } | null>(null);
+  const rail = useContext(RailContext);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [releaseMeta, setReleaseMeta] = useState<ReleaseMeta>(() => ({
     year: album.release_date?.slice(0, 4),
     label: album.label,
@@ -130,9 +133,21 @@ export function JewelCaseDetailModal({
   }, [album.id, album.artists, album.name, album.release_date, album.label, album.genres]);
 
   useEffect(() => {
-    const raf = requestAnimationFrame(() => setIsOpen(true));
-    return () => cancelAnimationFrame(raf);
-  }, []);
+    rail?.stop();
+    const previousActive = document.activeElement as HTMLElement | null;
+    const raf = requestAnimationFrame(() => {
+      setIsOpen(true);
+      closeButtonRef.current?.focus();
+    });
+
+    return () => {
+      cancelAnimationFrame(raf);
+      rail?.start();
+      if (previousActive && document.contains(previousActive)) {
+        previousActive.focus();
+      }
+    };
+  }, [rail]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) =>
@@ -333,6 +348,7 @@ export function JewelCaseDetailModal({
           </div>
           <button
             type="button"
+            ref={closeButtonRef}
             className={styles.closeBtn}
             onClick={() => !isLaunching && onClose()}
             disabled={isLaunching}
