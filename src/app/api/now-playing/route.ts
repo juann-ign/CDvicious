@@ -5,10 +5,25 @@ import { fetchNowPlaying, SpotifyApiError } from "@/lib/spotify";
 export async function GET() {
   if (process.env.NEXT_PUBLIC_SPOTIFY_MOCK === "1") {
     return NextResponse.json({
-      isPlaying: false,
-      progressMs: null,
-      durationMs: null,
-      track: null,
+      isPlaying: true,
+      progressMs: 42_000,
+      durationMs: 214_000,
+      track: {
+        id: "cdvicious-demo-track",
+        name: "Demo Track",
+        duration_ms: 214_000,
+        artists: [{ name: "CDvicious Demo" }],
+        album: {
+          name: "Local Mock Session",
+          images: [
+            {
+              url: "https://placehold.co/600x600/111111/ffffff.png?text=NOW",
+              width: 600,
+              height: 600,
+            },
+          ],
+        },
+      },
     });
   }
 
