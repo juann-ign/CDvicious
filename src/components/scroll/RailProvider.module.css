@@ -39,7 +39,8 @@
   height: 100%;
 }
 
-.root[data-deck-interactive="false"] [data-rail-overlay] .interactive {
+.root[data-deck-interactive="false"] [data-rail-overlay] .interactive,
+.root[data-deck-interactive="false"] [data-rail-overlay] .discHitArea > * {
   pointer-events: none;
 }
 
