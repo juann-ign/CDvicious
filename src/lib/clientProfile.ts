@@ -49,13 +49,21 @@ export function getClientUserProfile(): Promise<UserProfile> {
         const body = (await res.json().catch(() => null)) as {
           reason?: string;
         } | null;
-        const retryAfter = parseRetryAfterSeconds(res.headers.get("retry-after"));
+        const retryAfter = parseRetryAfterSeconds(
+          res.headers.get("retry-after"),
+        );
+        const validRetryAfter =
+          retryAfter !== undefined &&
+          Number.isFinite(retryAfter) &&
+          retryAfter > 0
+            ? retryAfter
+            : undefined;
 
         throw new ClientProfileError(
           `auth/me failed: ${res.status}`,
           res.status,
           body?.reason,
-          Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : undefined,
+          validRetryAfter,
         );
       }
 
