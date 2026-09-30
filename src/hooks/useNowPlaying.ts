@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { NowPlayingResponse } from "@/types/spotify";
 
-const POLL_INTERVAL_MS = 4000;
+const POLL_INTERVAL_MS = 10_000;
 
 export function useNowPlaying(enabled: boolean) {
   const [data, setData] = useState<NowPlayingResponse | null>(null);
@@ -13,29 +13,63 @@ export function useNowPlaying(enabled: boolean) {
   useEffect(() => {
     if (!enabled) {
       setData(null);
+      setError(false);
       return;
     }
 
+    let active = true;
+
     async function poll() {
+      if (document.visibilityState !== "visible") return;
+
       try {
-        const res = await fetch("/api/now-playing");
+        const res = await fetch("/api/now-playing", {
+          cache: "no-store",
+        });
+
         if (!res.ok) {
-          setError(true);
+          if (active) setError(true);
           return;
         }
+
         const json: NowPlayingResponse = await res.json();
+
+        if (!active) return;
         setData(json);
         setError(false);
       } catch {
-        setError(true);
+        if (active) setError(true);
       }
     }
 
-    poll();
-    intervalRef.current = setInterval(poll, POLL_INTERVAL_MS);
+    const startPolling = () => {
+      if (intervalRef.current !== null) return;
+      void poll();
+      intervalRef.current = setInterval(poll, POLL_INTERVAL_MS);
+    };
+
+    const stopPolling = () => {
+      if (intervalRef.current !== null) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        startPolling();
+      } else {
+        stopPolling();
+      }
+    };
+
+    startPolling();
+    document.addEventListener("visibilitychange", handleVisibility);
 
     return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      active = false;
+      stopPolling();
+      document.removeEventListener("visibilitychange", handleVisibility);
     };
   }, [enabled]);
 
