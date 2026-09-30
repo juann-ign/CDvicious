@@ -42,10 +42,13 @@ export function MixtapeChapter({
   const [loading, setLoading] = useState(false);
   const [rateLimitSeconds, setRateLimitSeconds] = useState<number | null>(null);
   const [isNearChapter, setIsNearChapter] = useState(false);
+  const [quotaExceeded, setQuotaExceeded] = useState(false);
   const [exporting, setExporting] = useState(false);
   const chapterRef = useRef<HTMLDivElement>(null);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const countdownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const loadedRef = useRef(false);
+  const requestStartedRef = useRef(false);
+    const countdownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     const chapter = chapterRef.current;
@@ -56,10 +59,10 @@ export function MixtapeChapter({
     const observer = new IntersectionObserver(
       ([entry]) => {
         setIsNearChapter(
-          entry.isIntersecting && entry.intersectionRatio >= 0.55,
+          entry.isIntersecting && entry.intersectionRatio >= 0.9,
         );
       },
-      { root: wrapper, threshold: [0, 0.55, 1] },
+      { root: wrapper, threshold: [0, 0.9, 1] },
     );
 
     observer.observe(chapter);
@@ -67,7 +70,14 @@ export function MixtapeChapter({
   }, []);
 
   useEffect(() => {
-    if (!isNearChapter) return;
+    if (
+      !isNearChapter ||
+      loadedRef.current ||
+      requestStartedRef.current ||
+      quotaExceeded
+    ) return;
+
+    requestStartedRef.current = true;
 
     let cancelled = false;
 
@@ -92,6 +102,18 @@ export function MixtapeChapter({
         });
 
         if (res.status === 429) {
+          const body = (await res.json().catch(() => null)) as {
+            reason?: string;
+          } | null;
+
+          if (body?.reason === "QUOTA_EXCEEDED") {
+            setLoading(false);
+            setRateLimitSeconds(null);
+            setQuotaExceeded(true);
+            clearTimers();
+            return;
+          }
+
           const retryAfter = Number(res.headers.get("retry-after") ?? "60");
           const seconds =
             Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : 60;
@@ -112,6 +134,7 @@ export function MixtapeChapter({
 
           retryTimerRef.current = setTimeout(() => {
             retryTimerRef.current = null;
+            requestStartedRef.current = false;
             setRateLimitSeconds(null);
             void load();
           }, seconds * 1000);
@@ -127,8 +150,10 @@ export function MixtapeChapter({
 
         if (!cancelled && Array.isArray(data)) {
           clearTimers();
+          loadedRef.current = true;
           setAlbums(data);
           setRateLimitSeconds(null);
+          setQuotaExceeded(false);
           setLoading(false);
         }
       } catch {
@@ -142,7 +167,7 @@ export function MixtapeChapter({
       cancelled = true;
       clearTimers();
     };
-  }, [isNearChapter]);
+  }, [isNearChapter, quotaExceeded]);
 
   const pickedAlbums = useMemo(() => albums.slice(0, PICK_COUNT), [albums]);
 
@@ -196,9 +221,11 @@ export function MixtapeChapter({
           <h2>MIXTAPE LAB</h2>
         </div>
         <span className={styles.status}>
-          {rateLimitSeconds !== null
-            ? "RATE LIMITED / RETRY IN " + rateLimitSeconds + "s"
-            : "COLA LOCAL // " + queue.length + "/" + QUEUE_LIMIT}
+          {quotaExceeded
+            ? "SPOTIFY QUOTA EXCEEDED"
+            : rateLimitSeconds !== null
+              ? "RATE LIMITED / RETRY IN " + rateLimitSeconds + "s"
+              : "COLA LOCAL // " + queue.length + "/" + QUEUE_LIMIT}
         </span>
       </header>
 

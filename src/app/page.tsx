@@ -14,6 +14,8 @@ import { HorizontalRail } from "@/components/scroll/HorizontalRail";
 import type { AlbumItem } from "@/types/crate";
 import styles from "./page.module.css";
 
+const RAIL_ENABLED = process.env.NEXT_PUBLIC_ENABLE_RAIL === "1";
+
 function HomeContent() {
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
   const [isBookletOpen, setIsBookletOpen] = useState(false);
@@ -58,7 +60,9 @@ function HomeContent() {
     [loadAlbumToDeck],
   );
 
-  const { data, error } = useNowPlaying(authenticated === true);
+  const { data, error } = useNowPlaying(
+    authenticated === true && !RAIL_ENABLED,
+  );
   const coverUrl = data?.track?.album.images[0]?.url;
   const accentColor = useDominantColor(coverUrl) ?? "#1DB954";
 
@@ -71,7 +75,7 @@ function HomeContent() {
           CD<span>vicious</span>
         </div>
         <div className="top-nav-actions">
-          <UserProfileChip />
+          {!RAIL_ENABLED && <UserProfileChip />}
         </div>
       </header>
 
@@ -104,17 +108,21 @@ function HomeContent() {
         />
       </div>
 
-      <CrateTeaser onLoadAlbum={handleLoadAlbumFromCrate} />
+      {!RAIL_ENABLED && (
+        <CrateTeaser onLoadAlbum={handleLoadAlbumFromCrate} />
+      )}
     </main>
   );
 }
 
-const RAIL_ENABLED = process.env.NEXT_PUBLIC_ENABLE_RAIL === "1";
-
 export default function Home() {
   return (
     <Suspense fallback={null}>
-      {RAIL_ENABLED ? <HorizontalRail fallback={<HomeContent />} /> : <HomeContent />}
+      {RAIL_ENABLED ? (
+        <HorizontalRail fallback={<HomeContent />} />
+      ) : (
+        <HomeContent />
+      )}
     </Suspense>
   );
 }

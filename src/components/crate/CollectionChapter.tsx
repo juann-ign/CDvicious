@@ -33,6 +33,7 @@ export function CollectionChapter() {
   const [loading, setLoading] = useState(false);
   const [rateLimitSeconds, setRateLimitSeconds] = useState<number | null>(null);
   const [isNearChapter, setIsNearChapter] = useState(false);
+  const [quotaExceeded, setQuotaExceeded] = useState(false);
   const [query, setQuery] = useState("");
   const [decade, setDecade] = useState<DecadeFilter>("all");
   const [genre, setGenre] = useState("all");
@@ -44,7 +45,9 @@ export function CollectionChapter() {
   } | null>(null);
   const chapterRef = useRef<HTMLDivElement>(null);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const countdownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const loadedRef = useRef(false);
+  const requestStartedRef = useRef(false);
+    const countdownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     const chapter = chapterRef.current;
@@ -55,10 +58,10 @@ export function CollectionChapter() {
     const observer = new IntersectionObserver(
       ([entry]) => {
         setIsNearChapter(
-          entry.isIntersecting && entry.intersectionRatio >= 0.55,
+          entry.isIntersecting && entry.intersectionRatio >= 0.9,
         );
       },
-      { root: wrapper, threshold: [0, 0.55, 1] },
+      { root: wrapper, threshold: [0, 0.9, 1] },
     );
 
     observer.observe(chapter);
@@ -66,7 +69,14 @@ export function CollectionChapter() {
   }, []);
 
   useEffect(() => {
-    if (!isNearChapter) return;
+    if (
+      !isNearChapter ||
+      loadedRef.current ||
+      requestStartedRef.current ||
+      quotaExceeded
+    ) return;
+
+    requestStartedRef.current = true;
 
     let cancelled = false;
 
@@ -91,6 +101,18 @@ export function CollectionChapter() {
         });
 
         if (res.status === 429) {
+          const body = (await res.json().catch(() => null)) as {
+            reason?: string;
+          } | null;
+
+          if (body?.reason === "QUOTA_EXCEEDED") {
+            setLoading(false);
+            setRateLimitSeconds(null);
+            setQuotaExceeded(true);
+            clearTimers();
+            return;
+          }
+
           const retryAfter = Number(res.headers.get("retry-after") ?? "60");
           const seconds =
             Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : 60;
@@ -111,6 +133,7 @@ export function CollectionChapter() {
 
           retryTimerRef.current = setTimeout(() => {
             retryTimerRef.current = null;
+            requestStartedRef.current = false;
             setRateLimitSeconds(null);
             void load();
           }, seconds * 1000);
@@ -126,8 +149,10 @@ export function CollectionChapter() {
 
         if (!cancelled && Array.isArray(data)) {
           clearTimers();
+          loadedRef.current = true;
           setAlbums(data);
           setRateLimitSeconds(null);
+          setQuotaExceeded(false);
           setLoading(false);
         }
       } catch {
@@ -141,7 +166,7 @@ export function CollectionChapter() {
       cancelled = true;
       clearTimers();
     };
-  }, [isNearChapter]);
+  }, [isNearChapter, quotaExceeded]);
 
   const topGenres = useMemo(() => {
     const counts = new Map<string, number>();
@@ -224,9 +249,11 @@ export function CollectionChapter() {
           <h2>LA COLECCIÓN</h2>
         </div>
         <span className={styles.meta}>
-          {rateLimitSeconds !== null
-            ? "RATE LIMITED / RETRY IN " + rateLimitSeconds + "s"
-            : loading
+          {quotaExceeded
+            ? "SPOTIFY QUOTA EXCEEDED"
+            : rateLimitSeconds !== null
+              ? "RATE LIMITED / RETRY IN " + rateLimitSeconds + "s"
+              : loading
               ? "INDEXANDO..."
               : filtered.length + " / " + albums.length + " DISCOS"}
         </span>
