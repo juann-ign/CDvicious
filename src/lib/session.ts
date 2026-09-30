@@ -1,9 +1,16 @@
+import { createHash } from "node:crypto";
 import { cookies } from "next/headers";
 import { refreshAccessToken } from "./spotify";
 
 const ACCESS_TOKEN_COOKIE = "sp_access_token";
 const REFRESH_TOKEN_COOKIE = "sp_refresh_token";
 const EXPIRES_AT_COOKIE = "sp_expires_at";
+const CLIENT_VERSION_COOKIE = "sp_client_version";
+
+function getClientIdVersion() {
+  const clientId = process.env.SPOTIFY_CLIENT_ID?.trim() ?? "";
+  return createHash("sha256").update(clientId).digest("hex");
+}
 
 const COOKIE_OPTIONS = {
   httpOnly: true,
@@ -26,6 +33,7 @@ export async function setSession(tokens: {
     maxAge: 60 * 60 * 24 * 30,
   });
   cookieStore.set(EXPIRES_AT_COOKIE, String(expiresAt), COOKIE_OPTIONS);
+  cookieStore.set(CLIENT_VERSION_COOKIE, getClientIdVersion(), COOKIE_OPTIONS);
 }
 
 export async function getSession() {
@@ -33,8 +41,10 @@ export async function getSession() {
   const accessToken = cookieStore.get(ACCESS_TOKEN_COOKIE)?.value;
   const refreshToken = cookieStore.get(REFRESH_TOKEN_COOKIE)?.value;
   const expiresAt = cookieStore.get(EXPIRES_AT_COOKIE)?.value;
+  const clientVersion = cookieStore.get(CLIENT_VERSION_COOKIE)?.value;
 
   if (!accessToken || !refreshToken) return null;
+  if (clientVersion !== getClientIdVersion()) return null;
 
   return {
     accessToken,
@@ -59,6 +69,7 @@ export async function clearSession() {
   cookieStore.delete(ACCESS_TOKEN_COOKIE);
   cookieStore.delete(REFRESH_TOKEN_COOKIE);
   cookieStore.delete(EXPIRES_AT_COOKIE);
+  cookieStore.delete(CLIENT_VERSION_COOKIE);
 }
 
 export async function getValidAccessToken(): Promise<string | null> {
