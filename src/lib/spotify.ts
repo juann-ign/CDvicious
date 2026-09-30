@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import {
   SPOTIFY_AUTH_URL,
   SPOTIFY_TOKEN_URL,
@@ -7,6 +8,104 @@ import {
   SPOTIFY_ARTISTS_BATCH,
   SPOTIFY_ARTISTS_URL,
 } from "./constants";
+
+type CircuitEntry = {
+  blockedUntil: number;
+  reason?: string;
+};
+
+const spotifyCircuit = new Map<string, CircuitEntry>();
+
+function circuitKey(endpoint: string, accessToken: string) {
+  const tokenHash = createHash("sha256").update(accessToken).digest("hex");
+  return endpoint + ":" + tokenHash;
+}
+
+function parseRetryAfterSeconds(value: string | null) {
+  const raw = value?.trim();
+  if (!raw || !/^\d+$/.test(raw)) return undefined;
+
+  const seconds = Number(raw);
+  return Number.isSafeInteger(seconds) && seconds > 0 ? seconds : undefined;
+}
+
+function circuitResponse(blockedUntil: number, reason?: string) {
+  const remaining = Math.max(1, Math.ceil((blockedUntil - Date.now()) / 1000));
+
+  return new Response(
+    JSON.stringify({
+      error: {
+        status: 429,
+        message: "Too many requests",
+        reason: reason ?? "RATE_LIMITED",
+      },
+    }),
+    {
+      status: 429,
+      headers: {
+        "Content-Type": "application/json",
+        "Retry-After": String(remaining),
+      },
+    },
+  );
+}
+
+export async function fetchSpotifyWebApi(
+  accessToken: string,
+  endpoint: string,
+  input: string | URL,
+  init?: RequestInit,
+) {
+  const key = circuitKey(endpoint, accessToken);
+  const current = spotifyCircuit.get(key);
+
+  if (current) {
+    if (Date.now() < current.blockedUntil) {
+      return circuitResponse(current.blockedUntil, current.reason);
+    }
+
+    spotifyCircuit.delete(key);
+  }
+
+  const res = await fetch(input, init);
+
+  if (res.status === 429) {
+    const retryAfterRaw = res.headers.get("retry-after");
+    const retryAfterSeconds = parseRetryAfterSeconds(retryAfterRaw);
+
+    if (retryAfterSeconds !== undefined) {
+      const clone = res.clone();
+      let reason: string | undefined;
+
+      try {
+        const body = (await clone.json()) as {
+          error?: { reason?: string };
+        };
+        reason = body.error?.reason;
+      } catch {
+        reason = undefined;
+      }
+
+      spotifyCircuit.set(key, {
+        blockedUntil: Date.now() + retryAfterSeconds * 1000,
+        reason,
+      });
+
+      if (process.env.NODE_ENV !== "production") {
+        console.warn("[Spotify circuit open]", {
+          endpoint,
+          reason: reason ?? null,
+          retryAfterRaw,
+          retryAfterSeconds,
+        });
+      }
+    }
+  } else if (res.ok) {
+    spotifyCircuit.delete(key);
+  }
+
+  return res;
+}
 
 export class SpotifyApiError extends Error {
   constructor(
@@ -109,10 +208,15 @@ export async function refreshAccessToken(refreshToken: string) {
 }
 
 export async function fetchNowPlaying(accessToken: string) {
-  const res = await fetch(SPOTIFY_NOW_PLAYING_URL, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-    cache: "no-store",
-  });
+  const res = await fetchSpotifyWebApi(
+    accessToken,
+    "GET /v1/me/player",
+    SPOTIFY_NOW_PLAYING_URL,
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      cache: "no-store",
+    },
+  );
 
   if (res.status === 204) {
     return {
@@ -159,10 +263,15 @@ export async function fetchNowPlaying(accessToken: string) {
 }
 
 export async function fetchUserProfile(accessToken: string) {
-  const res = await fetch(SPOTIFY_ME_URL, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-    cache: "no-store",
-  });
+  const res = await fetchSpotifyWebApi(
+    accessToken,
+    "GET /v1/me",
+    SPOTIFY_ME_URL,
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      cache: "no-store",
+    },
+  );
 
   if (!res.ok) {
     const body = await res.text();
@@ -193,9 +302,14 @@ export async function fetchArtistGenres(
 
   for (let i = 0; i < unique.length; i += SPOTIFY_ARTISTS_BATCH) {
     const batch = unique.slice(i, i + SPOTIFY_ARTISTS_BATCH);
-    const res = await fetch(`${SPOTIFY_ARTISTS_URL}?ids=${batch.join(",")}`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
+    const res = await fetchSpotifyWebApi(
+      accessToken,
+      "GET /v1/artists",
+      `${SPOTIFY_ARTISTS_URL}?ids=${batch.join(",")}`,
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      },
+    );
 
     if (res.status === 429) {
       const body = await res.text();
