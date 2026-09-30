@@ -7,20 +7,35 @@ import { NowPlayingCard } from "@/components/NowPlayingCard";
 import { LyricsBooklet } from "@/components/LyricsBooklet";
 import { useNowPlaying } from "@/hooks/useNowPlaying";
 import { useDominantColor } from "@/hooks/useDominantColor";
+import { useSpotifyPlayer } from "@/components/SpotifyPlayerProvider";
 import pageStyles from "@/app/page.module.css";
 import styles from "./DeckPinnedLayer.module.css";
 
 export function DeckPinnedLayer() {
-  const [authenticated, setAuthenticated] = useState<boolean | null>(null);
+  const { authenticated } = useSpotifyPlayer();
+  const [deckInteractive, setDeckInteractive] = useState(true);
 
   useEffect(() => {
-    fetch("/api/auth/session")
-      .then((res) => res.json())
-      .then((data) => setAuthenticated(data.authenticated))
-      .catch(() => setAuthenticated(false));
+    const overlay = document.querySelector<HTMLElement>("[data-rail-overlay]");
+    const railRoot = overlay?.parentElement;
+
+    if (!railRoot) return;
+
+    const update = () => {
+      setDeckInteractive(railRoot.dataset.deckInteractive !== "false");
+    };
+
+    update();
+    const observer = new MutationObserver(update);
+    observer.observe(railRoot, {
+      attributes: true,
+      attributeFilter: ["data-deck-interactive"],
+    });
+
+    return () => observer.disconnect();
   }, []);
 
-  const { data, error } = useNowPlaying(authenticated === true);
+  const { data, error } = useNowPlaying(authenticated === true && deckInteractive);
   const coverUrl = data?.track?.album.images[0]?.url;
   const accentColor = useDominantColor(coverUrl) ?? "#1DB954";
   const stageStyle = {
@@ -33,18 +48,18 @@ export function DeckPinnedLayer() {
       style={stageStyle}
       data-rail-overlay
     >
-      <header className={pageStyles.topControlBar + " " + styles.interactive}>
+      <header className={pageStyles.topControlBar}>
         <div className={pageStyles.brandCorner}>
           CD<span>vicious</span>
         </div>
-        <div className="top-nav-actions">
+        <div className={"top-nav-actions " + styles.interactive}>
           <UserProfileChip />
         </div>
       </header>
 
       <div className={styles.deckCluster}>
         <div className={pageStyles.centerStage}>
-          <div className={pageStyles.discHero + " " + styles.interactive}>
+          <div className={styles.discHitArea}>
             <Disc
               track={data?.track ?? null}
               isPlaying={data?.isPlaying ?? false}
@@ -53,14 +68,16 @@ export function DeckPinnedLayer() {
           </div>
         </div>
 
-        <div className={pageStyles.nowPlayingDock + " " + styles.interactive}>
-          <NowPlayingCard
-            track={data?.track ?? null}
-            isPlaying={data?.isPlaying ?? false}
-            error={error}
-            progressMs={data?.progressMs ?? null}
-            durationMs={data?.durationMs ?? null}
-          />
+        <div className={pageStyles.nowPlayingDock}>
+          <div className={styles.interactive}>
+            <NowPlayingCard
+              track={data?.track ?? null}
+              isPlaying={data?.isPlaying ?? false}
+              error={error}
+              progressMs={data?.progressMs ?? null}
+              durationMs={data?.durationMs ?? null}
+            />
+          </div>
         </div>
       </div>
 

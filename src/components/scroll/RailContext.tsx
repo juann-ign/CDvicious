@@ -126,10 +126,32 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
         Math.max(0, (scroll - hideStart) / hideDistance),
       );
 
+      const viewportWidth = Math.max(1, wrapper.clientWidth || window.innerWidth);
+      const maxChapterIndex = Math.max(0, content.children.length - 1);
+      const activeChapterIndex = Math.min(
+        maxChapterIndex,
+        Math.max(0, Math.round(scroll / viewportWidth)),
+      );
+
       root.style.setProperty("--pSplit", String(splitProgress));
       root.style.setProperty("--pHideDeck", String(hideDeckProgress));
       root.dataset.splitActive = splitProgress > 0.05 ? "true" : "false";
       root.dataset.deckHidden = hideDeckProgress >= 0.98 ? "true" : "false";
+      root.dataset.chapter = String(activeChapterIndex);
+      root.dataset.deckInteractive =
+        activeChapterIndex < 2 ? "true" : "false";
+      document.documentElement.dataset.chapter = String(activeChapterIndex);
+
+      Array.from(content.children).forEach((child, index) => {
+        const panel = child as HTMLElement;
+        const active = index === activeChapterIndex;
+
+        panel.toggleAttribute("inert", !active);
+        panel.dataset.chapterActive = active ? "true" : "false";
+      });
+
+      const overlay = root.querySelector<HTMLElement>("[data-rail-overlay]");
+      overlay?.toggleAttribute("inert", activeChapterIndex >= 2);
     };
 
     measureRail();
@@ -172,6 +194,18 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
       root.style.removeProperty("--pHideDeck");
       delete root.dataset.splitActive;
       delete root.dataset.deckHidden;
+      delete root.dataset.deckInteractive;
+      delete root.dataset.chapter;
+      delete document.documentElement.dataset.chapter;
+
+      Array.from(content.children).forEach((child) => {
+        const panel = child as HTMLElement;
+        panel.toggleAttribute("inert", false);
+        delete panel.dataset.chapterActive;
+      });
+
+      const overlay = root.querySelector<HTMLElement>("[data-rail-overlay]");
+      overlay?.toggleAttribute("inert", false);
 
       document.documentElement.style.overflow = previousHtmlOverflow;
       document.body.style.overflow = previousBodyOverflow;

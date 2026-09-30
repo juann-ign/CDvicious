@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feature/epic-2-jewel-modal-mockup
+      - fix/spotify-stop-bleeding-mock
   pull_request:
     branches:
       - main
@@ -34,6 +35,12 @@ jobs:
 
       - name: Install dependencies
         run: npm ci --no-audit --no-fund --loglevel=error
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run test
 
       - name: Production build
         env:

@@ -86,6 +86,20 @@ export function JewelCaseDetailModal({
 
   useEffect(() => {
     let cancelled = false;
+
+    if (process.env.NEXT_PUBLIC_SPOTIFY_MOCK === "1") {
+      setTracks(
+        Array.from({ length: 10 }, (_, index) => ({
+          name: "DEMO TRACK " + String(index + 1).padStart(2, "0"),
+          duration_ms: 150000 + index * 9000,
+        })),
+      );
+      setLoading(false);
+      return () => {
+        cancelled = true;
+      };
+    }
+
     setLoading(true);
     fetch(`/api/album/${album.id}/tracks`)
       .then((res) => res.json())
@@ -107,10 +121,17 @@ export function JewelCaseDetailModal({
     let cancelled = false;
     setReleaseMeta({
       year: album.release_date?.slice(0, 4),
-      label: album.label,
+      label: album.label ?? "CDvicious Demo Label",
       format: "COMPACT DISC",
+      country: "AR",
       tags: album.genres ?? [],
     });
+
+    if (process.env.NEXT_PUBLIC_SPOTIFY_MOCK === "1") {
+      return () => {
+        cancelled = true;
+      };
+    }
 
     const query = new URLSearchParams({
       artist: album.artists.map((artist) => artist.name).join(", "),
