@@ -23,7 +23,7 @@ export function DeckPinnedLayer() {
 
   useEffect(() => {
     const overlay = document.querySelector<HTMLElement>("[data-rail-overlay]");
-    const railRoot = overlay?.closest<HTMLElement>("[data-deck-interactive]");
+    const railRoot = overlay?.parentElement;
 
     if (!railRoot) return;
 
