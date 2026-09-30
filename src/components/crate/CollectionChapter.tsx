@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { JewelCaseDetailModal } from "./JewelCaseDetailModal";
 import { JewelCaseFront } from "./JewelCaseFront";
 import { RailFlyingDisc } from "./RailFlyingDisc";
@@ -30,7 +30,9 @@ function decadeOf(album: AlbumItem): DecadeFilter {
 
 export function CollectionChapter() {
   const [albums, setAlbums] = useState<AlbumItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [rateLimitSeconds, setRateLimitSeconds] = useState<number | null>(null);
+  const [isNearChapter, setIsNearChapter] = useState(false);
   const [query, setQuery] = useState("");
   const [decade, setDecade] = useState<DecadeFilter>("all");
   const [genre, setGenre] = useState("all");
@@ -40,28 +42,106 @@ export function CollectionChapter() {
     album: AlbumItem;
     originRect: DOMRect;
   } | null>(null);
+  const chapterRef = useRef<HTMLDivElement>(null);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const countdownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
+    const chapter = chapterRef.current;
+    const wrapper = chapter?.closest<HTMLElement>('[aria-label="Horizontal rail"]');
+
+    if (!chapter || !wrapper) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsNearChapter(
+          entry.isIntersecting && entry.intersectionRatio >= 0.55,
+        );
+      },
+      { root: wrapper, threshold: [0, 0.55, 1] },
+    );
+
+    observer.observe(chapter);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!isNearChapter) return;
+
     let cancelled = false;
 
-    fetch("/api/collection?includeGenres=1")
-      .then((res) => (res.ok ? res.json() : []))
-      .then((data) => {
-        if (!cancelled && Array.isArray(data)) {
-          setAlbums(data);
+    const clearTimers = () => {
+      if (retryTimerRef.current !== null) {
+        clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = null;
+      }
+
+      if (countdownTimerRef.current !== null) {
+        clearInterval(countdownTimerRef.current);
+        countdownTimerRef.current = null;
+      }
+    };
+
+    const load = async () => {
+      setLoading(true);
+
+      try {
+        const res = await fetch("/api/collection?includeGenres=1", {
+          cache: "no-store",
+        });
+
+        if (res.status === 429) {
+          const retryAfter = Number(res.headers.get("retry-after") ?? "60");
+          const seconds =
+            Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : 60;
+          let remaining = seconds;
+
+          setLoading(false);
+          setRateLimitSeconds(remaining);
+          clearTimers();
+
+          countdownTimerRef.current = setInterval(() => {
+            remaining = Math.max(0, remaining - 1);
+            setRateLimitSeconds(remaining);
+            if (remaining === 0) {
+              clearInterval(countdownTimerRef.current!);
+              countdownTimerRef.current = null;
+            }
+          }, 1000);
+
+          retryTimerRef.current = setTimeout(() => {
+            retryTimerRef.current = null;
+            setRateLimitSeconds(null);
+            void load();
+          }, seconds * 1000);
+          return;
         }
-      })
-      .catch(() => undefined)
-      .finally(() => {
-        if (!cancelled) {
+
+        if (!res.ok) {
+          setLoading(false);
+          return;
+        }
+
+        const data = await res.json();
+
+        if (!cancelled && Array.isArray(data)) {
+          clearTimers();
+          setAlbums(data);
+          setRateLimitSeconds(null);
           setLoading(false);
         }
-      });
+      } catch {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    void load();
 
     return () => {
       cancelled = true;
+      clearTimers();
     };
-  }, []);
+  }, [isNearChapter]);
 
   const topGenres = useMemo(() => {
     const counts = new Map<string, number>();
@@ -137,16 +217,18 @@ export function CollectionChapter() {
   }, []);
 
   return (
-    <div className={styles.chapter}>
+    <div ref={chapterRef} className={styles.chapter}>
       <header className={styles.header}>
         <div>
           <p className={styles.eyebrow}>CAP.04 / EPIC C</p>
           <h2>LA COLECCIÓN</h2>
         </div>
         <span className={styles.meta}>
-          {loading
-            ? "INDEXANDO..."
-            : filtered.length + " / " + albums.length + " DISCOS"}
+          {rateLimitSeconds !== null
+            ? "RATE LIMITED / RETRY IN " + rateLimitSeconds + "s"
+            : loading
+              ? "INDEXANDO..."
+              : filtered.length + " / " + albums.length + " DISCOS"}
         </span>
       </header>
 
