@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
+import mockCollection from "@/mocks/collection.json";
 import {
   fetchArtistGenres,
   fetchSpotifyWebApi,
@@ -127,6 +128,7 @@ async function fetchAllAlbums(accessToken: string, refreshToken: string) {
 export async function GET(request: NextRequest) {
   const includeGenres = request.nextUrl.searchParams.get("includeGenres") === "1";
 
+  // Dev/testing only: bypass Spotify and the session entirely.
   if (process.env.NEXT_PUBLIC_SPOTIFY_MOCK === "1") {
     return NextResponse.json(mockCollection);
   }
