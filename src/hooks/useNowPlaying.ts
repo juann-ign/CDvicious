@@ -11,6 +11,8 @@ export function useNowPlaying(enabled: boolean) {
   const [error, setError] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const quotaExceededRef = useRef(false);
+  const pollInFlightRef = useRef(false);
+  const lastPollStartedAtRef = useRef(0);
 
   useEffect(() => {
     if (!enabled) {
@@ -32,6 +34,7 @@ export function useNowPlaying(enabled: boolean) {
 
     const schedule = (delay: number) => {
       clearTimer();
+
       if (
         !active ||
         quotaExceededRef.current ||
@@ -40,20 +43,40 @@ export function useNowPlaying(enabled: boolean) {
         return;
       }
 
+      const elapsed = Date.now() - lastPollStartedAtRef.current;
+      const minDelay =
+        lastPollStartedAtRef.current === 0
+          ? 0
+          : Math.max(0, POLL_INTERVAL_MS - elapsed);
+      const nextDelay = Math.max(delay, minDelay);
+
       timerRef.current = setTimeout(() => {
         timerRef.current = null;
         void poll();
-      }, delay);
+      }, nextDelay);
     };
 
     async function poll() {
       if (
         !active ||
         quotaExceededRef.current ||
-        document.visibilityState !== "visible"
+        document.visibilityState !== "visible" ||
+        pollInFlightRef.current
       ) {
         return;
       }
+
+      const elapsed = Date.now() - lastPollStartedAtRef.current;
+      if (
+        lastPollStartedAtRef.current !== 0 &&
+        elapsed < POLL_INTERVAL_MS
+      ) {
+        schedule(POLL_INTERVAL_MS - elapsed);
+        return;
+      }
+
+      pollInFlightRef.current = true;
+      lastPollStartedAtRef.current = Date.now();
 
       try {
         const res = await fetch("/api/now-playing", {
@@ -79,7 +102,7 @@ export function useNowPlaying(enabled: boolean) {
               Number.isFinite(retryAfter) && retryAfter > 0
                 ? retryAfter * 1000
                 : ERROR_RETRY_MS;
-            schedule(retryMs);
+            schedule(Math.max(retryMs, POLL_INTERVAL_MS));
           } else {
             schedule(ERROR_RETRY_MS);
           }
@@ -98,6 +121,8 @@ export function useNowPlaying(enabled: boolean) {
           setError(true);
           schedule(ERROR_RETRY_MS);
         }
+      } finally {
+        pollInFlightRef.current = false;
       }
     }
 
