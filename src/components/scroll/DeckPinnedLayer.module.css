@@ -17,6 +17,14 @@
   pointer-events: auto;
 }
 
+.discHitArea {
+  pointer-events: none;
+}
+
+.discHitArea > * {
+  pointer-events: auto;
+}
+
 .layer[data-deck-hidden="true"] .interactive {
   pointer-events: none;
 }

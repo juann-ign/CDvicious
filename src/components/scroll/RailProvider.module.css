@@ -39,7 +39,7 @@
   height: 100%;
 }
 
-.root[data-deck-hidden="true"] [data-rail-overlay] .interactive {
+.root[data-deck-interactive="false"] [data-rail-overlay] .interactive {
   pointer-events: none;
 }
 

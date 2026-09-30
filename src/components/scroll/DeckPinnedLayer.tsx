@@ -33,18 +33,18 @@ export function DeckPinnedLayer() {
       style={stageStyle}
       data-rail-overlay
     >
-      <header className={pageStyles.topControlBar + " " + styles.interactive}>
+      <header className={pageStyles.topControlBar}>
         <div className={pageStyles.brandCorner}>
           CD<span>vicious</span>
         </div>
-        <div className="top-nav-actions">
+        <div className={"top-nav-actions " + styles.interactive}>
           <UserProfileChip />
         </div>
       </header>
 
       <div className={styles.deckCluster}>
         <div className={pageStyles.centerStage}>
-          <div className={pageStyles.discHero + " " + styles.interactive}>
+          <div className={styles.discHitArea}>
             <Disc
               track={data?.track ?? null}
               isPlaying={data?.isPlaying ?? false}
@@ -53,14 +53,16 @@ export function DeckPinnedLayer() {
           </div>
         </div>
 
-        <div className={pageStyles.nowPlayingDock + " " + styles.interactive}>
-          <NowPlayingCard
-            track={data?.track ?? null}
-            isPlaying={data?.isPlaying ?? false}
-            error={error}
-            progressMs={data?.progressMs ?? null}
-            durationMs={data?.durationMs ?? null}
-          />
+        <div className={pageStyles.nowPlayingDock}>
+          <div className={styles.interactive}>
+            <NowPlayingCard
+              track={data?.track ?? null}
+              isPlaying={data?.isPlaying ?? false}
+              error={error}
+              progressMs={data?.progressMs ?? null}
+              durationMs={data?.durationMs ?? null}
+            />
+          </div>
         </div>
       </div>
 

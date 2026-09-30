@@ -130,6 +130,8 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
       root.style.setProperty("--pHideDeck", String(hideDeckProgress));
       root.dataset.splitActive = splitProgress > 0.05 ? "true" : "false";
       root.dataset.deckHidden = hideDeckProgress >= 0.98 ? "true" : "false";
+      root.dataset.deckInteractive =
+        hideDeckProgress < 0.5 ? "true" : "false";
     };
 
     measureRail();
@@ -172,6 +174,7 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
       root.style.removeProperty("--pHideDeck");
       delete root.dataset.splitActive;
       delete root.dataset.deckHidden;
+      delete root.dataset.deckInteractive;
 
       document.documentElement.style.overflow = previousHtmlOverflow;
       document.body.style.overflow = previousBodyOverflow;
