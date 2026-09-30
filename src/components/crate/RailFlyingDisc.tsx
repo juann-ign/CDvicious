@@ -51,7 +51,10 @@ export function RailFlyingDisc({
     const fromX = originRect.left + originRect.width / 2;
     const fromY = originRect.top + originRect.height / 2;
     const fromSize = originRect.width;
-    const duration = 1.15;
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    const duration = reduceMotion ? 0 : 1.15;
 
     const readTarget = () =>
       discRegistry.discTarget?.getBoundingClientRect() ?? null;
@@ -89,6 +92,40 @@ export function RailFlyingDisc({
       doneRef.current = true;
       onDone();
     };
+
+    if (reduceMotion) {
+      const target = readTarget() ?? initialTarget;
+
+      if (target) {
+        const dockTarget = discRegistry.discTarget;
+        const dockRect = dockTarget?.getBoundingClientRect();
+
+        gsap.set(el, {
+          left: target.left + target.width / 2,
+          top: target.top + target.height / 2,
+          width: target.width * 0.9,
+          height: target.height * 0.9,
+        });
+
+        if (dockTarget) {
+          dockTarget.classList.remove(discStyles.dockPulse);
+          void dockTarget.offsetWidth;
+          dockTarget.classList.add(discStyles.dockPulse);
+          window.setTimeout(() => dockTarget.classList.remove(discStyles.dockPulse), 450);
+        }
+
+        if (impactRef.current && dockRect) {
+          gsap.set(impactRef.current, {
+            left: dockRect.left + dockRect.width / 2,
+            top: dockRect.top + dockRect.height / 2,
+          });
+        }
+      }
+
+      onArrive();
+      onDone();
+      return;
+    }
 
     const tween = gsap.to(path, {
       p: 1,
@@ -195,7 +232,7 @@ export function RailFlyingDisc({
     });
 
     return () => {
-      tween.kill();
+      tween?.kill();
       impactTimelineRef.current?.kill();
       if (pulseTimeoutRef.current !== null) {
         window.clearTimeout(pulseTimeoutRef.current);
