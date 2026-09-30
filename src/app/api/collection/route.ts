@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { fetchArtistGenres, SpotifyApiError } from "@/lib/spotify";
 
@@ -40,8 +40,8 @@ const genreCache = new Map<string, string[]>();
 const collectionCache = new Map<string, CollectionCacheEntry>();
 const collectionInFlight = new Map<string, Promise<SpotifyAlbum[]>>();
 
-function cacheKey(accessToken: string) {
-  return createHash("sha256").update(accessToken).digest("hex");
+function cacheKey(refreshToken: string) {
+  return createHash("sha256").update(refreshToken).digest("hex");
 }
 
 function parseSpotifyReason(body: string) {
@@ -55,8 +55,8 @@ function parseSpotifyReason(body: string) {
   }
 }
 
-async function fetchAllAlbums(accessToken: string) {
-  const key = cacheKey(accessToken);
+async function fetchAllAlbums(accessToken: string, refreshToken: string) {
+  const key = cacheKey(refreshToken);
   const cached = collectionCache.get(key);
 
   if (cached && cached.expiresAt > Date.now()) {
@@ -118,7 +118,8 @@ async function fetchAllAlbums(accessToken: string) {
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const includeGenres = request.nextUrl.searchParams.get("includeGenres") === "1";
   const session = await getSession();
 
   if (!session?.accessToken) {
@@ -126,7 +127,11 @@ export async function GET() {
   }
 
   try {
-    const allAlbums = await fetchAllAlbums(session.accessToken);
+    const allAlbums = await fetchAllAlbums(session.accessToken, session.refreshToken);
+
+    if (!includeGenres) {
+      return NextResponse.json(allAlbums);
+    }
 
     const allArtistIds = allAlbums.flatMap((a) =>
       a.artists.map((ar) => ar.id),
