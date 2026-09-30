@@ -8,6 +8,31 @@ import {
   SPOTIFY_ARTISTS_URL,
 } from "./constants";
 
+export class SpotifyApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+    public readonly reason?: string,
+    public readonly retryAfter?: string,
+  ) {
+    super(message);
+    this.name = "SpotifyApiError";
+  }
+}
+
+function parseSpotifyError(body: string): {
+  reason?: string;
+} {
+  try {
+    const data = JSON.parse(body) as {
+      error?: { reason?: string };
+    };
+    return { reason: data.error?.reason };
+  } catch {
+    return {};
+  }
+}
+
 export function buildAuthUrl(state: string) {
   const params = new URLSearchParams({
     client_id: process.env.SPOTIFY_CLIENT_ID!,
@@ -114,7 +139,17 @@ export async function fetchUserProfile(accessToken: string) {
     cache: "no-store",
   });
 
-  if (!res.ok) throw new Error(`spotify me failed: ${res.status}`);
+  if (!res.ok) {
+    const body = await res.text();
+    const { reason } = parseSpotifyError(body);
+
+    throw new SpotifyApiError(
+      `spotify me failed: ${res.status}`,
+      res.status,
+      reason,
+      res.headers.get("retry-after") ?? undefined,
+    );
+  }
 
   const data = await res.json();
 
@@ -136,6 +171,18 @@ export async function fetchArtistGenres(
     const res = await fetch(`${SPOTIFY_ARTISTS_URL}?ids=${batch.join(",")}`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
+
+    if (res.status === 429) {
+      const body = await res.text();
+      const { reason } = parseSpotifyError(body);
+      throw new SpotifyApiError(
+        "spotify artists rate limited",
+        res.status,
+        reason,
+        res.headers.get("retry-after") ?? undefined,
+      );
+    }
+
     if (!res.ok) continue;
 
     const data = await res.json();
