@@ -33,6 +33,13 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
   const contentRef = useRef<HTMLDivElement>(null);
   const lenisRef = useRef<Lenis | null>(null);
   const animationFrameRef = useRef<number | null>(null);
+  const reducedMotionRef = useRef(false);
+  const chapterMetricsRef = useRef({
+    splitStart: 0,
+    splitDistance: 1,
+    hideStart: 0,
+    hideDistance: 1,
+  });
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
@@ -47,6 +54,10 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
     const previousHtmlOverflow = document.documentElement.style.overflow;
     const previousBodyOverflow = document.body.style.overflow;
 
+    reducedMotionRef.current = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+
     document.documentElement.style.overflow = "hidden";
     document.body.style.overflow = "hidden";
 
@@ -56,8 +67,8 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
       eventsTarget: root,
       orientation: "horizontal",
       gestureOrientation: "horizontal",
-      smoothWheel: true,
-      lerp: 0.075,
+      smoothWheel: !reducedMotionRef.current,
+      lerp: reducedMotionRef.current ? 1 : 0.075,
       wheelMultiplier: 0.85,
       virtualScroll: (data) => {
         if (data.event.type === "wheel") {
@@ -75,11 +86,10 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
     lenisRef.current = lenis;
     setIsReady(true);
 
-    const updateRailProgress = (scroll: number) => {
-      const chapters = Array.from(content.children) as HTMLElement[];
-      const firstChapter = chapters[0];
-      const secondChapter = chapters[1];
-      const thirdChapter = chapters[2];
+    const measureRail = () => {
+      const firstChapter = content.children[0] as HTMLElement | undefined;
+      const secondChapter = content.children[1] as HTMLElement | undefined;
+      const thirdChapter = content.children[2] as HTMLElement | undefined;
 
       const splitStart = firstChapter?.offsetLeft ?? 0;
       const splitEnd =
@@ -91,8 +101,21 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
         thirdChapter?.offsetLeft ??
         hideStart + (secondChapter?.offsetWidth || wrapper.clientWidth);
 
-      const splitDistance = Math.max(1, splitEnd - splitStart);
-      const hideDistance = Math.max(1, hideEnd - hideStart);
+      chapterMetricsRef.current = {
+        splitStart,
+        splitDistance: Math.max(1, splitEnd - splitStart),
+        hideStart,
+        hideDistance: Math.max(1, hideEnd - hideStart),
+      };
+    };
+
+    const updateRailProgress = (scroll: number) => {
+      const {
+        splitStart,
+        splitDistance,
+        hideStart,
+        hideDistance,
+      } = chapterMetricsRef.current;
 
       const splitProgress = Math.min(
         1,
@@ -109,7 +132,16 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
       root.dataset.deckHidden = hideDeckProgress >= 0.98 ? "true" : "false";
     };
 
+    measureRail();
     updateRailProgress(lenis.scroll);
+
+    const resizeObserver = new ResizeObserver(() => {
+      measureRail();
+      updateRailProgress(lenis.scroll);
+    });
+
+    resizeObserver.observe(wrapper);
+    resizeObserver.observe(content);
 
     const handleScroll = ({ scroll }: { scroll: number }) => {
       updateRailProgress(scroll);
@@ -131,6 +163,7 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
       }
 
       lenis.off("scroll", handleScroll);
+      resizeObserver.disconnect();
       lenis.destroy();
       lenisRef.current = null;
       setIsReady(false);
@@ -178,7 +211,7 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
     const chapter = content.children[safeIndex] as HTMLElement;
 
     lenis.scrollTo(chapter.offsetLeft, {
-      duration: Math.max(0, duration),
+      duration: reducedMotionRef.current ? 0 : Math.max(0, duration),
     });
   }, []);
 
