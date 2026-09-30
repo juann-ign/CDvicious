@@ -44,7 +44,7 @@ export function CollectionChapter() {
   useEffect(() => {
     let cancelled = false;
 
-    fetch("/api/collection")
+    fetch("/api/collection?includeGenres=1")
       .then((res) => (res.ok ? res.json() : []))
       .then((data) => {
         if (!cancelled && Array.isArray(data)) {
