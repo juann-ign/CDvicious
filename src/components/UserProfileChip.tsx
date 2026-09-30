@@ -14,6 +14,7 @@ export function UserProfileChip() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [open, setOpen] = useState(false);
   const [rateLimited, setRateLimited] = useState(false);
+  const [quotaExceeded, setQuotaExceeded] = useState(false);
   const [rateLimitSeconds, setRateLimitSeconds] = useState<number | null>(null);
   const retryAttemptedRef = useRef(false);
   const retryTimerRef = useRef<number | null>(null);
@@ -33,6 +34,7 @@ export function UserProfileChip() {
     if (authenticated !== true) {
       setProfile(null);
       setRateLimited(false);
+      setQuotaExceeded(false);
       setRateLimitSeconds(null);
       retryAttemptedRef.current = false;
       return;
@@ -69,12 +71,22 @@ export function UserProfileChip() {
 
         setProfile(data);
         setRateLimited(false);
+        setQuotaExceeded(false);
         setRateLimitSeconds(null);
       } catch (error) {
         if (!active) return;
 
         if (error instanceof ClientProfileError && error.status === 429) {
           setProfile(null);
+
+          if (error.reason === "QUOTA_EXCEEDED") {
+            setQuotaExceeded(true);
+            setRateLimited(false);
+            setRateLimitSeconds(null);
+            return;
+          }
+
+          setQuotaExceeded(false);
           setRateLimited(true);
 
           if (
@@ -98,6 +110,7 @@ export function UserProfileChip() {
 
     retryAttemptedRef.current = false;
     setRateLimited(false);
+    setQuotaExceeded(false);
     setRateLimitSeconds(null);
     void loadProfile();
 
@@ -145,11 +158,13 @@ export function UserProfileChip() {
         )}
         <span className={styles.username}>
           {profile?.displayName ??
-            (rateLimited
-              ? rateLimitSeconds !== null
-                ? `RATE LIMITED / RETRY IN ${rateLimitSeconds}s`
-                : "RATE LIMITED"
-              : "USUARIO")}
+            (quotaExceeded
+              ? "SPOTIFY QUOTA EXCEEDED"
+              : rateLimited
+                ? rateLimitSeconds !== null
+                  ? `RATE LIMITED / RETRY IN ${rateLimitSeconds}s`
+                  : "RATE LIMITED"
+                : "USUARIO")}
         </span>
       </button>
 
