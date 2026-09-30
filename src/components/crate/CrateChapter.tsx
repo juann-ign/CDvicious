@@ -23,7 +23,7 @@ export function CrateChapter() {
   useEffect(() => {
     let cancelled = false;
 
-    fetch("/api/collection")
+    fetch("/api/collection?includeGenres=0")
       .then((res) => (res.ok ? res.json() : []))
       .then((data) => {
         if (!cancelled && Array.isArray(data)) {
