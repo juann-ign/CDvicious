@@ -3,6 +3,15 @@ import { getValidAccessToken } from "@/lib/session";
 import { fetchNowPlaying, SpotifyApiError } from "@/lib/spotify";
 
 export async function GET() {
+  if (process.env.NEXT_PUBLIC_SPOTIFY_MOCK === "1") {
+    return NextResponse.json({
+      isPlaying: false,
+      progressMs: null,
+      durationMs: null,
+      track: null,
+    });
+  }
+
   const accessToken = await getValidAccessToken();
 
   if (!accessToken) {
