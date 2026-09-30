@@ -48,7 +48,27 @@ async function getCachedProfile(accessToken: string, refreshToken: string) {
   }
 }
 
+const MOCK_PROFILE = {
+  id: "cdvicious-dev",
+  display_name: "CDvicious Demo",
+  images: [
+    {
+      url: "https://placehold.co/96x96/111111/ffffff.png?text=DV",
+      width: 96,
+      height: 96,
+    },
+  ],
+  displayName: "CDvicious Demo",
+  avatarUrl: "https://placehold.co/96x96/111111/ffffff.png?text=DV",
+};
+
 export async function GET() {
+  if (process.env.NEXT_PUBLIC_SPOTIFY_MOCK === "1") {
+    return NextResponse.json(MOCK_PROFILE, {
+      headers: { "Cache-Control": "no-store" },
+    });
+  }
+
   const session = await getSession();
 
   if (!session?.refreshToken) {
