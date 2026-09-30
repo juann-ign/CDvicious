@@ -12,6 +12,7 @@ import styles from "./DeckPinnedLayer.module.css";
 
 export function DeckPinnedLayer() {
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
+  const [deckInteractive, setDeckInteractive] = useState(true);
 
   useEffect(() => {
     fetch("/api/auth/session")
@@ -20,7 +21,24 @@ export function DeckPinnedLayer() {
       .catch(() => setAuthenticated(false));
   }, []);
 
-  const { data, error } = useNowPlaying(authenticated === true);
+  useEffect(() => {
+    const overlay = document.querySelector<HTMLElement>("[data-rail-overlay]");
+    const railRoot = overlay?.closest<HTMLElement>("[data-deck-interactive]");
+
+    if (!railRoot) return;
+
+    const update = () => {
+      setDeckInteractive(railRoot.dataset.deckInteractive !== "false");
+    };
+
+    update();
+    const observer = new MutationObserver(update);
+    observer.observe(railRoot, { attributes: true, attributeFilter: ["data-deck-interactive"] });
+
+    return () => observer.disconnect();
+  }, []);
+
+  const { data, error } = useNowPlaying(authenticated === true && deckInteractive);
   const coverUrl = data?.track?.album.images[0]?.url;
   const accentColor = useDominantColor(coverUrl) ?? "#1DB954";
   const stageStyle = {
