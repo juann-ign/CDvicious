@@ -2,6 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { UserProfile } from "@/types/spotify";
+import {
+  ClientProfileError,
+  getClientUserProfile,
+} from "@/lib/clientProfile";
 import { useSpotifyPlayer } from "./SpotifyPlayerProvider";
 import styles from "./UserProfileChip.module.css";
 
@@ -9,12 +13,26 @@ export function UserProfileChip() {
   const { authenticated } = useSpotifyPlayer();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [open, setOpen] = useState(false);
+  const [rateLimited, setRateLimited] = useState(false);
   const [rateLimitSeconds, setRateLimitSeconds] = useState<number | null>(null);
   const retryAttemptedRef = useRef(false);
+  const retryTimerRef = useRef<number | null>(null);
+  const countdownTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
+    if (retryTimerRef.current !== null) {
+      window.clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
+
+    if (countdownTimerRef.current !== null) {
+      window.clearInterval(countdownTimerRef.current);
+      countdownTimerRef.current = null;
+    }
+
     if (authenticated !== true) {
       setProfile(null);
+      setRateLimited(false);
       setRateLimitSeconds(null);
       retryAttemptedRef.current = false;
       return;
@@ -22,70 +40,79 @@ export function UserProfileChip() {
 
     let active = true;
 
+    const scheduleRetry = (retryAfter: number, loadProfile: () => void) => {
+      setRateLimitSeconds(retryAfter);
+
+      let remaining = retryAfter;
+      countdownTimerRef.current = window.setInterval(() => {
+        remaining = Math.max(0, remaining - 1);
+        setRateLimitSeconds(remaining);
+        if (remaining === 0 && countdownTimerRef.current !== null) {
+          window.clearInterval(countdownTimerRef.current);
+          countdownTimerRef.current = null;
+        }
+      }, 1000);
+
+      retryTimerRef.current = window.setTimeout(() => {
+        retryTimerRef.current = null;
+        if (!active) return;
+        setRateLimitSeconds(null);
+        loadProfile();
+      }, retryAfter * 1000);
+    };
+
     const loadProfile = async () => {
       try {
-        const res = await fetch("/api/auth/me", {
-          cache: "no-store",
-        });
-
-        if (res.status === 429) {
-          const retryAfter = Number(res.headers.get("retry-after") ?? "");
-          const body = (await res.json().catch(() => null)) as {
-            reason?: string;
-          } | null;
-
-          if (!active) return;
-
-          if (
-            !retryAttemptedRef.current &&
-            Number.isFinite(retryAfter) &&
-            retryAfter > 0
-          ) {
-            retryAttemptedRef.current = true;
-            setRateLimitSeconds(retryAfter);
-
-            const countdown = window.setInterval(() => {
-              setRateLimitSeconds((remaining) =>
-                remaining !== null && remaining > 1 ? remaining - 1 : 0,
-              );
-            }, 1000);
-
-            window.setTimeout(() => {
-              window.clearInterval(countdown);
-              if (!active) return;
-              setRateLimitSeconds(null);
-              void loadProfile();
-            }, retryAfter * 1000);
-          } else {
-            setRateLimitSeconds(null);
-          }
-
-          console.warn("Spotify profile rate limited:", body?.reason ?? "RATE_LIMITED");
-          return;
-        }
-
-        if (!res.ok) {
-          throw new Error(`auth/me failed: ${res.status}`);
-        }
-
-        const data = (await res.json()) as UserProfile;
+        const data = await getClientUserProfile();
 
         if (!active) return;
 
         setProfile(data);
+        setRateLimited(false);
         setRateLimitSeconds(null);
-      } catch {
+      } catch (error) {
         if (!active) return;
+
+        if (error instanceof ClientProfileError && error.status === 429) {
+          setProfile(null);
+          setRateLimited(true);
+
+          if (
+            !retryAttemptedRef.current &&
+            error.retryAfter !== undefined
+          ) {
+            retryAttemptedRef.current = true;
+            scheduleRetry(error.retryAfter, loadProfile);
+          } else {
+            setRateLimitSeconds(null);
+          }
+
+          return;
+        }
+
         setProfile(null);
+        setRateLimited(false);
         setRateLimitSeconds(null);
       }
     };
 
     retryAttemptedRef.current = false;
+    setRateLimited(false);
+    setRateLimitSeconds(null);
     void loadProfile();
 
     return () => {
       active = false;
+
+      if (retryTimerRef.current !== null) {
+        window.clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = null;
+      }
+
+      if (countdownTimerRef.current !== null) {
+        window.clearInterval(countdownTimerRef.current);
+        countdownTimerRef.current = null;
+      }
     };
   }, [authenticated]);
 
@@ -118,8 +145,10 @@ export function UserProfileChip() {
         )}
         <span className={styles.username}>
           {profile?.displayName ??
-            (rateLimitSeconds !== null
-              ? `RATE LIMITED / RETRY IN ${rateLimitSeconds}s`
+            (rateLimited
+              ? rateLimitSeconds !== null
+                ? `RATE LIMITED / RETRY IN ${rateLimitSeconds}s`
+                : "RATE LIMITED"
               : "USUARIO")}
         </span>
       </button>
