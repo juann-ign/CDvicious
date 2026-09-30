@@ -4,6 +4,14 @@ import type { UserProfile } from "@/types/spotify";
 
 const PROFILE_CACHE_TTL_MS = 10 * 60 * 1000;
 
+function parseRetryAfterSeconds(value: string | null) {
+  if (value === null || !/^\d+$/.test(value.trim())) {
+    return undefined;
+  }
+
+  return Number(value);
+}
+
 type ProfileCacheEntry = {
   profile: UserProfile;
   expiresAt: number;
@@ -41,7 +49,7 @@ export function getClientUserProfile(): Promise<UserProfile> {
         const body = (await res.json().catch(() => null)) as {
           reason?: string;
         } | null;
-        const retryAfter = Number(res.headers.get("retry-after") ?? "");
+        const retryAfter = parseRetryAfterSeconds(res.headers.get("retry-after"));
 
         throw new ClientProfileError(
           `auth/me failed: ${res.status}`,

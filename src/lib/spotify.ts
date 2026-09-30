@@ -33,6 +33,24 @@ function parseSpotifyError(body: string): {
   }
 }
 
+
+function readRetryAfter(res: Response, endpoint: string, reason?: string) {
+  const raw = res.headers.get("retry-after")?.trim() ?? undefined;
+  const seconds =
+    raw !== undefined && /^\\d+$/.test(raw) ? Number(raw) : undefined;
+
+  if (res.status === 429 && process.env.NODE_ENV !== "production") {
+    console.warn("[Spotify 429]", {
+      endpoint,
+      reason: reason ?? null,
+      retryAfterRaw: raw ?? null,
+      retryAfterSeconds: seconds ?? null,
+    });
+  }
+
+  return raw;
+}
+
 export function buildAuthUrl(state: string) {
   const params = new URLSearchParams({
     client_id: process.env.SPOTIFY_CLIENT_ID!,
@@ -155,7 +173,7 @@ export async function fetchUserProfile(accessToken: string) {
       `spotify me failed: ${res.status}`,
       res.status,
       reason,
-      res.headers.get("retry-after") ?? undefined,
+      readRetryAfter(res, "GET /v1/me", reason),
     );
   }
 
