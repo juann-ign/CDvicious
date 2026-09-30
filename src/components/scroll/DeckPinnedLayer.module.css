@@ -70,8 +70,22 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .layer {
+    transition: none;
+  }
+
   .deckCluster,
   .bookletLayer {
     will-change: auto;
+    transition: none;
+  }
+
+  .deckCluster {
+    transform: none;
+  }
+
+  .bookletLayer {
+    filter: none;
+    transform: none;
   }
 }
