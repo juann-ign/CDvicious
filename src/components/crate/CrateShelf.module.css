@@ -102,6 +102,10 @@
   cursor: grabbing;
 }
 
+.viewport.dragging .spine {
+  cursor: grabbing;
+}
+
 .track {
   position: absolute;
   bottom: var(--space-3);

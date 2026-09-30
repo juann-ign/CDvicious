@@ -119,12 +119,46 @@ export function useMarqueeBelt({
     if (!el) return;
 
     const down = (e: PointerEvent) => {
-      onGrabStartRef.current?.();
       dragging.current = true;
       captured.current = false;
       pointerId.current = e.pointerId;
       lastX.current = e.clientX;
       target.current = null;
+    };
+
+    const finish = (snap: boolean) => {
+      if (!dragging.current) return;
+
+      const wasCaptured = captured.current;
+      const currentPointerId = pointerId.current;
+
+      if (wasCaptured && snap) {
+        const len = lenRef.current;
+        const nPages = pagesRef.current;
+
+        if (len > 0) {
+          const stop =
+            Math.round((offset.current / len) * nPages) * (len / nPages);
+          target.current = offset.current + ring(offset.current, stop, len);
+        }
+      }
+
+      dragging.current = false;
+      captured.current = false;
+      pointerId.current = null;
+      setIsDragging(false);
+
+      if (wasCaptured) {
+        onGrabEndRef.current?.();
+      }
+
+      if (
+        wasCaptured &&
+        currentPointerId !== null &&
+        el.hasPointerCapture?.(currentPointerId)
+      ) {
+        el.releasePointerCapture(currentPointerId);
+      }
     };
 
     const move = (e: PointerEvent) => {
@@ -134,6 +168,8 @@ export function useMarqueeBelt({
       if (!captured.current && Math.abs(dx) > DRAG_THRESHOLD_PX) {
         captured.current = true;
         setIsDragging(true);
+        onGrabStartRef.current?.();
+
         if (pointerId.current !== null) {
           el.setPointerCapture?.(pointerId.current);
         }
@@ -146,31 +182,22 @@ export function useMarqueeBelt({
       velocity.current = -dx * 8;
     };
 
-    const up = () => {
-      onGrabEndRef.current?.();
-      if (captured.current && pointerId.current !== null) {
-        el.releasePointerCapture?.(pointerId.current);
-      }
-      if (captured.current) {
-        const len = lenRef.current;
-        const nPages = pagesRef.current;
-        const stop =
-          Math.round((offset.current / len) * nPages) * (len / nPages);
-        target.current = offset.current + ring(offset.current, stop, len);
-      }
-      dragging.current = false;
-      captured.current = false;
-      pointerId.current = null;
-      setIsDragging(false);
-    };
+    const up = () => finish(true);
+    const cancel = () => finish(false);
+    const lostCapture = () => finish(false);
 
     el.addEventListener("pointerdown", down);
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", cancel);
+    el.addEventListener("lostpointercapture", lostCapture);
+
     return () => {
       el.removeEventListener("pointerdown", down);
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", cancel);
+      el.removeEventListener("lostpointercapture", lostCapture);
     };
   }, []);
 
