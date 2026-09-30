@@ -48,51 +48,6 @@ function cacheKey(refreshToken: string) {
   return createHash("sha256").update(refreshToken).digest("hex");
 }
 
-type MockAlbumSeed = [string, string, string, string[]];
-
-function mockCover(index: number) {
-  return "https://placehold.co/600x600/111111/ffffff.png?text=" + String(index).padStart(2, "0");
-}
-
-const MOCK_ALBUM_SEEDS: MockAlbumSeed[] = [
-  ["Neon Rooms", "Vértice Magnético", "2024", ["indie", "electronic"]],
-  ["Nocturnal FM", "Satélite Sur", "2023", ["electronic", "ambient"]],
-  ["Ciudad de Vidrio", "Los Inerciales", "2022", ["post-punk", "rock"]],
-  ["Static Hearts", "Signal Ghosts", "2021", ["shoegaze", "indie"]],
-  ["Luz de Invierno", "Río Eléctrico", "2020", ["rock", "alternative"]],
-  ["Midnight Archive", "Soft Machines", "2019", ["indie", "dream-pop"]],
-  ["Pulsar Motel", "Norte Magnético", "2018", ["electronic", "synth-pop"]],
-  ["Ficciones", "Habitación 9", "2017", ["indie", "alternative"]],
-  ["Circuitos Rotos", "Cable Rojo", "2016", ["post-punk", "rock"]],
-  ["Velvet Transit", "The Afterhours", "2015", ["britpop", "indie"]],
-  ["Mar de Fondo", "Bajo Control", "2014", ["rock", "alternative"]],
-  ["Frequencies", "Blue Static", "2013", ["shoegaze", "ambient"]],
-  ["Horas Muertas", "Niebla Club", "2011", ["post-punk", "indie"]],
-  ["Satellite Youth", "Plastic Cinema", "2010", ["britpop", "alternative"]],
-  ["Archivo Cero", "Los Diagramas", "2008", ["rock", "indie"]],
-  ["Signals in the Dark", "Night Operators", "2006", ["electronic", "alternative"]],
-  ["Terminal Norte", "Autopista 3", "2004", ["rock", "post-punk"]],
-  ["Polaroid Summer", "Static Parade", "2001", ["indie", "dream-pop"]],
-];
-
-const MOCK_COLLECTION: SpotifyAlbum[] = MOCK_ALBUM_SEEDS.map(
-  ([name, artist, year, genres], index) => ({
-    id: "mock-album-" + String(index + 1).padStart(2, "0"),
-    name,
-    uri: "spotify:album:mock-" + String(index + 1).padStart(2, "0"),
-    release_date: year,
-    label: "CDvicious Demo Label",
-    images: [{ url: mockCover(index + 1), width: 600, height: 600 }],
-    artists: [
-      {
-        id: "mock-artist-" + String(index + 1).padStart(2, "0"),
-        name: artist,
-      },
-    ],
-    genres,
-  }),
-);
-
 function parseSpotifyReason(body: string) {
   try {
     const data = JSON.parse(body) as {
@@ -173,7 +128,7 @@ export async function GET(request: NextRequest) {
   const includeGenres = request.nextUrl.searchParams.get("includeGenres") === "1";
 
   if (process.env.NEXT_PUBLIC_SPOTIFY_MOCK === "1") {
-    return NextResponse.json(MOCK_COLLECTION);
+    return NextResponse.json(mockCollection);
   }
 
   const session = await getSession();
