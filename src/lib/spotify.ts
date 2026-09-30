@@ -106,14 +106,22 @@ export async function fetchNowPlaying(accessToken: string) {
     };
   }
 
-  if (res.status === 401) {
-    const err = new Error("spotify_unauthorized");
-    err.name = "SpotifyUnauthorizedError";
-    throw err;
-  }
-
   if (!res.ok) {
-    throw new Error(`spotify now-playing failed: ${res.status}`);
+    const body = await res.text();
+    const { reason } = parseSpotifyError(body);
+
+    if (res.status === 401) {
+      const err = new Error("spotify_unauthorized");
+      err.name = "SpotifyUnauthorizedError";
+      throw err;
+    }
+
+    throw new SpotifyApiError(
+      `spotify now-playing failed: ${res.status}`,
+      res.status,
+      reason,
+      res.headers.get("retry-after") ?? undefined,
+    );
   }
 
   const data = await res.json();
