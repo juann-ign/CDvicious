@@ -4,11 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import type { NowPlayingResponse } from "@/types/spotify";
 
 const POLL_INTERVAL_MS = 10_000;
+const ERROR_RETRY_MS = 30_000;
+const QUOTA_RETRY_MS = 60_000;
 
 export function useNowPlaying(enabled: boolean) {
   const [data, setData] = useState<NowPlayingResponse | null>(null);
   const [error, setError] = useState(false);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!enabled) {
@@ -19,8 +21,24 @@ export function useNowPlaying(enabled: boolean) {
 
     let active = true;
 
+    const clearTimer = () => {
+      if (timerRef.current !== null) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+
+    const schedule = (delay: number) => {
+      clearTimer();
+      if (!active || document.visibilityState !== "visible") return;
+      timerRef.current = setTimeout(() => {
+        timerRef.current = null;
+        void poll();
+      }, delay);
+    };
+
     async function poll() {
-      if (document.visibilityState !== "visible") return;
+      if (!active || document.visibilityState !== "visible") return;
 
       try {
         const res = await fetch("/api/now-playing", {
@@ -29,6 +47,18 @@ export function useNowPlaying(enabled: boolean) {
 
         if (!res.ok) {
           if (active) setError(true);
+
+          if (res.status === 429) {
+            const retryAfter = Number(res.headers.get("retry-after") ?? "");
+            const retryMs =
+              Number.isFinite(retryAfter) && retryAfter > 0
+                ? retryAfter * 1000
+                : QUOTA_RETRY_MS;
+            schedule(retryMs);
+          } else {
+            schedule(ERROR_RETRY_MS);
+          }
+
           return;
         }
 
@@ -37,38 +67,29 @@ export function useNowPlaying(enabled: boolean) {
         if (!active) return;
         setData(json);
         setError(false);
+        schedule(POLL_INTERVAL_MS);
       } catch {
-        if (active) setError(true);
+        if (active) {
+          setError(true);
+          schedule(ERROR_RETRY_MS);
+        }
       }
     }
 
-    const startPolling = () => {
-      if (intervalRef.current !== null) return;
-      void poll();
-      intervalRef.current = setInterval(poll, POLL_INTERVAL_MS);
-    };
-
-    const stopPolling = () => {
-      if (intervalRef.current !== null) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-    };
-
     const handleVisibility = () => {
+      clearTimer();
+
       if (document.visibilityState === "visible") {
-        startPolling();
-      } else {
-        stopPolling();
+        void poll();
       }
     };
 
-    startPolling();
+    void poll();
     document.addEventListener("visibilitychange", handleVisibility);
 
     return () => {
       active = false;
-      stopPolling();
+      clearTimer();
       document.removeEventListener("visibilitychange", handleVisibility);
     };
   }, [enabled]);
