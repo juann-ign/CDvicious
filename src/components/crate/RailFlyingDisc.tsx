@@ -111,7 +111,10 @@ export function RailFlyingDisc({
           dockTarget.classList.remove(discStyles.dockPulse);
           void dockTarget.offsetWidth;
           dockTarget.classList.add(discStyles.dockPulse);
-          window.setTimeout(() => dockTarget.classList.remove(discStyles.dockPulse), 450);
+          pulseTimeoutRef.current = window.setTimeout(() => {
+            dockTarget.classList.remove(discStyles.dockPulse);
+            pulseTimeoutRef.current = null;
+          }, 450);
         }
 
         if (impactRef.current && dockRect) {
