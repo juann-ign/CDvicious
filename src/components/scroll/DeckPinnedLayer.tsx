@@ -7,19 +7,13 @@ import { NowPlayingCard } from "@/components/NowPlayingCard";
 import { LyricsBooklet } from "@/components/LyricsBooklet";
 import { useNowPlaying } from "@/hooks/useNowPlaying";
 import { useDominantColor } from "@/hooks/useDominantColor";
+import { useSpotifyPlayer } from "@/components/SpotifyPlayerProvider";
 import pageStyles from "@/app/page.module.css";
 import styles from "./DeckPinnedLayer.module.css";
 
 export function DeckPinnedLayer() {
-  const [authenticated, setAuthenticated] = useState<boolean | null>(null);
+  const { authenticated } = useSpotifyPlayer();
   const [deckInteractive, setDeckInteractive] = useState(true);
-
-  useEffect(() => {
-    fetch("/api/auth/session")
-      .then((res) => res.json())
-      .then((data) => setAuthenticated(data.authenticated))
-      .catch(() => setAuthenticated(false));
-  }, []);
 
   useEffect(() => {
     const overlay = document.querySelector<HTMLElement>("[data-rail-overlay]");
@@ -33,7 +27,10 @@ export function DeckPinnedLayer() {
 
     update();
     const observer = new MutationObserver(update);
-    observer.observe(railRoot, { attributes: true, attributeFilter: ["data-deck-interactive"] });
+    observer.observe(railRoot, {
+      attributes: true,
+      attributeFilter: ["data-deck-interactive"],
+    });
 
     return () => observer.disconnect();
   }, []);

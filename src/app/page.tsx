@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type CSSProperties, Suspense, useCallback } from "react";
+import { useEffect, type CSSProperties, Suspense, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { UserProfileChip } from "@/components/UserProfileChip";
 import { Disc } from "@/components/Disc";
@@ -17,47 +17,39 @@ import styles from "./page.module.css";
 const RAIL_ENABLED = process.env.NEXT_PUBLIC_ENABLE_RAIL === "1";
 
 function HomeContent() {
-  const [authenticated, setAuthenticated] = useState<boolean | null>(null);
+  const { deviceId, isReady, authenticated } = useSpotifyPlayer();
   const [isBookletOpen, setIsBookletOpen] = useState(false);
   const searchParams = useSearchParams();
   const albumId = searchParams.get("album");
-  const { deviceId, isReady } = useSpotifyPlayer();
-
-  useEffect(() => {
-    fetch("/api/auth/session")
-      .then((res) => res.json())
-      .then((d) => setAuthenticated(d.authenticated));
-  }, []);
-
-  const loadAlbumToDeck = useCallback(
-    async (uri: string) => {
-      if (!deviceId || !isReady) return;
-      try {
-        await fetch("/api/play", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ uri, deviceId }),
-        });
-      } catch (err) {
-        console.error("Error al iniciar reproducción:", err);
-      }
-    },
-    [deviceId, isReady],
-  );
 
   useEffect(() => {
     if (!albumId || !deviceId || !isReady || authenticated !== true) return;
     const albumUri = albumId.startsWith("spotify:album:")
       ? albumId
       : `spotify:album:${albumId}`;
-    loadAlbumToDeck(albumUri);
-  }, [albumId, deviceId, isReady, authenticated, loadAlbumToDeck]);
+
+    void fetch("/api/play", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ uri: albumUri, deviceId }),
+    }).catch((error) => {
+      console.error("Error al iniciar reproducción:", error);
+    });
+  }, [albumId, deviceId, isReady, authenticated]);
 
   const handleLoadAlbumFromCrate = useCallback(
     (album: AlbumItem) => {
-      loadAlbumToDeck(album.uri);
+      if (!deviceId || !isReady) return;
+
+      void fetch("/api/play", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ uri: album.uri, deviceId }),
+      }).catch((error) => {
+        console.error("Error al iniciar reproducción:", error);
+      });
     },
-    [loadAlbumToDeck],
+    [deviceId, isReady],
   );
 
   const { data, error } = useNowPlaying(
