@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
-import { getValidAccessToken } from "@/lib/session";
+import { getSession, getValidAccessToken } from "@/lib/session";
 import { fetchUserProfile, SpotifyApiError } from "@/lib/spotify";
 import type { UserProfile } from "@/types/spotify";
 
@@ -18,8 +18,8 @@ function cacheKey(accessToken: string) {
   return createHash("sha256").update(accessToken).digest("hex");
 }
 
-async function getCachedProfile(accessToken: string) {
-  const key = cacheKey(accessToken);
+async function getCachedProfile(accessToken: string, refreshToken: string) {
+  const key = cacheKey(refreshToken);
   const cached = profileCache.get(key);
 
   if (cached && cached.expiresAt > Date.now()) {
@@ -49,6 +49,12 @@ async function getCachedProfile(accessToken: string) {
 }
 
 export async function GET() {
+  const session = await getSession();
+
+  if (!session?.refreshToken) {
+    return NextResponse.json({ error: "no_session" }, { status: 401 });
+  }
+
   const accessToken = await getValidAccessToken();
 
   if (!accessToken) {
@@ -56,7 +62,7 @@ export async function GET() {
   }
 
   try {
-    const profile = await getCachedProfile(accessToken);
+    const profile = await getCachedProfile(accessToken, session.refreshToken);
     return NextResponse.json(profile, {
       headers: { "Cache-Control": "no-store" },
     });
