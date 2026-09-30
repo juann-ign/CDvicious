@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRail } from "@/components/scroll/RailContext";
 import { JewelCaseDetailModal } from "./JewelCaseDetailModal";
 import { RailFlyingDisc } from "./RailFlyingDisc";
@@ -13,34 +13,114 @@ const SHELF_COUNT = 18;
 export function CrateChapter() {
   const { stop, start } = useRail();
   const [albums, setAlbums] = useState<AlbumItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [rateLimitSeconds, setRateLimitSeconds] = useState<number | null>(null);
+  const [isNearChapter, setIsNearChapter] = useState(false);
   const [selected, setSelected] = useState<AlbumItem | null>(null);
   const [flight, setFlight] = useState<{
     album: AlbumItem;
     originRect: DOMRect;
   } | null>(null);
+  const chapterRef = useRef<HTMLDivElement>(null);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const countdownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
+    const chapter = chapterRef.current;
+    const wrapper = chapter?.closest<HTMLElement>('[aria-label="Horizontal rail"]');
+
+    if (!chapter || !wrapper) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsNearChapter(
+          entry.isIntersecting && entry.intersectionRatio >= 0.55,
+        );
+      },
+      { root: wrapper, threshold: [0, 0.55, 1] },
+    );
+
+    observer.observe(chapter);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!isNearChapter) return;
+
     let cancelled = false;
 
-    fetch("/api/collection?includeGenres=0")
-      .then((res) => (res.ok ? res.json() : []))
-      .then((data) => {
-        if (!cancelled && Array.isArray(data)) {
-          setAlbums(data);
+    const clearTimers = () => {
+      if (retryTimerRef.current !== null) {
+        clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = null;
+      }
+
+      if (countdownTimerRef.current !== null) {
+        clearInterval(countdownTimerRef.current);
+        countdownTimerRef.current = null;
+      }
+    };
+
+    const load = async () => {
+      setLoading(true);
+
+      try {
+        const res = await fetch("/api/collection?includeGenres=0", {
+          cache: "no-store",
+        });
+
+        if (res.status === 429) {
+          const retryAfter = Number(res.headers.get("retry-after") ?? "60");
+          const seconds =
+            Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : 60;
+          let remaining = seconds;
+
+          setLoading(false);
+          setRateLimitSeconds(remaining);
+          clearTimers();
+
+          countdownTimerRef.current = setInterval(() => {
+            remaining = Math.max(0, remaining - 1);
+            setRateLimitSeconds(remaining);
+            if (remaining === 0) {
+              clearInterval(countdownTimerRef.current!);
+              countdownTimerRef.current = null;
+            }
+          }, 1000);
+
+          retryTimerRef.current = setTimeout(() => {
+            retryTimerRef.current = null;
+            setRateLimitSeconds(null);
+            void load();
+          }, seconds * 1000);
+          return;
         }
-      })
-      .catch(() => undefined)
-      .finally(() => {
-        if (!cancelled) {
+
+        if (!res.ok) {
+          setLoading(false);
+          return;
+        }
+
+        const data = await res.json();
+
+        if (!cancelled && Array.isArray(data)) {
+          clearTimers();
+          setAlbums(data);
+          setRateLimitSeconds(null);
           setLoading(false);
         }
-      });
+      } catch {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    void load();
 
     return () => {
       cancelled = true;
+      clearTimers();
     };
-  }, []);
+  }, [isNearChapter]);
 
   const handleGrabStart = useCallback(() => {
     stop();
@@ -68,10 +148,15 @@ export function CrateChapter() {
     setFlight(null);
   }, []);
 
-  const statusLabel = loading ? "INDEXANDO..." : albums.length + " DISCS";
+  const statusLabel =
+    rateLimitSeconds !== null
+      ? "RATE LIMITED / RETRY IN " + rateLimitSeconds + "s"
+      : loading
+        ? "INDEXANDO..."
+        : albums.length + " DISCS";
 
   return (
-    <div className={styles.chapter}>
+    <div ref={chapterRef} className={styles.chapter}>
       <header className={styles.header}>
         <div>
           <span className={styles.kicker}>CAP.03 / EPIC C</span>
