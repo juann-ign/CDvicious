@@ -110,12 +110,8 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
     };
 
     const updateRailProgress = (scroll: number) => {
-      const {
-        splitStart,
-        splitDistance,
-        hideStart,
-        hideDistance,
-      } = chapterMetricsRef.current;
+      const { splitStart, splitDistance, hideStart, hideDistance } =
+        chapterMetricsRef.current;
 
       const splitProgress = Math.min(
         1,
@@ -126,7 +122,10 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
         Math.max(0, (scroll - hideStart) / hideDistance),
       );
 
-      const viewportWidth = Math.max(1, wrapper.clientWidth || window.innerWidth);
+      const viewportWidth = Math.max(
+        1,
+        wrapper.clientWidth || window.innerWidth,
+      );
       const maxChapterIndex = Math.max(0, content.children.length - 1);
       const activeChapterIndex = Math.min(
         maxChapterIndex,
@@ -138,8 +137,7 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
       root.dataset.splitActive = splitProgress > 0.05 ? "true" : "false";
       root.dataset.deckHidden = hideDeckProgress >= 0.98 ? "true" : "false";
       root.dataset.chapter = String(activeChapterIndex);
-      root.dataset.deckInteractive =
-        activeChapterIndex < 2 ? "true" : "false";
+      root.dataset.deckInteractive = activeChapterIndex < 2 ? "true" : "false";
       document.documentElement.dataset.chapter = String(activeChapterIndex);
 
       Array.from(content.children).forEach((child, index) => {
