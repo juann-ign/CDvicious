@@ -6,7 +6,7 @@
 }
 @font-face {
   font-family: "Neon";
-  src: url("../../public/fonts/neon.woff2") format("woff2");
+  src: url("../../public/fonts/neon-fixed.woff2") format("woff2");
   font-weight: 400;
   font-style: normal;
 }

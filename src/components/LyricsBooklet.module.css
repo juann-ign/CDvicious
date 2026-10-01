@@ -724,12 +724,12 @@
   font-family: var(--font-display);
 
   font-size: var(--booklet-title-size);
-  font-weight: var(--weight-bold);
+  font-weight: 300;
 
   line-height: 1.08;
   letter-spacing: -0.2px;
 
-  color: #292824;
+  color: #000;
 }
 
 .bookletHeader span {
@@ -770,11 +770,11 @@
 
   font-family: var(--font-editorial);
 
-  font-size: 15px;
-  line-height: 1.18;
-  letter-spacing: -0.08px;
+  font-size: 16px;
+  line-height: 1;
+  letter-spacing: -0.1px;
 
-  color: #45433f;
+  color: #4e4c4c;
 
   text-rendering: optimizeLegibility;
 }
@@ -786,38 +786,29 @@
 .bookletPageNumberRight {
   position: absolute;
 
-  top: 12px;
-
+  top: 8px;
   z-index: 25;
 
   font-family: var(--font-ui);
 
-  font-size: 8px;
+  font-size: 12px;
   font-weight: var(--weight-bold);
 
   line-height: 1;
 
   letter-spacing: 1px;
 
-  color: rgba(67, 64, 59, 0.58);
+  color: rgba(94, 93, 91, 0.58);
 
   pointer-events: none;
 }
 
 .bookletPageNumberLeft {
-  left: 20px;
+  left: 12px;
 }
 
 .bookletPageNumberRight {
-  right: 20px;
-}
-
-/*
- * The first page already contains the title,
- * so its number stays deliberately quiet.
- */
-.bookletPageNumberLeft {
-  opacity: 0.55;
+  right: -8px;
 }
 
 /* =========================================================

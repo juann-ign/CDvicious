@@ -6,7 +6,11 @@
   background: transparent;
   border: none;
   padding: 0;
-  cursor: pointer;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+  touch-action: none;
   transform: rotate(var(--tilt));
   transform: translateY(-50px);
   transition: transform var(--transition-mechanical);

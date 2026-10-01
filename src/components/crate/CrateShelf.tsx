@@ -10,13 +10,20 @@ import styles from "./CrateShelf.module.css";
 interface CrateShelfProps {
   albums: AlbumItem[];
   onSelect: (album: AlbumItem) => void;
+  onGrabStart?: () => void;
+  onGrabEnd?: () => void;
 }
 
 const COPIES = 3;
 const GAP = 8;
 const MAX_PAGES = 6;
 
-export function CrateShelf({ albums, onSelect }: CrateShelfProps) {
+export function CrateShelf({
+  albums,
+  onSelect,
+  onGrabStart,
+  onGrabEnd,
+}: CrateShelfProps) {
   const [hovering, setHovering] = useState(false);
   const [driftEnabled, setDriftEnabled] = useState(true);
   const [length, setLength] = useState(0);
@@ -45,6 +52,8 @@ export function CrateShelf({ albums, onSelect }: CrateShelfProps) {
       paused: !driftEnabled || hovering || albums.length === 0,
       length,
       pages,
+      onGrabStart,
+      onGrabEnd,
     });
 
   if (albums.length === 0) return null;

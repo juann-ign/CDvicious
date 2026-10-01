@@ -78,6 +78,8 @@
 
 .stage {
   position: relative;
+  user-select: none;
+  -webkit-user-select: none;
   overflow: hidden;
   height: 256px;
   padding: var(--space-3) 0;
@@ -95,10 +97,17 @@
   position: absolute;
   inset: 0;
   cursor: grab;
-  touch-action: pan-y;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
 }
 
 .viewport.dragging {
+  cursor: grabbing;
+}
+
+.viewport.dragging .spine {
   cursor: grabbing;
 }
 

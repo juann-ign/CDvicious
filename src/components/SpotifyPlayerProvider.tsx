@@ -5,19 +5,22 @@ import {
   useContext,
   useEffect,
   useState,
-  ReactNode,
+  type ReactNode,
 } from "react";
+import { getClientAuthSession } from "@/lib/clientSession";
 
 interface SpotifyPlayerContextType {
   player: Spotify.Player | null;
   isReady: boolean;
   deviceId: string | null;
+  authenticated: boolean | null;
 }
 
 const SpotifyPlayerContext = createContext<SpotifyPlayerContextType>({
   player: null,
   isReady: false,
   deviceId: null,
+  authenticated: null,
 });
 
 export const useSpotifyPlayer = () => useContext(SpotifyPlayerContext);
@@ -27,22 +30,33 @@ export function SpotifyPlayerProvider({ children }: { children: ReactNode }) {
   const [isReady, setIsReady] = useState(false);
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [authenticated, setAuthenticated] = useState<boolean | null>(null);
 
   useEffect(() => {
-    fetch("/api/auth/session")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.authenticated && data.accessToken) {
-          setToken(data.accessToken);
-        }
+    let active = true;
+
+    getClientAuthSession()
+      .then((session) => {
+        if (!active) return;
+
+        setAuthenticated(session.authenticated);
+        setToken(session.authenticated ? session.accessToken : null);
       })
-      .catch(console.error);
+      .catch(() => {
+        if (!active) return;
+
+        setAuthenticated(false);
+        setToken(null);
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
     if (!token) return;
 
-    // 1. Definimos la función ANTES de cargar el script
     window.onSpotifyWebPlaybackSDKReady = () => {
       const spotifyPlayer = new window.Spotify.Player({
         name: "CDvicious Web Player",
@@ -77,14 +91,12 @@ export function SpotifyPlayerProvider({ children }: { children: ReactNode }) {
       setPlayer(spotifyPlayer);
     };
 
-    // 2. Inyectamos el script dinámicamente
     const script = document.createElement("script");
     script.src = "https://sdk.scdn.co/spotify-player.js";
     script.async = true;
     document.body.appendChild(script);
 
     return () => {
-      // Limpieza si el componente se desmonta
       if (document.body.contains(script)) {
         document.body.removeChild(script);
       }
@@ -92,7 +104,9 @@ export function SpotifyPlayerProvider({ children }: { children: ReactNode }) {
   }, [token]);
 
   return (
-    <SpotifyPlayerContext.Provider value={{ player, isReady, deviceId }}>
+    <SpotifyPlayerContext.Provider
+      value={{ player, isReady, deviceId, authenticated }}
+    >
       {children}
     </SpotifyPlayerContext.Provider>
   );
