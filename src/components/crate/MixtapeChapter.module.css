@@ -1,0 +1,347 @@
+.chapter {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 44px 5vw 26px;
+  overflow: hidden;
+  color: var(--color-text);
+  background:
+    linear-gradient(rgba(137, 233, 0, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(137, 233, 0, 0.018) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+.header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  flex: 0 0 auto;
+  margin-bottom: 18px;
+}
+
+.kicker {
+  display: block;
+  margin-bottom: 6px;
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-wide-2);
+  color: var(--color-text-muted);
+}
+
+.header h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(38px, 5vw, 76px);
+  line-height: 0.88;
+  letter-spacing: var(--tracking-display);
+  color: var(--color-text);
+  text-shadow: 0 0 18px rgba(137, 233, 0, 0.08);
+}
+
+.status,
+.sectionLabel,
+.sectionHint,
+.footer {
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-wide);
+}
+
+.status {
+  padding-bottom: 5px;
+  color: var(--color-phosphor);
+}
+
+.lab {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(340px, 0.8fr);
+  gap: 18px;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.selector,
+.queue {
+  min-width: 0;
+  min-height: 0;
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  background:
+    linear-gradient(180deg, rgba(34, 34, 34, 0.78), rgba(17, 17, 17, 0.88));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+}
+
+.sectionHead {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 12px;
+}
+
+.sectionLabel,
+.sectionHint {
+  color: var(--color-text-muted);
+}
+
+.sectionHead h3 {
+  margin: 5px 0 0;
+  font-family: var(--font-display);
+  font-size: clamp(18px, 1.8vw, 27px);
+  line-height: 0.95;
+  letter-spacing: 1.5px;
+}
+
+.sectionHint {
+  white-space: nowrap;
+  opacity: 0.7;
+}
+
+.albumGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: minmax(0, 1fr);
+  gap: 10px;
+  height: calc(100% - 52px);
+  min-height: 0;
+}
+
+.albumCard {
+  position: relative;
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr) 28px;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--color-border-subtle);
+  background: rgba(20, 20, 20, 0.84);
+}
+
+.cover,
+.queueThumb {
+  position: relative;
+  flex: 0 0 auto;
+  overflow: hidden;
+  background: var(--color-surface-dark);
+  border: 1px solid var(--color-border);
+}
+
+.cover {
+  aspect-ratio: 1;
+  width: 76px;
+}
+
+.queueThumb {
+  width: 42px;
+  height: 42px;
+}
+
+.coverImage {
+  object-fit: cover;
+}
+
+.albumInfo,
+.queueMeta {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.albumInfo strong,
+.queueMeta strong {
+  overflow: hidden;
+  color: var(--color-text);
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: var(--weight-bold);
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.albumInfo span,
+.queueMeta span {
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font-family: var(--font-ui);
+  font-size: 9px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.addButton,
+.removeButton,
+.clearButton,
+.spotifyButton {
+  appearance: none;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-family: var(--font-ui);
+  cursor: pointer;
+}
+
+.addButton {
+  width: 28px;
+  height: 28px;
+  font-size: 16px;
+}
+
+.addButton:hover:not(:disabled),
+.clearButton:hover:not(:disabled),
+.spotifyButton:hover:not(:disabled) {
+  border-color: var(--color-phosphor);
+  color: var(--color-phosphor);
+}
+
+.addButton:disabled,
+.clearButton:disabled,
+.spotifyButton:disabled {
+  opacity: 0.28;
+  cursor: not-allowed;
+}
+
+.queue {
+  display: flex;
+  flex-direction: column;
+}
+
+.queueList {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.queueEmpty {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 6px;
+  height: 100%;
+  min-height: 0;
+  color: var(--color-text-muted);
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-wide);
+  text-align: center;
+}
+
+.queueEmptyMark {
+  font-size: 24px;
+  line-height: 1;
+  color: var(--color-phosphor);
+}
+
+.queueEmpty small {
+  font-size: 8px;
+  letter-spacing: var(--tracking-wide-2);
+}
+
+.queueRow {
+  display: grid;
+  grid-template-columns: 28px 42px minmax(0, 1fr) 28px;
+  align-items: center;
+  gap: 9px;
+  min-height: 52px;
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.queueRow:last-child {
+  border-bottom: 0;
+}
+
+.queueIndex {
+  color: var(--color-phosphor);
+  font-family: var(--font-ui);
+  font-size: 9px;
+  letter-spacing: var(--tracking-wide);
+}
+
+.removeButton {
+  width: 28px;
+  height: 28px;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.clearButton {
+  min-height: 27px;
+  padding: 0 10px;
+  font-size: 9px;
+  letter-spacing: var(--tracking-wide);
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex: 0 0 auto;
+  padding-top: 10px;
+  color: var(--color-text-muted);
+}
+
+.spotifyButton {
+  min-height: 28px;
+  padding: 0 12px;
+  font-size: 9px;
+  letter-spacing: var(--tracking-wide);
+}
+
+.emptyState {
+  display: grid;
+  grid-column: 1 / -1;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  color: var(--color-text-muted);
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-wide);
+}
+
+@media (max-width: 1100px) {
+  .lab {
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 0.85fr);
+    gap: 12px;
+  }
+
+  .selector,
+  .queue {
+    padding: 12px;
+  }
+
+  .albumCard {
+    grid-template-columns: 58px minmax(0, 1fr) 26px;
+    gap: 8px;
+  }
+
+  .cover {
+    width: 58px;
+  }
+}
+
+@media (max-width: 900px) {
+  .chapter {
+    padding: 36px 24px 22px;
+  }
+
+  .albumGrid {
+    gap: 7px;
+  }
+
+  .albumInfo span {
+    display: none;
+  }
+}

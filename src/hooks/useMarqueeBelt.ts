@@ -7,6 +7,8 @@ interface Options {
   paused?: boolean;
   length: number;
   pages?: number;
+  onGrabStart?: () => void;
+  onGrabEnd?: () => void;
 }
 
 const DRAG_THRESHOLD_PX = 6;
@@ -23,6 +25,8 @@ export function useMarqueeBelt({
   paused = false,
   length,
   pages = 1,
+  onGrabStart,
+  onGrabEnd,
 }: Options) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const trackRef = useRef<HTMLDivElement | null>(null);
@@ -41,7 +45,12 @@ export function useMarqueeBelt({
   const speedRef = useRef(speed);
   const lenRef = useRef(length);
   const pagesRef = useRef(pages);
+  const onGrabStartRef = useRef(onGrabStart);
+  const onGrabEndRef = useRef(onGrabEnd);
+
   pausedRef.current = paused;
+  onGrabStartRef.current = onGrabStart;
+  onGrabEndRef.current = onGrabEnd;
   speedRef.current = speed;
   lenRef.current = length;
   pagesRef.current = pages;
@@ -75,7 +84,8 @@ export function useMarqueeBelt({
       offset.current = ((offset.current % len) + len) % len;
 
       if (trackRef.current) {
-        trackRef.current.style.transform = `translate3d(${-offset.current}px,0,0)`;
+        trackRef.current.style.transform =
+          "translate3d(" + -offset.current + "px,0,0)";
       }
 
       const p = Math.min(
@@ -114,20 +124,52 @@ export function useMarqueeBelt({
       pointerId.current = e.pointerId;
       lastX.current = e.clientX;
       target.current = null;
-      // OJO: no capturamos el puntero acá todavía. Ver comentario en `move`.
+    };
+
+    const finish = (snap: boolean) => {
+      if (!dragging.current) return;
+
+      const wasCaptured = captured.current;
+      const currentPointerId = pointerId.current;
+
+      if (wasCaptured && snap) {
+        const len = lenRef.current;
+        const nPages = pagesRef.current;
+
+        if (len > 0) {
+          const stop =
+            Math.round((offset.current / len) * nPages) * (len / nPages);
+          target.current = offset.current + ring(offset.current, stop, len);
+        }
+      }
+
+      dragging.current = false;
+      captured.current = false;
+      pointerId.current = null;
+      setIsDragging(false);
+
+      if (wasCaptured) {
+        onGrabEndRef.current?.();
+      }
+
+      if (
+        wasCaptured &&
+        currentPointerId !== null &&
+        el.hasPointerCapture?.(currentPointerId)
+      ) {
+        el.releasePointerCapture(currentPointerId);
+      }
     };
 
     const move = (e: PointerEvent) => {
       if (!dragging.current) return;
       const dx = e.clientX - lastX.current;
 
-      // Solo capturamos el puntero si confirmamos drag real (>6px). Capturar
-      // de entrada en pointerdown retargea el `click` resultante al
-      // contenedor en vez del jewel case debajo del cursor — es el bug que
-      // ya resolvimos una vez, no reintroducirlo.
       if (!captured.current && Math.abs(dx) > DRAG_THRESHOLD_PX) {
         captured.current = true;
         setIsDragging(true);
+        onGrabStartRef.current?.();
+
         if (pointerId.current !== null) {
           el.setPointerCapture?.(pointerId.current);
         }
@@ -140,30 +182,22 @@ export function useMarqueeBelt({
       velocity.current = -dx * 8;
     };
 
-    const up = () => {
-      if (captured.current && pointerId.current !== null) {
-        el.releasePointerCapture?.(pointerId.current);
-      }
-      if (captured.current) {
-        const len = lenRef.current;
-        const nPages = pagesRef.current;
-        const stop =
-          Math.round((offset.current / len) * nPages) * (len / nPages);
-        target.current = offset.current + ring(offset.current, stop, len);
-      }
-      dragging.current = false;
-      captured.current = false;
-      pointerId.current = null;
-      setIsDragging(false);
-    };
+    const up = () => finish(true);
+    const cancel = () => finish(false);
+    const lostCapture = () => finish(false);
 
     el.addEventListener("pointerdown", down);
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", cancel);
+    el.addEventListener("lostpointercapture", lostCapture);
+
     return () => {
       el.removeEventListener("pointerdown", down);
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", cancel);
+      el.removeEventListener("lostpointercapture", lostCapture);
     };
   }, []);
 

@@ -1,0 +1,434 @@
+[
+  {
+    "id": "mock-album-01",
+    "name": "Neon Rooms",
+    "uri": "spotify:album:mock-01",
+    "release_date": "2024",
+    "label": "CDvicious Demo Label",
+    "images": [
+      {
+        "url": "https://placehold.co/600x600/111111/ffffff.png?text=01",
+        "width": 600,
+        "height": 600
+      }
+    ],
+    "artists": [
+      {
+        "id": "mock-artist-01",
+        "name": "Vértice Magnético"
+      }
+    ],
+    "genres": [
+      "indie",
+      "electronic"
+    ]
+  },
+  {
+    "id": "mock-album-02",
+    "name": "Nocturnal FM",
+    "uri": "spotify:album:mock-02",
+    "release_date": "2023",
+    "label": "CDvicious Demo Label",
+    "images": [
+      {
+        "url": "https://placehold.co/600x600/111111/ffffff.png?text=02",
+        "width": 600,
+        "height": 600
+      }
+    ],
+    "artists": [
+      {
+        "id": "mock-artist-02",
+        "name": "Satélite Sur"
+      }
+    ],
+    "genres": [
+      "electronic",
+      "ambient"
+    ]
+  },
+  {
+    "id": "mock-album-03",
+    "name": "Ciudad de Vidrio",
+    "uri": "spotify:album:mock-03",
+    "release_date": "2022",
+    "label": "CDvicious Demo Label",
+    "images": [
+      {
+        "url": "https://placehold.co/600x600/111111/ffffff.png?text=03",
+        "width": 600,
+        "height": 600
+      }
+    ],
+    "artists": [
+      {
+        "id": "mock-artist-03",
+        "name": "Los Inerciales"
+      }
+    ],
+    "genres": [
+      "post-punk",
+      "rock"
+    ]
+  },
+  {
+    "id": "mock-album-04",
+    "name": "Static Hearts",
+    "uri": "spotify:album:mock-04",
+    "release_date": "2021",
+    "label": "CDvicious Demo Label",
+    "images": [
+      {
+        "url": "https://placehold.co/600x600/111111/ffffff.png?text=04",
+        "width": 600,
+        "height": 600
+      }
+    ],
+    "artists": [
+      {
+        "id": "mock-artist-04",
+        "name": "Signal Ghosts"
+      }
+    ],
+    "genres": [
+      "shoegaze",
+      "indie"
+    ]
+  },
+  {
+    "id": "mock-album-05",
+    "name": "Luz de Invierno",
+    "uri": "spotify:album:mock-05",
+    "release_date": "2020",
+    "label": "CDvicious Demo Label",
+    "images": [
+      {
+        "url": "https://placehold.co/600x600/111111/ffffff.png?text=05",
+        "width": 600,
+        "height": 600
+      }
+    ],
+    "artists": [
+      {
+        "id": "mock-artist-05",
+        "name": "Río Eléctrico"
+      }
+    ],
+    "genres": [
+      "rock",
+      "alternative"
+    ]
+  },
+  {
+    "id": "mock-album-06",
+    "name": "Midnight Archive",
+    "uri": "spotify:album:mock-06",
+    "release_date": "2019",
+    "label": "CDvicious Demo Label",
+    "images": [
+      {
+        "url": "https://placehold.co/600x600/111111/ffffff.png?text=06",
+        "width": 600,
+        "height": 600
+      }
+    ],
+    "artists": [
+      {
+        "id": "mock-artist-06",
+        "name": "Soft Machines"
+      }
+    ],
+    "genres": [
+      "indie",
+      "dream-pop"
+    ]
+  },
+  {
+    "id": "mock-album-07",
+    "name": "Pulsar Motel",
+    "uri": "spotify:album:mock-07",
+    "release_date": "2018",
+    "label": "CDvicious Demo Label",
+    "images": [
+      {
+        "url": "https://placehold.co/600x600/111111/ffffff.png?text=07",
+        "width": 600,
+        "height": 600
+      }
+    ],
+    "artists": [
+      {
+        "id": "mock-artist-07",
+        "name": "Norte Magnético"
+      }
+    ],
+    "genres": [
+      "electronic",
+      "synth-pop"
+    ]
+  },
+  {
+    "id": "mock-album-08",
+    "name": "Ficciones",
+    "uri": "spotify:album:mock-08",
+    "release_date": "2017",
+    "label": "CDvicious Demo Label",
+    "images": [
+      {
+        "url": "https://placehold.co/600x600/111111/ffffff.png?text=08",
+        "width": 600,
+        "height": 600
+      }
+    ],
+    "artists": [
+      {
+        "id": "mock-artist-08",
+        "name": "Habitación 9"
+      }
+    ],
+    "genres": [
+      "indie",
+      "alternative"
+    ]
+  },
+  {
+    "id": "mock-album-09",
+    "name": "Circuitos Rotos",
+    "uri": "spotify:album:mock-09",
+    "release_date": "2016",
+    "label": "CDvicious Demo Label",
+    "images": [
+      {
+        "url": "https://placehold.co/600x600/111111/ffffff.png?text=09",
+        "width": 600,
+        "height": 600
+      }
+    ],
+    "artists": [
+      {
+        "id": "mock-artist-09",
+        "name": "Cable Rojo"
+      }
+    ],
+    "genres": [
+      "post-punk",
+      "rock"
+    ]
+  },
+  {
+    "id": "mock-album-10",
+    "name": "Velvet Transit",
+    "uri": "spotify:album:mock-10",
+    "release_date": "2015",
+    "label": "CDvicious Demo Label",
+    "images": [
+      {
+        "url": "https://placehold.co/600x600/111111/ffffff.png?text=10",
+        "width": 600,
+        "height": 600
+      }
+    ],
+    "artists": [
+      {
+        "id": "mock-artist-10",
+        "name": "The Afterhours"
+      }
+    ],
+    "genres": [
+      "britpop",
+      "indie"
+    ]
+  },
+  {
+    "id": "mock-album-11",
+    "name": "Mar de Fondo",
+    "uri": "spotify:album:mock-11",
+    "release_date": "2014",
+    "label": "CDvicious Demo Label",
+    "images": [
+      {
+        "url": "https://placehold.co/600x600/111111/ffffff.png?text=11",
+        "width": 600,
+        "height": 600
+      }
+    ],
+    "artists": [
+      {
+        "id": "mock-artist-11",
+        "name": "Bajo Control"
+      }
+    ],
+    "genres": [
+      "rock",
+      "alternative"
+    ]
+  },
+  {
+    "id": "mock-album-12",
+    "name": "Frequencies",
+    "uri": "spotify:album:mock-12",
+    "release_date": "2013",
+    "label": "CDvicious Demo Label",
+    "images": [
+      {
+        "url": "https://placehold.co/600x600/111111/ffffff.png?text=12",
+        "width": 600,
+        "height": 600
+      }
+    ],
+    "artists": [
+      {
+        "id": "mock-artist-12",
+        "name": "Blue Static"
+      }
+    ],
+    "genres": [
+      "shoegaze",
+      "ambient"
+    ]
+  },
+  {
+    "id": "mock-album-13",
+    "name": "Horas Muertas",
+    "uri": "spotify:album:mock-13",
+    "release_date": "2011",
+    "label": "CDvicious Demo Label",
+    "images": [
+      {
+        "url": "https://placehold.co/600x600/111111/ffffff.png?text=13",
+        "width": 600,
+        "height": 600
+      }
+    ],
+    "artists": [
+      {
+        "id": "mock-artist-13",
+        "name": "Niebla Club"
+      }
+    ],
+    "genres": [
+      "post-punk",
+      "indie"
+    ]
+  },
+  {
+    "id": "mock-album-14",
+    "name": "Satellite Youth",
+    "uri": "spotify:album:mock-14",
+    "release_date": "2010",
+    "label": "CDvicious Demo Label",
+    "images": [
+      {
+        "url": "https://placehold.co/600x600/111111/ffffff.png?text=14",
+        "width": 600,
+        "height": 600
+      }
+    ],
+    "artists": [
+      {
+        "id": "mock-artist-14",
+        "name": "Plastic Cinema"
+      }
+    ],
+    "genres": [
+      "britpop",
+      "alternative"
+    ]
+  },
+  {
+    "id": "mock-album-15",
+    "name": "Archivo Cero",
+    "uri": "spotify:album:mock-15",
+    "release_date": "2008",
+    "label": "CDvicious Demo Label",
+    "images": [
+      {
+        "url": "https://placehold.co/600x600/111111/ffffff.png?text=15",
+        "width": 600,
+        "height": 600
+      }
+    ],
+    "artists": [
+      {
+        "id": "mock-artist-15",
+        "name": "Los Diagramas"
+      }
+    ],
+    "genres": [
+      "rock",
+      "indie"
+    ]
+  },
+  {
+    "id": "mock-album-16",
+    "name": "Signals in the Dark",
+    "uri": "spotify:album:mock-16",
+    "release_date": "2006",
+    "label": "CDvicious Demo Label",
+    "images": [
+      {
+        "url": "https://placehold.co/600x600/111111/ffffff.png?text=16",
+        "width": 600,
+        "height": 600
+      }
+    ],
+    "artists": [
+      {
+        "id": "mock-artist-16",
+        "name": "Night Operators"
+      }
+    ],
+    "genres": [
+      "electronic",
+      "alternative"
+    ]
+  },
+  {
+    "id": "mock-album-17",
+    "name": "Terminal Norte",
+    "uri": "spotify:album:mock-17",
+    "release_date": "2004",
+    "label": "CDvicious Demo Label",
+    "images": [
+      {
+        "url": "https://placehold.co/600x600/111111/ffffff.png?text=17",
+        "width": 600,
+        "height": 600
+      }
+    ],
+    "artists": [
+      {
+        "id": "mock-artist-17",
+        "name": "Autopista 3"
+      }
+    ],
+    "genres": [
+      "rock",
+      "post-punk"
+    ]
+  },
+  {
+    "id": "mock-album-18",
+    "name": "Polaroid Summer",
+    "uri": "spotify:album:mock-18",
+    "release_date": "2001",
+    "label": "CDvicious Demo Label",
+    "images": [
+      {
+        "url": "https://placehold.co/600x600/111111/ffffff.png?text=18",
+        "width": 600,
+        "height": 600
+      }
+    ],
+    "artists": [
+      {
+        "id": "mock-artist-18",
+        "name": "Static Parade"
+      }
+    ],
+    "genres": [
+      "indie",
+      "dream-pop"
+    ]
+  }
+]

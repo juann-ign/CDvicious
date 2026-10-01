@@ -1,0 +1,137 @@
+.disc {
+  position: fixed;
+  z-index: calc(var(--z-modal) + 120);
+  border-radius: 50%;
+  overflow: hidden;
+  pointer-events: none;
+  transform-style: preserve-3d;
+  will-change: left, top, width, height, transform, opacity;
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.58),
+    0 0 28px -6px var(--color-phosphor-glow);
+}
+
+.spinner {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  transform-origin: center;
+  will-change: transform;
+}
+
+.discInner {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background-size: cover;
+  background-position: center;
+  filter: saturate(1.06) contrast(1.02);
+}
+
+.sheen {
+  position: absolute;
+  inset: -12%;
+  border-radius: 50%;
+  background:
+    linear-gradient(
+      118deg,
+      transparent 29%,
+      rgba(255, 255, 255, 0.4) 48%,
+      transparent 63%
+    ),
+    conic-gradient(
+      from 12deg,
+      rgba(70, 215, 255, 0.08),
+      rgba(255, 167, 216, 0.07),
+      rgba(255, 220, 146, 0.07),
+      rgba(141, 255, 211, 0.07),
+      rgba(70, 215, 255, 0.08)
+    );
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+.grooves {
+  position: absolute;
+  inset: 5%;
+  border-radius: 50%;
+  background: repeating-radial-gradient(
+    circle at center,
+    rgba(255, 255, 255, 0.055) 0 1px,
+    transparent 1px 3px
+  );
+  mix-blend-mode: overlay;
+  pointer-events: none;
+}
+
+.hub {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 20%;
+  height: 20%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: var(--color-bg);
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.2),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.6);
+}
+
+.impact {
+  position: fixed;
+  z-index: calc(var(--z-modal) + 121);
+  left: 0;
+  top: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
+.impactRing {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  transform: translate(-50%, -50%);
+  border: 1px solid var(--color-phosphor);
+  border-radius: 50%;
+  opacity: 0;
+}
+
+.impactFlash {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 28px;
+  height: 28px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.46) 0%,
+    rgba(148, 255, 0, 0.16) 26%,
+    transparent 74%
+  );
+  opacity: 0;
+}
+
+.impactParticle {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--color-phosphor);
+  box-shadow: 0 0 6px var(--color-phosphor-glow);
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .disc {
+    animation: none;
+  }
+}

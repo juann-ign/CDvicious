@@ -1,11 +1,13 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import type { CSSProperties } from "react";
 import type { AlbumItem, AlbumTrack } from "@/types/crate";
 import { useDiscSurfaceDrag } from "@/hooks/useDiscSurfaceDrag";
+import { useSpotifyPlayer } from "@/components/SpotifyPlayerProvider";
+import { RailContext } from "@/components/scroll/RailContext";
 import styles from "./JewelCaseDetailModal.module.css";
 import polishStyles from "./JewelCaseDetailModal.polish.module.css";
 import densityStyles from "./JewelCaseDetailModal.density.module.css";
@@ -26,6 +28,7 @@ interface JewelCaseDetailModalProps {
   album: AlbumItem;
   onClose: () => void;
   onLoad: (originEl: HTMLElement) => void;
+  onPlay?: (originEl: HTMLElement) => void;
 }
 
 interface ReleaseMeta {
@@ -41,6 +44,7 @@ export function JewelCaseDetailModal({
   album,
   onClose,
   onLoad,
+  onPlay,
 }: JewelCaseDetailModalProps) {
   const [tracks, setTracks] = useState<AlbumTrack[] | null>(null);
   const [loading, setLoading] = useState(true);
@@ -55,6 +59,9 @@ export function JewelCaseDetailModal({
     width: number;
     height: number;
   } | null>(null);
+  const rail = useContext(RailContext);
+  const { deviceId, isReady } = useSpotifyPlayer();
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [releaseMeta, setReleaseMeta] = useState<ReleaseMeta>(() => ({
     year: album.release_date?.slice(0, 4),
     label: album.label,
@@ -65,6 +72,7 @@ export function JewelCaseDetailModal({
   const launchDiscRef = useRef<HTMLDivElement>(null);
   const launchSpinnerRef = useRef<HTMLDivElement>(null);
   const pendingLaunchRef = useRef(false);
+  const pendingPlayRef = useRef(false);
   const launchTimelineRef = useRef<gsap.core.Timeline | null>(null);
   const handedOffRef = useRef(false);
   const {
@@ -78,6 +86,20 @@ export function JewelCaseDetailModal({
 
   useEffect(() => {
     let cancelled = false;
+
+    if (process.env.NEXT_PUBLIC_SPOTIFY_MOCK === "1") {
+      setTracks(
+        Array.from({ length: 10 }, (_, index) => ({
+          name: "DEMO TRACK " + String(index + 1).padStart(2, "0"),
+          duration_ms: 150000 + index * 9000,
+        })),
+      );
+      setLoading(false);
+      return () => {
+        cancelled = true;
+      };
+    }
+
     setLoading(true);
     fetch(`/api/album/${album.id}/tracks`)
       .then((res) => res.json())
@@ -99,10 +121,17 @@ export function JewelCaseDetailModal({
     let cancelled = false;
     setReleaseMeta({
       year: album.release_date?.slice(0, 4),
-      label: album.label,
+      label: album.label ?? "CDvicious Demo Label",
       format: "COMPACT DISC",
+      country: "AR",
       tags: album.genres ?? [],
     });
+
+    if (process.env.NEXT_PUBLIC_SPOTIFY_MOCK === "1") {
+      return () => {
+        cancelled = true;
+      };
+    }
 
     const query = new URLSearchParams({
       artist: album.artists.map((artist) => artist.name).join(", "),
@@ -130,9 +159,21 @@ export function JewelCaseDetailModal({
   }, [album.id, album.artists, album.name, album.release_date, album.label, album.genres]);
 
   useEffect(() => {
-    const raf = requestAnimationFrame(() => setIsOpen(true));
-    return () => cancelAnimationFrame(raf);
-  }, []);
+    rail?.stop();
+    const previousActive = document.activeElement as HTMLElement | null;
+    const raf = requestAnimationFrame(() => {
+      setIsOpen(true);
+      closeButtonRef.current?.focus();
+    });
+
+    return () => {
+      cancelAnimationFrame(raf);
+      rail?.start();
+      if (previousActive && document.contains(previousActive)) {
+        previousActive.focus();
+      }
+    };
+  }, [rail]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) =>
@@ -164,27 +205,58 @@ export function JewelCaseDetailModal({
     setIsLifting(true);
   }, [isLaunching]);
 
-  const handleLoad = () => {
+  const beginPlay = useCallback(() => {
     if (isLaunching) return;
 
-    if (!isCaseOpen) {
-      pendingLaunchRef.current = true;
-      setIsCaseOpen(true);
+    const disc = discRef.current;
+    if (!disc) return;
+
+    if (onPlay) {
+      if (deviceId && isReady) {
+        fetch("/api/play", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ uri: album.uri, deviceId }),
+        }).catch((error) => {
+          console.error("Error al iniciar reproducción:", error);
+        });
+      }
+
+      onPlay(disc);
+      onClose();
       return;
     }
 
     beginLaunch();
-  };
+  }, [album.uri, beginLaunch, deviceId, isLaunching, isReady, onClose, onPlay]);
+
+  const handlePlay = useCallback(() => {
+    if (isLaunching) return;
+
+    if (!isCaseOpen) {
+      pendingPlayRef.current = true;
+      setIsCaseOpen(true);
+      return;
+    }
+
+    beginPlay();
+  }, [beginPlay, isCaseOpen, isLaunching]);
 
   useEffect(() => {
-    if (!isCaseOpen || !pendingLaunchRef.current || isLaunching) return;
+    if (!isCaseOpen || isLaunching) return;
 
-    pendingLaunchRef.current = false;
+    if (pendingLaunchRef.current) {
+      pendingLaunchRef.current = false;
+      const timer = window.setTimeout(beginLaunch, CASE_OPEN_DURATION_MS);
+      return () => window.clearTimeout(timer);
+    }
 
-    const timer = window.setTimeout(beginLaunch, CASE_OPEN_DURATION_MS);
-
-    return () => window.clearTimeout(timer);
-  }, [beginLaunch, isCaseOpen, isLaunching]);
+    if (pendingPlayRef.current) {
+      pendingPlayRef.current = false;
+      const timer = window.setTimeout(beginPlay, CASE_OPEN_DURATION_MS);
+      return () => window.clearTimeout(timer);
+    }
+  }, [beginLaunch, beginPlay, isCaseOpen, isLaunching]);
 
   useEffect(() => {
     if (
@@ -288,6 +360,7 @@ export function JewelCaseDetailModal({
     return () => {
       launchTimelineRef.current?.kill();
       pendingLaunchRef.current = false;
+      pendingPlayRef.current = false;
     };
   }, []);
 
@@ -333,6 +406,7 @@ export function JewelCaseDetailModal({
           </div>
           <button
             type="button"
+            ref={closeButtonRef}
             className={styles.closeBtn}
             onClick={() => !isLaunching && onClose()}
             disabled={isLaunching}
@@ -637,7 +711,7 @@ export function JewelCaseDetailModal({
           <button
             type="button"
             className={polishStyles.vfdMainAction}
-            onClick={handleLoad}
+            onClick={handlePlay}
             disabled={isLaunching}
             aria-label={`Reproducir ${album.name}`}
           >

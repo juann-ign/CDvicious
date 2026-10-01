@@ -24,10 +24,10 @@
 
 .modalPolish > header h2 {
   max-width: 720px;
-  font-size: clamp(17px, 1.9vw, 24px);
-  line-height: 1;
+  font-size: clamp(17px, 1.9vw, 26px);
+  line-height: 1.25;
   font-weight: 100;
-  letter-spacing: 2px;
+  letter-spacing: 3px;
   text-wrap: balance;
 }
 
