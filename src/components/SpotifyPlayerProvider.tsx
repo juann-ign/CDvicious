@@ -57,8 +57,17 @@ export function SpotifyPlayerProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!token) return;
 
+    let active = true;
+    let spotifyPlayer: Spotify.Player | null = null;
+
+    const handlePlayerStateChanged = () => {
+      window.dispatchEvent(new Event("cdvicious:player_state_changed"));
+    };
+
     window.onSpotifyWebPlaybackSDKReady = () => {
-      const spotifyPlayer = new window.Spotify.Player({
+      if (!active) return;
+
+      spotifyPlayer = new window.Spotify.Player({
         name: "CDvicious Web Player",
         getOAuthToken: (cb) => {
           cb(token);
@@ -76,6 +85,11 @@ export function SpotifyPlayerProvider({ children }: { children: ReactNode }) {
         console.log("❌ Dispositivo desconectado:", device_id);
         setIsReady(false);
       });
+
+      spotifyPlayer.addListener(
+        "player_state_changed",
+        handlePlayerStateChanged,
+      );
 
       spotifyPlayer.addListener("initialization_error", ({ message }) =>
         console.error(message),
@@ -97,6 +111,21 @@ export function SpotifyPlayerProvider({ children }: { children: ReactNode }) {
     document.body.appendChild(script);
 
     return () => {
+      active = false;
+
+      if (spotifyPlayer) {
+        spotifyPlayer.removeListener(
+          "player_state_changed",
+          handlePlayerStateChanged,
+        );
+        spotifyPlayer.disconnect();
+        spotifyPlayer = null;
+      }
+
+      setPlayer(null);
+      setDeviceId(null);
+      setIsReady(false);
+
       if (document.body.contains(script)) {
         document.body.removeChild(script);
       }
