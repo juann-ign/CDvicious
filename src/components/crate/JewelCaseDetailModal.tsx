@@ -80,6 +80,14 @@ export function JewelCaseDetailModal({
     isDragging: isDiscDragging,
     pointerHandlers: discPointerHandlers,
   } = useDiscSurfaceDrag(!isCaseOpen || isLaunching);
+  useEffect(() => {
+    document.documentElement.dataset.modalOpen = "true";
+
+    return () => {
+      delete document.documentElement.dataset.modalOpen;
+    };
+  }, []);
+
   const coverUrl =
     [...album.images].sort((a, b) => (b.width ?? 0) - (a.width ?? 0))[0]?.url ??
     album.images[0]?.url;
