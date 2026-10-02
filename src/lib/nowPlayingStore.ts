@@ -3,9 +3,8 @@
 import type { NowPlayingResponse } from "@/types/spotify";
 
 const POLL_INTERVAL_MS = 5_000;
-const ERROR_RETRY_MS = 30_000;
 const EVENT_DEBOUNCE_MS = 200;
-const EVENT_THROTTLE_MS = 1_000;
+const REFRESH_THROTTLE_MS = 1_000;
 
 type Snapshot = {
   data: NowPlayingResponse | null;
@@ -25,10 +24,14 @@ let subscriberCount = 0;
 let inFlight = false;
 let abortController: AbortController | null = null;
 let quotaExceeded = false;
+
+let lastRefreshAt = 0;
 let lastPollStartedAt = 0;
 let lastEventRefreshAt = 0;
+
 let timer: ReturnType<typeof setTimeout> | null = null;
 let eventDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+
 let mutationObserver: MutationObserver | null = null;
 let observersInstalled = false;
 
@@ -47,10 +50,9 @@ const setSnapshot = (next: Snapshot) => {
   notify();
 };
 
-const isModalOpen = () =>
-  document.documentElement.dataset.modalOpen === "true";
+const isModalOpen = () => document.documentElement.dataset.modalOpen === "true";
 
-const canRequest = () =>
+const canRefresh = () =>
   subscriberCount > 0 &&
   document.visibilityState === "visible" &&
   !isModalOpen() &&
@@ -72,15 +74,12 @@ const clearEventDebounce = () => {
 };
 
 const abortInFlight = () => {
-  if (abortController) {
-    abortController.abort();
-    abortController = null;
-  }
-
+  abortController?.abort();
+  abortController = null;
   inFlight = false;
 };
 
-const schedulePoll = (delayMs: number) => {
+const scheduleNextPoll = () => {
   clearTimer();
 
   if (
@@ -92,21 +91,14 @@ const schedulePoll = (delayMs: number) => {
     return;
   }
 
-  const elapsed =
-    lastPollStartedAt === 0 ? POLL_INTERVAL_MS : Date.now() - lastPollStartedAt;
-  const minDelay =
-    lastPollStartedAt === 0
-      ? 0
-      : Math.max(0, POLL_INTERVAL_MS - elapsed);
-
   timer = setTimeout(() => {
     timer = null;
     refresh("poll");
-  }, Math.max(delayMs, minDelay));
+  }, POLL_INTERVAL_MS);
 };
 
 const fetchNowPlaying = async (source: RefreshSource) => {
-  if (!canRequest()) {
+  if (!canRefresh()) {
     return;
   }
 
@@ -115,6 +107,7 @@ const fetchNowPlaying = async (source: RefreshSource) => {
   inFlight = true;
 
   const startedAt = Date.now();
+  lastRefreshAt = startedAt;
 
   if (source === "poll") {
     lastPollStartedAt = startedAt;
@@ -130,33 +123,19 @@ const fetchNowPlaying = async (source: RefreshSource) => {
       signal: controller.signal,
     });
 
-    if (!res.ok) {
-      if (res.status === 429) {
-        const body = (await res.json().catch(() => null)) as {
-          reason?: string;
-        } | null;
+    if (res.status === 429) {
+      const body = (await res.json().catch(() => null)) as {
+        reason?: string;
+      } | null;
 
-        if (body?.reason === "QUOTA_EXCEEDED") {
-          quotaExceeded = true;
-          stop();
-          setSnapshot({
-            data: snapshot.data,
-            error: true,
-          });
-          return;
-        }
-
-        const retryAfter = Number(res.headers.get("retry-after") ?? "");
-        const retryMs =
-          Number.isFinite(retryAfter) && retryAfter > 0
-            ? retryAfter * 1000
-            : ERROR_RETRY_MS;
-
+      if (body?.reason === "QUOTA_EXCEEDED") {
+        quotaExceeded = true;
+        clearTimer();
+        clearEventDebounce();
         setSnapshot({
           data: snapshot.data,
           error: true,
         });
-        schedulePoll(Math.max(retryMs, POLL_INTERVAL_MS));
         return;
       }
 
@@ -164,7 +143,14 @@ const fetchNowPlaying = async (source: RefreshSource) => {
         data: snapshot.data,
         error: true,
       });
-      schedulePoll(ERROR_RETRY_MS);
+      return;
+    }
+
+    if (!res.ok) {
+      setSnapshot({
+        data: snapshot.data,
+        error: true,
+      });
       return;
     }
 
@@ -178,7 +164,6 @@ const fetchNowPlaying = async (source: RefreshSource) => {
       data: json,
       error: false,
     });
-    schedulePoll(POLL_INTERVAL_MS);
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") {
       return;
@@ -188,42 +173,55 @@ const fetchNowPlaying = async (source: RefreshSource) => {
       data: snapshot.data,
       error: true,
     });
-    schedulePoll(ERROR_RETRY_MS);
   } finally {
     if (abortController === controller) {
       abortController = null;
       inFlight = false;
     }
+
+    if (
+      subscriberCount > 0 &&
+      !quotaExceeded &&
+      document.visibilityState === "visible" &&
+      !isModalOpen()
+    ) {
+      scheduleNextPoll();
+    }
   }
 };
 
 const refresh = (source: RefreshSource) => {
-  if (subscriberCount === 0 || quotaExceeded) {
+  if (subscriberCount === 0 || quotaExceeded || inFlight) {
     return;
-  }
-
-  if (source === "poll" && lastPollStartedAt !== 0) {
-    const elapsed = Date.now() - lastPollStartedAt;
-
-    if (elapsed < POLL_INTERVAL_MS) {
-      schedulePoll(POLL_INTERVAL_MS - elapsed);
-      return;
-    }
   }
 
   if (source === "event") {
-    const elapsed = Date.now() - lastEventRefreshAt;
+    const lastEventGateAt = Math.max(lastRefreshAt, lastEventRefreshAt);
 
-    if (elapsed < EVENT_THROTTLE_MS) {
+    if (Date.now() - lastEventGateAt < REFRESH_THROTTLE_MS) {
       return;
     }
   }
 
-  if (!canRequest()) {
+  if (
+    source === "visibility" &&
+    Date.now() - lastRefreshAt < REFRESH_THROTTLE_MS
+  ) {
     return;
   }
 
-  clearTimer();
+  if (!canRefresh()) {
+    if (source === "visibility") {
+      scheduleNextPoll();
+    }
+
+    return;
+  }
+
+  if (source !== "poll") {
+    clearTimer();
+  }
+
   void fetchNowPlaying(source);
 };
 
@@ -240,31 +238,10 @@ const handlePlayerStateChanged = () => {
     return;
   }
 
-  const elapsed =
-    lastEventRefreshAt === 0 ? EVENT_THROTTLE_MS : Date.now() - lastEventRefreshAt;
-  const throttleDelay =
-    lastEventRefreshAt === 0
-      ? 0
-      : Math.max(0, EVENT_THROTTLE_MS - elapsed);
-
   eventDebounceTimer = setTimeout(() => {
     eventDebounceTimer = null;
-
-    const delayFromLastEvent =
-      lastEventRefreshAt === 0
-        ? 0
-        : Math.max(0, EVENT_THROTTLE_MS - (Date.now() - lastEventRefreshAt));
-
-    if (delayFromLastEvent > 0) {
-      eventDebounceTimer = setTimeout(() => {
-        eventDebounceTimer = null;
-        refresh("event");
-      }, delayFromLastEvent);
-      return;
-    }
-
     refresh("event");
-  }, Math.max(EVENT_DEBOUNCE_MS, throttleDelay));
+  }, EVENT_DEBOUNCE_MS);
 };
 
 const handleVisibilityChange = () => {
@@ -386,10 +363,4 @@ const release = () => {
   }
 };
 
-export {
-  acquire,
-  getSnapshot,
-  refresh,
-  release,
-  subscribe,
-};
+export { acquire, getSnapshot, refresh, release, subscribe };
