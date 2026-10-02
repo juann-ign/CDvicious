@@ -1,6 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useSpotifyPlayer } from "@/components/SpotifyPlayerProvider";
+import {
+  loadCollection,
+  loadCollectionGenres,
+  syncCollectionAuth,
+  useCollectionCache,
+} from "@/lib/collectionClient";
 import { CrateShelf } from "./CrateShelf";
 import { CollectionOverlay } from "./CollectionOverlay";
 import { JewelCaseDetailModal } from "./JewelCaseDetailModal";
@@ -15,18 +22,36 @@ interface CrateTeaserProps {
 }
 
 export function CrateTeaser({ onLoadAlbum }: CrateTeaserProps) {
-  const [albums, setAlbums] = useState<AlbumItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { authenticated } = useSpotifyPlayer();
+  const { albums: cachedAlbums, genresLoaded } = useCollectionCache();
+  const albums = cachedAlbums ?? [];
+  const [loading, setLoading] = useState(false);
+  const [loadingGenres, setLoadingGenres] = useState(false);
   const [overlayOpen, setOverlayOpen] = useState(false);
   const [selected, setSelected] = useState<AlbumItem | null>(null);
   const [flight, setFlight] = useState<{ album: AlbumItem; rect: DOMRect } | null>(null);
 
   useEffect(() => {
-    fetch("/api/collection")
-      .then((res) => res.json())
-      .then((data) => Array.isArray(data) && setAlbums(data))
-      .finally(() => setLoading(false));
+    syncCollectionAuth(authenticated);
+  }, [authenticated]);
+
+  const handleOpenCollection = useCallback(() => {
+    setOverlayOpen(true);
   }, []);
+
+  useEffect(() => {
+    if (!overlayOpen || authenticated !== true || cachedAlbums) return;
+
+    setLoading(true);
+    void loadCollection(true)!.finally(() => setLoading(false));
+  }, [authenticated, cachedAlbums, overlayOpen]);
+
+  const handleLoadGenres = useCallback(() => {
+    if (authenticated !== true || genresLoaded || loadingGenres) return;
+
+    setLoadingGenres(true);
+    void loadCollectionGenres(true)!.finally(() => setLoadingGenres(false));
+  }, [authenticated, genresLoaded, loadingGenres]);
 
   const handleLoad = useCallback((album: AlbumItem, originEl: HTMLElement) => {
     const rect = originEl.getBoundingClientRect();
@@ -50,7 +75,11 @@ export function CrateTeaser({ onLoadAlbum }: CrateTeaserProps) {
     <section className={styles.section} data-crate-teaser>
       <div className={styles.header}>
         <span className={styles.label}>LA BATEA</span>
-        <button type="button" className={styles.openBtn} onClick={() => setOverlayOpen(true)}>
+        <button
+          type="button"
+          className={styles.openBtn}
+          onClick={handleOpenCollection}
+        >
           ABRIR COLECCIÓN ▸
         </button>
       </div>
@@ -69,7 +98,11 @@ export function CrateTeaser({ onLoadAlbum }: CrateTeaserProps) {
 
       {overlayOpen && (
         <CollectionOverlay
-          albums={albums}
+          albums={albums ?? []}
+          loading={loading}
+          genresLoaded={genresLoaded}
+          loadingGenres={loadingGenres}
+          onLoadGenres={handleLoadGenres}
           onClose={() => setOverlayOpen(false)}
           onLoadAlbum={handleLoad}
         />
