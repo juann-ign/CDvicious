@@ -33,6 +33,12 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
   const contentRef = useRef<HTMLDivElement>(null);
   const lenisRef = useRef<Lenis | null>(null);
   const animationFrameRef = useRef<number | null>(null);
+  const snapTimerRef = useRef<number | null>(null);
+  const snapInProgressRef = useRef(false);
+  const snapAnchorRef = useRef<{
+    index: number;
+    scroll: number;
+  } | null>(null);
   const reducedMotionRef = useRef(false);
   const chapterMetricsRef = useRef({
     splitStart: 0,
@@ -109,6 +115,115 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
       };
     };
 
+    const getNearestChapterIndex = (scroll: number) => {
+      let nearestIndex = 0;
+      let nearestDistance = Number.POSITIVE_INFINITY;
+
+      Array.from(content.children).forEach((child, index) => {
+        const distance = Math.abs(
+          (child as HTMLElement).offsetLeft - scroll,
+        );
+
+        if (distance < nearestDistance) {
+          nearestDistance = distance;
+          nearestIndex = index;
+        }
+      });
+
+      return nearestIndex;
+    };
+
+    const clearSnapTimer = () => {
+      if (snapTimerRef.current !== null) {
+        window.clearTimeout(snapTimerRef.current);
+        snapTimerRef.current = null;
+      }
+    };
+
+    const snapToAnchor = () => {
+      snapTimerRef.current = null;
+
+      const activeLenis = lenisRef.current;
+      const anchor = snapAnchorRef.current;
+
+      if (
+        !activeLenis ||
+        !anchor ||
+        activeLenis.isStopped ||
+        snapInProgressRef.current ||
+        document.documentElement.dataset.modalOpen === "true"
+      ) {
+        snapAnchorRef.current = null;
+        return;
+      }
+
+      const viewportWidth = Math.max(
+        1,
+        wrapper.clientWidth || window.innerWidth,
+      );
+      const threshold = viewportWidth * 0.2;
+      const delta = activeLenis.scroll - anchor.scroll;
+      const lastChapterIndex = content.children.length - 1;
+
+      let targetIndex = anchor.index;
+
+      if (delta >= threshold) {
+        targetIndex += 1;
+      } else if (delta <= -threshold) {
+        targetIndex -= 1;
+      }
+
+      targetIndex = Math.min(
+        lastChapterIndex,
+        Math.max(0, targetIndex),
+      );
+
+      const targetChapter = content.children[targetIndex] as
+        | HTMLElement
+        | undefined;
+
+      if (!targetChapter) {
+        snapAnchorRef.current = null;
+        return;
+      }
+
+      const target = targetChapter.offsetLeft;
+      snapAnchorRef.current = null;
+
+      if (Math.abs(target - activeLenis.scroll) < 1) {
+        return;
+      }
+
+      snapInProgressRef.current = true;
+      activeLenis.scrollTo(target, {
+        duration: reducedMotionRef.current ? 0 : 0.65,
+        userData: { source: "chapter-snap" },
+        onComplete: () => {
+          snapInProgressRef.current = false;
+        },
+      });
+    };
+
+    const armSnapTimer = (scroll: number) => {
+      if (
+        snapInProgressRef.current ||
+        lenis.isStopped ||
+        document.documentElement.dataset.modalOpen === "true"
+      ) {
+        return;
+      }
+
+      if (!snapAnchorRef.current) {
+        snapAnchorRef.current = {
+          index: getNearestChapterIndex(scroll),
+          scroll,
+        };
+      }
+
+      clearSnapTimer();
+      snapTimerRef.current = window.setTimeout(snapToAnchor, 200);
+    };
+
     const updateRailProgress = (scroll: number) => {
       const { splitStart, splitDistance, hideStart, hideDistance } =
         chapterMetricsRef.current;
@@ -165,6 +280,12 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
 
     const handleScroll = ({ scroll }: { scroll: number }) => {
       updateRailProgress(scroll);
+
+      if (snapInProgressRef.current) {
+        return;
+      }
+
+      armSnapTimer(scroll);
     };
 
     lenis.on("scroll", handleScroll);
@@ -184,6 +305,9 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
 
       lenis.off("scroll", handleScroll);
       resizeObserver.disconnect();
+      clearSnapTimer();
+      snapAnchorRef.current = null;
+      snapInProgressRef.current = false;
       lenis.destroy();
       lenisRef.current = null;
       setIsReady(false);
@@ -215,24 +339,36 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
   }, []);
 
   const stop = useCallback(() => {
+    if (snapTimerRef.current !== null) {
+      window.clearTimeout(snapTimerRef.current);
+      snapTimerRef.current = null;
+    }
+
+    snapAnchorRef.current = null;
+    snapInProgressRef.current = false;
     lenisRef.current?.stop();
   }, []);
 
   const scrollToX = useCallback((px: number) => {
     const lenis = lenisRef.current;
 
-    if (!lenis) {
+    if (!lenis || lenis.isStopped) {
       return;
     }
 
-    lenis.scrollTo(Math.max(0, px));
+    snapInProgressRef.current = true;
+    lenis.scrollTo(Math.max(0, px), {
+      onComplete: () => {
+        snapInProgressRef.current = false;
+      },
+    });
   }, []);
 
   const scrollToChapter = useCallback((index: number, duration = 0.9) => {
     const lenis = lenisRef.current;
     const content = contentRef.current;
 
-    if (!lenis || !content || content.children.length === 0) {
+    if (!lenis || !content || content.children.length === 0 || lenis.isStopped) {
       return;
     }
 
@@ -242,8 +378,13 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
     );
     const chapter = content.children[safeIndex] as HTMLElement;
 
+    snapInProgressRef.current = true;
+    snapAnchorRef.current = null;
     lenis.scrollTo(chapter.offsetLeft, {
       duration: reducedMotionRef.current ? 0 : Math.max(0, duration),
+      onComplete: () => {
+        snapInProgressRef.current = false;
+      },
     });
   }, []);
 
