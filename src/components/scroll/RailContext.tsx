@@ -12,6 +12,10 @@ import {
 import Lenis from "lenis";
 import styles from "./RailProvider.module.css";
 
+const SNAP_IDLE_DELAY_MS = 200;
+const SNAP_THRESHOLD_RATIO = 0.2;
+const SNAP_DURATION_SECONDS = 0.65;
+
 type RailContextValue = {
   isReady: boolean;
   start: () => void;
@@ -161,7 +165,7 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
         1,
         wrapper.clientWidth || window.innerWidth,
       );
-      const threshold = viewportWidth * 0.2;
+      const threshold = viewportWidth * SNAP_THRESHOLD_RATIO;
       const delta = activeLenis.scroll - anchor.scroll;
       const lastChapterIndex = content.children.length - 1;
 
@@ -196,7 +200,7 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
 
       snapInProgressRef.current = true;
       activeLenis.scrollTo(target, {
-        duration: reducedMotionRef.current ? 0 : 0.65,
+        duration: reducedMotionRef.current ? 0 : SNAP_DURATION_SECONDS,
         userData: { source: "chapter-snap" },
         onComplete: () => {
           snapInProgressRef.current = false;
@@ -221,7 +225,10 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
       }
 
       clearSnapTimer();
-      snapTimerRef.current = window.setTimeout(snapToAnchor, 200);
+      snapTimerRef.current = window.setTimeout(
+        snapToAnchor,
+        SNAP_IDLE_DELAY_MS,
+      );
     };
 
     const updateRailProgress = (scroll: number) => {
