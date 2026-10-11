@@ -30,12 +30,20 @@ function decadeOf(album: AlbumItem): DecadeFilter {
 
 interface CollectionOverlayProps {
   albums: AlbumItem[];
+  loading: boolean;
+  genresLoaded: boolean;
+  loadingGenres: boolean;
+  onLoadGenres: () => void;
   onClose: () => void;
   onLoadAlbum: (album: AlbumItem, originEl: HTMLElement) => void;
 }
 
 export function CollectionOverlay({
   albums,
+  loading,
+  genresLoaded,
+  loadingGenres,
+  onLoadGenres,
   onClose,
   onLoadAlbum,
 }: CollectionOverlayProps) {
@@ -134,7 +142,18 @@ export function CollectionOverlay({
             ))}
           </div>
 
-          {topGenres.length > 0 && (
+          {!genresLoaded ? (
+            <div className={styles.pillRow}>
+              <button
+                type="button"
+                className={styles.pill}
+                onClick={onLoadGenres}
+                disabled={loadingGenres}
+              >
+                {loadingGenres ? "CARGANDO GÉNEROS..." : "CARGAR GÉNEROS"}
+              </button>
+            </div>
+          ) : topGenres.length > 0 ? (
             <div className={styles.pillRow}>
               <button
                 type="button"
@@ -154,16 +173,18 @@ export function CollectionOverlay({
                 </button>
               ))}
             </div>
-          )}
+          ) : null}
         </div>
 
         <p className={styles.resultCount}>
-          {filtered.length} DISCOS · PAGINA {page + 1}/{totalPages}
+          {loading
+            ? "CARGANDO COLECCIÓN..."
+            : `${filtered.length} DISCOS · PAGINA ${page + 1}/${totalPages}`}
         </p>
 
         <div className={styles.gridScroll}>
           <div className={styles.grid}>
-            {pageItems.map((album) => (
+            {loading ? null : pageItems.map((album) => (
               <JewelCaseFront
                 key={album.id}
                 album={album}

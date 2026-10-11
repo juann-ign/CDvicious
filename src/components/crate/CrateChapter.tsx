@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import { useRail } from "@/components/scroll/RailContext";
+import { useCollectionCache } from "@/lib/collectionClient";
 import { JewelCaseDetailModal } from "./JewelCaseDetailModal";
 import { RailFlyingDisc } from "./RailFlyingDisc";
 import { CrateShelf } from "./CrateShelf";
@@ -12,140 +13,16 @@ const SHELF_COUNT = 18;
 
 export function CrateChapter() {
   const { stop, start } = useRail();
-  const [albums, setAlbums] = useState<AlbumItem[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [rateLimitSeconds, setRateLimitSeconds] = useState<number | null>(null);
-  const [isNearChapter, setIsNearChapter] = useState(false);
-  const [quotaExceeded, setQuotaExceeded] = useState(false);
+  const { albums: cachedAlbums } = useCollectionCache();
+  const albums = cachedAlbums ?? [];
+  const [loading] = useState(false);
+  const [rateLimitSeconds] = useState<number | null>(null);
+  const [quotaExceeded] = useState(false);
   const [selected, setSelected] = useState<AlbumItem | null>(null);
   const [flight, setFlight] = useState<{
     album: AlbumItem;
     originRect: DOMRect;
   } | null>(null);
-  const chapterRef = useRef<HTMLDivElement>(null);
-  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const loadedRef = useRef(false);
-  const requestStartedRef = useRef(false);
-    const countdownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  useEffect(() => {
-    const chapter = chapterRef.current;
-    const wrapper = chapter?.closest<HTMLElement>('[aria-label="Horizontal rail"]');
-
-    if (!chapter || !wrapper) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        setIsNearChapter(
-          entry.isIntersecting && entry.intersectionRatio >= 0.9,
-        );
-      },
-      { root: wrapper, threshold: [0, 0.9, 1] },
-    );
-
-    observer.observe(chapter);
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    if (
-      !isNearChapter ||
-      loadedRef.current ||
-      requestStartedRef.current ||
-      quotaExceeded
-    ) return;
-
-    requestStartedRef.current = true;
-
-    let cancelled = false;
-
-    const clearTimers = () => {
-      if (retryTimerRef.current !== null) {
-        clearTimeout(retryTimerRef.current);
-        retryTimerRef.current = null;
-      }
-
-      if (countdownTimerRef.current !== null) {
-        clearInterval(countdownTimerRef.current);
-        countdownTimerRef.current = null;
-      }
-    };
-
-    const load = async () => {
-      setLoading(true);
-
-      try {
-        const res = await fetch("/api/collection?includeGenres=0", {
-          cache: "no-store",
-        });
-
-        if (res.status === 429) {
-          const body = (await res.json().catch(() => null)) as {
-            reason?: string;
-          } | null;
-
-          if (body?.reason === "QUOTA_EXCEEDED") {
-            setLoading(false);
-            setRateLimitSeconds(null);
-            setQuotaExceeded(true);
-            clearTimers();
-            return;
-          }
-
-          const retryAfter = Number(res.headers.get("retry-after") ?? "60");
-          const seconds =
-            Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : 60;
-          let remaining = seconds;
-
-          setLoading(false);
-          setRateLimitSeconds(remaining);
-          clearTimers();
-
-          countdownTimerRef.current = setInterval(() => {
-            remaining = Math.max(0, remaining - 1);
-            setRateLimitSeconds(remaining);
-            if (remaining === 0) {
-              clearInterval(countdownTimerRef.current!);
-              countdownTimerRef.current = null;
-            }
-          }, 1000);
-
-          retryTimerRef.current = setTimeout(() => {
-            retryTimerRef.current = null;
-            requestStartedRef.current = false;
-            setRateLimitSeconds(null);
-            void load();
-          }, seconds * 1000);
-          return;
-        }
-
-        if (!res.ok) {
-          setLoading(false);
-          return;
-        }
-
-        const data = await res.json();
-
-        if (!cancelled && Array.isArray(data)) {
-          clearTimers();
-          loadedRef.current = true;
-          setAlbums(data);
-          setRateLimitSeconds(null);
-          setQuotaExceeded(false);
-          setLoading(false);
-        }
-      } catch {
-        if (!cancelled) setLoading(false);
-      }
-    };
-
-    void load();
-
-    return () => {
-      cancelled = true;
-      clearTimers();
-    };
-  }, [isNearChapter, quotaExceeded]);
 
   const handleGrabStart = useCallback(() => {
     stop();
@@ -183,7 +60,7 @@ export function CrateChapter() {
         : albums.length + " DISCS";
 
   return (
-    <div ref={chapterRef} className={styles.chapter}>
+    <div className={styles.chapter}>
       <header className={styles.header}>
         <div>
           <span className={styles.kicker}>CAP.03 / EPIC C</span>

@@ -128,15 +128,21 @@ async function fetchAllAlbums(accessToken: string, refreshToken: string) {
 export async function GET(request: NextRequest) {
   const includeGenres = request.nextUrl.searchParams.get("includeGenres") === "1";
 
-  // Dev/testing only: bypass Spotify and the session entirely.
+  // Dev/testing only: return the mock while preserving the includeGenres contract.
   if (process.env.NEXT_PUBLIC_SPOTIFY_MOCK === "1") {
+    if (!includeGenres) {
+      return NextResponse.json(
+        mockCollection.map((album) => ({ ...album, genres: [] })),
+      );
+    }
+
     return NextResponse.json(mockCollection);
   }
 
   const session = await getSession();
 
   if (!session?.accessToken) {
-    return NextResponse.json({ error: "Falta sesión" }, { status: 400 });
+    return NextResponse.json({ error: "no_session" }, { status: 401 });
   }
 
   try {

@@ -1,6 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSpotifyPlayer } from "@/components/SpotifyPlayerProvider";
+import {
+  loadCollection,
+  loadCollectionGenres,
+  syncCollectionAuth,
+  useCollectionCache,
+} from "@/lib/collectionClient";
 import { JewelCaseDetailModal } from "./JewelCaseDetailModal";
 import { JewelCaseFront } from "./JewelCaseFront";
 import { RailFlyingDisc } from "./RailFlyingDisc";
@@ -29,10 +36,13 @@ function decadeOf(album: AlbumItem): DecadeFilter {
 }
 
 export function CollectionChapter() {
-  const [albums, setAlbums] = useState<AlbumItem[]>([]);
+  const { authenticated } = useSpotifyPlayer();
+  const { albums: cachedAlbums, genresLoaded } = useCollectionCache();
+  const albums = useMemo(() => cachedAlbums ?? [], [cachedAlbums]);
   const [loading, setLoading] = useState(false);
+  const [loadingGenres, setLoadingGenres] = useState(false);
   const [rateLimitSeconds, setRateLimitSeconds] = useState<number | null>(null);
-  const [isNearChapter, setIsNearChapter] = useState(false);
+  const [isActiveChapter, setIsActiveChapter] = useState(false);
   const [quotaExceeded, setQuotaExceeded] = useState(false);
   const [query, setQuery] = useState("");
   const [decade, setDecade] = useState<DecadeFilter>("all");
@@ -44,129 +54,78 @@ export function CollectionChapter() {
     originRect: DOMRect;
   } | null>(null);
   const chapterRef = useRef<HTMLDivElement>(null);
-  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const loadedRef = useRef(false);
   const requestStartedRef = useRef(false);
-    const countdownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    const chapter = chapterRef.current;
-    const wrapper = chapter?.closest<HTMLElement>('[aria-label="Horizontal rail"]');
+    syncCollectionAuth(authenticated);
+    if (authenticated !== true) {
+      requestStartedRef.current = false;
+    }
+  }, [authenticated]);
 
-    if (!chapter || !wrapper) return;
+  useEffect(() => {
+    const readActiveChapter = () => {
+      setIsActiveChapter(document.documentElement.dataset.chapter === "3");
+    };
 
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        setIsNearChapter(
-          entry.isIntersecting && entry.intersectionRatio >= 0.9,
-        );
-      },
-      { root: wrapper, threshold: [0, 0.9, 1] },
-    );
+    readActiveChapter();
 
-    observer.observe(chapter);
+    const observer = new MutationObserver(readActiveChapter);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-chapter"],
+    });
+
     return () => observer.disconnect();
   }, []);
 
   useEffect(() => {
     if (
-      !isNearChapter ||
-      loadedRef.current ||
+      !isActiveChapter ||
+      authenticated !== true ||
+      cachedAlbums ||
       requestStartedRef.current ||
       quotaExceeded
-    ) return;
+    ) {
+      return;
+    }
 
     requestStartedRef.current = true;
+    setLoading(true);
+    setRateLimitSeconds(null);
 
-    let cancelled = false;
+    void loadCollection(authenticated)
+      ?.catch((error: unknown) => {
+        const status =
+          typeof error === "object" && error !== null && "status" in error
+            ? Number((error as { status?: number }).status)
+            : 0;
+        const reason =
+          typeof error === "object" && error !== null && "reason" in error
+            ? (error as { reason?: string }).reason
+            : undefined;
 
-    const clearTimers = () => {
-      if (retryTimerRef.current !== null) {
-        clearTimeout(retryTimerRef.current);
-        retryTimerRef.current = null;
-      }
-
-      if (countdownTimerRef.current !== null) {
-        clearInterval(countdownTimerRef.current);
-        countdownTimerRef.current = null;
-      }
-    };
-
-    const load = async () => {
-      setLoading(true);
-
-      try {
-        const res = await fetch("/api/collection?includeGenres=1", {
-          cache: "no-store",
-        });
-
-        if (res.status === 429) {
-          const body = (await res.json().catch(() => null)) as {
-            reason?: string;
-          } | null;
-
-          if (body?.reason === "QUOTA_EXCEEDED") {
-            setLoading(false);
-            setRateLimitSeconds(null);
-            setQuotaExceeded(true);
-            clearTimers();
-            return;
-          }
-
-          const retryAfter = Number(res.headers.get("retry-after") ?? "60");
-          const seconds =
-            Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : 60;
-          let remaining = seconds;
-
-          setLoading(false);
-          setRateLimitSeconds(remaining);
-          clearTimers();
-
-          countdownTimerRef.current = setInterval(() => {
-            remaining = Math.max(0, remaining - 1);
-            setRateLimitSeconds(remaining);
-            if (remaining === 0) {
-              clearInterval(countdownTimerRef.current!);
-              countdownTimerRef.current = null;
-            }
-          }, 1000);
-
-          retryTimerRef.current = setTimeout(() => {
-            retryTimerRef.current = null;
-            requestStartedRef.current = false;
-            setRateLimitSeconds(null);
-            void load();
-          }, seconds * 1000);
-          return;
-        }
-
-        if (!res.ok) {
-          setLoading(false);
-          return;
-        }
-
-        const data = await res.json();
-
-        if (!cancelled && Array.isArray(data)) {
-          clearTimers();
-          loadedRef.current = true;
-          setAlbums(data);
+        if (status === 429 && reason === "QUOTA_EXCEEDED") {
+          setQuotaExceeded(true);
           setRateLimitSeconds(null);
-          setQuotaExceeded(false);
-          setLoading(false);
+        } else if (status === 429) {
+          setRateLimitSeconds(60);
         }
-      } catch {
-        if (!cancelled) setLoading(false);
-      }
-    };
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, [authenticated, cachedAlbums, isActiveChapter, quotaExceeded]);
 
-    void load();
+  const handleLoadGenres = useCallback(() => {
+    if (authenticated !== true || genresLoaded || loadingGenres) return;
 
-    return () => {
-      cancelled = true;
-      clearTimers();
-    };
-  }, [isNearChapter, quotaExceeded]);
+    setLoadingGenres(true);
+
+    void loadCollectionGenres(authenticated)
+      ?.catch(() => undefined)
+      .finally(() => setLoadingGenres(false));
+  }, [authenticated, genresLoaded, loadingGenres]);
 
   const topGenres = useMemo(() => {
     const counts = new Map<string, number>();
@@ -287,30 +246,43 @@ export function CollectionChapter() {
           </div>
 
           <div className={styles.pillRow} aria-label="Filtrar por género">
-            <button
-              type="button"
-              className={
-                styles.pill +
-                (genre === "all" ? " " + styles.pillActive : "")
-              }
-              onClick={() => setGenre("all")}
-            >
-              TODOS
-            </button>
-
-            {topGenres.map((item) => (
+            {!genresLoaded ? (
               <button
-                key={item}
                 type="button"
-                className={
-                  styles.pill +
-                  (genre === item ? " " + styles.pillActive : "")
-                }
-                onClick={() => setGenre(item)}
+                className={styles.pill}
+                onClick={handleLoadGenres}
+                disabled={loadingGenres}
               >
-                {item.toUpperCase()}
+                {loadingGenres ? "CARGANDO GÉNEROS..." : "CARGAR GÉNEROS"}
               </button>
-            ))}
+            ) : (
+              <>
+                <button
+                  type="button"
+                  className={
+                    styles.pill +
+                    (genre === "all" ? " " + styles.pillActive : "")
+                  }
+                  onClick={() => setGenre("all")}
+                >
+                  TODOS
+                </button>
+
+                {topGenres.map((item) => (
+                  <button
+                    key={item}
+                    type="button"
+                    className={
+                      styles.pill +
+                      (genre === item ? " " + styles.pillActive : "")
+                    }
+                    onClick={() => setGenre(item)}
+                  >
+                    {item.toUpperCase()}
+                  </button>
+                ))}
+              </>
+            )}
           </div>
         </div>
       </div>
