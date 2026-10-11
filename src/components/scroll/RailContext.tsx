@@ -261,6 +261,7 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
         <div
           ref={wrapperRef}
           className={styles.wrapper}
+          data-rail-wrapper
           aria-label="Horizontal rail"
         >
           <div ref={contentRef} className={styles.content}>

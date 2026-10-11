@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import {
   Suspense,
   useCallback,
@@ -16,9 +17,16 @@ import { CrateTeaser } from "@/components/crate/CrateTeaser";
 import { useNowPlaying } from "@/hooks/useNowPlaying";
 import { useDominantColor } from "@/hooks/useDominantColor";
 import { useSpotifyPlayer } from "@/components/SpotifyPlayerProvider";
-import { HorizontalRail } from "@/components/scroll/HorizontalRail";
 import type { AlbumItem } from "@/types/crate";
 import styles from "./page.module.css";
+
+const HorizontalRail = dynamic(
+  () =>
+    import("@/components/scroll/HorizontalRail").then(
+      (module) => module.HorizontalRail,
+    ),
+  { ssr: false },
+);
 
 const RAIL_ENABLED = process.env.NEXT_PUBLIC_ENABLE_RAIL === "1";
 
