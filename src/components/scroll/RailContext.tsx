@@ -14,7 +14,8 @@ import styles from "./RailProvider.module.css";
 
 const SNAP_IDLE_DELAY_MS = 200;
 const SNAP_THRESHOLD_RATIO = 0.2;
-const SNAP_DURATION_SECONDS = 0.65;
+const SNAP_MIN_DURATION_SECONDS = 0.18;
+const SNAP_MAX_DURATION_SECONDS = 0.6;
 
 type RailContextValue = {
   isReady: boolean;
@@ -192,15 +193,28 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
       }
 
       const target = targetChapter.offsetLeft;
+      const currentScrollX = activeLenis.scroll;
+      const dist = Math.abs(target - currentScrollX);
       snapAnchorRef.current = null;
 
-      if (Math.abs(target - activeLenis.scroll) < 1) {
+      if (dist < 6) {
         return;
       }
 
+      const vw = Math.max(1, window.innerWidth);
+      const dist01 = Math.min(1, dist / vw);
+      const duration = Math.max(
+        SNAP_MIN_DURATION_SECONDS,
+        Math.min(
+          SNAP_MAX_DURATION_SECONDS,
+          0.22 + dist01 * 0.32,
+        ),
+      );
+
       snapInProgressRef.current = true;
       activeLenis.scrollTo(target, {
-        duration: reducedMotionRef.current ? 0 : SNAP_DURATION_SECONDS,
+        duration: reducedMotionRef.current ? 0 : duration,
+        easing: (t) => 1 - Math.pow(1 - t, 5),
         userData: { source: "chapter-snap" },
         onComplete: () => {
           snapInProgressRef.current = false;
