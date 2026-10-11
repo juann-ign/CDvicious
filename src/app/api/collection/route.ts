@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import mockCollection from "@/mocks/collection.json";
+import { cached } from "@/lib/serverCache";
 import {
   fetchArtistGenres,
   fetchSpotifyWebApi,
@@ -10,7 +11,8 @@ import {
 
 const SPOTIFY_MAX_LIMIT = 50;
 const SAFETY_CEILING = 3000;
-const COLLECTION_CACHE_TTL_MS = 60_000;
+const COLLECTION_BASE_TTL_MS = 2 * 60 * 1000;
+const COLLECTION_GENRES_TTL_MS = 10 * 60 * 1000;
 
 interface SpotifyArtistRef {
   id: string;
@@ -36,17 +38,16 @@ interface SpotifySavedAlbumsResponse {
   next?: string | null;
 }
 
-interface CollectionCacheEntry {
-  albums: SpotifyAlbum[];
-  expiresAt: number;
+function cacheKey(refreshToken: string | undefined, accessToken: string) {
+  const identity = refreshToken || accessToken;
+  return createHash("sha256").update(identity).digest("hex");
 }
 
-const genreCache = new Map<string, string[]>();
-const collectionCache = new Map<string, CollectionCacheEntry>();
-const collectionInFlight = new Map<string, Promise<SpotifyAlbum[]>>();
-
-function cacheKey(refreshToken: string) {
-  return createHash("sha256").update(refreshToken).digest("hex");
+function collectionCacheKey(
+  identityHash: string,
+  variant: "base" | "genres",
+) {
+  return `collection:${variant}:${identityHash}`;
 }
 
 function parseSpotifyReason(body: string) {
@@ -60,76 +61,50 @@ function parseSpotifyReason(body: string) {
   }
 }
 
-async function fetchAllAlbums(accessToken: string, refreshToken: string) {
-  const key = cacheKey(refreshToken);
-  const cached = collectionCache.get(key);
+async function fetchAllAlbums(accessToken: string) {
+  const allAlbums: SpotifyAlbum[] = [];
+  let offset = 0;
+  let hasMore = true;
 
-  if (cached && cached.expiresAt > Date.now()) {
-    return cached.albums;
-  }
+  while (hasMore && allAlbums.length < SAFETY_CEILING) {
+    const res = await fetchSpotifyWebApi(
+      accessToken,
+      "GET /v1/me/albums",
+      `https://api.spotify.com/v1/me/albums?limit=${SPOTIFY_MAX_LIMIT}&offset=${offset}`,
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        cache: "no-store",
+      },
+    );
 
-  const pending = collectionInFlight.get(key);
-  if (pending) {
-    return pending;
-  }
+    if (!res.ok) {
+      const body = await res.text();
 
-  const request = (async () => {
-    const allAlbums: SpotifyAlbum[] = [];
-    let offset = 0;
-    let hasMore = true;
-
-    while (hasMore && allAlbums.length < SAFETY_CEILING) {
-      const res = await fetchSpotifyWebApi(
-        accessToken,
-        "GET /v1/me/albums",
-        `https://api.spotify.com/v1/me/albums?limit=${SPOTIFY_MAX_LIMIT}&offset=${offset}`,
-        {
-          headers: { Authorization: `Bearer ${accessToken}` },
-          cache: "no-store",
-        },
+      throw new SpotifyApiError(
+        `spotify saved albums failed: ${res.status}`,
+        res.status,
+        parseSpotifyReason(body),
+        res.headers.get("retry-after") ?? undefined,
       );
-
-      if (!res.ok) {
-        const body = await res.text();
-
-        throw new SpotifyApiError(
-          `spotify saved albums failed: ${res.status}`,
-          res.status,
-          parseSpotifyReason(body),
-          res.headers.get("retry-after") ?? undefined,
-        );
-      }
-
-      const data = (await res.json()) as SpotifySavedAlbumsResponse;
-      const items = data.items ?? [];
-
-      allAlbums.push(...items.map((item) => item.album));
-      hasMore = Boolean(data.next);
-      offset += SPOTIFY_MAX_LIMIT;
     }
 
-    collectionCache.set(key, {
-      albums: allAlbums,
-      expiresAt: Date.now() + COLLECTION_CACHE_TTL_MS,
-    });
+    const data = (await res.json()) as SpotifySavedAlbumsResponse;
+    const items = data.items ?? [];
 
-    return allAlbums;
-  })();
-
-  collectionInFlight.set(key, request);
-
-  try {
-    return await request;
-  } finally {
-    collectionInFlight.delete(key);
+    allAlbums.push(...items.map((item) => item.album));
+    hasMore = Boolean(data.next);
+    offset += SPOTIFY_MAX_LIMIT;
   }
+
+  return allAlbums;
 }
 
 export async function GET(request: NextRequest) {
-  const includeGenres = request.nextUrl.searchParams.get("includeGenres") === "1";
-
-  // Dev/testing only: return the mock while preserving the includeGenres contract.
+  // Dev/testing only: never touch session, server cache, or Spotify in mock mode.
   if (process.env.NEXT_PUBLIC_SPOTIFY_MOCK === "1") {
+    const includeGenres =
+      request.nextUrl.searchParams.get("includeGenres") === "1";
+
     if (!includeGenres) {
       return NextResponse.json(
         mockCollection.map((album) => ({ ...album, genres: [] })),
@@ -139,38 +114,62 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(mockCollection);
   }
 
+  const includeGenres =
+    request.nextUrl.searchParams.get("includeGenres") === "1";
+
   const session = await getSession();
 
-  if (!session?.accessToken) {
+  if (!session) {
     return NextResponse.json({ error: "no_session" }, { status: 401 });
   }
 
-  try {
-    const allAlbums = await fetchAllAlbums(session.accessToken, session.refreshToken);
+  const identityHash = cacheKey(session.refreshToken, session.accessToken);
+  const baseKey = collectionCacheKey(identityHash, "base");
 
+  try {
     if (!includeGenres) {
+      const allAlbums = await cached(
+        baseKey,
+        COLLECTION_BASE_TTL_MS,
+        () => fetchAllAlbums(session.accessToken),
+      );
+
       return NextResponse.json(allAlbums);
     }
 
-    const allArtistIds = allAlbums.flatMap((a) =>
-      a.artists.map((ar) => ar.id),
+    const genresKey = collectionCacheKey(identityHash, "genres");
+    const withGenres = await cached(
+      genresKey,
+      COLLECTION_GENRES_TTL_MS,
+      async () => {
+        const allAlbums = await cached(
+          baseKey,
+          COLLECTION_BASE_TTL_MS,
+          () => fetchAllAlbums(session.accessToken),
+        );
+
+        const allArtistIds = allAlbums.flatMap((album) =>
+          album.artists.map((artist) => artist.id),
+        );
+
+        const fetched = await fetchArtistGenres(
+          session.accessToken,
+          allArtistIds,
+        );
+
+        return allAlbums.map((album) => {
+          const genres = Array.from(
+            new Set(
+              album.artists.flatMap(
+                (artist) => fetched[artist.id] ?? [],
+              ),
+            ),
+          );
+
+          return { ...album, genres };
+        });
+      },
     );
-    const uncachedIds = allArtistIds.filter((id) => !genreCache.has(id));
-
-    if (uncachedIds.length > 0) {
-      const fetched = await fetchArtistGenres(session.accessToken, uncachedIds);
-
-      for (const [id, genres] of Object.entries(fetched)) {
-        genreCache.set(id, genres);
-      }
-    }
-
-    const withGenres = allAlbums.map((album) => {
-      const genres = Array.from(
-        new Set(album.artists.flatMap((ar) => genreCache.get(ar.id) ?? [])),
-      );
-      return { ...album, genres };
-    });
 
     return NextResponse.json(withGenres);
   } catch (error) {

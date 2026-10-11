@@ -1,50 +1,21 @@
 import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { getSession, getValidAccessToken } from "@/lib/session";
+import { cached } from "@/lib/serverCache";
 import { fetchUserProfile, SpotifyApiError } from "@/lib/spotify";
 import type { UserProfile } from "@/types/spotify";
 
-const PROFILE_CACHE_TTL_MS = 10 * 60 * 1000;
+const PROFILE_CACHE_TTL_MS = 15 * 60 * 1000;
 
-type ProfileCacheEntry = {
-  profile: UserProfile;
-  expiresAt: number;
-};
-
-const profileCache = new Map<string, ProfileCacheEntry>();
-const profileInFlight = new Map<string, Promise<UserProfile>>();
-
-function cacheKey(accessToken: string) {
-  return createHash("sha256").update(accessToken).digest("hex");
+function cacheKey(refreshToken: string | undefined, accessToken: string) {
+  const identity = refreshToken || accessToken;
+  return `auth:profile:${createHash("sha256").update(identity).digest("hex")}`;
 }
 
-async function getCachedProfile(accessToken: string, refreshToken: string) {
-  const key = cacheKey(refreshToken);
-  const cached = profileCache.get(key);
-
-  if (cached && cached.expiresAt > Date.now()) {
-    return cached.profile;
-  }
-
-  const pending = profileInFlight.get(key);
-  if (pending) {
-    return pending;
-  }
-
-  const request = fetchUserProfile(accessToken).then((profile) => {
-    profileCache.set(key, {
-      profile,
-      expiresAt: Date.now() + PROFILE_CACHE_TTL_MS,
-    });
-    return profile;
-  });
-
-  profileInFlight.set(key, request);
-
-  try {
-    return await request;
-  } finally {
-    profileInFlight.delete(key);
+class NoSessionError extends Error {
+  constructor() {
+    super("no_session");
+    this.name = "NoSessionError";
   }
 }
 
@@ -71,22 +42,35 @@ export async function GET() {
 
   const session = await getSession();
 
-  if (!session?.refreshToken) {
+  if (!session) {
     return NextResponse.json({ error: "no_session" }, { status: 401 });
   }
 
-  const accessToken = await getValidAccessToken();
-
-  if (!accessToken) {
-    return NextResponse.json({ error: "no_session" }, { status: 401 });
-  }
+  const key = cacheKey(session.refreshToken, session.accessToken);
 
   try {
-    const profile = await getCachedProfile(accessToken, session.refreshToken);
+    const profile = await cached<UserProfile>(
+      key,
+      PROFILE_CACHE_TTL_MS,
+      async () => {
+        const accessToken = await getValidAccessToken();
+
+        if (!accessToken) {
+          throw new NoSessionError();
+        }
+
+        return fetchUserProfile(accessToken);
+      },
+    );
+
     return NextResponse.json(profile, {
       headers: { "Cache-Control": "no-store" },
     });
   } catch (error) {
+    if (error instanceof NoSessionError) {
+      return NextResponse.json({ error: "no_session" }, { status: 401 });
+    }
+
     if (error instanceof SpotifyApiError) {
       const responseHeaders =
         error.retryAfter !== undefined
