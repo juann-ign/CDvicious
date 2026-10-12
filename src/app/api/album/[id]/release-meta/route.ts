@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getValidAccessToken } from "@/lib/session";
+import mockCollection from "@/mocks/collection.json";
 
 interface SpotifyAlbumDetails { name: string; artists?: { name: string }[]; release_date?: string; label?: string; genres?: string[]; }
 interface MusicBrainzRelease { id: string; score?: number; date?: string; country?: string; }
@@ -87,6 +88,19 @@ async function getLastFmTags(artist: string, album: string) {
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+
+  if (process.env.NEXT_PUBLIC_SPOTIFY_MOCK === "1") {
+    const album = mockCollection.find((item) => item.id === id);
+
+    return NextResponse.json({
+      year: album?.release_date?.slice(0, 4) ?? "2024",
+      label: album?.label ?? "CDvicious Demo Label",
+      format: "COMPACT DISC",
+      country: "AR",
+      tags: album?.genres ?? [],
+    });
+  }
+
   const url = new URL(_request.url);
   const queryArtist = url.searchParams.get("artist")?.trim() ?? "";
   const queryAlbum = url.searchParams.get("album")?.trim() ?? "";

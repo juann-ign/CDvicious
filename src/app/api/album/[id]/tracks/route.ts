@@ -11,6 +11,16 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
+
+  if (process.env.NEXT_PUBLIC_SPOTIFY_MOCK === "1") {
+    return NextResponse.json({
+      tracks: Array.from({ length: 10 }, (_, index) => ({
+        name: "DEMO TRACK " + String(index + 1).padStart(2, "0"),
+        duration_ms: 150_000 + index * 9_000,
+      })),
+    });
+  }
+
   const accessToken = await getValidAccessToken();
   if (!accessToken) {
     return NextResponse.json({ error: "no_session" }, { status: 401 });
