@@ -3,7 +3,7 @@
 **Repositorio:** `juann-ign/CDvicious`  
 **Base auditada:** `main` (`761edfe3ca76047e7c366cb961f39f5079122fb0`)  
 **Última revisión estática:** 2026-10-12.  
-**Tipo de revisión:** inspección estática de TSX/CSS; no se ejecutó navegador ni se modificó código de interacción.  
+**Tipo de revisión:** inspección estática de TSX/CSS y revisión de cambios de Ticket 1.2; no se ejecutó navegador ni hit-testing en runtime.  
 **Dependencia:** la baseline de desarrollo/mock está integrada en `main` mediante [PR #68](https://github.com/juann-ign/CDvicious/pull/68). Ticket 1.2 aplica correcciones estáticas derivadas de este audit; la validación funcional en navegador sigue pendiente.
 
 ## Resumen ejecutivo
@@ -29,9 +29,9 @@ Ninguna de estas hipótesis se presenta como una traza de navegador. Para confir
 - **Elementos relevantes:** `[data-rail-overlay]`, `.interactive`, `.discHitArea > *`; panel activo debajo.
 - **Esperado:** en Deck/Split pueden funcionar los controles previstos del deck; desde Batea, Colección y Mixtape los clicks/drag deben llegar al contenido del panel activo.
 - **Elemento que podría recibir el evento:** un descendiente interactivo del deck pinned (por ejemplo el CD, `NowPlayingCard`, el perfil o el booklet), por estar en una capa fija superior.
-- **Causa encontrada:** además del stacking, `RailProvider.module.css` intentaba seleccionar `.interactive` y `.discHitArea` desde otro CSS Module; las clases locales se compilan con nombres distintos. También se comprobó `data-deck-hidden` sobre el layer aunque el atributo vive en la raíz de `RailProvider`.
+- **Causa encontrada:** además del stacking, `RailProvider.module.css` intentaba seleccionar `.interactive` y `.discHitArea` desde otro CSS Module; las clases locales se compilan con nombres distintos. El selector anterior de `data-deck-hidden` también buscaba el atributo sobre el layer; se reemplazó por el gate `data-deck-interactive` reflejado en esa raíz.
 - **Fix aplicado:** `DeckPinnedLayer.tsx` expone `data-deck-interactive` en su layer a partir del estado observado en la raíz; `DeckPinnedLayer.module.css` desactiva `.interactive` y los hijos de `.discHitArea` cuando el atributo es `false`. `RailProvider.module.css` deja el gating dentro del módulo propietario y conserva las reglas basadas en atributos globales. `RailContext.tsx` sigue aplicando `inert` desde `activeChapterIndex >= 2`.
-- **Referencias:** `DeckPinnedLayer.module.css:1-30`; `RailProvider.module.css:42-53`; `RailContext.tsx:261-288`; `DeckPinnedLayer.tsx:18-35, 45-98`.
+- **Referencias:** `DeckPinnedLayer.module.css:1-34`; `RailProvider.module.css:42-51`; `RailContext.tsx:261-288`; `DeckPinnedLayer.tsx:18-36, 45-100`.
 - **Validación pendiente:** conservar el mismo criterio de capítulo para el gating CSS y `inert`. Probar `document.elementsFromPoint(x, y)` donde el CD/booklet se superpone visualmente a Batea y Colección. No se modificó `z-index`: aumentar el de los paneles no es necesario para el fix planteado.
 
 ### H2 — Anchura de panel y cálculo del capítulo activo usan medidas distintas
@@ -65,7 +65,7 @@ Ninguna de estas hipótesis se presenta como una traza de navegador. Para confir
 - **Esperado:** la zona de drag coincide exactamente con la región de la cinta que se pretende arrastrar.
 - **Elemento que recibe el evento:** `.viewport`, que cubre la caja de posicionamiento de `.stage`, incluido el área de padding.
 - **Fix aplicado:** `.stage` ahora declara `box-sizing: border-box`; la altura exterior incluye padding y bordes, por lo que `height: 256px` define el tamaño completo. `.viewport { position: absolute; inset: 0 }` sigue siendo el objetivo de drag dentro de esa caja.
-- **Referencias:** `CrateShelf.module.css:79-104`.
+- **Referencias:** `CrateShelf.module.css:79-105`.
 - **Validación pendiente:** medir `stage.getBoundingClientRect()` y `viewport.getBoundingClientRect()` para confirmar que la región interactiva cubre solo el escenario visual previsto.
 
 ### H5 — Recortes del capítulo Colección y de sus controles
@@ -77,7 +77,7 @@ Ninguna de estas hipótesis se presenta como una traza de navegador. Para confir
 - **Elemento que podría quedar fuera del área visible:** una carátula o control en los bordes del grid/toolbar; el overflow no deja interactuar con partes que queden realmente recortadas.
 - **Causa y fix aplicado:** los recortes de `.chapter`, `.filterBlock`, `.gridFrame` y `.grid` se conservan intencionalmente; `.chapter` y `.grid` ahora usan `box-sizing: border-box` para incluir el padding dentro de sus dimensiones. `.pillRow` mantiene `overflow-x: auto`; la paginación sigue fuera del grid, en `.footer`.
 - **Interacción actual:** `JewelCaseFront` es un elemento nativo `button` con `onClick`; las capas decorativas `.edge` y `.gloss` tienen `pointer-events: none`.
-- **Referencias:** `CollectionChapter.tsx:204-336`; `CollectionChapter.module.css:1-8, 46-92, 115-197`; `JewelCaseFront.tsx:12-28`; `JewelCaseFront.module.css:1-18, 38-65`.
+- **Referencias:** `CollectionChapter.tsx:204-336`; `CollectionChapter.module.css:1-9, 47-93, 117-199`; `JewelCaseFront.tsx:12-28`; `JewelCaseFront.module.css:1-18, 38-65`.
 - **Validación pendiente:** probar carátulas de la primera/última fila, filtros desplazados hasta ambos extremos y paginación a 1920×1080, 1366×768 y zoom 125%. Mantener `overflow-x: auto` en las pills.
 
 ### H6 — Mixtape Lab: botones nativos, pero contenido recortado por altura
@@ -100,7 +100,7 @@ Ninguna de estas hipótesis se presenta como una traza de navegador. Para confir
 - **Comportamiento observado en código:** en `updateRailProgress`, el índice se calcula por distancia/viewport y se limita al rango de paneles. Cada hijo directo de `.content` recibe `inert` cuando su índice no coincide; se publica `data-chapter-active`; el overlay recibe `inert` para índices >= 2. La función corre al iniciar, en cada evento de scroll de Lenis y tras `ResizeObserver`.
 - **Limpieza:** al desmontar `RailProvider`, se quita `inert` de todos los paneles y del overlay.
 - **Causa probable si falla:** un desajuste entre el ancho real de paneles y `wrapper.clientWidth`, o una transición que cambia el índice justo en el punto medio del scroll. El cambio en el punto medio es consecuencia de `Math.round`, no prueba por sí mismo un defecto.
-- **Referencias:** `RailContext.tsx:248-300, 302-355`; `RailProvider.module.css:42-53`.
+- **Referencias:** `RailContext.tsx:248-300, 302-355`; `RailProvider.module.css:42-51`.
 - **Validación pendiente:** comprobar `document.activeElement`, `inert`, `data-chapter`, `data-deck-interactive` y `elementsFromPoint` durante un recorrido lento, tras redimensionar y al recuperar el wheel después del drag. El algoritmo de `inert` en `RailContext.tsx` no se modificó.
 
 ## Matriz breve para la prueba manual
