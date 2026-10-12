@@ -47,6 +47,7 @@ export function DeckPinnedLayer() {
       className={styles.layer}
       style={stageStyle}
       data-rail-overlay
+      data-deck-interactive={deckInteractive ? "true" : "false"}
     >
       <header className={pageStyles.topControlBar}>
         <div className={pageStyles.brandCorner}>

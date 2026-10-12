@@ -39,11 +39,8 @@
   height: 100%;
 }
 
-.root[data-deck-interactive="false"] [data-rail-overlay] .interactive,
-.root[data-deck-interactive="false"] [data-rail-overlay] .discHitArea > * {
-  pointer-events: none;
-}
-
+/* DeckPinnedLayer hit targets are gated in DeckPinnedLayer.module.css.
+   Its CSS Module classes are local and must not be selected from this module. */
 .root[data-split-active="false"] [data-rail-booklet] {
   pointer-events: none;
 }

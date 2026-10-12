@@ -25,7 +25,11 @@
   pointer-events: auto;
 }
 
-.layer[data-deck-hidden="true"] .interactive {
+/* The overlay paints above the rail panels, so re-enabled hit targets must
+   follow the active chapter. Keep this gate in the CSS Module that owns the
+   local .interactive and .discHitArea classes. */
+.layer[data-deck-interactive="false"] .interactive,
+.layer[data-deck-interactive="false"] .discHitArea > * {
   pointer-events: none;
 }
 
