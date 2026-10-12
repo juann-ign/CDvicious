@@ -1,9 +1,10 @@
 # Ticket 1.1 — Mapa de hitboxes y zonas muertas
 
 **Repositorio:** `juann-ign/CDvicious`  
-**Base auditada:** `main` (`85262d030782519d907e7d68ba6dc92e179a5dd8`)  
+**Base auditada:** `main` (`94ae543298739522df6f7487e785dfa23042b586`)  
+**Última revisión estática:** 2026-10-12.  
 **Tipo de revisión:** inspección estática de TSX/CSS; no se ejecutó navegador ni se modificó código de interacción.  
-**Dependencia:** Ticket 0.1 tiene su PR abierto, pero sus cambios todavía no están integrados en `main`. Por lo tanto, los hallazgos de este documento describen el código actualmente integrado en `main`; la validación manual debe repetirse con la baseline mock integrada.
+**Dependencia:** la baseline de desarrollo/mock está integrada en `main` mediante [PR #68](https://github.com/juann-ign/CDvicious/pull/68). Esta revisión se contrastó con el snapshot indicado arriba; la validación manual en navegador sigue pendiente.
 
 ## Resumen ejecutivo
 
@@ -30,7 +31,7 @@ Ninguna de estas hipótesis se presenta como una traza de navegador. Para confir
 - **Elemento que podría recibir el evento:** un descendiente interactivo del deck pinned (por ejemplo el CD, `NowPlayingCard`, el perfil o el booklet), por estar en una capa fija superior.
 - **Causa probable:** stacking + `pointer-events` heredado o re-habilitado. `.layer` es `position: fixed; inset: 0; z-index: 10`, mientras la raíz del rail es un stacking context con `z-index: 0`. La raíz del deck usa `pointer-events: none`, pero `.interactive` y `.discHitArea > *` vuelven a permitir eventos.
 - **Gating existente:** `RailProvider.module.css` anula esos eventos cuando `data-deck-interactive="false"`; `RailContext.tsx` pone `inert` en el overlay desde `activeChapterIndex >= 2`.
-- **Referencias:** `DeckPinnedLayer.module.css:1-30`; `RailProvider.module.css:42-53`; `RailContext.tsx:261-288`; `DeckPinnedLayer.tsx:16-38, 49-87`.
+- **Referencias:** `DeckPinnedLayer.module.css:1-30`; `RailProvider.module.css:42-53`; `RailContext.tsx:261-288`; `DeckPinnedLayer.tsx:18-35, 45-98`.
 - **Sugerencia de fix (no implementado):** conservar un único criterio de activación por capítulo para CSS y `inert`. Añadir una prueba manual con `elementsFromPoint` en zonas donde el CD/booklet se superpone visualmente a la batea y colección; no aumentar z-index de paneles a ciegas.
 
 ### H2 — Anchura de panel y cálculo del capítulo activo usan medidas distintas
@@ -99,7 +100,7 @@ Ninguna de estas hipótesis se presenta como una traza de navegador. Para confir
 - **Comportamiento observado en código:** en `updateRailProgress`, el índice se calcula por distancia/viewport y se limita al rango de paneles. Cada hijo directo de `.content` recibe `inert` cuando su índice no coincide; se publica `data-chapter-active`; el overlay recibe `inert` para índices >= 2. La función corre al iniciar, en cada evento de scroll de Lenis y tras `ResizeObserver`.
 - **Limpieza:** al desmontar `RailProvider`, se quita `inert` de todos los paneles y del overlay.
 - **Causa probable si falla:** un desajuste entre el ancho real de paneles y `wrapper.clientWidth`, o una transición que cambia el índice justo en el punto medio del scroll. El cambio en el punto medio es consecuencia de `Math.round`, no prueba por sí mismo un defecto.
-- **Referencias:** `RailContext.tsx:248-299, 333-353`; `RailProvider.module.css:42-53`.
+- **Referencias:** `RailContext.tsx:248-300, 302-355`; `RailProvider.module.css:42-53`.
 - **Sugerencia de fix (no implementado):** comprobar `document.activeElement`, el atributo `inert`, `data-chapter`, `data-deck-interactive` y el resultado de `elementsFromPoint` durante un recorrido lento y después de redimensionar. Solo cambiar el algoritmo si se reproduce una divergencia.
 
 ## Matriz breve para la prueba manual
@@ -119,4 +120,4 @@ Ninguna de estas hipótesis se presenta como una traza de navegador. Para confir
 
 Este ticket es documental. No se modifican TSX, CSS, comportamiento de interacción ni z-index. La anchura de los paneles usa `border-box` y no muestra un desborde por padding/borde en CSS estático. Los bloqueos más plausibles a investigar en navegador son la sincronización del gating del deck con `inert`, el click después del drag y el clipping vertical en capítulos con altura fija.
 
-No se afirma que la auditoría esté validada por runtime: falta la prueba real del hit-test en navegador y Ticket 0.1 aún no está integrado en `main`.
+No se afirma que la auditoría esté validada por runtime: falta la prueba real del hit-test en navegador. La baseline mock sí está integrada en `main`; este update solo corrige la referencia al snapshot, el estado de la dependencia y las referencias de línea revalidadas.
