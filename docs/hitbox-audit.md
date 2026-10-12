@@ -8,7 +8,7 @@
 
 ## Resumen ejecutivo
 
-Ticket 1.2 corrige el gating del Deck en su propio CSS Module: el atributo `data-deck-interactive` del rail se refleja en la raíz del overlay y las zonas con `pointer-events: auto` quedan desactivadas desde Batea. También se corrigió el box model de los wrappers revisados, se hizo desplazable la cola de Mixtape y se añadió supresión del click posterior a un drag real. No se cambiaron valores de `z-index` ni se modificó `RailContext.tsx`. La validación de hit-testing en navegador sigue pendiente.
+Ticket 1.2 corrige el gating del Deck en su propio CSS Module: el atributo `data-deck-interactive` del rail se refleja en la raíz del overlay y los hit targets reactivados, incluidos descendientes del booklet, quedan desactivados desde Batea. El gating por atributos globales también bloquea los descendientes del booklet mientras el split está inactivo o el deck está oculto. También se corrigió el box model de los wrappers revisados, se hizo desplazable la cola de Mixtape y se añadió supresión del click posterior a un drag real. No se cambiaron valores de `z-index` ni se modificó `RailContext.tsx`. La validación de hit-testing en navegador sigue pendiente.
 
 Los principales riesgos a comprobar son:
 
@@ -30,7 +30,7 @@ Ninguna de estas hipótesis se presenta como una traza de navegador. Para confir
 - **Esperado:** en Deck/Split pueden funcionar los controles previstos del deck; desde Batea, Colección y Mixtape los clicks/drag deben llegar al contenido del panel activo.
 - **Elemento que podría recibir el evento:** un descendiente interactivo del deck pinned (por ejemplo el CD, `NowPlayingCard`, el perfil o el booklet), por estar en una capa fija superior.
 - **Causa encontrada:** además del stacking, `RailProvider.module.css` intentaba seleccionar `.interactive` y `.discHitArea` desde otro CSS Module; las clases locales se compilan con nombres distintos. El selector anterior de `data-deck-hidden` también buscaba el atributo sobre el layer; se reemplazó por el gate `data-deck-interactive` reflejado en esa raíz.
-- **Fix aplicado:** `DeckPinnedLayer.tsx` expone `data-deck-interactive` en su layer a partir del estado observado en la raíz; `DeckPinnedLayer.module.css` desactiva `.interactive` y los hijos de `.discHitArea` cuando el atributo es `false`. `RailProvider.module.css` deja el gating dentro del módulo propietario y conserva las reglas basadas en atributos globales. `RailContext.tsx` sigue aplicando `inert` desde `activeChapterIndex >= 2`.
+- **Fix aplicado:** `DeckPinnedLayer.tsx` expone `data-deck-interactive` en su layer a partir del estado observado en la raíz; `DeckPinnedLayer.module.css` desactiva `.interactive` y todos sus descendientes, además del árbol de `.discHitArea`, cuando el atributo es `false`. `RailProvider.module.css` mantiene el gating de booklet mediante atributos globales e incluye también sus descendientes mientras el split no está activo o el Deck está oculto. `RailContext.tsx` sigue aplicando `inert` desde `activeChapterIndex >= 2`.
 - **Referencias:** `DeckPinnedLayer.module.css:1-34`; `RailProvider.module.css:42-51`; `RailContext.tsx:261-288`; `DeckPinnedLayer.tsx:18-36, 45-100`.
 - **Validación pendiente:** conservar el mismo criterio de capítulo para el gating CSS y `inert`. Probar `document.elementsFromPoint(x, y)` donde el CD/booklet se superpone visualmente a Batea y Colección. No se modificó `z-index`: aumentar el de los paneles no es necesario para el fix planteado.
 

@@ -41,10 +41,9 @@
 
 /* DeckPinnedLayer hit targets are gated in DeckPinnedLayer.module.css.
    Its CSS Module classes are local and must not be selected from this module. */
-.root[data-split-active="false"] [data-rail-booklet] {
-  pointer-events: none;
-}
-
-.root[data-deck-hidden="true"] [data-rail-booklet] {
+.root[data-split-active="false"] [data-rail-booklet],
+.root[data-split-active="false"] [data-rail-booklet] *,
+.root[data-deck-hidden="true"] [data-rail-booklet],
+.root[data-deck-hidden="true"] [data-rail-booklet] * {
   pointer-events: none;
 }

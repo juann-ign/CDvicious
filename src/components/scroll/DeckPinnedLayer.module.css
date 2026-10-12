@@ -29,7 +29,9 @@
    follow the active chapter. Keep this gate in the CSS Module that owns the
    local .interactive and .discHitArea classes. */
 .layer[data-deck-interactive="false"] .interactive,
-.layer[data-deck-interactive="false"] .discHitArea > * {
+.layer[data-deck-interactive="false"] .interactive *,
+.layer[data-deck-interactive="false"] .discHitArea > *,
+.layer[data-deck-interactive="false"] .discHitArea > * * {
   pointer-events: none;
 }
 
