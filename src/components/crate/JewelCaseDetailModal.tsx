@@ -126,6 +126,41 @@ function unregisterModal(entryId: symbol) {
   }
 }
 
+type PlayApiResponse = {
+  success?: boolean;
+  error?: string;
+  message?: string;
+};
+
+function getPlayFailureMessage(
+  status: number,
+  response: PlayApiResponse | null,
+): string {
+  if (response?.message) return response.message;
+
+  if (
+    response?.error === "AUTH_REQUIRED" ||
+    response?.error === "SPOTIFY_AUTH_EXPIRED" ||
+    status === 401
+  ) {
+    return "Tu sesión de Spotify expiró. Volvé a iniciar sesión.";
+  }
+
+  if (response?.error === "DEVICE_NOT_AVAILABLE") {
+    return "El dispositivo de Spotify no está disponible. Activá un dispositivo e intentá de nuevo.";
+  }
+
+  if (status === 403) {
+    return "Spotify no permitió la reproducción. Verificá tu cuenta y los permisos.";
+  }
+
+  if (status === 429) {
+    return "Spotify está limitando las solicitudes. Esperá un momento e intentá de nuevo.";
+  }
+
+  return "Spotify no confirmó la reproducción. Podés intentarlo de nuevo.";
+}
+
 function fmt(ms: number) {
   const totalSeconds = Math.floor(ms / 1000);
   return `${Math.floor(totalSeconds / 60)}:${String(totalSeconds % 60).padStart(2, "0")}`;
@@ -158,6 +193,8 @@ export function JewelCaseDetailModal({
   const [isOpen, setIsOpen] = useState(false);
   const [isCaseOpen, setIsCaseOpen] = useState(false);
   const [isLaunching, setIsLaunching] = useState(false);
+  const [isPlayPending, setIsPlayPending] = useState(false);
+  const [playError, setPlayError] = useState<string | null>(null);
   const [isLifting, setIsLifting] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
   const [launchOrigin, setLaunchOrigin] = useState<{
@@ -176,10 +213,12 @@ export function JewelCaseDetailModal({
   const onCloseRef = useRef(onClose);
   const onLoadRef = useRef(onLoad);
   const isLaunchingRef = useRef(isLaunching);
+  const isPlayPendingRef = useRef(isPlayPending);
 
   onCloseRef.current = onClose;
   onLoadRef.current = onLoad;
   isLaunchingRef.current = isLaunching;
+  isPlayPendingRef.current = isPlayPending;
   const [releaseMeta, setReleaseMeta] = useState<ReleaseMeta>(() => ({
     year: album.release_date?.slice(0, 4),
     label: album.label,
@@ -196,13 +235,13 @@ export function JewelCaseDetailModal({
     rotation: discDragRotation,
     isDragging: isDiscDragging,
     pointerHandlers: discPointerHandlers,
-  } = useDiscSurfaceDrag(!isCaseOpen || isLaunching);
+  } = useDiscSurfaceDrag(!isCaseOpen || isLaunching || isPlayPending);
   useLayoutEffect(() => {
     const modalOwner = railLockTokenRef.current;
 
     registerModal(modalOwner, {
       getDialog: () => dialogRef.current,
-      isLaunching: () => isLaunchingRef.current,
+      isLaunching: () => isLaunchingRef.current || isPlayPendingRef.current,
       close: () => onCloseRef.current(),
     });
 
@@ -318,11 +357,11 @@ export function JewelCaseDetailModal({
   // Escape and Tab are handled by the single shared modal keyboard listener.
 
   const handleOpenCase = () => {
-    if (!isCaseOpen) setIsCaseOpen(true);
+    if (!isCaseOpen && !isPlayPending && !isLaunching) setIsCaseOpen(true);
   };
 
   const handleCloseCase = () => {
-    if (isCaseOpen) setIsCaseOpen(false);
+    if (isCaseOpen && !isPlayPending && !isLaunching) setIsCaseOpen(false);
   };
 
   const beginLaunch = useCallback(() => {
@@ -340,33 +379,71 @@ export function JewelCaseDetailModal({
     setIsLifting(true);
   }, [isLaunching]);
 
-  const beginPlay = useCallback(() => {
-    if (isLaunching) return;
+  const beginPlay = useCallback(async () => {
+    if (isLaunching || isPlayPending) return;
 
     const disc = discRef.current;
     if (!disc) return;
 
-    if (onPlay) {
-      if (deviceId && isReady) {
-        fetch("/api/play", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ uri: album.uri, deviceId }),
-        }).catch((error) => {
-          console.error("Error al iniciar reproducción:", error);
-        });
-      }
+    if (!deviceId || !isReady) {
+      setPlayError(
+        "No hay un dispositivo Spotify activo. Abrí Spotify y esperá a que el reproductor se conecte.",
+      );
+      return;
+    }
 
+    setPlayError(null);
+    setIsPlayPending(true);
+
+    try {
+      const response = await fetch("/api/play", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ uri: album.uri, deviceId }),
+      });
+      const result = (await response.json().catch(() => null)) as
+        | PlayApiResponse
+        | null;
+
+      if (!response.ok || result?.success !== true) {
+        setPlayError(getPlayFailureMessage(response.status, result));
+        return;
+      }
+    } catch {
+      setPlayError(
+        "No se pudo conectar con Spotify. Revisá tu conexión e intentá de nuevo.",
+      );
+      return;
+    } finally {
+      setIsPlayPending(false);
+    }
+
+    // A flight is only created after the API explicitly confirms success.
+    // Unmounting this modal triggers the existing nowPlayingStore modal-close refresh.
+    setPlayError(null);
+
+    if (onPlay) {
       onPlay(disc);
       onClose();
       return;
     }
 
     beginLaunch();
-  }, [album.uri, beginLaunch, deviceId, isLaunching, isReady, onClose, onPlay]);
+  }, [
+    album.uri,
+    beginLaunch,
+    deviceId,
+    isLaunching,
+    isPlayPending,
+    isReady,
+    onClose,
+    onPlay,
+  ]);
 
   const handlePlay = useCallback(() => {
-    if (isLaunching) return;
+    if (isLaunching || isPlayPending) return;
+
+    setPlayError(null);
 
     if (!isCaseOpen) {
       pendingPlayRef.current = true;
@@ -374,8 +451,8 @@ export function JewelCaseDetailModal({
       return;
     }
 
-    beginPlay();
-  }, [beginPlay, isCaseOpen, isLaunching]);
+    void beginPlay();
+  }, [beginPlay, isCaseOpen, isLaunching, isPlayPending]);
 
   useEffect(() => {
     if (!isCaseOpen || isLaunching || !pendingPlayRef.current) return;
@@ -517,8 +594,9 @@ export function JewelCaseDetailModal({
       <button
         type="button"
         className={styles.scrim}
-        onClick={() => !isLaunching && onClose()}
+        onClick={() => !isLaunching && !isPlayPending && onClose()}
         aria-label="Cerrar"
+        disabled={isLaunching || isPlayPending}
       />
 
       <div
@@ -539,8 +617,8 @@ export function JewelCaseDetailModal({
             type="button"
             ref={closeButtonRef}
             className={styles.closeBtn}
-            onClick={() => !isLaunching && onClose()}
-            disabled={isLaunching}
+            onClick={() => !isLaunching && !isPlayPending && onClose()}
+            disabled={isLaunching || isPlayPending}
             aria-label="Cerrar"
           >
             <span className={polishStyles.closeIcon} aria-hidden="true">
@@ -843,22 +921,25 @@ export function JewelCaseDetailModal({
             type="button"
             className={polishStyles.vfdMainAction}
             onClick={handlePlay}
-            disabled={isLaunching}
+            disabled={isLaunching || isPlayPending}
+            aria-busy={isPlayPending}
             aria-label={`Reproducir ${album.name}`}
           >
             <span className={polishStyles.vfdMainInfo}>
               <strong>{album.name}</strong>
               <small>{album.artists.map((a) => a.name).join(", ")}</small>
             </span>
-            <span className={polishStyles.vfdMainHover}>REPRODUCIR CD</span>
+            <span className={polishStyles.vfdMainHover}>
+              {isPlayPending ? "ESPERANDO A SPOTIFY..." : "REPRODUCIR CD"}
+            </span>
           </button>
 
           <div className={polishStyles.hardwareControls}>
             <button
               type="button"
               className={`${polishStyles.hwBtn} ${polishStyles.hwBtnTray}`}
-              onClick={() => !isLaunching && onClose()}
-              disabled={isLaunching}
+              onClick={() => !isLaunching && !isPlayPending && onClose()}
+              disabled={isLaunching || isPlayPending}
               aria-label="Dejar en batea"
             >
               DEJAR EN BATEA
@@ -867,7 +948,7 @@ export function JewelCaseDetailModal({
               type="button"
               className={`${polishStyles.hwBtn} ${polishStyles.hwBtnCase}`}
               onClick={() => !isLaunching && setIsCaseOpen((open) => !open)}
-              disabled={isLaunching}
+              disabled={isLaunching || isPlayPending}
               aria-expanded={isCaseOpen}
               aria-label={isCaseOpen ? "Cerrar caja" : "Abrir caja"}
             >
@@ -875,6 +956,11 @@ export function JewelCaseDetailModal({
             </button>
           </div>
         </footer>
+        {playError && (
+          <p className={styles.playError} role="alert" aria-live="polite">
+            {playError}
+          </p>
+        )}
       </div>
     </div>
   );
