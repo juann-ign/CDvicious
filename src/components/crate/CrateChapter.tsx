@@ -15,7 +15,7 @@ import styles from "./CrateChapter.module.css";
 const SHELF_COUNT = 18;
 
 export function CrateChapter() {
-  const { stop, start } = useRail();
+  const { stop, start, scrollToChapter } = useRail();
   const dragLockTokenRef = useRef(Symbol("crate-shelf-drag"));
   const { albums: cachedAlbums } = useCollectionCache();
 
