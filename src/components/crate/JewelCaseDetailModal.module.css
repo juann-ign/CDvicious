@@ -1065,3 +1065,16 @@
     transition: none;
   }
 }
+
+
+.playError {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 7px 10px;
+  border-left: 2px solid rgba(255, 115, 105, 0.9);
+  background: rgba(255, 80, 72, 0.08);
+  color: #ffb4ad;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  line-height: 1.45;
+}
