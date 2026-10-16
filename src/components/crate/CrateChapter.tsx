@@ -51,9 +51,12 @@ export function CrateChapter() {
     setSelected(null);
   }, []);
 
-  const handleFlightArrive = useCallback(() => {}, []);
+  const handleFlightArrive = useCallback(() => {
+    window.dispatchEvent(new Event("cdvicious:disc-flight-arrived"));
+  }, []);
 
   const handleFlightDone = useCallback(() => {
+    window.dispatchEvent(new Event("cdvicious:disc-flight-done"));
     setFlight(null);
   }, []);
 
