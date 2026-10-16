@@ -17,10 +17,12 @@ const SNAP_THRESHOLD_RATIO = 0.2;
 const SNAP_MIN_DURATION_SECONDS = 0.18;
 const SNAP_MAX_DURATION_SECONDS = 0.6;
 
+type RailLockToken = symbol;
+
 type RailContextValue = {
   isReady: boolean;
-  start: () => void;
-  stop: () => void;
+  start: (token: RailLockToken) => void;
+  stop: (token: RailLockToken) => void;
   scrollToX: (px: number) => void;
   scrollToChapter: (index: number, duration?: number) => void;
 };
@@ -37,6 +39,7 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const lenisRef = useRef<Lenis | null>(null);
+  const stopTokensRef = useRef(new Set<RailLockToken>());
   const animationFrameRef = useRef<number | null>(null);
   const snapTimerRef = useRef<number | null>(null);
   const snapInProgressRef = useRef(false);
@@ -95,6 +98,9 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
     });
 
     lenisRef.current = lenis;
+    if (stopTokensRef.current.size > 0) {
+      lenis.stop();
+    }
     setIsReady(true);
 
     const measureRail = () => {
@@ -155,6 +161,7 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
         !activeLenis ||
         !anchor ||
         activeLenis.isStopped ||
+        stopTokensRef.current.size > 0 ||
         snapInProgressRef.current ||
         document.documentElement.dataset.modalOpen === "true"
       ) {
@@ -226,6 +233,7 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
       if (
         snapInProgressRef.current ||
         lenis.isStopped ||
+        stopTokensRef.current.size > 0 ||
         document.documentElement.dataset.modalOpen === "true"
       ) {
         return;
@@ -355,11 +363,19 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
     };
   }, []);
 
-  const start = useCallback(() => {
+  const start = useCallback((token: RailLockToken) => {
+    stopTokensRef.current.delete(token);
+
+    if (stopTokensRef.current.size > 0) {
+      return;
+    }
+
     lenisRef.current?.start();
   }, []);
 
-  const stop = useCallback(() => {
+  const stop = useCallback((token: RailLockToken) => {
+    stopTokensRef.current.add(token);
+
     if (snapTimerRef.current !== null) {
       window.clearTimeout(snapTimerRef.current);
       snapTimerRef.current = null;
@@ -373,7 +389,7 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
   const scrollToX = useCallback((px: number) => {
     const lenis = lenisRef.current;
 
-    if (!lenis || lenis.isStopped) {
+    if (!lenis || lenis.isStopped || stopTokensRef.current.size > 0) {
       return;
     }
 
@@ -389,7 +405,13 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
     const lenis = lenisRef.current;
     const content = contentRef.current;
 
-    if (!lenis || !content || content.children.length === 0 || lenis.isStopped) {
+    if (
+      !lenis ||
+      !content ||
+      content.children.length === 0 ||
+      lenis.isStopped ||
+      stopTokensRef.current.size > 0
+    ) {
       return;
     }
 
