@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useTexture } from "@react-three/drei";
+import type { NowPlayingResponse } from "@/types/spotify";
 import { UserProfileChip } from "@/components/UserProfileChip";
 import { Disc } from "@/components/Disc";
 import { NowPlayingCard } from "@/components/NowPlayingCard";
@@ -11,9 +13,18 @@ import { useSpotifyPlayer } from "@/components/SpotifyPlayerProvider";
 import pageStyles from "@/app/page.module.css";
 import styles from "./DeckPinnedLayer.module.css";
 
+const DISC_PLAYBACK_START_DELAY_MS = 1_000;
+
+type DiscFlightStage = "idle" | "flying" | "docked";
+
 export function DeckPinnedLayer() {
   const { authenticated } = useSpotifyPlayer();
   const [deckInteractive, setDeckInteractive] = useState(true);
+  const [flightStage, setFlightStage] = useState<DiscFlightStage>("idle");
+  const [frozenData, setFrozenData] = useState<NowPlayingResponse | null>(null);
+  const [visualPlaybackReady, setVisualPlaybackReady] = useState(true);
+  const flightStageRef = useRef<DiscFlightStage>("idle");
+  const playbackDelayRef = useRef<number | null>(null);
 
   useEffect(() => {
     const overlay = document.querySelector<HTMLElement>("[data-rail-overlay]");
@@ -36,7 +47,75 @@ export function DeckPinnedLayer() {
   }, []);
 
   const { data, error } = useNowPlaying(authenticated === true && deckInteractive);
-  const coverUrl = data?.track?.album.images[0]?.url;
+  const latestDataRef = useRef(data);
+  latestDataRef.current = data;
+
+  const trackCoverUrl = data?.track?.album.images[0]?.url;
+
+  useEffect(() => {
+    if (!trackCoverUrl) return;
+
+    // Load the next artwork while the temporary disc is travelling so the
+    // persistent Three.js disc is less likely to suspend at the handoff.
+    try {
+      useTexture.preload(trackCoverUrl);
+    } catch {
+      // DiscMesh still loads the same texture through its normal Suspense path.
+    }
+  }, [trackCoverUrl]);
+
+  useEffect(() => {
+    const clearPlaybackDelay = () => {
+      if (playbackDelayRef.current !== null) {
+        window.clearTimeout(playbackDelayRef.current);
+        playbackDelayRef.current = null;
+      }
+    };
+
+    const handleFlightStarted = () => {
+      clearPlaybackDelay();
+      flightStageRef.current = "flying";
+      setFlightStage("flying");
+      setFrozenData(latestDataRef.current);
+      setVisualPlaybackReady(false);
+    };
+
+    const beginDockedDelay = () => {
+      // "done" is also sent when the Deck target is missing, so the display
+      // cannot remain frozen if a flight has to be discarded early.
+      if (flightStageRef.current !== "flying") return;
+
+      clearPlaybackDelay();
+      flightStageRef.current = "docked";
+      setFlightStage("docked");
+      setFrozenData(null);
+      setVisualPlaybackReady(false);
+
+      playbackDelayRef.current = window.setTimeout(() => {
+        playbackDelayRef.current = null;
+        flightStageRef.current = "idle";
+        setFlightStage("idle");
+        setFrozenData(null);
+        setVisualPlaybackReady(true);
+      }, DISC_PLAYBACK_START_DELAY_MS);
+    };
+
+    window.addEventListener("cdvicious:disc-flight-started", handleFlightStarted);
+    window.addEventListener("cdvicious:disc-flight-arrived", beginDockedDelay);
+    window.addEventListener("cdvicious:disc-flight-done", beginDockedDelay);
+
+    return () => {
+      window.removeEventListener("cdvicious:disc-flight-started", handleFlightStarted);
+      window.removeEventListener("cdvicious:disc-flight-arrived", beginDockedDelay);
+      window.removeEventListener("cdvicious:disc-flight-done", beginDockedDelay);
+      clearPlaybackDelay();
+    };
+  }, []);
+
+  const visibleData = flightStage === "flying" ? frozenData : data;
+  const visibleIsPlaying =
+    visualPlaybackReady && (visibleData?.isPlaying ?? false);
+  const coverUrl = visibleData?.track?.album.images[0]?.url;
   const accentColor = useDominantColor(coverUrl) ?? "#1DB954";
   const stageStyle = {
     "--accent-color": accentColor,
@@ -62,8 +141,8 @@ export function DeckPinnedLayer() {
         <div className={pageStyles.centerStage}>
           <div className={styles.discHitArea}>
             <Disc
-              track={data?.track ?? null}
-              isPlaying={data?.isPlaying ?? false}
+              track={visibleData?.track ?? null}
+              isPlaying={visibleIsPlaying}
               accentColor={accentColor}
             />
           </div>
@@ -72,23 +151,23 @@ export function DeckPinnedLayer() {
         <div className={pageStyles.nowPlayingDock}>
           <div className={styles.interactive}>
             <NowPlayingCard
-              track={data?.track ?? null}
-              isPlaying={data?.isPlaying ?? false}
+              track={visibleData?.track ?? null}
+              isPlaying={visibleIsPlaying}
               error={error}
-              progressMs={data?.progressMs ?? null}
-              durationMs={data?.durationMs ?? null}
+              progressMs={visibleData?.progressMs ?? null}
+              durationMs={visibleData?.durationMs ?? null}
             />
           </div>
         </div>
       </div>
 
-      {data?.track && (
+      {visibleData?.track && (
         <div
           className={styles.bookletLayer + " " + styles.interactive}
           data-rail-booklet
         >
           <LyricsBooklet
-            track={data.track}
+            track={visibleData.track}
             isOpen
             onToggle={() => undefined}
             accentColor={accentColor}
