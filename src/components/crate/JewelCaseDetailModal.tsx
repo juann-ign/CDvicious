@@ -138,7 +138,11 @@ function getPlayFailureMessage(
 ): string {
   if (response?.message) return response.message;
 
-  if (response?.error === "AUTH_REQUIRED" || response?.error === "SPOTIFY_AUTH_EXPIRED" || status === 401) {
+  if (
+    response?.error === "AUTH_REQUIRED" ||
+    response?.error === "SPOTIFY_AUTH_EXPIRED" ||
+    status === 401
+  ) {
     return "Tu sesión de Spotify expiró. Volvé a iniciar sesión.";
   }
 
