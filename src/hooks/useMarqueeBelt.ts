@@ -223,6 +223,14 @@ export function useMarqueeBelt({
     el.addEventListener("lostpointercapture", lostCapture);
 
     return () => {
+      // Release the drag-owned rail lock if this hook unmounts mid-gesture.
+      if (captured.current) {
+        captured.current = false;
+        dragging.current = false;
+        pointerId.current = null;
+        onGrabEndRef.current?.();
+      }
+
       el.removeEventListener("pointerdown", down);
       el.removeEventListener("click", click, true);
       clearClickSuppression();

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRail } from "@/components/scroll/RailContext";
 import { useCollectionCache } from "@/lib/collectionClient";
 import { JewelCaseDetailModal } from "./JewelCaseDetailModal";
@@ -13,7 +13,14 @@ const SHELF_COUNT = 18;
 
 export function CrateChapter() {
   const { stop, start } = useRail();
+  const dragLockTokenRef = useRef(Symbol("crate-shelf-drag"));
   const { albums: cachedAlbums } = useCollectionCache();
+
+  useEffect(() => {
+    return () => {
+      start(dragLockTokenRef.current);
+    };
+  }, [start]);
   const albums = cachedAlbums ?? [];
   const [loading] = useState(false);
   const [rateLimitSeconds] = useState<number | null>(null);
@@ -25,11 +32,11 @@ export function CrateChapter() {
   } | null>(null);
 
   const handleGrabStart = useCallback(() => {
-    stop();
+    stop(dragLockTokenRef.current);
   }, [stop]);
 
   const handleGrabEnd = useCallback(() => {
-    start();
+    start(dragLockTokenRef.current);
   }, [start]);
 
   const handleSelect = useCallback((album: AlbumItem) => {

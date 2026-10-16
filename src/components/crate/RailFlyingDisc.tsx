@@ -31,7 +31,7 @@ export function RailFlyingDisc({
   onArrive,
   onDone,
 }: RailFlyingDiscProps) {
-  const rail = useRail();
+  const { isReady, scrollToChapter } = useRail();
   const wrapRef = useRef<HTMLDivElement>(null);
   const spinnerRef = useRef<HTMLDivElement>(null);
   const impactRef = useRef<HTMLDivElement>(null);
@@ -41,7 +41,7 @@ export function RailFlyingDisc({
   const pulseTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
-    if (!rail.isReady) return;
+    if (!isReady) return;
 
     const el = wrapRef.current;
     const spinner = spinnerRef.current;
@@ -84,8 +84,7 @@ export function RailFlyingDisc({
     });
 
     gsap.set(spinner, { rotate: 0 });
-    rail.start();
-    rail.scrollToChapter(0, duration);
+    scrollToChapter(0, duration);
 
     const finish = () => {
       if (doneRef.current) return;
@@ -244,7 +243,7 @@ export function RailFlyingDisc({
       gsap.killTweensOf(el);
       gsap.killTweensOf(spinner);
     };
-  }, [onArrive, onDone, originRect, rail]);
+  }, [isReady, onArrive, onDone, originRect, scrollToChapter]);
 
   return (
     <>

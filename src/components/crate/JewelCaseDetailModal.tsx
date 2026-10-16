@@ -60,8 +60,11 @@ export function JewelCaseDetailModal({
     height: number;
   } | null>(null);
   const rail = useContext(RailContext);
+  const stopRail = rail?.stop;
+  const startRail = rail?.start;
   const { deviceId, isReady } = useSpotifyPlayer();
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const railLockTokenRef = useRef(Symbol("jewel-case-modal"));
   const [releaseMeta, setReleaseMeta] = useState<ReleaseMeta>(() => ({
     year: album.release_date?.slice(0, 4),
     label: album.label,
@@ -167,7 +170,8 @@ export function JewelCaseDetailModal({
   }, [album.id, album.artists, album.name, album.release_date, album.label, album.genres]);
 
   useEffect(() => {
-    rail?.stop();
+    const lockToken = railLockTokenRef.current;
+    stopRail?.(lockToken);
     const previousActive = document.activeElement as HTMLElement | null;
     const raf = requestAnimationFrame(() => {
       setIsOpen(true);
@@ -176,12 +180,12 @@ export function JewelCaseDetailModal({
 
     return () => {
       cancelAnimationFrame(raf);
-      rail?.start();
+      startRail?.(lockToken);
       if (previousActive && document.contains(previousActive)) {
         previousActive.focus();
       }
     };
-  }, [rail]);
+  }, [startRail, stopRail]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) =>
