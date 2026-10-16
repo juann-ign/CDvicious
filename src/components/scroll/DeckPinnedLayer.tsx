@@ -97,17 +97,28 @@ export function DeckPinnedLayer() {
         setFlightStage("idle");
         setFrozenData(null);
         setVisualPlaybackReady(true);
+        window.dispatchEvent(new Event("cdvicious:disc-flight-playback-ready"));
       }, DISC_PLAYBACK_START_DELAY_MS);
+    };
+
+    const cancelFlight = () => {
+      clearPlaybackDelay();
+      flightStageRef.current = "idle";
+      setFlightStage("idle");
+      setFrozenData(null);
+      setVisualPlaybackReady(true);
     };
 
     window.addEventListener("cdvicious:disc-flight-started", handleFlightStarted);
     window.addEventListener("cdvicious:disc-flight-arrived", beginDockedDelay);
     window.addEventListener("cdvicious:disc-flight-done", beginDockedDelay);
+    window.addEventListener("cdvicious:disc-flight-cancelled", cancelFlight);
 
     return () => {
       window.removeEventListener("cdvicious:disc-flight-started", handleFlightStarted);
       window.removeEventListener("cdvicious:disc-flight-arrived", beginDockedDelay);
       window.removeEventListener("cdvicious:disc-flight-done", beginDockedDelay);
+      window.removeEventListener("cdvicious:disc-flight-cancelled", cancelFlight);
       clearPlaybackDelay();
     };
   }, []);
