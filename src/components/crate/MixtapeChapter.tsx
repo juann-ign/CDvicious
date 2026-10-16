@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRail } from "@/components/scroll/RailContext";
 import { useCollectionCache } from "@/lib/collectionClient";
 import type { AlbumItem } from "@/types/crate";
@@ -38,7 +38,14 @@ export function MixtapeChapter({
   spotifyBridge?: MixtapeSpotifyBridge;
 }) {
   const { stop, start } = useRail();
+  const exportLockTokenRef = useRef(Symbol("mixtape-export"));
   const { albums: cachedAlbums } = useCollectionCache();
+
+  useEffect(() => {
+    return () => {
+      start(exportLockTokenRef.current);
+    };
+  }, [start]);
   const [queue, setQueue] = useState<AlbumItem[]>([]);
   const [loading] = useState(false);
   const [rateLimitSeconds] = useState<number | null>(null);
@@ -82,13 +89,13 @@ export function MixtapeChapter({
     }
 
     setExporting(true);
-    stop();
+    stop(exportLockTokenRef.current);
 
     try {
       await spotifyBridge.exportPlaylist(toSpotifyPlaylistPayload(queue));
     } finally {
       setExporting(false);
-      start();
+      start(exportLockTokenRef.current);
     }
   }, [queue, spotifyBridge, start, stop]);
 
