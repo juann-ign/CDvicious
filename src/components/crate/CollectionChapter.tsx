@@ -2,13 +2,17 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSpotifyPlayer } from "@/components/SpotifyPlayerProvider";
+import { useRail } from "@/components/scroll/RailContext";
 import {
   loadCollection,
   loadCollectionGenres,
   syncCollectionAuth,
   useCollectionCache,
 } from "@/lib/collectionClient";
-import { JewelCaseDetailModal } from "./JewelCaseDetailModal";
+import {
+  JewelCaseDetailModal,
+  type StartPlayExecution,
+} from "./JewelCaseDetailModal";
 import { JewelCaseFront } from "./JewelCaseFront";
 import { RailFlyingDisc } from "./RailFlyingDisc";
 import type { AlbumItem } from "@/types/crate";
@@ -37,6 +41,7 @@ function decadeOf(album: AlbumItem): DecadeFilter {
 
 export function CollectionChapter() {
   const { authenticated } = useSpotifyPlayer();
+  const { scrollToChapter } = useRail();
   const { albums: cachedAlbums, genresLoaded } = useCollectionCache();
   const albums = useMemo(() => cachedAlbums ?? [], [cachedAlbums]);
   const [loading, setLoading] = useState(false);
@@ -49,6 +54,10 @@ export function CollectionChapter() {
   const [genre, setGenre] = useState("all");
   const [page, setPage] = useState(0);
   const [selected, setSelected] = useState<AlbumItem | null>(null);
+  const [playErrorForAlbum, setPlayErrorForAlbum] = useState<{
+    albumId: string;
+    message: string;
+  } | null>(null);
   const [flight, setFlight] = useState<{
     album: AlbumItem;
     originRect: DOMRect;
@@ -175,29 +184,68 @@ export function CollectionChapter() {
   );
 
   const handleSelect = useCallback((album: AlbumItem) => {
+    setPlayErrorForAlbum(null);
     setSelected(album);
   }, []);
 
-  const handlePlay = useCallback((album: AlbumItem, originEl: HTMLElement) => {
+  const handlePlay = useCallback((
+    album: AlbumItem,
+    originEl: HTMLElement,
+    executePlayback: StartPlayExecution,
+  ) => {
+    const sourceChapter = Number(document.documentElement.dataset.chapter ?? "0");
+
+    setPlayErrorForAlbum(null);
     setFlight({
       album,
       originRect: originEl.getBoundingClientRect(),
     });
     setSelected(null);
+
+    // Playback executes while the disc is in transit. On rejection, cancel the
+    // transient flight, return to the source chapter, and restore modal feedback.
+    void executePlayback()
+      .then((result) => {
+        if (result.success) return;
+
+        window.dispatchEvent(new Event("cdvicious:disc-flight-cancelled"));
+        scrollToChapter(sourceChapter, 0);
+        setFlight(null);
+        setPlayErrorForAlbum({
+          albumId: album.id,
+          message: result.message ?? "Spotify no confirmó la reproducción. Podés intentarlo de nuevo.",
+        });
+        setSelected(album);
+      })
+      .catch(() => {
+        window.dispatchEvent(new Event("cdvicious:disc-flight-cancelled"));
+        scrollToChapter(sourceChapter, 0);
+        setFlight(null);
+        setPlayErrorForAlbum({
+          albumId: album.id,
+          message: "No se pudo conectar con Spotify. Revisá tu conexión e intentá de nuevo.",
+        });
+        setSelected(album);
+      });
+  }, [scrollToChapter]);
+
+  const handleFlightArrive = useCallback(() => {
+    window.dispatchEvent(new Event("cdvicious:disc-flight-arrived"));
   }, []);
 
-  const handleFlightArrive = useCallback(() => {}, []);
-
   const handleFlightDone = useCallback(() => {
+    window.dispatchEvent(new Event("cdvicious:disc-flight-done"));
     setFlight(null);
   }, []);
 
   const handleClose = useCallback(() => {
     setSelected(null);
+    setPlayErrorForAlbum(null);
   }, []);
 
   const handleLoad = useCallback(() => {
     setSelected(null);
+    setPlayErrorForAlbum(null);
   }, []);
 
   return (
@@ -337,7 +385,14 @@ export function CollectionChapter() {
           album={selected}
           onClose={handleClose}
           onLoad={handleLoad}
-          onPlay={(originEl) => handlePlay(selected, originEl)}
+          initialPlayError={
+            playErrorForAlbum?.albumId === selected.id
+              ? playErrorForAlbum.message
+              : null
+          }
+          onPlay={(originEl, executePlayback) =>
+            handlePlay(selected, originEl, executePlayback)
+          }
         />
       )}
 

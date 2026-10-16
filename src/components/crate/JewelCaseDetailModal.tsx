@@ -161,6 +161,35 @@ function getPlayFailureMessage(
   return "Spotify no confirmó la reproducción. Podés intentarlo de nuevo.";
 }
 
+export type PlayExecutionResult = {
+  success: boolean;
+  message?: string;
+};
+
+export type StartPlayExecution = () => Promise<PlayExecutionResult>;
+
+function waitForWindowEvent(eventName: string, timeoutMs: number): Promise<void> {
+  if (
+    eventName === "cdvicious:disc-flight-playback-ready" &&
+    document.documentElement.dataset.discFlightPlaybackReady === "true"
+  ) {
+    return Promise.resolve();
+  }
+
+  return new Promise((resolve) => {
+    let timeoutId: number | null = null;
+
+    const finish = () => {
+      window.removeEventListener(eventName, finish);
+      if (timeoutId !== null) window.clearTimeout(timeoutId);
+      resolve();
+    };
+
+    window.addEventListener(eventName, finish);
+    timeoutId = window.setTimeout(finish, timeoutMs);
+  });
+}
+
 function fmt(ms: number) {
   const totalSeconds = Math.floor(ms / 1000);
   return `${Math.floor(totalSeconds / 60)}:${String(totalSeconds % 60).padStart(2, "0")}`;
@@ -170,7 +199,8 @@ interface JewelCaseDetailModalProps {
   album: AlbumItem;
   onClose: () => void;
   onLoad: (originEl: HTMLElement) => void;
-  onPlay?: (originEl: HTMLElement) => void;
+  onPlay?: (originEl: HTMLElement, executePlayback: StartPlayExecution) => void;
+  initialPlayError?: string | null;
 }
 
 interface ReleaseMeta {
@@ -187,6 +217,7 @@ export function JewelCaseDetailModal({
   onClose,
   onLoad,
   onPlay,
+  initialPlayError = null,
 }: JewelCaseDetailModalProps) {
   const [tracks, setTracks] = useState<AlbumTrack[] | null>(null);
   const [loading, setLoading] = useState(true);
@@ -194,7 +225,8 @@ export function JewelCaseDetailModal({
   const [isCaseOpen, setIsCaseOpen] = useState(false);
   const [isLaunching, setIsLaunching] = useState(false);
   const [isPlayPending, setIsPlayPending] = useState(false);
-  const [playError, setPlayError] = useState<string | null>(null);
+  const [isOpeningForPlay, setIsOpeningForPlay] = useState(false);
+  const [playError, setPlayError] = useState<string | null>(initialPlayError);
   const [isLifting, setIsLifting] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
   const [launchOrigin, setLaunchOrigin] = useState<{
@@ -206,7 +238,7 @@ export function JewelCaseDetailModal({
   const rail = useContext(RailContext);
   const stopRail = rail?.stop;
   const startRail = rail?.start;
-  const { deviceId, isReady } = useSpotifyPlayer();
+  const { deviceId, isReady, player } = useSpotifyPlayer();
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const railLockTokenRef = useRef(Symbol("jewel-case-modal"));
@@ -229,13 +261,16 @@ export function JewelCaseDetailModal({
   const launchDiscRef = useRef<HTMLDivElement>(null);
   const launchSpinnerRef = useRef<HTMLDivElement>(null);
   const pendingPlayRef = useRef(false);
+  const playStartedRef = useRef(false);
   const launchTimelineRef = useRef<gsap.core.Timeline | null>(null);
   const handedOffRef = useRef(false);
   const {
     rotation: discDragRotation,
     isDragging: isDiscDragging,
     pointerHandlers: discPointerHandlers,
-  } = useDiscSurfaceDrag(!isCaseOpen || isLaunching || isPlayPending);
+  } = useDiscSurfaceDrag(
+    !isCaseOpen || isLaunching || isPlayPending || isOpeningForPlay,
+  );
   useLayoutEffect(() => {
     const modalOwner = railLockTokenRef.current;
 
@@ -357,11 +392,20 @@ export function JewelCaseDetailModal({
   // Escape and Tab are handled by the single shared modal keyboard listener.
 
   const handleOpenCase = () => {
-    if (!isCaseOpen && !isPlayPending && !isLaunching) setIsCaseOpen(true);
+    if (!isCaseOpen && !isPlayPending && !isLaunching && !isOpeningForPlay) {
+      setIsCaseOpen(true);
+    }
   };
 
   const handleCloseCase = () => {
-    if (isCaseOpen && !isPlayPending && !isLaunching) setIsCaseOpen(false);
+    if (
+      isCaseOpen &&
+      !isPlayPending &&
+      !isLaunching &&
+      !isOpeningForPlay
+    ) {
+      setIsCaseOpen(false);
+    }
   };
 
   const beginLaunch = useCallback(() => {
@@ -379,56 +423,126 @@ export function JewelCaseDetailModal({
     setIsLifting(true);
   }, [isLaunching]);
 
-  const beginPlay = useCallback(async () => {
-    if (isLaunching || isPlayPending) return;
+  const beginPlay = useCallback(() => {
+    if (isLaunching || isPlayPending || playStartedRef.current) return;
 
     const disc = discRef.current;
     if (!disc) return;
 
-    if (!deviceId || !isReady) {
+    if (!deviceId || !isReady || !player) {
       setPlayError(
         "No hay un dispositivo Spotify activo. Abrí Spotify y esperá a que el reproductor se conecte.",
       );
+      setIsOpeningForPlay(false);
+      pendingPlayRef.current = false;
       return;
     }
 
     setPlayError(null);
-    setIsPlayPending(true);
-
-    try {
-      const response = await fetch("/api/play", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ uri: album.uri, deviceId }),
-      });
-      const result = (await response.json().catch(() => null)) as
-        | PlayApiResponse
-        | null;
-
-      if (!response.ok || result?.success !== true) {
-        setPlayError(getPlayFailureMessage(response.status, result));
-        return;
-      }
-    } catch {
-      setPlayError(
-        "No se pudo conectar con Spotify. Revisá tu conexión e intentá de nuevo.",
-      );
-      return;
-    } finally {
-      setIsPlayPending(false);
-    }
-
-    // A flight is only created after the API explicitly confirms success.
-    // Unmounting this modal triggers the existing nowPlayingStore modal-close refresh.
-    setPlayError(null);
+    playStartedRef.current = true;
 
     if (onPlay) {
-      onPlay(disc);
+      // The parent starts the flight immediately. The execution task mutes the
+      // Spotify SDK, starts the play request in parallel with travel, then
+      // restores volume only after docking + the one-second settle period.
+      const executePlayback: StartPlayExecution = async () => {
+        let previousVolume = 0.5;
+        let muted = false;
+
+        const restoreVolume = async () => {
+          if (!muted) return;
+
+          try {
+            await player.setVolume(previousVolume);
+          } catch {
+            // Avoid leaving the Spotify device silent if restoring the prior
+            // volume fails transiently.
+            await player.setVolume(0.5).catch(() => undefined);
+          } finally {
+            muted = false;
+          }
+        };
+
+        try {
+          previousVolume = await player.getVolume().catch(() => 0.5);
+          muted = true;
+          await player.setVolume(0);
+
+          const response = await fetch("/api/play", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ uri: album.uri, deviceId }),
+          });
+          const result = (await response.json().catch(() => null)) as
+            | PlayApiResponse
+            | null;
+
+          if (!response.ok || result?.success !== true) {
+            await restoreVolume();
+            return {
+              success: false,
+              message: getPlayFailureMessage(response.status, result),
+            };
+          }
+
+          // Spotify starts preparing playback while the CD is in transit.
+          // Pause it while muted, then restart from 0 after docking + 1 second
+          // so the listener doesn't miss the opening seconds during the flight.
+          await player.pause().catch(() => undefined);
+
+          // Timeout is a safety valve for a destroyed rail. The Deck signals
+          // readiness one second after the disc reaches its destination.
+          await waitForWindowEvent("cdvicious:disc-flight-playback-ready", 15_000);
+          await player.seek(0).catch(() => undefined);
+          await player.resume();
+          await restoreVolume();
+          window.dispatchEvent(new Event("cdvicious:disc-flight-playback-started"));
+          window.dispatchEvent(new Event("cdvicious:player_state_changed"));
+          return { success: true };
+        } catch {
+          await restoreVolume();
+          return {
+            success: false,
+            message: "No se pudo conectar con Spotify. Revisá tu conexión e intentá de nuevo.",
+          };
+        }
+      };
+
+      window.dispatchEvent(new Event("cdvicious:disc-flight-started"));
+      onPlay(disc, executePlayback);
       onClose();
       return;
     }
 
-    beginLaunch();
+    // Fallback for modal consumers that do not provide a flying-disc handler.
+    setIsPlayPending(true);
+    void fetch("/api/play", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ uri: album.uri, deviceId }),
+    })
+      .then(async (response) => {
+        const result = (await response.json().catch(() => null)) as
+          | PlayApiResponse
+          | null;
+
+        if (!response.ok || result?.success !== true) {
+          setPlayError(getPlayFailureMessage(response.status, result));
+          playStartedRef.current = false;
+          return;
+        }
+
+        beginLaunch();
+      })
+      .catch(() => {
+        setPlayError(
+          "No se pudo conectar con Spotify. Revisá tu conexión e intentá de nuevo.",
+        );
+        playStartedRef.current = false;
+      })
+      .finally(() => {
+        setIsPlayPending(false);
+      });
   }, [
     album.uri,
     beginLaunch,
@@ -438,27 +552,48 @@ export function JewelCaseDetailModal({
     isReady,
     onClose,
     onPlay,
+    player,
   ]);
 
   const handlePlay = useCallback(() => {
-    if (isLaunching || isPlayPending) return;
+    if (isLaunching || isPlayPending || isOpeningForPlay || playStartedRef.current) {
+      return;
+    }
 
     setPlayError(null);
 
+    if (!deviceId || !isReady || !player) {
+      setPlayError(
+        "No hay un dispositivo Spotify activo. Abrí Spotify y esperá a que el reproductor se conecte.",
+      );
+      return;
+    }
+
     if (!isCaseOpen) {
       pendingPlayRef.current = true;
+      setIsOpeningForPlay(true);
       setIsCaseOpen(true);
       return;
     }
 
-    void beginPlay();
-  }, [beginPlay, isCaseOpen, isLaunching, isPlayPending]);
+    beginPlay();
+  }, [
+    beginPlay,
+    deviceId,
+    isCaseOpen,
+    isLaunching,
+    isOpeningForPlay,
+    isPlayPending,
+    isReady,
+    player,
+  ]);
 
   useEffect(() => {
     if (!isCaseOpen || isLaunching || !pendingPlayRef.current) return;
 
     const timer = window.setTimeout(() => {
       pendingPlayRef.current = false;
+      setIsOpeningForPlay(false);
       beginPlay();
     }, CASE_OPEN_DURATION_MS);
 
@@ -594,9 +729,9 @@ export function JewelCaseDetailModal({
       <button
         type="button"
         className={styles.scrim}
-        onClick={() => !isLaunching && !isPlayPending && onClose()}
+        onClick={() => !isLaunching && !isPlayPending && !isOpeningForPlay && onClose()}
         aria-label="Cerrar"
-        disabled={isLaunching || isPlayPending}
+        disabled={isLaunching || isPlayPending || isOpeningForPlay}
       />
 
       <div
@@ -617,8 +752,8 @@ export function JewelCaseDetailModal({
             type="button"
             ref={closeButtonRef}
             className={styles.closeBtn}
-            onClick={() => !isLaunching && !isPlayPending && onClose()}
-            disabled={isLaunching || isPlayPending}
+            onClick={() => !isLaunching && !isPlayPending && !isOpeningForPlay && onClose()}
+            disabled={isLaunching || isPlayPending || isOpeningForPlay}
             aria-label="Cerrar"
           >
             <span className={polishStyles.closeIcon} aria-hidden="true">
@@ -921,8 +1056,8 @@ export function JewelCaseDetailModal({
             type="button"
             className={polishStyles.vfdMainAction}
             onClick={handlePlay}
-            disabled={isLaunching || isPlayPending}
-            aria-busy={isPlayPending}
+            disabled={isLaunching || isPlayPending || isOpeningForPlay}
+            aria-busy={isPlayPending || isOpeningForPlay}
             aria-label={`Reproducir ${album.name}`}
           >
             <span className={polishStyles.vfdMainInfo}>
@@ -930,7 +1065,9 @@ export function JewelCaseDetailModal({
               <small>{album.artists.map((a) => a.name).join(", ")}</small>
             </span>
             <span className={polishStyles.vfdMainHover}>
-              {isPlayPending ? "ESPERANDO A SPOTIFY..." : "REPRODUCIR CD"}
+              {isOpeningForPlay
+                ? "ESPERANDO A SPOTIFY..."
+                : "REPRODUCIR CD"}
             </span>
           </button>
 
@@ -938,8 +1075,10 @@ export function JewelCaseDetailModal({
             <button
               type="button"
               className={`${polishStyles.hwBtn} ${polishStyles.hwBtnTray}`}
-              onClick={() => !isLaunching && !isPlayPending && onClose()}
-              disabled={isLaunching || isPlayPending}
+              onClick={() =>
+                !isLaunching && !isPlayPending && !isOpeningForPlay && onClose()
+              }
+              disabled={isLaunching || isPlayPending || isOpeningForPlay}
               aria-label="Dejar en batea"
             >
               DEJAR EN BATEA
@@ -947,8 +1086,13 @@ export function JewelCaseDetailModal({
             <button
               type="button"
               className={`${polishStyles.hwBtn} ${polishStyles.hwBtnCase}`}
-              onClick={() => !isLaunching && setIsCaseOpen((open) => !open)}
-              disabled={isLaunching || isPlayPending}
+              onClick={() =>
+                !isLaunching &&
+                !isPlayPending &&
+                !isOpeningForPlay &&
+                setIsCaseOpen((open) => !open)
+              }
+              disabled={isLaunching || isPlayPending || isOpeningForPlay}
               aria-expanded={isCaseOpen}
               aria-label={isCaseOpen ? "Cerrar caja" : "Abrir caja"}
             >

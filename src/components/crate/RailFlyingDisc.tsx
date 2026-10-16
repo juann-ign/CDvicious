@@ -25,6 +25,9 @@ const PARTICLES = Array.from({ length: 12 }, (_, index) => {
   };
 });
 
+const DOCK_PULSE_DURATION_MS = 900;
+const FLIGHT_DURATION_SECONDS = 3.6;
+
 export function RailFlyingDisc({
   coverUrl,
   originRect,
@@ -39,6 +42,7 @@ export function RailFlyingDisc({
   const doneRef = useRef(false);
   const impactTimelineRef = useRef<gsap.core.Timeline | null>(null);
   const pulseTimeoutRef = useRef<number | null>(null);
+  const pulseTargetRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (!isReady) return;
@@ -50,24 +54,79 @@ export function RailFlyingDisc({
 
     const fromX = originRect.left + originRect.width / 2;
     const fromY = originRect.top + originRect.height / 2;
-    const fromSize = originRect.width;
+    const fromSize = Math.max(1, originRect.width);
     const reduceMotion = window.matchMedia(
       "(prefers-reduced-motion: reduce)",
     ).matches;
-    const duration = reduceMotion ? 0 : 1.15;
+    const duration = reduceMotion ? 0 : FLIGHT_DURATION_SECONDS;
 
-    const readTarget = () =>
-      discRegistry.discTarget?.getBoundingClientRect() ?? null;
+    const readTarget = () => {
+      const target = discRegistry.discTarget;
+      return target?.isConnected ? target.getBoundingClientRect() : null;
+    };
 
     const initialTarget = readTarget();
-    const fallbackX = window.innerWidth / 2;
-    const fallbackY = window.innerHeight * 0.48;
-    const fallbackSize = Math.max(220, fromSize * 0.5);
-
+    let lastTarget = initialTarget;
     const path = { p: 0 };
     let lastX = fromX;
     let lastY = fromY;
     let spin = 0;
+    let tween: gsap.core.Tween | null = null;
+    let fadeComplete = false;
+
+    const finish = () => {
+      if (doneRef.current) return;
+      doneRef.current = true;
+      onDone();
+    };
+
+    const maybeFinish = () => {
+      if (fadeComplete && pulseTimeoutRef.current === null) finish();
+    };
+
+    const clearPulse = () => {
+      if (pulseTimeoutRef.current !== null) {
+        window.clearTimeout(pulseTimeoutRef.current);
+        pulseTimeoutRef.current = null;
+      }
+
+      pulseTargetRef.current?.classList.remove(discStyles.dockPulse);
+      pulseTargetRef.current = null;
+    };
+
+    const startDockPulse = (target: HTMLElement) => {
+      clearPulse();
+      target.classList.remove(discStyles.dockPulse);
+      void target.offsetWidth;
+      target.classList.add(discStyles.dockPulse);
+      pulseTargetRef.current = target;
+
+      pulseTimeoutRef.current = window.setTimeout(() => {
+        target.classList.remove(discStyles.dockPulse);
+        if (pulseTargetRef.current === target) {
+          pulseTargetRef.current = null;
+        }
+        pulseTimeoutRef.current = null;
+        maybeFinish();
+      }, DOCK_PULSE_DURATION_MS);
+    };
+
+    const cleanup = () => {
+      tween?.kill();
+      impactTimelineRef.current?.kill();
+      impactTimelineRef.current = null;
+      clearPulse();
+      gsap.killTweensOf(el);
+      gsap.killTweensOf(spinner);
+    };
+
+    // Never animate to an arbitrary point if the Deck has not registered its
+    // target. Keep the chapter reset, then discard the temporary flight element.
+    if (!initialTarget) {
+      scrollToChapter(0, duration);
+      finish();
+      return cleanup;
+    }
 
     gsap.set(el, {
       left: fromX,
@@ -76,6 +135,8 @@ export function RailFlyingDisc({
       height: fromSize,
       xPercent: -50,
       yPercent: -50,
+      x: 0,
+      y: 0,
       opacity: 1,
       rotate: 0,
       rotationX: 0,
@@ -84,63 +145,61 @@ export function RailFlyingDisc({
     });
 
     gsap.set(spinner, { rotate: 0 });
+    const setX = gsap.quickSetter(el, "x", "px");
+    const setY = gsap.quickSetter(el, "y", "px");
+    const setRotate = gsap.quickSetter(el, "rotate", "deg");
+    const setRotationX = gsap.quickSetter(el, "rotationX", "deg");
+    const setScaleX = gsap.quickSetter(el, "scaleX");
+    const setScaleY = gsap.quickSetter(el, "scaleY");
+    const setSpinnerRotate = gsap.quickSetter(spinner, "rotate", "deg");
     scrollToChapter(0, duration);
-
-    const finish = () => {
-      if (doneRef.current) return;
-      doneRef.current = true;
-      onDone();
-    };
 
     if (reduceMotion) {
       const target = readTarget() ?? initialTarget;
+      const dockRect = readTarget();
 
-      if (target) {
-        const dockTarget = discRegistry.discTarget;
-        const dockRect = dockTarget?.getBoundingClientRect();
+      gsap.set(el, {
+        left: target.left + target.width / 2,
+        top: target.top + target.height / 2,
+        width: target.width * 0.9,
+        height: target.height * 0.9,
+        x: 0,
+        y: 0,
+        xPercent: -50,
+        yPercent: -50,
+        rotate: 0,
+        rotationX: 0,
+        scaleX: 1,
+        scaleY: 1,
+      });
 
-        gsap.set(el, {
-          left: target.left + target.width / 2,
-          top: target.top + target.height / 2,
-          width: target.width * 0.9,
-          height: target.height * 0.9,
+      if (impactRef.current && dockRect) {
+        gsap.set(impactRef.current, {
+          left: dockRect.left + dockRect.width / 2,
+          top: dockRect.top + dockRect.height / 2,
         });
-
-        if (dockTarget) {
-          dockTarget.classList.remove(discStyles.dockPulse);
-          void dockTarget.offsetWidth;
-          dockTarget.classList.add(discStyles.dockPulse);
-          pulseTimeoutRef.current = window.setTimeout(() => {
-            dockTarget.classList.remove(discStyles.dockPulse);
-            pulseTimeoutRef.current = null;
-          }, 450);
-        }
-
-        if (impactRef.current && dockRect) {
-          gsap.set(impactRef.current, {
-            left: dockRect.left + dockRect.width / 2,
-            top: dockRect.top + dockRect.height / 2,
-          });
-        }
       }
 
       onArrive();
-      onDone();
-      return;
+      finish();
+      return cleanup;
     }
 
-    const tween = gsap.to(path, {
+    tween = gsap.to(path, {
       p: 1,
       duration,
       ease: "sine.inOut",
       onUpdate: () => {
-        const target = readTarget() ?? initialTarget;
-        const toX = target ? target.left + target.width / 2 : fallbackX;
-        const toY = target ? target.top + target.height / 2 : fallbackY;
-        const toSize = target ? target.width * 0.9 : fallbackSize;
+        const target = readTarget();
+        if (target) lastTarget = target;
+        const targetRect = lastTarget ?? initialTarget;
+        if (!targetRect) return;
+        const toX = targetRect.left + targetRect.width / 2;
+        const toY = targetRect.top + targetRect.height / 2;
+        const toSize = targetRect.width * 0.9;
         const p = path.p;
         const midX = fromX + (toX - fromX) * 0.5 + (toX >= fromX ? 26 : -26);
-        const midY = (fromY + toY) * 0.5 - 74;
+        const midY = (fromY + toY) * 0.5 - 96;
         const x =
           (1 - p) * (1 - p) * fromX +
           2 * (1 - p) * p * midX +
@@ -160,34 +219,23 @@ export function RailFlyingDisc({
 
         spin += distance * 1.5 + 1.8;
 
-        gsap.set(el, {
-          left: x,
-          top: y,
-          width: size,
-          height: size,
-          rotate: travelAngle,
-          rotationX: 30 * Math.max(0, Math.min(1, (p - 0.8) / 0.2)),
-          scaleX: 1 + Math.min(0.06, distance / 90),
-          scaleY: 1 - Math.min(0.025, distance / 180),
-        });
-
-        gsap.set(spinner, { rotate: spin - travelAngle });
+        setX(x - fromX);
+        setY(y - fromY);
+        setRotate(travelAngle);
+        setRotationX(30 * Math.max(0, Math.min(1, (p - 0.8) / 0.2)));
+        setScaleX((size / fromSize) * (1 + Math.min(0.06, distance / 90)));
+        setScaleY((size / fromSize) * (1 - Math.min(0.025, distance / 180)));
+        setSpinnerRotate(spin - travelAngle);
         lastX = x;
         lastY = y;
 
-        if (!arrivedRef.current && p >= 0.97) {
+        if (!arrivedRef.current && p >= 0.99) {
           arrivedRef.current = true;
           const dockTarget = discRegistry.discTarget;
-          const dockRect = dockTarget?.getBoundingClientRect();
+          const dockRect = readTarget();
 
-          if (dockTarget) {
-            dockTarget.classList.remove(discStyles.dockPulse);
-            void dockTarget.offsetWidth;
-            dockTarget.classList.add(discStyles.dockPulse);
-            pulseTimeoutRef.current = window.setTimeout(() => {
-              dockTarget.classList.remove(discStyles.dockPulse);
-              pulseTimeoutRef.current = null;
-            }, 650);
+          if (dockTarget?.isConnected && dockRect) {
+            startDockPulse(dockTarget);
           }
 
           if (impactRef.current && dockRect) {
@@ -228,21 +276,15 @@ export function RailFlyingDisc({
           opacity: 0,
           duration: 0.16,
           ease: "power1.in",
-          onComplete: finish,
+          onComplete: () => {
+            fadeComplete = true;
+            maybeFinish();
+          },
         });
       },
     });
 
-    return () => {
-      tween?.kill();
-      impactTimelineRef.current?.kill();
-      if (pulseTimeoutRef.current !== null) {
-        window.clearTimeout(pulseTimeoutRef.current);
-        pulseTimeoutRef.current = null;
-      }
-      gsap.killTweensOf(el);
-      gsap.killTweensOf(spinner);
-    };
+    return cleanup;
   }, [isReady, onArrive, onDone, originRect, scrollToChapter]);
 
   return (

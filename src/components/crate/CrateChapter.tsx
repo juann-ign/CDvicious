@@ -3,7 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRail } from "@/components/scroll/RailContext";
 import { useCollectionCache } from "@/lib/collectionClient";
-import { JewelCaseDetailModal } from "./JewelCaseDetailModal";
+import {
+  JewelCaseDetailModal,
+  type StartPlayExecution,
+} from "./JewelCaseDetailModal";
 import { RailFlyingDisc } from "./RailFlyingDisc";
 import { CrateShelf } from "./CrateShelf";
 import type { AlbumItem } from "@/types/crate";
@@ -12,7 +15,7 @@ import styles from "./CrateChapter.module.css";
 const SHELF_COUNT = 18;
 
 export function CrateChapter() {
-  const { stop, start } = useRail();
+  const { stop, start, scrollToChapter } = useRail();
   const dragLockTokenRef = useRef(Symbol("crate-shelf-drag"));
   const { albums: cachedAlbums } = useCollectionCache();
 
@@ -26,6 +29,10 @@ export function CrateChapter() {
   const [rateLimitSeconds] = useState<number | null>(null);
   const [quotaExceeded] = useState(false);
   const [selected, setSelected] = useState<AlbumItem | null>(null);
+  const [playErrorForAlbum, setPlayErrorForAlbum] = useState<{
+    albumId: string;
+    message: string;
+  } | null>(null);
   const [flight, setFlight] = useState<{
     album: AlbumItem;
     originRect: DOMRect;
@@ -40,20 +47,67 @@ export function CrateChapter() {
   }, [start]);
 
   const handleSelect = useCallback((album: AlbumItem) => {
+    setPlayErrorForAlbum(null);
     setSelected(album);
   }, []);
 
-  const handlePlay = useCallback((album: AlbumItem, originEl: HTMLElement) => {
+  const handleClose = useCallback(() => {
+    setSelected(null);
+    setPlayErrorForAlbum(null);
+  }, []);
+
+  const handleLoad = useCallback(() => {
+    setSelected(null);
+    setPlayErrorForAlbum(null);
+  }, []);
+
+  const handlePlay = useCallback((
+    album: AlbumItem,
+    originEl: HTMLElement,
+    executePlayback: StartPlayExecution,
+  ) => {
+    const sourceChapter = Number(document.documentElement.dataset.chapter ?? "0");
+
+    setPlayErrorForAlbum(null);
     setFlight({
       album,
       originRect: originEl.getBoundingClientRect(),
     });
     setSelected(null);
+
+    // Playback executes while the disc is in transit. On rejection, cancel the
+    // transient flight, return to the source chapter, and restore modal feedback.
+    void executePlayback()
+      .then((result) => {
+        if (result.success) return;
+
+        window.dispatchEvent(new Event("cdvicious:disc-flight-cancelled"));
+        scrollToChapter(sourceChapter, 0);
+        setFlight(null);
+        setPlayErrorForAlbum({
+          albumId: album.id,
+          message: result.message ?? "Spotify no confirmó la reproducción. Podés intentarlo de nuevo.",
+        });
+        setSelected(album);
+      })
+      .catch(() => {
+        window.dispatchEvent(new Event("cdvicious:disc-flight-cancelled"));
+        scrollToChapter(sourceChapter, 0);
+        setFlight(null);
+        setPlayErrorForAlbum({
+          albumId: album.id,
+          message: "No se pudo conectar con Spotify. Revisá tu conexión e intentá de nuevo.",
+        });
+        setSelected(album);
+      });
+  }, [scrollToChapter]);
+
+  const handleFlightArrive = useCallback(() => {
+    window.dispatchEvent(new Event("cdvicious:disc-flight-arrived"));
   }, []);
 
-  const handleFlightArrive = useCallback(() => {}, []);
-
   const handleFlightDone = useCallback(() => {
+    window.dispatchEvent(new Event("cdvicious:disc-flight-done"));
     setFlight(null);
   }, []);
 
@@ -94,9 +148,16 @@ export function CrateChapter() {
       {selected && (
         <JewelCaseDetailModal
           album={selected}
-          onClose={() => setSelected(null)}
-          onLoad={() => setSelected(null)}
-          onPlay={(originEl) => handlePlay(selected, originEl)}
+          onClose={handleClose}
+          onLoad={handleLoad}
+          initialPlayError={
+            playErrorForAlbum?.albumId === selected.id
+              ? playErrorForAlbum.message
+              : null
+          }
+          onPlay={(originEl, executePlayback) =>
+            handlePlay(selected, originEl, executePlayback)
+          }
         />
       )}
 
