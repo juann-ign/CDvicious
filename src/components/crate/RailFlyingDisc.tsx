@@ -49,10 +49,7 @@ export function RailFlyingDisc({
     const el = wrapRef.current;
     const spinner = spinnerRef.current;
 
-    if (!el || !spinner) {
-      onDone();
-      return;
-    }
+    if (!el || !spinner) return;
 
     const fromX = originRect.left + originRect.width / 2;
     const fromY = originRect.top + originRect.height / 2;
@@ -146,20 +143,9 @@ export function RailFlyingDisc({
     gsap.set(spinner, { rotate: 0 });
     scrollToChapter(0, duration);
 
-    const finishFade = () => {
-      gsap.to(el, {
-        opacity: 0,
-        duration: 0.16,
-        ease: "power1.in",
-        onComplete: () => {
-          fadeComplete = true;
-          maybeFinish();
-        },
-      });
-    };
-
     if (reduceMotion) {
       const target = readTarget() ?? initialTarget;
+      const dockRect = readTarget();
 
       gsap.set(el, {
         left: target.left + target.width / 2,
@@ -167,6 +153,13 @@ export function RailFlyingDisc({
         width: target.width * 0.9,
         height: target.height * 0.9,
       });
+
+      if (impactRef.current && dockRect) {
+        gsap.set(impactRef.current, {
+          left: dockRect.left + dockRect.width / 2,
+          top: dockRect.top + dockRect.height / 2,
+        });
+      }
 
       onArrive();
       finish();
@@ -241,29 +234,19 @@ export function RailFlyingDisc({
             impactTimelineRef.current?.kill();
             impactTimelineRef.current = gsap.timeline();
             impactTimelineRef.current
-              .fromTo(
-                ring,
+              .fromTo(ring,
                 { scale: 0.3, opacity: 0.65 },
                 { scale: 1.8, opacity: 0, duration: 0.32, ease: "power2.out" },
                 0,
               )
-              .fromTo(
-                flash,
+              .fromTo(flash,
                 { scale: 0.4, opacity: 0.45 },
                 { scale: 1.35, opacity: 0, duration: 0.2, ease: "power2.out" },
                 0,
               )
-              .fromTo(
-                particles,
+              .fromTo(particles,
                 { x: 0, y: 0, opacity: 0.8 },
-                {
-                  x: (index) => PARTICLES[index]?.dx ?? 0,
-                  y: (index) => PARTICLES[index]?.dy ?? 0,
-                  opacity: 0,
-                  duration: 0.34,
-                  stagger: 0.01,
-                  ease: "power2.out",
-                },
+                { x: (index) => PARTICLES[index]?.dx ?? 0, y: (index) => PARTICLES[index]?.dy ?? 0, opacity: 0, duration: 0.34, stagger: 0.01, ease: "power2.out" },
                 0,
               );
           }
@@ -271,7 +254,17 @@ export function RailFlyingDisc({
           onArrive();
         }
       },
-      onComplete: finishFade,
+      onComplete: () => {
+        gsap.to(el, {
+          opacity: 0,
+          duration: 0.16,
+          ease: "power1.in",
+          onComplete: () => {
+            fadeComplete = true;
+            maybeFinish();
+          },
+        });
+      },
     });
 
     return cleanup;
@@ -299,13 +292,11 @@ export function RailFlyingDisc({
             key={index}
             className={styles.impactParticle}
             data-impact-particle
-            style={
-              {
-                "--dx": particle.dx + "px",
-                "--dy": particle.dy + "px",
-                animationDelay: particle.delay + "s",
-              } as CSSProperties
-            }
+            style={{
+              "--dx": particle.dx + "px",
+              "--dy": particle.dy + "px",
+              animationDelay: particle.delay + "s",
+            } as CSSProperties}
           />
         ))}
       </div>
