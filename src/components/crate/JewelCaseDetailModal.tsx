@@ -451,8 +451,16 @@ export function JewelCaseDetailModal({
 
         const restoreVolume = async () => {
           if (!muted) return;
-          muted = false;
-          await player.setVolume(previousVolume).catch(() => undefined);
+
+          try {
+            await player.setVolume(previousVolume);
+          } catch {
+            // Avoid leaving the Spotify device silent if restoring the prior
+            // volume fails transiently.
+            await player.setVolume(0.5).catch(() => undefined);
+          } finally {
+            muted = false;
+          }
         };
 
         try {
