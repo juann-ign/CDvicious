@@ -56,14 +56,12 @@ export function RailFlyingDisc({
 
     const fromX = originRect.left + originRect.width / 2;
     const fromY = originRect.top + originRect.height / 2;
-    const fromSize = Math.max(1, originRect.width);
+    const fromSize = originRect.width;
     const reduceMotion = window.matchMedia(
       "(prefers-reduced-motion: reduce)",
     ).matches;
     const duration = reduceMotion ? 0 : 1.15;
 
-    // The Deck target lives outside this component. Read its current rect while
-    // animating so layout and viewport changes are reflected in the destination.
     const readTarget = () => {
       const target = discRegistry.discTarget;
       return target?.isConnected ? target.getBoundingClientRect() : null;
@@ -75,7 +73,6 @@ export function RailFlyingDisc({
     let lastY = fromY;
     let spin = 0;
     let tween: gsap.core.Tween | null = null;
-    let fadeTween: gsap.core.Tween | null = null;
     let fadeComplete = false;
 
     const finish = () => {
@@ -85,8 +82,6 @@ export function RailFlyingDisc({
     };
 
     const maybeFinish = () => {
-      // Keep the component alive until both the disc fade and dock pulse have
-      // ended. This lets cleanup remove the pulse class without cutting it off.
       if (fadeComplete && pulseTimeoutRef.current === null) finish();
     };
 
@@ -119,7 +114,6 @@ export function RailFlyingDisc({
 
     const cleanup = () => {
       tween?.kill();
-      fadeTween?.kill();
       impactTimelineRef.current?.kill();
       impactTimelineRef.current = null;
       clearPulse();
@@ -127,8 +121,8 @@ export function RailFlyingDisc({
       gsap.killTweensOf(spinner);
     };
 
-    // Do not invent a center-of-screen destination when the Deck ref is absent.
-    // The scroll still returns to chapter 0; the transient flight is discarded.
+    // Never animate to an arbitrary point if the Deck has not registered its
+    // target. Keep the chapter reset, then discard the temporary flight element.
     if (!initialTarget) {
       scrollToChapter(0, duration);
       finish();
@@ -152,6 +146,18 @@ export function RailFlyingDisc({
     gsap.set(spinner, { rotate: 0 });
     scrollToChapter(0, duration);
 
+    const finishFade = () => {
+      gsap.to(el, {
+        opacity: 0,
+        duration: 0.16,
+        ease: "power1.in",
+        onComplete: () => {
+          fadeComplete = true;
+          maybeFinish();
+        },
+      });
+    };
+
     if (reduceMotion) {
       const target = readTarget() ?? initialTarget;
 
@@ -167,134 +173,106 @@ export function RailFlyingDisc({
       return cleanup;
     }
 
-    const tweenPath = () => {
-      tween = gsap.to(path, {
-        p: 1,
-        duration,
-        ease: "sine.inOut",
-        onUpdate: () => {
-          const target = readTarget() ?? initialTarget;
-          const toX = target.left + target.width / 2;
-          const toY = target.top + target.height / 2;
-          const toSize = target.width * 0.9;
-          const p = path.p;
-          const midX =
-            fromX + (toX - fromX) * 0.5 + (toX >= fromX ? 26 : -26);
-          const midY = (fromY + toY) * 0.5 - 74;
-          const x =
-            (1 - p) * (1 - p) * fromX +
-            2 * (1 - p) * p * midX +
-            p * p * toX;
-          const arc =
-            Math.sin(Math.PI * p) * Math.min(28, window.innerHeight * 0.035);
-          const y =
-            (1 - p) * (1 - p) * fromY +
-            2 * (1 - p) * p * midY +
-            p * p * toY -
-            arc;
-          const size = fromSize + (toSize - fromSize) * p;
-          const dx = x - lastX;
-          const dy = y - lastY;
-          const distance = Math.hypot(dx, dy);
-          const travelAngle =
-            distance > 0.1 ? (Math.atan2(dy, dx) * 180) / Math.PI : 0;
+    tween = gsap.to(path, {
+      p: 1,
+      duration,
+      ease: "sine.inOut",
+      onUpdate: () => {
+        const target = readTarget() ?? initialTarget;
+        const toX = target.left + target.width / 2;
+        const toY = target.top + target.height / 2;
+        const toSize = target.width * 0.9;
+        const p = path.p;
+        const midX = fromX + (toX - fromX) * 0.5 + (toX >= fromX ? 26 : -26);
+        const midY = (fromY + toY) * 0.5 - 74;
+        const x =
+          (1 - p) * (1 - p) * fromX +
+          2 * (1 - p) * p * midX +
+          p * p * toX;
+        const arc = Math.sin(Math.PI * p) * Math.min(28, window.innerHeight * 0.035);
+        const y =
+          (1 - p) * (1 - p) * fromY +
+          2 * (1 - p) * p * midY +
+          p * p * toY -
+          arc;
+        const size = fromSize + (toSize - fromSize) * p;
+        const dx = x - lastX;
+        const dy = y - lastY;
+        const distance = Math.hypot(dx, dy);
+        const travelAngle =
+          distance > 0.1 ? (Math.atan2(dy, dx) * 180) / Math.PI : 0;
 
-          spin += distance * 1.5 + 1.8;
+        spin += distance * 1.5 + 1.8;
 
-          gsap.set(el, {
-            left: x,
-            top: y,
-            width: size,
-            height: size,
-            rotate: travelAngle,
-            rotationX: 30 * Math.max(0, Math.min(1, (p - 0.8) / 0.2)),
-            scaleX: 1 + Math.min(0.06, distance / 90),
-            scaleY: 1 - Math.min(0.025, distance / 180),
-          });
+        gsap.set(el, {
+          left: x,
+          top: y,
+          width: size,
+          height: size,
+          rotate: travelAngle,
+          rotationX: 30 * Math.max(0, Math.min(1, (p - 0.8) / 0.2)),
+          scaleX: 1 + Math.min(0.06, distance / 90),
+          scaleY: 1 - Math.min(0.025, distance / 180),
+        });
 
-          gsap.set(spinner, { rotate: spin - travelAngle });
-          lastX = x;
-          lastY = y;
+        gsap.set(spinner, { rotate: spin - travelAngle });
+        lastX = x;
+        lastY = y;
 
-          if (!arrivedRef.current && p >= 0.97) {
-            arrivedRef.current = true;
-            const dockTarget = discRegistry.discTarget;
-            const dockRect = readTarget();
+        if (!arrivedRef.current && p >= 0.97) {
+          arrivedRef.current = true;
+          const dockTarget = discRegistry.discTarget;
+          const dockRect = readTarget();
 
-            if (dockTarget?.isConnected && dockRect) {
-              startDockPulse(dockTarget);
-            }
-
-            if (impactRef.current && dockRect) {
-              const ring = impactRef.current.querySelector("[data-impact-ring]");
-              const flash = impactRef.current.querySelector("[data-impact-flash]");
-              const particles = impactRef.current.querySelectorAll(
-                "[data-impact-particle]",
-              );
-
-              gsap.set(impactRef.current, {
-                left: dockRect.left + dockRect.width / 2,
-                top: dockRect.top + dockRect.height / 2,
-              });
-
-              impactTimelineRef.current?.kill();
-              impactTimelineRef.current = gsap.timeline();
-              impactTimelineRef.current
-                .fromTo(
-                  ring,
-                  { scale: 0.3, opacity: 0.65 },
-                  {
-                    scale: 1.8,
-                    opacity: 0,
-                    duration: 0.32,
-                    ease: "power2.out",
-                  },
-                  0,
-                )
-                .fromTo(
-                  flash,
-                  { scale: 0.4, opacity: 0.45 },
-                  {
-                    scale: 1.35,
-                    opacity: 0,
-                    duration: 0.2,
-                    ease: "power2.out",
-                  },
-                  0,
-                )
-                .fromTo(
-                  particles,
-                  { x: 0, y: 0, opacity: 0.8 },
-                  {
-                    x: (index) => PARTICLES[index]?.dx ?? 0,
-                    y: (index) => PARTICLES[index]?.dy ?? 0,
-                    opacity: 0,
-                    duration: 0.34,
-                    stagger: 0.01,
-                    ease: "power2.out",
-                  },
-                  0,
-                );
-            }
-
-            onArrive();
+          if (dockTarget?.isConnected && dockRect) {
+            startDockPulse(dockTarget);
           }
-        },
-        onComplete: () => {
-          fadeTween = gsap.to(el, {
-            opacity: 0,
-            duration: 0.16,
-            ease: "power1.in",
-            onComplete: () => {
-              fadeComplete = true;
-              maybeFinish();
-            },
-          });
-        },
-      });
-    };
 
-    tweenPath();
+          if (impactRef.current && dockRect) {
+            const ring = impactRef.current.querySelector("[data-impact-ring]");
+            const flash = impactRef.current.querySelector("[data-impact-flash]");
+            const particles = impactRef.current.querySelectorAll("[data-impact-particle]");
+
+            gsap.set(impactRef.current, {
+              left: dockRect.left + dockRect.width / 2,
+              top: dockRect.top + dockRect.height / 2,
+            });
+
+            impactTimelineRef.current?.kill();
+            impactTimelineRef.current = gsap.timeline();
+            impactTimelineRef.current
+              .fromTo(
+                ring,
+                { scale: 0.3, opacity: 0.65 },
+                { scale: 1.8, opacity: 0, duration: 0.32, ease: "power2.out" },
+                0,
+              )
+              .fromTo(
+                flash,
+                { scale: 0.4, opacity: 0.45 },
+                { scale: 1.35, opacity: 0, duration: 0.2, ease: "power2.out" },
+                0,
+              )
+              .fromTo(
+                particles,
+                { x: 0, y: 0, opacity: 0.8 },
+                {
+                  x: (index) => PARTICLES[index]?.dx ?? 0,
+                  y: (index) => PARTICLES[index]?.dy ?? 0,
+                  opacity: 0,
+                  duration: 0.34,
+                  stagger: 0.01,
+                  ease: "power2.out",
+                },
+                0,
+              );
+          }
+
+          onArrive();
+        }
+      },
+      onComplete: finishFade,
+    });
 
     return cleanup;
   }, [isReady, onArrive, onDone, originRect, scrollToChapter]);
