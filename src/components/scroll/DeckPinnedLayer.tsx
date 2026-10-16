@@ -96,8 +96,8 @@ export function DeckPinnedLayer() {
 
       playbackDelayRef.current = window.setTimeout(() => {
         playbackDelayRef.current = null;
-        flightStageRef.current = "idle";
-        setFlightStage("idle");
+        // Keep the Deck in the docked phase until the muted player has resumed.
+        // This prevents stale Now Playing data from showing playback too early.
         setFrozenData(null);
         setVisualPlaybackReady(true);
         document.documentElement.dataset.discFlightPlaybackReady = "true";
@@ -116,6 +116,8 @@ export function DeckPinnedLayer() {
     };
 
     const handlePlaybackStarted = () => {
+      flightStageRef.current = "idle";
+      setFlightStage("idle");
       setFlightPlaybackStarted(true);
     };
 
@@ -135,10 +137,22 @@ export function DeckPinnedLayer() {
     };
   }, []);
 
+  useEffect(() => {
+    if (flightPlaybackStarted && data?.isPlaying) {
+      setFlightPlaybackStarted(false);
+    }
+  }, [data?.isPlaying, flightPlaybackStarted]);
+
   const visibleData = flightStage === "flying" ? frozenData : data;
+  const isDockedBeforePlayback =
+    flightStage === "docked" && !flightPlaybackStarted;
   const visibleIsPlaying =
     visualPlaybackReady &&
+    !isDockedBeforePlayback &&
     (flightPlaybackStarted || (visibleData?.isPlaying ?? false));
+  const visibleProgressMs = isDockedBeforePlayback
+    ? 0
+    : (visibleData?.progressMs ?? null);
   const coverUrl = visibleData?.track?.album.images[0]?.url;
   const accentColor = useDominantColor(coverUrl) ?? "#1DB954";
   const stageStyle = {
@@ -178,7 +192,7 @@ export function DeckPinnedLayer() {
               track={visibleData?.track ?? null}
               isPlaying={visibleIsPlaying}
               error={error}
-              progressMs={visibleData?.progressMs ?? null}
+              progressMs={visibleProgressMs}
               durationMs={visibleData?.durationMs ?? null}
             />
           </div>
