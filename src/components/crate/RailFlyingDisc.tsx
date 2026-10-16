@@ -26,6 +26,7 @@ const PARTICLES = Array.from({ length: 12 }, (_, index) => {
 });
 
 const DOCK_PULSE_DURATION_MS = 900;
+const FLIGHT_DURATION_SECONDS = 2.1;
 
 export function RailFlyingDisc({
   coverUrl,
@@ -53,11 +54,11 @@ export function RailFlyingDisc({
 
     const fromX = originRect.left + originRect.width / 2;
     const fromY = originRect.top + originRect.height / 2;
-    const fromSize = originRect.width;
+    const fromSize = Math.max(1, originRect.width);
     const reduceMotion = window.matchMedia(
       "(prefers-reduced-motion: reduce)",
     ).matches;
-    const duration = reduceMotion ? 0 : 1.15;
+    const duration = reduceMotion ? 0 : FLIGHT_DURATION_SECONDS;
 
     const readTarget = () => {
       const target = discRegistry.discTarget;
@@ -65,6 +66,7 @@ export function RailFlyingDisc({
     };
 
     const initialTarget = readTarget();
+    let lastTarget = initialTarget;
     const path = { p: 0 };
     let lastX = fromX;
     let lastY = fromY;
@@ -133,6 +135,8 @@ export function RailFlyingDisc({
       height: fromSize,
       xPercent: -50,
       yPercent: -50,
+      x: 0,
+      y: 0,
       opacity: 1,
       rotate: 0,
       rotationX: 0,
@@ -141,6 +145,13 @@ export function RailFlyingDisc({
     });
 
     gsap.set(spinner, { rotate: 0 });
+    const setX = gsap.quickSetter(el, "x", "px");
+    const setY = gsap.quickSetter(el, "y", "px");
+    const setRotate = gsap.quickSetter(el, "rotate", "deg");
+    const setRotationX = gsap.quickSetter(el, "rotationX", "deg");
+    const setScaleX = gsap.quickSetter(el, "scaleX");
+    const setScaleY = gsap.quickSetter(el, "scaleY");
+    const setSpinnerRotate = gsap.quickSetter(spinner, "rotate", "deg");
     scrollToChapter(0, duration);
 
     if (reduceMotion) {
@@ -152,6 +163,14 @@ export function RailFlyingDisc({
         top: target.top + target.height / 2,
         width: target.width * 0.9,
         height: target.height * 0.9,
+        x: 0,
+        y: 0,
+        xPercent: -50,
+        yPercent: -50,
+        rotate: 0,
+        rotationX: 0,
+        scaleX: 1,
+        scaleY: 1,
       });
 
       if (impactRef.current && dockRect) {
@@ -171,13 +190,16 @@ export function RailFlyingDisc({
       duration,
       ease: "sine.inOut",
       onUpdate: () => {
-        const target = readTarget() ?? initialTarget;
-        const toX = target.left + target.width / 2;
-        const toY = target.top + target.height / 2;
-        const toSize = target.width * 0.9;
+        const target = readTarget();
+        if (target) lastTarget = target;
+        const targetRect = lastTarget ?? initialTarget;
+        if (!targetRect) return;
+        const toX = targetRect.left + targetRect.width / 2;
+        const toY = targetRect.top + targetRect.height / 2;
+        const toSize = targetRect.width * 0.9;
         const p = path.p;
         const midX = fromX + (toX - fromX) * 0.5 + (toX >= fromX ? 26 : -26);
-        const midY = (fromY + toY) * 0.5 - 74;
+        const midY = (fromY + toY) * 0.5 - 96;
         const x =
           (1 - p) * (1 - p) * fromX +
           2 * (1 - p) * p * midX +
@@ -197,18 +219,13 @@ export function RailFlyingDisc({
 
         spin += distance * 1.5 + 1.8;
 
-        gsap.set(el, {
-          left: x,
-          top: y,
-          width: size,
-          height: size,
-          rotate: travelAngle,
-          rotationX: 30 * Math.max(0, Math.min(1, (p - 0.8) / 0.2)),
-          scaleX: 1 + Math.min(0.06, distance / 90),
-          scaleY: 1 - Math.min(0.025, distance / 180),
-        });
-
-        gsap.set(spinner, { rotate: spin - travelAngle });
+        setX(x - fromX);
+        setY(y - fromY);
+        setRotate(travelAngle);
+        setRotationX(30 * Math.max(0, Math.min(1, (p - 0.8) / 0.2)));
+        setScaleX((size / fromSize) * (1 + Math.min(0.06, distance / 90)));
+        setScaleY((size / fromSize) * (1 - Math.min(0.025, distance / 180)));
+        setSpinnerRotate(spin - travelAngle);
         lastX = x;
         lastY = y;
 
