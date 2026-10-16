@@ -182,7 +182,6 @@ export function JewelCaseDetailModal({
   const discRef = useRef<HTMLDivElement>(null);
   const launchDiscRef = useRef<HTMLDivElement>(null);
   const launchSpinnerRef = useRef<HTMLDivElement>(null);
-  const pendingLaunchRef = useRef(false);
   const pendingPlayRef = useRef(false);
   const launchTimelineRef = useRef<gsap.core.Timeline | null>(null);
   const handedOffRef = useRef(false);
@@ -295,8 +294,12 @@ export function JewelCaseDetailModal({
     return () => {
       cancelAnimationFrame(raf);
       startRail?.(lockToken);
+      const anotherModalIsActive = Array.from(activeModalEntries.keys()).some(
+        (owner) => owner !== railLockTokenRef.current,
+      );
+
       if (
-        activeModalEntries.size === 0 &&
+        !anotherModalIsActive &&
         previousActive &&
         document.contains(previousActive)
       ) {
@@ -368,20 +371,15 @@ export function JewelCaseDetailModal({
   }, [beginPlay, isCaseOpen, isLaunching]);
 
   useEffect(() => {
-    if (!isCaseOpen || isLaunching) return;
+    if (!isCaseOpen || isLaunching || !pendingPlayRef.current) return;
 
-    if (pendingLaunchRef.current) {
-      pendingLaunchRef.current = false;
-      const timer = window.setTimeout(beginLaunch, CASE_OPEN_DURATION_MS);
-      return () => window.clearTimeout(timer);
-    }
-
-    if (pendingPlayRef.current) {
+    const timer = window.setTimeout(() => {
       pendingPlayRef.current = false;
-      const timer = window.setTimeout(beginPlay, CASE_OPEN_DURATION_MS);
-      return () => window.clearTimeout(timer);
-    }
-  }, [beginLaunch, beginPlay, isCaseOpen, isLaunching]);
+      beginPlay();
+    }, CASE_OPEN_DURATION_MS);
+
+    return () => window.clearTimeout(timer);
+  }, [beginPlay, isCaseOpen, isLaunching]);
 
   useEffect(() => {
     if (
@@ -484,7 +482,6 @@ export function JewelCaseDetailModal({
   useEffect(() => {
     return () => {
       launchTimelineRef.current?.kill();
-      pendingLaunchRef.current = false;
       pendingPlayRef.current = false;
     };
   }, []);
