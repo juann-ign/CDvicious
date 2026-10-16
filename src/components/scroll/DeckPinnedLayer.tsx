@@ -49,6 +49,7 @@ export function DeckPinnedLayer() {
 
   const { data, error } = useNowPlaying(authenticated === true && deckInteractive);
   const latestDataRef = useRef(data);
+  const playbackSnapshotAtStartRef = useRef(data);
   latestDataRef.current = data;
 
   const trackCoverUrl = data?.track?.album.images[0]?.url;
@@ -116,6 +117,7 @@ export function DeckPinnedLayer() {
     };
 
     const handlePlaybackStarted = () => {
+      playbackSnapshotAtStartRef.current = latestDataRef.current;
       flightStageRef.current = "idle";
       setFlightStage("idle");
       setFlightPlaybackStarted(true);
@@ -138,10 +140,14 @@ export function DeckPinnedLayer() {
   }, []);
 
   useEffect(() => {
-    if (flightPlaybackStarted && data?.isPlaying) {
+    if (
+      flightPlaybackStarted &&
+      data &&
+      data !== playbackSnapshotAtStartRef.current
+    ) {
       setFlightPlaybackStarted(false);
     }
-  }, [data?.isPlaying, flightPlaybackStarted]);
+  }, [data, flightPlaybackStarted]);
 
   const visibleData = flightStage === "flying" ? frozenData : data;
   const isDockedBeforePlayback =
