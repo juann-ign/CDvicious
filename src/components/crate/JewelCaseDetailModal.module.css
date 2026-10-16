@@ -1068,8 +1068,7 @@
 
 
 .playError {
-  grid-column: 1 / -1;
-  margin: 0;
+  margin: 8px 0 0;
   padding: 7px 10px;
   border-left: 2px solid rgba(255, 115, 105, 0.9);
   background: rgba(255, 80, 72, 0.08);
