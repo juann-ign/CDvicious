@@ -74,6 +74,7 @@ export function DeckPinnedLayer() {
 
     const handleFlightStarted = () => {
       clearPlaybackDelay();
+      delete document.documentElement.dataset.discFlightPlaybackReady;
       flightStageRef.current = "flying";
       setFlightStage("flying");
       setFrozenData(latestDataRef.current);
@@ -97,12 +98,14 @@ export function DeckPinnedLayer() {
         setFlightStage("idle");
         setFrozenData(null);
         setVisualPlaybackReady(true);
+        document.documentElement.dataset.discFlightPlaybackReady = "true";
         window.dispatchEvent(new Event("cdvicious:disc-flight-playback-ready"));
       }, DISC_PLAYBACK_START_DELAY_MS);
     };
 
     const cancelFlight = () => {
       clearPlaybackDelay();
+      delete document.documentElement.dataset.discFlightPlaybackReady;
       flightStageRef.current = "idle";
       setFlightStage("idle");
       setFrozenData(null);
