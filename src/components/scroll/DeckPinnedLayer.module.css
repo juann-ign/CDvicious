@@ -52,7 +52,7 @@
   --booklet-height: calc(100% - 42px);
 
   position: absolute;
-  right: max(4vw, calc(50vw - 980px));
+  right: max(3vw, calc(50vw - 980px));
   bottom: 12vh;
   z-index: 6;
   width: min(900px, max(570px, 40vw));
