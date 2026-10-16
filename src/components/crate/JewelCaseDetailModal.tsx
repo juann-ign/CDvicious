@@ -169,6 +169,13 @@ export type PlayExecutionResult = {
 export type StartPlayExecution = () => Promise<PlayExecutionResult>;
 
 function waitForWindowEvent(eventName: string, timeoutMs: number): Promise<void> {
+  if (
+    eventName === "cdvicious:disc-flight-playback-ready" &&
+    document.documentElement.dataset.discFlightPlaybackReady === "true"
+  ) {
+    return Promise.resolve();
+  }
+
   return new Promise((resolve) => {
     let timeoutId: number | null = null;
 
@@ -474,6 +481,7 @@ export function JewelCaseDetailModal({
           // after arrival. Timeout is a safety valve for a destroyed rail.
           await waitForWindowEvent("cdvicious:disc-flight-playback-ready", 15_000);
           await restoreVolume();
+          window.dispatchEvent(new Event("cdvicious:player_state_changed"));
           return { success: true };
         } catch {
           await restoreVolume();
@@ -1051,8 +1059,10 @@ export function JewelCaseDetailModal({
             <button
               type="button"
               className={`${polishStyles.hwBtn} ${polishStyles.hwBtnTray}`}
-              onClick={() => !isLaunching && !isPlayPending && onClose()}
-              disabled={isLaunching || isPlayPending}
+              onClick={() =>
+                !isLaunching && !isPlayPending && !isOpeningForPlay && onClose()
+              }
+              disabled={isLaunching || isPlayPending || isOpeningForPlay}
               aria-label="Dejar en batea"
             >
               DEJAR EN BATEA
