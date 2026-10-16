@@ -364,9 +364,9 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
   }, []);
 
   const start = useCallback((token: RailLockToken) => {
-    stopTokensRef.current.delete(token);
+    const releasedLock = stopTokensRef.current.delete(token);
 
-    if (stopTokensRef.current.size > 0) {
+    if (!releasedLock || stopTokensRef.current.size > 0) {
       return;
     }
 
