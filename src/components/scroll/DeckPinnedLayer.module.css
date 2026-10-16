@@ -42,18 +42,21 @@
   flex-direction: column;
   width: 100%;
   min-height: 0;
-  transform: translate3d(calc(-13vw * var(--pSplit)), 0, 0);
+  transform: translate3d(calc(max(-14.5vw, -350px) * var(--pSplit)), 0, 0);
   transform-origin: center center;
   will-change: transform;
 }
 
 .bookletLayer {
+  --booklet-width: calc(100% - 30px);
+  --booklet-height: calc(100% - 42px);
+
   position: absolute;
-  right: 4vw;
+  right: max(4vw, calc(50vw - 980px));
   bottom: 12vh;
   z-index: 6;
-  width: min(570px, 42vw);
-  height: 370px;
+  width: min(900px, max(570px, 40vw));
+  height: clamp(370px, 25vw, 550px);
 
   opacity: var(--pSplit);
   filter: blur(calc(7px * (1 - var(--pSplit))));
@@ -95,11 +98,11 @@
   }
 
   .deckCluster {
-    transform: none;
+    transform: translate3d(max(-14.5vw, -350px), 0, 0);
   }
 
   .bookletLayer {
     filter: none;
-    transform: none;
+    transform: translate3d(0, 0, 0) rotateY(0deg) rotateZ(-0.8deg) scale(1);
   }
 }
