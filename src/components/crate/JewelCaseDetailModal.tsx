@@ -465,8 +465,8 @@ export function JewelCaseDetailModal({
 
         try {
           previousVolume = await player.getVolume().catch(() => 0.5);
-          await player.setVolume(0);
           muted = true;
+          await player.setVolume(0);
 
           const response = await fetch("/api/play", {
             method: "POST",
