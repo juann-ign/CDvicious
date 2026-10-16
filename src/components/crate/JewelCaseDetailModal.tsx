@@ -170,7 +170,8 @@ export function JewelCaseDetailModal({
   }, [album.id, album.artists, album.name, album.release_date, album.label, album.genres]);
 
   useEffect(() => {
-    stopRail?.(railLockTokenRef.current);
+    const lockToken = railLockTokenRef.current;
+    stopRail?.(lockToken);
     const previousActive = document.activeElement as HTMLElement | null;
     const raf = requestAnimationFrame(() => {
       setIsOpen(true);
@@ -179,7 +180,7 @@ export function JewelCaseDetailModal({
 
     return () => {
       cancelAnimationFrame(raf);
-      startRail?.(railLockTokenRef.current);
+      startRail?.(lockToken);
       if (previousActive && document.contains(previousActive)) {
         previousActive.focus();
       }
