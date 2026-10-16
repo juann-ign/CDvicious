@@ -1,7 +1,14 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useContext, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import gsap from "gsap";
 import type { CSSProperties } from "react";
 import type { AlbumItem, AlbumTrack } from "@/types/crate";
@@ -190,7 +197,7 @@ export function JewelCaseDetailModal({
     isDragging: isDiscDragging,
     pointerHandlers: discPointerHandlers,
   } = useDiscSurfaceDrag(!isCaseOpen || isLaunching);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const modalOwner = railLockTokenRef.current;
 
     registerModal(modalOwner, {
@@ -282,7 +289,7 @@ export function JewelCaseDetailModal({
     };
   }, [album.id, album.artists, album.name, album.release_date, album.label, album.genres]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const lockToken = railLockTokenRef.current;
     stopRail?.(lockToken);
     const previousActive = document.activeElement as HTMLElement | null;
