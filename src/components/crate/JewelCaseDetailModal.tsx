@@ -485,10 +485,18 @@ export function JewelCaseDetailModal({
             };
           }
 
-          // The Deck raises cdvicious:disc-flight-playback-ready one second
-          // after arrival. Timeout is a safety valve for a destroyed rail.
+          // Spotify starts preparing playback while the CD is in transit.
+          // Pause it while muted, then restart from 0 after docking + 1 second
+          // so the listener doesn't miss the opening seconds during the flight.
+          await player.pause().catch(() => undefined);
+
+          // Timeout is a safety valve for a destroyed rail. The Deck signals
+          // readiness one second after the disc reaches its destination.
           await waitForWindowEvent("cdvicious:disc-flight-playback-ready", 15_000);
+          await player.seek(0).catch(() => undefined);
+          await player.resume();
           await restoreVolume();
+          window.dispatchEvent(new Event("cdvicious:disc-flight-playback-started"));
           window.dispatchEvent(new Event("cdvicious:player_state_changed"));
           return { success: true };
         } catch {
