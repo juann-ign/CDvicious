@@ -19,6 +19,106 @@ const CASE_CLOSE_MS = 620;
 const POST_CLOSE_HOLD_MS = 160;
 const EXIT_MS = 340;
 
+const FOCUSABLE_SELECTOR = [
+  "a[href]",
+  "area[href]",
+  "button:not(:disabled)",
+  "input:not(:disabled):not([type='hidden'])",
+  "select:not(:disabled)",
+  "textarea:not(:disabled)",
+  "[tabindex]:not([tabindex='-1'])",
+].join(", ");
+
+type ActiveModalEntry = {
+  getDialog: () => HTMLDivElement | null;
+  isLaunching: () => boolean;
+  close: () => void;
+};
+
+const activeModalEntries = new Map<symbol, ActiveModalEntry>();
+let modalKeydownListener: ((event: KeyboardEvent) => void) | null = null;
+
+function getFocusableElements(dialog: HTMLDivElement): HTMLElement[] {
+  return Array.from(
+    dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
+  ).filter((element) => {
+    return (
+      element.tabIndex >= 0 &&
+      !element.matches(":disabled") &&
+      !element.closest('[aria-hidden="true"], [inert]') &&
+      element.getClientRects().length > 0
+    );
+  });
+}
+
+function handleModalKeydown(event: KeyboardEvent) {
+  const entries = Array.from(activeModalEntries.values());
+  const activeModal = entries[entries.length - 1];
+  const dialog = activeModal?.getDialog();
+
+  if (!activeModal || !dialog) return;
+
+  if (event.key === "Escape") {
+    if (!activeModal.isLaunching()) {
+      event.preventDefault();
+      activeModal.close();
+    }
+    return;
+  }
+
+  if (event.key !== "Tab") return;
+
+  const focusable = getFocusableElements(dialog);
+
+  if (focusable.length === 0) {
+    event.preventDefault();
+    dialog.focus();
+    return;
+  }
+
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  const activeElement = document.activeElement as HTMLElement | null;
+  const activeIndex = activeElement ? focusable.indexOf(activeElement) : -1;
+
+  if (activeIndex === -1) {
+    event.preventDefault();
+    (event.shiftKey ? last : first).focus();
+  } else if (event.shiftKey && activeIndex === 0) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && activeIndex === focusable.length - 1) {
+    event.preventDefault();
+    first.focus();
+  }
+}
+
+function registerModal(entryId: symbol, entry: ActiveModalEntry) {
+  activeModalEntries.set(entryId, entry);
+
+  if (!modalKeydownListener) {
+    modalKeydownListener = handleModalKeydown;
+    window.addEventListener("keydown", modalKeydownListener);
+  }
+
+  document.documentElement.dataset.modalOpen = "true";
+}
+
+function unregisterModal(entryId: symbol) {
+  activeModalEntries.delete(entryId);
+
+  if (activeModalEntries.size === 0) {
+    delete document.documentElement.dataset.modalOpen;
+
+    if (modalKeydownListener) {
+      window.removeEventListener("keydown", modalKeydownListener);
+      modalKeydownListener = null;
+    }
+  } else {
+    document.documentElement.dataset.modalOpen = "true";
+  }
+}
+
 function fmt(ms: number) {
   const totalSeconds = Math.floor(ms / 1000);
   return `${Math.floor(totalSeconds / 60)}:${String(totalSeconds % 60).padStart(2, "0")}`;
@@ -63,8 +163,16 @@ export function JewelCaseDetailModal({
   const stopRail = rail?.stop;
   const startRail = rail?.start;
   const { deviceId, isReady } = useSpotifyPlayer();
+  const dialogRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const railLockTokenRef = useRef(Symbol("jewel-case-modal"));
+  const onCloseRef = useRef(onClose);
+  const onLoadRef = useRef(onLoad);
+  const isLaunchingRef = useRef(isLaunching);
+
+  onCloseRef.current = onClose;
+  onLoadRef.current = onLoad;
+  isLaunchingRef.current = isLaunching;
   const [releaseMeta, setReleaseMeta] = useState<ReleaseMeta>(() => ({
     year: album.release_date?.slice(0, 4),
     label: album.label,
@@ -84,10 +192,16 @@ export function JewelCaseDetailModal({
     pointerHandlers: discPointerHandlers,
   } = useDiscSurfaceDrag(!isCaseOpen || isLaunching);
   useEffect(() => {
-    document.documentElement.dataset.modalOpen = "true";
+    const modalOwner = railLockTokenRef.current;
+
+    registerModal(modalOwner, {
+      getDialog: () => dialogRef.current,
+      isLaunching: () => isLaunchingRef.current,
+      close: () => onCloseRef.current(),
+    });
 
     return () => {
-      delete document.documentElement.dataset.modalOpen;
+      unregisterModal(modalOwner);
     };
   }, []);
 
@@ -181,18 +295,17 @@ export function JewelCaseDetailModal({
     return () => {
       cancelAnimationFrame(raf);
       startRail?.(lockToken);
-      if (previousActive && document.contains(previousActive)) {
+      if (
+        activeModalEntries.size === 0 &&
+        previousActive &&
+        document.contains(previousActive)
+      ) {
         previousActive.focus();
       }
     };
   }, [startRail, stopRail]);
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) =>
-      e.key === "Escape" && !isLaunching && onClose();
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [isLaunching, onClose]);
+  // Escape and Tab are handled by the single shared modal keyboard listener.
 
   const handleOpenCase = () => {
     if (!isCaseOpen) setIsCaseOpen(true);
@@ -355,7 +468,7 @@ export function JewelCaseDetailModal({
       () => {
         if (handedOffRef.current || !launchDiscRef.current) return;
         handedOffRef.current = true;
-        onLoad(launchDiscRef.current);
+        onLoadRef.current(launchDiscRef.current);
       },
       [],
       (CASE_CLOSE_START_MS + CASE_CLOSE_MS + POST_CLOSE_HOLD_MS + EXIT_MS) /
@@ -366,7 +479,7 @@ export function JewelCaseDetailModal({
       tl.kill();
       launchTimelineRef.current = null;
     };
-  }, [isLaunching, launchOrigin, onLoad]);
+  }, [isLaunching, launchOrigin]);
 
   useEffect(() => {
     return () => {
@@ -391,6 +504,8 @@ export function JewelCaseDetailModal({
   return (
     <div
       className={[styles.overlay, isExiting ? styles.overlayExiting : ""].filter(Boolean).join(" ")}
+      ref={dialogRef}
+      tabIndex={-1}
       role="dialog"
       aria-modal="true"
       aria-label={`${album.name} — ${album.artists.map((a) => a.name).join(", ")}`}
