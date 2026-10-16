@@ -118,7 +118,19 @@ export function useMarqueeBelt({
     const el = containerRef.current;
     if (!el) return;
 
+    let suppressNextClick = false;
+    let suppressClickTimer: number | null = null;
+
+    const clearClickSuppression = () => {
+      suppressNextClick = false;
+      if (suppressClickTimer !== null) {
+        window.clearTimeout(suppressClickTimer);
+        suppressClickTimer = null;
+      }
+    };
+
     const down = (e: PointerEvent) => {
+      clearClickSuppression();
       dragging.current = true;
       captured.current = false;
       pointerId.current = e.pointerId;
@@ -133,6 +145,14 @@ export function useMarqueeBelt({
       const currentPointerId = pointerId.current;
 
       if (wasCaptured && snap) {
+        suppressNextClick = true;
+        if (suppressClickTimer !== null) {
+          window.clearTimeout(suppressClickTimer);
+        }
+        // Pointerup is normally followed immediately by click. Clear the
+        // guard shortly afterward if the browser does not dispatch that click.
+        suppressClickTimer = window.setTimeout(clearClickSuppression, 0);
+
         const len = lenRef.current;
         const nPages = pagesRef.current;
 
@@ -182,11 +202,21 @@ export function useMarqueeBelt({
       velocity.current = -dx * 8;
     };
 
+    const click = (event: MouseEvent) => {
+      if (!suppressNextClick) return;
+
+      clearClickSuppression();
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+    };
+
     const up = () => finish(true);
     const cancel = () => finish(false);
     const lostCapture = () => finish(false);
 
     el.addEventListener("pointerdown", down);
+    el.addEventListener("click", click, true);
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);
     window.addEventListener("pointercancel", cancel);
@@ -194,6 +224,8 @@ export function useMarqueeBelt({
 
     return () => {
       el.removeEventListener("pointerdown", down);
+      el.removeEventListener("click", click, true);
+      clearClickSuppression();
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
       window.removeEventListener("pointercancel", cancel);
