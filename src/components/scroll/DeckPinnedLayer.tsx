@@ -23,6 +23,7 @@ export function DeckPinnedLayer() {
   const [flightStage, setFlightStage] = useState<DiscFlightStage>("idle");
   const [frozenData, setFrozenData] = useState<NowPlayingResponse | null>(null);
   const [visualPlaybackReady, setVisualPlaybackReady] = useState(true);
+  const [flightPlaybackStarted, setFlightPlaybackStarted] = useState(false);
   const flightStageRef = useRef<DiscFlightStage>("idle");
   const playbackDelayRef = useRef<number | null>(null);
 
@@ -79,6 +80,7 @@ export function DeckPinnedLayer() {
       setFlightStage("flying");
       setFrozenData(latestDataRef.current);
       setVisualPlaybackReady(false);
+      setFlightPlaybackStarted(false);
     };
 
     const beginDockedDelay = () => {
@@ -110,25 +112,33 @@ export function DeckPinnedLayer() {
       setFlightStage("idle");
       setFrozenData(null);
       setVisualPlaybackReady(true);
+      setFlightPlaybackStarted(false);
+    };
+
+    const handlePlaybackStarted = () => {
+      setFlightPlaybackStarted(true);
     };
 
     window.addEventListener("cdvicious:disc-flight-started", handleFlightStarted);
     window.addEventListener("cdvicious:disc-flight-arrived", beginDockedDelay);
     window.addEventListener("cdvicious:disc-flight-done", beginDockedDelay);
     window.addEventListener("cdvicious:disc-flight-cancelled", cancelFlight);
+    window.addEventListener("cdvicious:disc-flight-playback-started", handlePlaybackStarted);
 
     return () => {
       window.removeEventListener("cdvicious:disc-flight-started", handleFlightStarted);
       window.removeEventListener("cdvicious:disc-flight-arrived", beginDockedDelay);
       window.removeEventListener("cdvicious:disc-flight-done", beginDockedDelay);
       window.removeEventListener("cdvicious:disc-flight-cancelled", cancelFlight);
+      window.removeEventListener("cdvicious:disc-flight-playback-started", handlePlaybackStarted);
       clearPlaybackDelay();
     };
   }, []);
 
   const visibleData = flightStage === "flying" ? frozenData : data;
   const visibleIsPlaying =
-    visualPlaybackReady && (visibleData?.isPlaying ?? false);
+    visualPlaybackReady &&
+    (flightPlaybackStarted || (visibleData?.isPlaying ?? false));
   const coverUrl = visibleData?.track?.album.images[0]?.url;
   const accentColor = useDominantColor(coverUrl) ?? "#1DB954";
   const stageStyle = {
