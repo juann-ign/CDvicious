@@ -26,7 +26,7 @@ const PARTICLES = Array.from({ length: 12 }, (_, index) => {
 });
 
 const DOCK_PULSE_DURATION_MS = 900;
-const FLIGHT_DURATION_SECONDS = 2.1;
+const FLIGHT_DURATION_SECONDS = 3.6;
 
 export function RailFlyingDisc({
   coverUrl,
@@ -229,7 +229,7 @@ export function RailFlyingDisc({
         lastX = x;
         lastY = y;
 
-        if (!arrivedRef.current && p >= 0.97) {
+        if (!arrivedRef.current && p >= 0.99) {
           arrivedRef.current = true;
           const dockTarget = discRegistry.discTarget;
           const dockRect = readTarget();
