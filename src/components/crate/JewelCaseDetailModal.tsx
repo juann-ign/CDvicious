@@ -423,6 +423,8 @@ export function JewelCaseDetailModal({
     setPlayError(null);
 
     if (onPlay) {
+      // Freeze the Deck presentation before the modal-close refresh updates it.
+      window.dispatchEvent(new Event("cdvicious:disc-flight-started"));
       onPlay(disc);
       onClose();
       return;
