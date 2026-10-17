@@ -14,6 +14,7 @@ import type { CSSProperties } from "react";
 import type { AlbumItem, AlbumTrack } from "@/types/crate";
 import { useDiscSurfaceDrag } from "@/hooks/useDiscSurfaceDrag";
 import { useSpotifyPlayer } from "@/components/SpotifyPlayerProvider";
+import { loadMockAlbum } from "@/lib/mockSpotifyStore";
 import { RailContext } from "@/components/scroll/RailContext";
 import styles from "./JewelCaseDetailModal.module.css";
 import polishStyles from "./JewelCaseDetailModal.polish.module.css";
@@ -485,6 +486,10 @@ export function JewelCaseDetailModal({
             };
           }
 
+          if (process.env.NEXT_PUBLIC_SPOTIFY_MOCK === "1") {
+            loadMockAlbum(album);
+          }
+
           // Spotify starts preparing playback while the CD is in transit.
           // Pause it while muted, then restart from 0 after docking + 1 second
           // so the listener doesn't miss the opening seconds during the flight.
@@ -544,7 +549,7 @@ export function JewelCaseDetailModal({
         setIsPlayPending(false);
       });
   }, [
-    album.uri,
+    album,
     beginLaunch,
     deviceId,
     isLaunching,
