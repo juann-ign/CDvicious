@@ -98,7 +98,7 @@
   }
 
   .deckCluster {
-    transform: translate3d(max(-14.5vw, -350px), 0, 0);
+    transform: translate3d(calc(max(-14.5vw, -350px) * var(--pSplit)), 0, 0);
   }
 
   .bookletLayer {
