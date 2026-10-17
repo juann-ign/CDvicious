@@ -86,7 +86,7 @@ export function LyricsBooklet({
   }, [trackId, trackArtist, trackTitle, trackAlbum, trackDuration]);
 
   useLayoutEffect(() => {
-    if (!lyrics || !track) {
+    if (!lyrics || !trackId) {
       setPages([]);
       return;
     }
@@ -101,15 +101,32 @@ export function LyricsBooklet({
     }
 
     let cancelled = false;
+    let measurementVersion = 0;
+    let pendingFrame: number | null = null;
+
+    const commitPages = (nextPages: string[], version: number) => {
+      if (cancelled || version !== measurementVersion) return;
+
+      setPages((previous) => {
+        if (cancelled || version !== measurementVersion) return previous;
+        const unchanged =
+          previous.length === nextPages.length &&
+          previous.every((page, index) => page === nextPages[index]);
+
+        return unchanged ? previous : nextPages;
+      });
+    };
 
     const paginate = async () => {
+      const version = ++measurementVersion;
+
       // Wait for the editorial font before measuring. Otherwise the first
       // pagination pass can use fallback metrics and create false page breaks.
       if (document.fonts?.ready) {
         await document.fonts.ready;
       }
 
-      if (cancelled) return;
+      if (cancelled || version !== measurementVersion) return;
 
       const physicalPageHeight = spread.offsetHeight;
 
@@ -238,29 +255,43 @@ export function LyricsBooklet({
       const source = normalizedLyrics.trim();
 
       if (reconstructed !== source) {
-        setPages([lyrics]);
+        commitPages([lyrics], version);
         return;
       }
 
-      if (!cancelled) {
-        setPages(result.length > 0 ? result : [lyrics]);
-      }
+      commitPages(result.length > 0 ? result : [lyrics], version);
     };
 
-    paginate();
+    void paginate();
 
-    const resizeObserver = new ResizeObserver(() => {
-      paginate();
-    });
+    const schedulePagination = () => {
+      // Invalidate any font-waiting measurement immediately, then coalesce
+      // ResizeObserver notifications into one layout pass per animation frame.
+      measurementVersion += 1;
+
+      if (pendingFrame !== null) return;
+
+      pendingFrame = window.requestAnimationFrame(() => {
+        pendingFrame = null;
+        void paginate();
+      });
+    };
+
+    const resizeObserver = new ResizeObserver(schedulePagination);
 
     resizeObserver.observe(spread);
     resizeObserver.observe(firstPageMeasure);
 
     return () => {
       cancelled = true;
+      measurementVersion += 1;
+      if (pendingFrame !== null) {
+        window.cancelAnimationFrame(pendingFrame);
+        pendingFrame = null;
+      }
       resizeObserver.disconnect();
     };
-  }, [lyrics, track]);
+  }, [lyrics, trackId]);
 
   useEffect(() => {
     if (pages.length === 0) {
@@ -349,11 +380,13 @@ export function LyricsBooklet({
   const handlePageKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key === "ArrowLeft") {
       event.preventDefault();
+      event.stopPropagation();
       goPrevious();
     }
 
     if (event.key === "ArrowRight") {
       event.preventDefault();
+      event.stopPropagation();
       goNext();
     }
   };
