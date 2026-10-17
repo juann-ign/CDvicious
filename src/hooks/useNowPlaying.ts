@@ -2,6 +2,7 @@
 
 import { useEffect, useSyncExternalStore } from "react";
 import * as nowPlayingStore from "@/lib/nowPlayingStore";
+import * as mockSpotifyStore from "@/lib/mockSpotifyStore";
 
 const EMPTY_SNAPSHOT = {
   data: null,
@@ -12,9 +13,12 @@ const noopSubscribe = () => () => undefined;
 const getEmptySnapshot = () => EMPTY_SNAPSHOT;
 
 export function useNowPlaying(enabled: boolean) {
+  const mockMode = process.env.NEXT_PUBLIC_SPOTIFY_MOCK === "1";
+  const store = mockMode ? mockSpotifyStore : nowPlayingStore;
+
   const snapshot = useSyncExternalStore(
-    enabled ? nowPlayingStore.subscribe : noopSubscribe,
-    enabled ? nowPlayingStore.getSnapshot : getEmptySnapshot,
+    enabled ? store.subscribe : noopSubscribe,
+    enabled ? store.getSnapshot : getEmptySnapshot,
     getEmptySnapshot,
   );
 
@@ -23,12 +27,12 @@ export function useNowPlaying(enabled: boolean) {
       return;
     }
 
-    nowPlayingStore.acquire();
+    store.acquire();
 
     return () => {
-      nowPlayingStore.release();
+      store.release();
     };
-  }, [enabled]);
+  }, [enabled, store]);
 
   if (!enabled) {
     return EMPTY_SNAPSHOT;

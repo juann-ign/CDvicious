@@ -1,30 +1,34 @@
 import { NextResponse } from "next/server";
 import { getValidAccessToken } from "@/lib/session";
 import { fetchNowPlaying, SpotifyApiError } from "@/lib/spotify";
+import mockCollection from "@/mocks/collection.json";
 
 export async function GET() {
   if (process.env.NEXT_PUBLIC_SPOTIFY_MOCK === "1") {
-    return NextResponse.json({
-      isPlaying: true,
-      progressMs: 42_000,
-      durationMs: 214_000,
-      track: {
-        id: "cdvicious-demo-track",
-        name: "Demo Track",
-        duration_ms: 214_000,
-        artists: [{ name: "CDvicious Demo" }],
-        album: {
-          name: "Local Mock Session",
-          images: [
-            {
-              url: "https://placehold.co/600x600/111111/ffffff.png?text=NOW",
-              width: 600,
-              height: 600,
-            },
-          ],
+    const album = mockCollection[0];
+
+    return NextResponse.json(
+      {
+        isPlaying: true,
+        progressMs: 42_000,
+        durationMs: 150_000,
+        track: {
+          id: `mock-track-${album.id}-1`,
+          name: "DEMO TRACK 01",
+          duration_ms: 150_000,
+          artists: album.artists.map((artist) => ({ name: artist.name })),
+          album: {
+            name: album.name,
+            images: album.images.map((image) => ({
+              url: image.url,
+              width: image.width,
+              height: image.height,
+            })),
+          },
         },
       },
-    });
+      { headers: { "Cache-Control": "no-store" } },
+    );
   }
 
   const accessToken = await getValidAccessToken();

@@ -8,9 +8,15 @@ import {
   type ReactNode,
 } from "react";
 import { getClientAuthSession } from "@/lib/clientSession";
+import {
+  mockSpotifyPlayer,
+  type MockSpotifyPlayer,
+} from "@/lib/mockSpotifyStore";
+
+type PlaybackPlayer = Spotify.Player | MockSpotifyPlayer;
 
 interface SpotifyPlayerContextType {
-  player: Spotify.Player | null;
+  player: PlaybackPlayer | null;
   isReady: boolean;
   deviceId: string | null;
   authenticated: boolean | null;
@@ -26,13 +32,20 @@ const SpotifyPlayerContext = createContext<SpotifyPlayerContextType>({
 export const useSpotifyPlayer = () => useContext(SpotifyPlayerContext);
 
 export function SpotifyPlayerProvider({ children }: { children: ReactNode }) {
-  const [player, setPlayer] = useState<Spotify.Player | null>(null);
+  const mockMode = process.env.NEXT_PUBLIC_SPOTIFY_MOCK === "1";
+  const [player, setPlayer] = useState<PlaybackPlayer | null>(null);
   const [isReady, setIsReady] = useState(false);
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
 
   useEffect(() => {
+    if (mockMode) {
+      setAuthenticated(true);
+      setToken(null);
+      return;
+    }
+
     let active = true;
 
     getClientAuthSession()
@@ -52,10 +65,27 @@ export function SpotifyPlayerProvider({ children }: { children: ReactNode }) {
     return () => {
       active = false;
     };
-  }, []);
+  }, [mockMode]);
 
   useEffect(() => {
-    if (!token) return;
+    if (mockMode) {
+      setPlayer(mockSpotifyPlayer);
+      setDeviceId("cdvicious-mock-device");
+      setIsReady(true);
+
+      return () => {
+        setPlayer(null);
+        setDeviceId(null);
+        setIsReady(false);
+      };
+    }
+
+    if (!token) {
+      setPlayer(null);
+      setDeviceId(null);
+      setIsReady(false);
+      return;
+    }
 
     let active = true;
     let spotifyPlayer: Spotify.Player | null = null;
@@ -130,7 +160,7 @@ export function SpotifyPlayerProvider({ children }: { children: ReactNode }) {
         document.body.removeChild(script);
       }
     };
-  }, [token]);
+  }, [token, mockMode]);
 
   return (
     <SpotifyPlayerContext.Provider
