@@ -11,8 +11,8 @@ import styles from "./HorizontalRail.module.css";
 const DESKTOP_QUERY = "(min-width: 761px)";
 
 const PANELS = [
-  { number: "01", title: "Deck limpio", detail: "Rail base" },
-  { number: "02", title: "Split / Booklet", detail: "Placeholder" },
+  { id: "deck", label: "Deck" },
+  { id: "split", label: "Split / Booklet" },
 ];
 
 function useIsDesktop() {
@@ -42,16 +42,10 @@ export function HorizontalRail({ fallback }: { fallback: ReactNode }) {
     <RailProvider overlay={<DeckPinnedLayer />}>
       {PANELS.map((panel) => (
         <section
-          key={panel.number}
+          key={panel.id}
           className={styles.panel}
-          aria-label={panel.title}
+          aria-label={panel.label}
         >
-          <div className={styles.panelIndex}>{panel.number}</div>
-          <div>
-            <p className={styles.eyebrow}>CDvicious / EPIC A</p>
-            <h1>{panel.title}</h1>
-            <p className={styles.detail}>{panel.detail}</p>
-          </div>
         </section>
       ))}
 
@@ -59,7 +53,6 @@ export function HorizontalRail({ fallback }: { fallback: ReactNode }) {
         className={styles.panel + " " + styles.panelChapter}
         aria-label="La Batea"
       >
-        <div className={styles.panelIndex}>03</div>
         <div className={styles.chapterContent}>
           <CrateChapter />
         </div>
@@ -69,7 +62,6 @@ export function HorizontalRail({ fallback }: { fallback: ReactNode }) {
         className={styles.panel + " " + styles.panelChapter}
         aria-label="La Colección"
       >
-        <div className={styles.panelIndex}>04</div>
         <div className={styles.chapterContent}>
           <CollectionChapter />
         </div>
@@ -79,7 +71,6 @@ export function HorizontalRail({ fallback }: { fallback: ReactNode }) {
         className={styles.panel + " " + styles.panelChapter}
         aria-label="Mixtape Lab"
       >
-        <div className={styles.panelIndex}>05</div>
         <div className={styles.chapterContent}>
           <MixtapeChapter />
         </div>

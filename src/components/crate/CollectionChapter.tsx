@@ -252,7 +252,6 @@ export function CollectionChapter() {
     <div ref={chapterRef} className={styles.chapter}>
       <header className={styles.header}>
         <div>
-          <p className={styles.eyebrow}>CAP.04 / EPIC C</p>
           <h2>LA COLECCIÓN</h2>
         </div>
         <span className={styles.meta}>

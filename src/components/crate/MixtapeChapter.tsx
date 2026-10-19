@@ -103,7 +103,6 @@ export function MixtapeChapter({
     <div className={styles.chapter}>
       <header className={styles.header}>
         <div>
-          <span className={styles.kicker}>CAP.05 / EPIC D</span>
           <h2>MIXTAPE LAB</h2>
         </div>
         <span className={styles.status}>
