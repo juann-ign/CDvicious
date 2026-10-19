@@ -13,38 +13,57 @@ interface DiscCanvasProps {
 }
 
 export function DiscCanvas({ track, isPlaying, accentColor }: DiscCanvasProps) {
-  const [frameloop, setFrameloop] = useState<"always" | "never">("always");
+  const [canvasElement, setCanvasElement] = useState<HTMLCanvasElement | null>(
+    null,
+  );
+  const [documentVisible, setDocumentVisible] = useState(true);
+  const [contextLost, setContextLost] = useState(false);
+
+  // Visibility and WebGL context state are independent: a visible tab must not
+  // resume rendering while its canvas still has a lost context.
+  const frameloop =
+    documentVisible && !contextLost ? ("always" as const) : ("never" as const);
 
   useEffect(() => {
-    function handleVisibility() {
-      setFrameloop(document.hidden ? "never" : "always");
-    }
-    document.addEventListener("visibilitychange", handleVisibility);
+    const updateVisibility = () => {
+      setDocumentVisible(document.visibilityState === "visible");
+    };
+
+    updateVisibility();
+    document.addEventListener("visibilitychange", updateVisibility);
+
     return () =>
-      document.removeEventListener("visibilitychange", handleVisibility);
+      document.removeEventListener("visibilitychange", updateVisibility);
   }, []);
 
   useEffect(() => {
-    const canvas = document.querySelector("canvas");
-    if (!canvas) return;
+    if (!canvasElement) return;
 
-    const handleLost = (e: Event) => {
-      e.preventDefault();
-      console.error("[DiscCanvas] WebGL context lost — pausando frameloop");
-      setFrameloop("never");
+    const handleLost = (event: Event) => {
+      // Prevent the browser's default permanent-loss behavior where supported.
+      event.preventDefault();
+      setContextLost(true);
+      console.warn(
+        "[DiscCanvas] WebGL context lost; frameloop paused until restoration",
+      );
     };
+
     const handleRestored = () => {
-      console.warn("[DiscCanvas] WebGL context restored");
-      setFrameloop("always");
+      setContextLost(false);
+      console.info("[DiscCanvas] WebGL context restored");
     };
 
-    canvas.addEventListener("webglcontextlost", handleLost);
-    canvas.addEventListener("webglcontextrestored", handleRestored);
+    canvasElement.addEventListener("webglcontextlost", handleLost);
+    canvasElement.addEventListener("webglcontextrestored", handleRestored);
+
     return () => {
-      canvas.removeEventListener("webglcontextlost", handleLost);
-      canvas.removeEventListener("webglcontextrestored", handleRestored);
+      canvasElement.removeEventListener("webglcontextlost", handleLost);
+      canvasElement.removeEventListener(
+        "webglcontextrestored",
+        handleRestored,
+      );
     };
-  }, []);
+  }, [canvasElement]);
 
   return (
     <Canvas
@@ -52,7 +71,12 @@ export function DiscCanvas({ track, isPlaying, accentColor }: DiscCanvasProps) {
       dpr={[1, 2]}
       frameloop={frameloop}
       camera={{ position: [0, 0.7, 4.6], fov: 40 }}
-      onCreated={({ camera }) => camera.lookAt(0, 0, 0)}
+      onCreated={({ camera, gl }) => {
+        camera.lookAt(0, 0, 0);
+        // Listen to the canvas owned by this R3F instance, not the first
+        // arbitrary canvas in the document.
+        setCanvasElement(gl.domElement);
+      }}
       gl={{ antialias: true, alpha: true }}
     >
       <ambientLight intensity={1.4} />
