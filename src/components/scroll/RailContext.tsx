@@ -12,10 +12,12 @@ import {
 import Lenis from "lenis";
 import styles from "./RailProvider.module.css";
 
-const SNAP_IDLE_DELAY_MS = 200;
+const SNAP_IDLE_DELAY_MS = 140;
 const SNAP_THRESHOLD_RATIO = 0.2;
-const SNAP_MIN_DURATION_SECONDS = 0.18;
-const SNAP_MAX_DURATION_SECONDS = 0.6;
+const SNAP_MIN_DURATION_SECONDS = 0.16;
+const SNAP_MAX_DURATION_SECONDS = 0.48;
+const CHAPTER_FORWARD_THRESHOLD = 0.55;
+const CHAPTER_BACKWARD_THRESHOLD = 0.45;
 
 type RailLockToken = symbol;
 
@@ -43,6 +45,7 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
   const animationFrameRef = useRef<number | null>(null);
   const snapTimerRef = useRef<number | null>(null);
   const snapInProgressRef = useRef(false);
+  const activeChapterIndexRef = useRef<number | null>(null);
   const snapAnchorRef = useRef<{
     index: number;
     scroll: number;
@@ -65,6 +68,8 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
       return;
     }
 
+    activeChapterIndexRef.current = null;
+
     const previousHtmlOverflow = document.documentElement.style.overflow;
     const previousBodyOverflow = document.body.style.overflow;
 
@@ -82,7 +87,7 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
       orientation: "horizontal",
       gestureOrientation: "horizontal",
       smoothWheel: !reducedMotionRef.current,
-      lerp: reducedMotionRef.current ? 1 : 0.075,
+      lerp: reducedMotionRef.current ? 1 : 0.09,
       wheelMultiplier: 0.85,
       virtualScroll: (data) => {
         if (data.event.type === "wheel") {
@@ -214,14 +219,14 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
         SNAP_MIN_DURATION_SECONDS,
         Math.min(
           SNAP_MAX_DURATION_SECONDS,
-          0.22 + dist01 * 0.32,
+          0.18 + dist01 * 0.28,
         ),
       );
 
       snapInProgressRef.current = true;
       activeLenis.scrollTo(target, {
         duration: reducedMotionRef.current ? 0 : duration,
-        easing: (t) => 1 - Math.pow(1 - t, 5),
+        easing: (t) => 1 - Math.pow(1 - t, 3),
         userData: { source: "chapter-snap" },
         onComplete: () => {
           snapInProgressRef.current = false;
@@ -271,10 +276,32 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
         wrapper.clientWidth || window.innerWidth,
       );
       const maxChapterIndex = Math.max(0, content.children.length - 1);
-      const activeChapterIndex = Math.min(
-        maxChapterIndex,
-        Math.max(0, Math.round(scroll / viewportWidth)),
-      );
+      const chapterPosition = scroll / viewportWidth;
+      let activeChapterIndex = activeChapterIndexRef.current;
+
+      if (activeChapterIndex === null) {
+        activeChapterIndex = Math.min(
+          maxChapterIndex,
+          Math.max(0, Math.floor(chapterPosition)),
+        );
+      }
+
+      while (
+        activeChapterIndex < maxChapterIndex &&
+        chapterPosition >= activeChapterIndex + CHAPTER_FORWARD_THRESHOLD
+      ) {
+        activeChapterIndex += 1;
+      }
+
+      while (
+        activeChapterIndex > 0 &&
+        chapterPosition <=
+          activeChapterIndex - 1 + CHAPTER_BACKWARD_THRESHOLD
+      ) {
+        activeChapterIndex -= 1;
+      }
+
+      activeChapterIndexRef.current = activeChapterIndex;
 
       root.style.setProperty("--pSplit", String(splitProgress));
       root.style.setProperty("--pHideDeck", String(hideDeckProgress));
