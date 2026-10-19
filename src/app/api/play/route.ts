@@ -56,6 +56,11 @@ export async function POST(request: Request) {
     );
   }
 
+  if (process.env.NEXT_PUBLIC_SPOTIFY_MOCK === "1") {
+    // Mock mode confirms the simulated player action without contacting Spotify.
+    return NextResponse.json({ success: true, mock: true });
+  }
+
   let accessToken: string | null;
 
   try {
