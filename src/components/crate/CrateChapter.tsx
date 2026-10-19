@@ -124,7 +124,6 @@ export function CrateChapter() {
     <div className={styles.chapter}>
       <header className={styles.header}>
         <div>
-          <span className={styles.kicker}>CAP.03 / EPIC C</span>
           <h2>LA BATEA</h2>
         </div>
         <span className={styles.status}>{statusLabel}</span>

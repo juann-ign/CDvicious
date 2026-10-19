@@ -24,15 +24,6 @@
   margin-bottom: 18px;
 }
 
-.kicker {
-  display: block;
-  margin-bottom: 6px;
-  font-family: var(--font-ui);
-  font-size: var(--text-xs);
-  letter-spacing: var(--tracking-wide-2);
-  color: var(--color-text-muted);
-}
-
 .header h2 {
   margin: 0;
   font-family: var(--font-display);
