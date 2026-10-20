@@ -33,11 +33,12 @@ type RailContextValue = {
 type RailProviderProps = {
   children: ReactNode;
   overlay?: ReactNode;
+  navigation?: ReactNode;
 };
 
 export const RailContext = createContext<RailContextValue | null>(null);
 
-export function RailProvider({ children, overlay }: RailProviderProps) {
+export function RailProvider({ children, overlay, navigation }: RailProviderProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -486,6 +487,7 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
           </div>
         </div>
         {overlay}
+        {navigation}
       </div>
     </RailContext.Provider>
   );
