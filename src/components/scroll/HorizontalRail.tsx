@@ -4,6 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { CollectionChapter } from "@/components/crate/CollectionChapter";
 import { CrateChapter } from "@/components/crate/CrateChapter";
 import { MixtapeChapter } from "@/components/crate/MixtapeChapter";
+import { ChapterNavigation } from "./ChapterNavigation";
 import { DeckPinnedLayer } from "./DeckPinnedLayer";
 import { RailProvider } from "./RailContext";
 import styles from "./HorizontalRail.module.css";
@@ -39,7 +40,10 @@ export function HorizontalRail({ fallback }: { fallback: ReactNode }) {
   }
 
   return (
-    <RailProvider overlay={<DeckPinnedLayer />}>
+    <RailProvider
+      overlay={<DeckPinnedLayer />}
+      navigation={<ChapterNavigation />}
+    >
       {PANELS.map((panel) => (
         <section
           key={panel.id}

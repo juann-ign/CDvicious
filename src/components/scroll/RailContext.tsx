@@ -23,6 +23,7 @@ type RailLockToken = symbol;
 
 type RailContextValue = {
   isReady: boolean;
+  activeChapterIndex: number;
   start: (token: RailLockToken) => void;
   stop: (token: RailLockToken) => void;
   scrollToX: (px: number) => void;
@@ -32,11 +33,12 @@ type RailContextValue = {
 type RailProviderProps = {
   children: ReactNode;
   overlay?: ReactNode;
+  navigation?: ReactNode;
 };
 
 export const RailContext = createContext<RailContextValue | null>(null);
 
-export function RailProvider({ children, overlay }: RailProviderProps) {
+export function RailProvider({ children, overlay, navigation }: RailProviderProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -58,6 +60,7 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
     hideDistance: 1,
   });
   const [isReady, setIsReady] = useState(false);
+  const [activeChapterIndex, setActiveChapterIndex] = useState(0);
 
   useEffect(() => {
     const root = rootRef.current;
@@ -302,6 +305,9 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
       }
 
       activeChapterIndexRef.current = activeChapterIndex;
+      setActiveChapterIndex((current) =>
+        current === activeChapterIndex ? current : activeChapterIndex,
+      );
 
       root.style.setProperty("--pSplit", String(splitProgress));
       root.style.setProperty("--pHideDeck", String(hideDeckProgress));
@@ -460,6 +466,7 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
 
   const value: RailContextValue = {
     isReady,
+    activeChapterIndex,
     start,
     stop,
     scrollToX,
@@ -480,6 +487,7 @@ export function RailProvider({ children, overlay }: RailProviderProps) {
           </div>
         </div>
         {overlay}
+        {navigation}
       </div>
     </RailContext.Provider>
   );
