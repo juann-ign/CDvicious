@@ -104,31 +104,31 @@ Estos resultados son solo de las comprobaciones automatizadas. Los estados de la
 |---|---|---|
 | STAB-01-01 | PARCIAL | El click recorre los cinco capítulos; falta recorrido manual completo de ida/vuelta con wheel/trackpad. |
 | STAB-01-02 | NOT RUN | El recorrido inverso completo con wheel/trackpad no está automatizado. |
-| STAB-01-03 | FAIL reproducido (2/2) | En dos ejecuciones de Chromium, el wheel largo `deltaY=700` no activa Split dentro de 8 s. [Issue #84](https://github.com/juann-ign/CDvicious/issues/84). |
+| STAB-01-03 | PASS automatizado | En el run [39994009550](https://github.com/juann-ign/CDvicious/actions/runs/39994009550), el test de rueda corta → larga → inversa pasó: Deck conserva el estado tras el gesto corto, Split se activa con el largo y la rueda inversa vuelve a Deck. Trackpad físico aún no probado. |
 | STAB-01-04 | NOT RUN | No se probó trackpad físico. La automatización emite un evento sintético de wheel de mouse. |
 | STAB-01-05 | PARCIAL | Se comprobaron panel activo e `inert` después de navegación por botones; los umbrales 45/50/55% no se recorrieron manualmente. |
 | STAB-01-06 | PASS | Click en Deck, Split, Batea, Colección y Mixtape Lab actualiza `aria-current`, panel activo e `inert`. |
-| STAB-01-07 | BLOQUEADO (infra CI) | Dos ejecuciones agotaron el timeout al preparar el contexto de Chromium; el foco no llegó a probarse. No clasificar como defecto de accesibilidad de la app. |
+| STAB-01-07 | PASS con retry CI | En el run [39994009550](https://github.com/juann-ign/CDvicious/actions/runs/39994009550), la primera preparación de contexto agotó el timeout, pero el reintento pasó y comprobó foco visible y activación con Enter. Mantener observación de flakiness de Chromium. |
 | STAB-01-08 | PASS | Resize/reload y navegación comprobados a 1920×1080 y 1366×768. |
 | STAB-01-09 | PASS | Flag ON comprobado a 760/761/762/900 px; flag OFF comprobado sin barra/rail. |
 | STAB-01-10 | PASS | Flag OFF: se mantiene Home convencional y no se monta rail ni navegación por capítulos. |
 | STAB-01-11 | PASS | Flag ON por debajo de 761 px: se desmonta rail y aparece el fallback. |
 | STAB-01-12 | PASS | Flag OFF en móvil: fallback convencional visible. |
-| STAB-01-13 | INCONSISTENTE / BLOQUEADO | La ejecución inicial pasó, pero la reejecución no encontró la navegación en el DOM al abrir la página con `prefers-reduced-motion`. Revisar arranque/hidratación o contexto CI antes de considerar el escenario aprobado. |
+| STAB-01-13 | PASS automatizado | En el run [39994009550](https://github.com/juann-ign/CDvicious/actions/runs/39994009550), reduced-motion permitió navegar directamente a Mixtape Lab y actualizar el panel activo. |
 
 ### Evidencia y seguimiento
 
 - [Artefacto Playwright inicial del rail ON](https://github.com/juann-ign/CDvicious/actions/runs/39902041388/artifacts/12479163144).
 - [Artefacto Playwright de la reejecución del rail ON](https://github.com/juann-ign/CDvicious/actions/runs/39902702813/artifacts/12480196240).
-- [Issue #84 — wheel largo no activa Split](https://github.com/juann-ign/CDvicious/issues/84). La misma aserción de Deck → Split falló en 2/2 ejecuciones automatizadas; la causa raíz todavía no está identificada.
+- [Issue #84 — wheel largo no activa Split](https://github.com/juann-ign/CDvicious/issues/84). Causa identificada y corregida: el ancla se capturaba después de aplicar el delta de rueda. La prueba de ida/vuelta pasa en el run [39994009550](https://github.com/juann-ign/CDvicious/actions/runs/39994009550).
 - El modo `RAIL_FLAG=0` terminó con éxito: 1 prueba ejecutada y 5 pruebas exclusivas del rail omitidas correctamente.
-- El modo `RAIL_FLAG=1` de la primera ejecución pasó 4 pruebas y falló 2.
-- La reejecución del job `RAIL_FLAG=1` terminó con 3 pruebas aprobadas y 3 fallidas: wheel largo Deck → Split (mismo fallo reproducido), test de teclado (timeout preparando contexto Chromium) y reduced-motion (la navegación no apareció en el DOM dentro del timeout).
+- El modo `RAIL_FLAG=1` del run [39994009550](https://github.com/juann-ign/CDvicious/actions/runs/39994009550) terminó en PASS; la prueba de teclado pasó en un reintento por un fallo transitorio al crear el contexto de Chromium.
+- El run [39994009550](https://github.com/juann-ign/CDvicious/actions/runs/39994009550) terminó con las seis pruebas funcionales aprobadas (la prueba de teclado necesitó un reintento por un error de creación de contexto, no por una aserción de la aplicación).
 - El modo `RAIL_FLAG=0` continúa en PASS. La automatización no sustituye las pruebas manuales de wheel físico, trackpad, foco ni inspección visual.
 
 ## Criterio de cierre actualizado
 
-La automatización reduce el trabajo manual, pero STAB-01 sigue abierto hasta resolver o ticketizar el fallo de snap, obtener una ejecución limpia del test de teclado y completar únicamente los escenarios restantes que requieren inspección humana o trackpad físico. No marcar STAB-01 como cerrado basándose solo en Chromium headless.
+El fallo de snap está corregido y cubierto por una prueba automatizada de ida/vuelta; build, lint, typecheck y la matriz Playwright están en PASS en el commit validado. Queda pendiente la comprobación manual de trackpad físico y la revisión de la flakiness de creación de contexto Chromium (el retry pasó). Estos puntos deben mantenerse como QA manual/residual, no como bloqueo del defecto específico Deck ↔ Split.
 
 ## Criterio de salida de STAB-01
 
