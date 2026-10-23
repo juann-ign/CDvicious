@@ -1,0 +1,67 @@
+name: STAB-01 Browser QA
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "src/**"
+      - "tests/e2e/**"
+      - "playwright.config.cjs"
+      - ".github/workflows/stab-01-browser-qa.yml"
+      - "package.json"
+      - "package-lock.json"
+permissions:
+  contents: read
+
+concurrency:
+  group: stab-01-browser-qa-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  browser-qa:
+    name: Browser QA (rail flag ${{ matrix.rail_flag }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        rail_flag: ["0", "1"]
+    env:
+      RAIL_FLAG: ${{ matrix.rail_flag }}
+      NEXT_TELEMETRY_DISABLED: "1"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install application dependencies
+        run: npm ci --no-audit --no-fund --loglevel=error
+
+      - name: Install pinned Playwright runner outside the application
+        run: |
+          mkdir -p /tmp/playwright-runner
+          npm install --prefix /tmp/playwright-runner --no-save @playwright/test@1.64.1
+          echo "NODE_PATH=/tmp/playwright-runner/node_modules" >> "$GITHUB_ENV"
+          echo "/tmp/playwright-runner/node_modules/.bin" >> "$GITHUB_PATH"
+
+      - name: Install Chromium browser
+        run: playwright install chromium
+
+      - name: Run browser QA matrix
+        run: playwright test
+
+      - name: Upload browser evidence on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stab-01-playwright-rail-${{ matrix.rail_flag }}
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 7

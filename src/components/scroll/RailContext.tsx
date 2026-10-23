@@ -47,6 +47,8 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
   const animationFrameRef = useRef<number | null>(null);
   const snapTimerRef = useRef<number | null>(null);
   const snapInProgressRef = useRef(false);
+  const snapTargetIndexRef = useRef<number | null>(null);
+  const snapSequenceRef = useRef(0);
   const activeChapterIndexRef = useRef<number | null>(null);
   const snapAnchorRef = useRef<{
     index: number;
@@ -80,6 +82,24 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
       "(prefers-reduced-motion: reduce)",
     ).matches;
 
+    const getNearestChapterIndex = (scroll: number) => {
+      let nearestIndex = 0;
+      let nearestDistance = Number.POSITIVE_INFINITY;
+
+      Array.from(content.children).forEach((child, index) => {
+        const distance = Math.abs(
+          (child as HTMLElement).offsetLeft - scroll,
+        );
+
+        if (distance < nearestDistance) {
+          nearestDistance = distance;
+          nearestIndex = index;
+        }
+      });
+
+      return nearestIndex;
+    };
+
     document.documentElement.style.overflow = "hidden";
     document.body.style.overflow = "hidden";
 
@@ -94,6 +114,47 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
       wheelMultiplier: 0.85,
       virtualScroll: (data) => {
         if (data.event.type === "wheel") {
+          const activeLenis = lenisRef.current;
+          const hasWheelDelta = data.deltaX !== 0 || data.deltaY !== 0;
+          const canHandleWheel =
+            hasWheelDelta &&
+            activeLenis &&
+            !activeLenis.isStopped &&
+            stopTokensRef.current.size === 0 &&
+            document.documentElement.dataset.modalOpen !== "true";
+
+          if (canHandleWheel && activeLenis) {
+            // A new user gesture can interrupt Lenis's programmatic snap. Its
+            // old onComplete callback will not necessarily run, so release the
+            // snap latch and invalidate that callback before accepting input.
+            const interruptedSnap = snapInProgressRef.current;
+            const interruptedTargetIndex = interruptedSnap
+              ? snapTargetIndexRef.current
+              : null;
+
+            if (interruptedSnap) {
+              snapSequenceRef.current += 1;
+              snapInProgressRef.current = false;
+              snapTargetIndexRef.current = null;
+            }
+
+            // Capture the gesture origin before Lenis applies this wheel delta.
+            // Lenis accumulates wheel input against targetScroll, so when a
+            // programmatic snap is interrupted, use that intended destination
+            // as the baseline rather than the animation's in-between position.
+            if (!snapAnchorRef.current) {
+              const anchorScroll = interruptedSnap
+                ? activeLenis.targetScroll
+                : activeLenis.scroll;
+              snapAnchorRef.current = {
+                index:
+                  interruptedTargetIndex ??
+                  getNearestChapterIndex(anchorScroll),
+                scroll: anchorScroll,
+              };
+            }
+          }
+
           if (Math.abs(data.deltaY) >= Math.abs(data.deltaX)) {
             data.deltaX = data.deltaY;
             data.deltaY = 0;
@@ -132,24 +193,6 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
         hideStart,
         hideDistance: Math.max(1, hideEnd - hideStart),
       };
-    };
-
-    const getNearestChapterIndex = (scroll: number) => {
-      let nearestIndex = 0;
-      let nearestDistance = Number.POSITIVE_INFINITY;
-
-      Array.from(content.children).forEach((child, index) => {
-        const distance = Math.abs(
-          (child as HTMLElement).offsetLeft - scroll,
-        );
-
-        if (distance < nearestDistance) {
-          nearestDistance = distance;
-          nearestIndex = index;
-        }
-      });
-
-      return nearestIndex;
     };
 
     const clearSnapTimer = () => {
@@ -226,13 +269,17 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
         ),
       );
 
+      const snapSequence = ++snapSequenceRef.current;
+      snapTargetIndexRef.current = targetIndex;
       snapInProgressRef.current = true;
       activeLenis.scrollTo(target, {
         duration: reducedMotionRef.current ? 0 : duration,
         easing: (t) => 1 - Math.pow(1 - t, 3),
         userData: { source: "chapter-snap" },
         onComplete: () => {
+          if (snapSequenceRef.current !== snapSequence) return;
           snapInProgressRef.current = false;
+          snapTargetIndexRef.current = null;
         },
       });
     };
@@ -368,6 +415,8 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
       lenis.off("scroll", handleScroll);
       resizeObserver.disconnect();
       clearSnapTimer();
+      snapSequenceRef.current += 1;
+      snapTargetIndexRef.current = null;
       snapAnchorRef.current = null;
       snapInProgressRef.current = false;
       lenis.destroy();
@@ -414,6 +463,8 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
       snapTimerRef.current = null;
     }
 
+    snapSequenceRef.current += 1;
+    snapTargetIndexRef.current = null;
     snapAnchorRef.current = null;
     snapInProgressRef.current = false;
     lenisRef.current?.stop();
@@ -426,10 +477,14 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
       return;
     }
 
+    const snapSequence = ++snapSequenceRef.current;
+    snapTargetIndexRef.current = null;
     snapInProgressRef.current = true;
     lenis.scrollTo(Math.max(0, px), {
       onComplete: () => {
+        if (snapSequenceRef.current !== snapSequence) return;
         snapInProgressRef.current = false;
+        snapTargetIndexRef.current = null;
       },
     });
   }, []);
@@ -454,12 +509,16 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
     );
     const chapter = content.children[safeIndex] as HTMLElement;
 
+    const snapSequence = ++snapSequenceRef.current;
+    snapTargetIndexRef.current = safeIndex;
     snapInProgressRef.current = true;
     snapAnchorRef.current = null;
     lenis.scrollTo(chapter.offsetLeft, {
       duration: reducedMotionRef.current ? 0 : Math.max(0, duration),
       onComplete: () => {
+        if (snapSequenceRef.current !== snapSequence) return;
         snapInProgressRef.current = false;
+        snapTargetIndexRef.current = null;
       },
     });
   }, []);
