@@ -121,25 +121,29 @@ test("short wheel followed by long wheel reaches Split; reverse wheel returns to
   await openDesktop(page);
   const deck = chapterButton(page, "Deck");
   const split = chapterButton(page, "Split");
-  const wrapper = page.locator("[data-rail-wrapper]");
-  const horizontalScroll = () => wrapper.evaluate((element) => element.scrollLeft);
+  const activeChapter = () =>
+    page.locator("[data-rail-wrapper]").evaluate((element) =>
+      element.parentElement?.getAttribute("data-chapter"),
+    );
 
   await page.mouse.move(1200, 650);
   await page.mouse.wheel(0, 90);
-  await expect.poll(horizontalScroll, { timeout: 8_000 }).toBeGreaterThan(0);
 
   // Preserve the timing from the reported regression: another wheel gesture
   // arrives around the time the short movement's snap may still be running.
   await page.waitForTimeout(1_000);
+  await expect(activeChapter).toBe("0");
   await expect(deck).toHaveAttribute("aria-current", "location");
 
   await page.mouse.wheel(0, 700);
-  await expect.poll(horizontalScroll, { timeout: 8_000 }).toBe(1280);
+  await expect.poll(activeChapter, { timeout: 8_000 }).toBe("1");
   await expect(split).toHaveAttribute("aria-current", "location");
+  await expect(panels(page).nth(1)).toHaveAttribute("data-chapter-active", "true");
 
   await page.mouse.wheel(0, -700);
-  await expect.poll(horizontalScroll, { timeout: 8_000 }).toBe(0);
+  await expect.poll(activeChapter, { timeout: 8_000 }).toBe("0");
   await expect(deck).toHaveAttribute("aria-current", "location");
+  await expect(panels(page).nth(0)).toHaveAttribute("data-chapter-active", "true");
 });
 
 test("resizing and reloading at desktop resolutions keeps rail navigation usable", async ({
