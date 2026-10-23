@@ -31,7 +31,21 @@ async function goToChapter(page, chapter, index) {
 }
 
 async function firstSpine(page) {
-  const spine = panels(page).nth(2).locator('button[aria-label*=" — "]').first();
+  const spines = panels(page).nth(2).locator('button[aria-label*=" — "]');
+  const index = await spines.evaluateAll((nodes) => {
+    const stage = nodes[0]?.closest('[class*="stage"]');
+    if (!stage) return -1;
+    const bounds = stage.getBoundingClientRect();
+    return nodes.findIndex((node) => {
+      const rect = node.getBoundingClientRect();
+      const x = rect.left + rect.width / 2;
+      const y = rect.top + rect.height / 2;
+      return rect.width > 0 && x >= bounds.left + 75 && x <= bounds.right - 75 &&
+        y >= bounds.top && y <= bounds.bottom;
+    });
+  });
+  expect(index, "No hay un lomo con centro dentro de la zona visible de Batea").toBeGreaterThanOrEqual(0);
+  const spine = spines.nth(index);
   await expect(spine).toBeVisible();
   return spine;
 }
