@@ -132,7 +132,7 @@ test("short wheel followed by long wheel reaches Split; reverse wheel returns to
   // Preserve the timing from the reported regression: another wheel gesture
   // arrives around the time the short movement's snap may still be running.
   await page.waitForTimeout(1_000);
-  await expect(activeChapter).toBe("0");
+  await expect.poll(activeChapter, { timeout: 8_000 }).toBe("0");
   await expect(deck).toHaveAttribute("aria-current", "location");
 
   await page.mouse.wheel(0, 700);
