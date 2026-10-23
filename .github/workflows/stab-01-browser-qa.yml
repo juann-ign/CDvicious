@@ -11,15 +11,11 @@ on:
       - ".github/workflows/stab-01-browser-qa.yml"
       - "package.json"
       - "package-lock.json"
-  push:
-    branches:
-      - qa/stab-01-rail-navigation
-
 permissions:
   contents: read
 
 concurrency:
-  group: stab-01-browser-qa-${{ github.event.pull_request.number || github.ref }}
+  group: stab-01-browser-qa-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
