@@ -90,6 +90,44 @@ Estos puntos describen el código leído, no demuestran que el comportamiento fu
 - Enfoque/activación por teclado y foco visible en el navegador real.
 - Consistencia del rail después de muchos gestos de wheel/trackpad y recarga en distintas resoluciones.
 
+
+
+## Resultados de automatización (Playwright / Chromium)
+
+**Ejecución inicial:** [GitHub Actions run 39902041388](https://github.com/juann-ign/CDvicious/actions/runs/39902041388)  
+**Commit:** `e1d7f62995366c1d4bbbd3ed2ef993f1311e102d`  
+**Entorno:** Chromium headless, 1280×800 para navegación, `NEXT_PUBLIC_SPOTIFY_MOCK=1`.
+
+Estos resultados son solo de las comprobaciones automatizadas. Los estados de la matriz principal continúan reflejando la ejecución manual; no convertir un test automatizado en evidencia de trackpad físico o inspección visual.
+
+| ID de matriz | Estado automatizado inicial | Evidencia / alcance |
+|---|---|---|
+| STAB-01-01 | PARCIAL | El click recorre los cinco capítulos; falta recorrido manual completo de ida/vuelta con wheel/trackpad. |
+| STAB-01-02 | NOT RUN | El recorrido inverso completo con wheel/trackpad no está automatizado. |
+| STAB-01-03 | FAIL provisional | Un wheel corto mantiene Deck activo, pero el wheel largo `deltaY=700` no activa Split dentro de 8 s. [Issue #84](https://github.com/juann-ign/CDvicious/issues/84). |
+| STAB-01-04 | NOT RUN | No se probó trackpad físico. La automatización emite un evento sintético de wheel de mouse. |
+| STAB-01-05 | PARCIAL | Se comprobaron panel activo e `inert` después de navegación por botones; los umbrales 45/50/55% no se recorrieron manualmente. |
+| STAB-01-06 | PASS | Click en Deck, Split, Batea, Colección y Mixtape Lab actualiza `aria-current`, panel activo e `inert`. |
+| STAB-01-07 | BLOQUEADO (infra CI) | La ejecución no llegó a probar el foco: Chromium falló al crear el browser context (`Failed to find browser context`). No clasificar como defecto de accesibilidad de la app. |
+| STAB-01-08 | PASS | Resize/reload y navegación comprobados a 1920×1080 y 1366×768. |
+| STAB-01-09 | PASS | Flag ON comprobado a 760/761/762/900 px; flag OFF comprobado sin barra/rail. |
+| STAB-01-10 | PASS | Flag OFF: se mantiene Home convencional y no se monta rail ni navegación por capítulos. |
+| STAB-01-11 | PASS | Flag ON por debajo de 761 px: se desmonta rail y aparece el fallback. |
+| STAB-01-12 | PASS | Flag OFF en móvil: fallback convencional visible. |
+| STAB-01-13 | PASS | La navegación directa sigue funcionando con `prefers-reduced-motion: reduce`. |
+
+### Evidencia y seguimiento
+
+- [Artefacto Playwright del rail ON: video, trace y contexto de error](https://github.com/juann-ign/CDvicious/actions/runs/39902041388/artifacts/12479163144).
+- [Issue #84 — wheel largo no activa Split](https://github.com/juann-ign/CDvicious/issues/84). Se observó una vez; repetir antes de dar la causa por confirmada.
+- El modo `RAIL_FLAG=0` terminó con éxito: 1 prueba ejecutada y 5 pruebas exclusivas del rail omitidas correctamente.
+- El modo `RAIL_FLAG=1` terminó inicialmente con 4 pruebas aprobadas y 2 fallidas: el test de contexto de teclado (infraestructura) y el caso de wheel largo (#84).
+- **Reejecución:** al actualizar esta sección, la segunda ejecución del job `RAIL_FLAG=1` está en curso. No cambia los resultados iniciales hasta que termine.
+
+## Criterio de cierre actualizado
+
+La automatización reduce el trabajo manual, pero STAB-01 sigue abierto hasta resolver o ticketizar el fallo de snap, obtener una ejecución limpia del test de teclado y completar únicamente los escenarios restantes que requieren inspección humana o trackpad físico. No marcar STAB-01 como cerrado basándose solo en Chromium headless.
+
 ## Criterio de salida de STAB-01
 
 - Todos los escenarios pertinentes tienen estado PASS con evidencia, o los FAIL cuentan con issue independiente y priorizado.
