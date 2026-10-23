@@ -80,6 +80,24 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
       "(prefers-reduced-motion: reduce)",
     ).matches;
 
+    const getNearestChapterIndex = (scroll: number) => {
+      let nearestIndex = 0;
+      let nearestDistance = Number.POSITIVE_INFINITY;
+
+      Array.from(content.children).forEach((child, index) => {
+        const distance = Math.abs(
+          (child as HTMLElement).offsetLeft - scroll,
+        );
+
+        if (distance < nearestDistance) {
+          nearestDistance = distance;
+          nearestIndex = index;
+        }
+      });
+
+      return nearestIndex;
+    };
+
     document.documentElement.style.overflow = "hidden";
     document.body.style.overflow = "hidden";
 
@@ -94,6 +112,27 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
       wheelMultiplier: 0.85,
       virtualScroll: (data) => {
         if (data.event.type === "wheel") {
+          // Capture the gesture origin before Lenis applies this wheel delta.
+          // Anchoring on the next scroll event is too late: Lenis may already
+          // have moved a substantial distance, making the snap delta look like 0.
+          const activeLenis = lenisRef.current;
+
+          if (
+            (data.deltaX !== 0 || data.deltaY !== 0) &&
+            activeLenis &&
+            !activeLenis.isStopped &&
+            stopTokensRef.current.size === 0 &&
+            !snapAnchorRef.current &&
+            !snapInProgressRef.current &&
+            document.documentElement.dataset.modalOpen !== "true"
+          ) {
+            const anchorScroll = activeLenis.scroll;
+            snapAnchorRef.current = {
+              index: getNearestChapterIndex(anchorScroll),
+              scroll: anchorScroll,
+            };
+          }
+
           if (Math.abs(data.deltaY) >= Math.abs(data.deltaX)) {
             data.deltaX = data.deltaY;
             data.deltaY = 0;
@@ -132,24 +171,6 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
         hideStart,
         hideDistance: Math.max(1, hideEnd - hideStart),
       };
-    };
-
-    const getNearestChapterIndex = (scroll: number) => {
-      let nearestIndex = 0;
-      let nearestDistance = Number.POSITIVE_INFINITY;
-
-      Array.from(content.children).forEach((child, index) => {
-        const distance = Math.abs(
-          (child as HTMLElement).offsetLeft - scroll,
-        );
-
-        if (distance < nearestDistance) {
-          nearestDistance = distance;
-          nearestIndex = index;
-        }
-      });
-
-      return nearestIndex;
     };
 
     const clearSnapTimer = () => {
