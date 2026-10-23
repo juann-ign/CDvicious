@@ -71,6 +71,46 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
       return;
     }
 
+    console.log(
+      "[rail:debug:init]",
+      JSON.stringify({
+        railFlag: process.env.NEXT_PUBLIC_ENABLE_RAIL ?? null,
+        viewportWidth: window.innerWidth,
+        desktopBreakpointMatches: window.matchMedia("(min-width: 761px)").matches,
+        rootConnected: root.isConnected,
+        wrapperWidth: wrapper.clientWidth,
+      }),
+    );
+
+    const handleDiagnosticWheel = (event: WheelEvent) => {
+      const eventTarget = event.target;
+      const targetElement =
+        eventTarget instanceof Element
+          ? eventTarget
+          : eventTarget instanceof Node
+            ? eventTarget.parentElement
+            : null;
+
+      console.log(
+        "[rail:wheel:dom]",
+        JSON.stringify({
+          deltaX: event.deltaX,
+          deltaY: event.deltaY,
+          deltaMode: event.deltaMode,
+          targetTag: targetElement?.tagName ?? null,
+          targetClass: targetElement?.getAttribute("class") ?? null,
+          rootContainsTarget: eventTarget instanceof Node && root.contains(eventTarget),
+          defaultPrevented: event.defaultPrevented,
+          wrapperWidth: wrapper.clientWidth,
+        }),
+      );
+    };
+
+    root.addEventListener("wheel", handleDiagnosticWheel, {
+      capture: true,
+      passive: true,
+    });
+
     activeChapterIndexRef.current = null;
 
     const previousHtmlOverflow = document.documentElement.style.overflow;
@@ -102,7 +142,7 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
                 ? target.parentElement
                 : null;
 
-          console.debug(
+          console.log(
             "[rail:wheel:before-map]",
             JSON.stringify({
               eventDeltaX:
@@ -123,7 +163,7 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
             data.deltaY = 0;
           }
 
-          console.debug(
+          console.log(
             "[rail:wheel:after-map]",
             JSON.stringify({
               deltaX: data.deltaX,
@@ -197,7 +237,7 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
       const activeLenis = lenisRef.current;
       const anchor = snapAnchorRef.current;
 
-      console.debug(
+      console.log(
         "[rail:snap:attempt]",
         JSON.stringify({
           scroll: activeLenis?.scroll ?? null,
@@ -225,7 +265,7 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
                   : null;
 
       if (skipReason) {
-        console.debug(
+        console.log(
           "[rail:snap:skip]",
           JSON.stringify({ reason: skipReason, anchor }),
         );
@@ -269,7 +309,7 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
       const currentScrollX = activeLenis.scroll;
       const dist = Math.abs(target - currentScrollX);
 
-      console.debug(
+      console.log(
         "[rail:snap:decision]",
         JSON.stringify({
           anchorIndex: anchor.index,
@@ -289,7 +329,7 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
       snapAnchorRef.current = null;
 
       if (dist < 6) {
-        console.debug(
+        console.log(
           "[rail:snap:skip]",
           JSON.stringify({ reason: "already-at-target", dist }),
         );
@@ -306,7 +346,7 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
         ),
       );
 
-      console.debug(
+      console.log(
         "[rail:snap:start]",
         JSON.stringify({
           targetIndex,
@@ -324,7 +364,7 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
         userData: { source: "chapter-snap" },
         onComplete: () => {
           snapInProgressRef.current = false;
-          console.debug(
+          console.log(
             "[rail:snap:complete]",
             JSON.stringify({
               targetIndex,
@@ -354,7 +394,7 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
           scroll,
         };
 
-        console.debug(
+        console.log(
           "[rail:snap:anchor]",
           JSON.stringify({
             anchorIndex,
@@ -460,7 +500,7 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
         if (now - lastScrollDebugAt >= 150) {
           lastScrollDebugAt = now;
 
-          console.debug(
+          console.log(
             "[rail:scroll]",
             JSON.stringify({
               scroll,
@@ -499,6 +539,7 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
       }
 
       lenis.off("scroll", handleScroll);
+      root.removeEventListener("wheel", handleDiagnosticWheel, true);
       resizeObserver.disconnect();
       clearSnapTimer();
       snapAnchorRef.current = null;
