@@ -130,7 +130,12 @@ test("short wheel movement snaps back; long wheel movement advances and reverses
   await page.mouse.wheel(0, 700);
   await expect(split).toHaveAttribute("aria-current", "location");
 
+  // The active marker changes at the chapter threshold, before the snap animation
+  // necessarily completes (maximum configured snap duration: 480 ms).
+  await page.waitForTimeout(600);
+
   await page.mouse.wheel(0, -700);
+  await page.waitForTimeout(600);
   await expect(deck).toHaveAttribute("aria-current", "location");
 });
 
