@@ -90,6 +90,21 @@ async function openRail(page, options = {}) {
   ).toBeVisible();
 }
 
+async function waitForChapterSettled(page, index) {
+  await expect
+    .poll(
+      () =>
+        page.locator("[data-rail-wrapper]").evaluate((wrapper, targetIndex) => {
+          const content = wrapper.firstElementChild;
+          const target = content?.children.item(targetIndex);
+          if (!(target instanceof HTMLElement)) return Number.POSITIVE_INFINITY;
+          return Math.abs(wrapper.scrollLeft - target.offsetLeft);
+        }, index),
+      { timeout: 8_000 },
+    )
+    .toBeLessThan(3);
+}
+
 async function goToChapter(page, name, index) {
   await chapterButton(page, name).click();
   await expect.poll(() => currentChapter(page), { timeout: 8_000 }).toBe(
@@ -99,6 +114,7 @@ async function goToChapter(page, name, index) {
     "data-chapter-active",
     "true",
   );
+  await waitForChapterSettled(page, index);
 }
 
 function spineButtons(page) {
@@ -121,8 +137,16 @@ test("STAB-02: click corto en Batea abre modal; Escape restaura foco y scroll", 
   await openRail(page);
   await goToChapter(page, "Batea", 2);
 
+  // The shelf belt moves continuously by default. Pause its decorative
+  // drift so Playwright can exercise a stationary short click, not time out
+  // waiting for an animated hit target to become stable.
+  await page.getByRole("button", { name: "BELT ON" }).click();
+  await expect(page.getByRole("button", { name: "BELT PAUSED" })).toBeVisible();
+
   const spine = spineButtons(page).first();
-  await spine.click();
+  const box = await spine.boundingBox();
+  expect(box).not.toBeNull();
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
 
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible();
@@ -337,6 +361,13 @@ test("STAB-02: hit-testing del Deck pinned queda bloqueado en Batea y Colección
     expect(diagnostics.overlayInert).toBe(true);
     expect(diagnostics.panelInert).toBe(false);
     expect(diagnostics.panelActive).toBe("true");
+    expect(
+      diagnostics.probes.length,
+      "La sonda no encontró ningún hit target visible del Deck superpuesto a " +
+        target.section +
+        ": " +
+        JSON.stringify(diagnostics),
+    ).toBeGreaterThan(0);
 
     const blockedTargets = diagnostics.probes.filter(
       (probe) => probe.winnerOverlay,
@@ -419,6 +450,9 @@ test("STAB-02: búsqueda, filtros y paginación siguen accesibles en ventanas ba
     { width: 1920, height: 1080 },
     { width: 1366, height: 768 },
     { width: 1280, height: 540 },
+    // Effective CSS viewport approximation for a 1366×768 display at 125% UI zoom.
+    // This is not a substitute for checking native browser zoom manually.
+    { width: 1092, height: 614 },
     { width: 761, height: 540 },
   ]) {
     await page.setViewportSize(size);
