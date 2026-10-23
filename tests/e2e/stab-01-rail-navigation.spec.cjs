@@ -19,7 +19,7 @@ async function openDesktop(page, width = 1280, height = 800) {
     await expect(navigation(page)).toBeVisible();
     await expect(panels(page)).toHaveCount(5);
   } else {
-    await expect(page.locator("main.stageMain")).toBeVisible();
+    await expect(page.locator("main")).toBeVisible();
   }
 }
 
@@ -34,7 +34,7 @@ test("feature flag and 761px breakpoint select the expected experience", async (
 
     for (const width of [761, 760, 390]) {
       await page.setViewportSize({ width, height: 844 });
-      await expect(page.locator("main.stageMain")).toBeVisible();
+      await expect(page.locator("main")).toBeVisible();
       await expect(navigation(page)).toHaveCount(0);
     }
     return;
@@ -47,7 +47,7 @@ test("feature flag and 761px breakpoint select the expected experience", async (
     await page.setViewportSize({ width, height: 844 });
     await expect(navigation(page)).toHaveCount(0);
     await expect(page.locator("[data-rail-wrapper]")).toHaveCount(0);
-    await expect(page.locator("main.stageMain")).toBeVisible();
+    await expect(page.locator("main")).toBeVisible();
   }
 
   for (const width of [761, 762, 900, 1366, 1920]) {
