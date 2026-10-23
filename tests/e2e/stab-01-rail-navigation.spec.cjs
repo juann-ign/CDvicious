@@ -113,7 +113,7 @@ test("keyboard focus remains visible and Enter activates the focused chapter", a
   await expect(panels(page).nth(1)).toHaveAttribute("data-chapter-active", "true");
 });
 
-test("short wheel movement snaps back; long wheel movement advances and reverses one chapter", async ({
+test("short wheel followed by long wheel reaches Split; reverse wheel returns to Deck", async ({
   page,
 }) => {
   test.skip(!RAIL_ENABLED, "El rail no debe estar montado cuando el flag está apagado.");
@@ -126,11 +126,11 @@ test("short wheel movement snaps back; long wheel movement advances and reverses
 
   await page.mouse.move(1200, 650);
   await page.mouse.wheel(0, 90);
-
-  // Verify that the short gesture actually moves the rail, then wait for its
-  // snap to return to Deck before starting the next independent gesture.
   await expect.poll(horizontalScroll, { timeout: 8_000 }).toBeGreaterThan(0);
-  await expect.poll(horizontalScroll, { timeout: 8_000 }).toBe(0);
+
+  // Preserve the timing from the reported regression: another wheel gesture
+  // arrives around the time the short movement's snap may still be running.
+  await page.waitForTimeout(1_000);
   await expect(deck).toHaveAttribute("aria-current", "location");
 
   await page.mouse.wheel(0, 700);
