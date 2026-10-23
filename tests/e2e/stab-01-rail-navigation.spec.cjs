@@ -10,7 +10,7 @@ const navigation = (page) =>
 const chapterButton = (page, name) =>
   page.getByRole("button", { name: `Ir al capítulo ${name}` });
 
-const panels = (page) => page.locator("[data-rail-wrapper] section");
+const panels = (page) => page.locator("[data-rail-wrapper] > div > section");
 
 async function openDesktop(page, width = 1280, height = 800) {
   await page.setViewportSize({ width, height });
