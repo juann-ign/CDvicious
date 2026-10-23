@@ -121,21 +121,24 @@ test("short wheel movement snaps back; long wheel movement advances and reverses
   await openDesktop(page);
   const deck = chapterButton(page, "Deck");
   const split = chapterButton(page, "Split");
+  const wrapper = page.locator("[data-rail-wrapper]");
+  const horizontalScroll = () => wrapper.evaluate((element) => element.scrollLeft);
 
   await page.mouse.move(1200, 650);
   await page.mouse.wheel(0, 90);
-  await page.waitForTimeout(1_000);
+
+  // Verify that the short gesture actually moves the rail, then wait for its
+  // snap to return to Deck before starting the next independent gesture.
+  await expect.poll(horizontalScroll, { timeout: 8_000 }).toBeGreaterThan(0);
+  await expect.poll(horizontalScroll, { timeout: 8_000 }).toBe(0);
   await expect(deck).toHaveAttribute("aria-current", "location");
 
   await page.mouse.wheel(0, 700);
+  await expect.poll(horizontalScroll, { timeout: 8_000 }).toBe(1280);
   await expect(split).toHaveAttribute("aria-current", "location");
 
-  // The active marker changes at the chapter threshold, before the snap animation
-  // necessarily completes (maximum configured snap duration: 480 ms).
-  await page.waitForTimeout(600);
-
   await page.mouse.wheel(0, -700);
-  await page.waitForTimeout(600);
+  await expect.poll(horizontalScroll, { timeout: 8_000 }).toBe(0);
   await expect(deck).toHaveAttribute("aria-current", "location");
 });
 
