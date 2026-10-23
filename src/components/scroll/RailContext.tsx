@@ -127,21 +127,25 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
             // A new user gesture can interrupt Lenis's programmatic snap. Its
             // old onComplete callback will not necessarily run, so release the
             // snap latch and invalidate that callback before accepting input.
-            const interruptedTargetIndex = snapInProgressRef.current
+            const interruptedSnap = snapInProgressRef.current;
+            const interruptedTargetIndex = interruptedSnap
               ? snapTargetIndexRef.current
               : null;
 
-            if (snapInProgressRef.current) {
+            if (interruptedSnap) {
               snapSequenceRef.current += 1;
               snapInProgressRef.current = false;
               snapTargetIndexRef.current = null;
             }
 
             // Capture the gesture origin before Lenis applies this wheel delta.
-            // If the user interrupts a snap, anchor it to that snap's intended
-            // chapter so continued/reversed input still chooses the right panel.
+            // Lenis accumulates wheel input against targetScroll, so when a
+            // programmatic snap is interrupted, use that intended destination
+            // as the baseline rather than the animation's in-between position.
             if (!snapAnchorRef.current) {
-              const anchorScroll = activeLenis.scroll;
+              const anchorScroll = interruptedSnap
+                ? activeLenis.targetScroll
+                : activeLenis.scroll;
               snapAnchorRef.current = {
                 index:
                   interruptedTargetIndex ??
