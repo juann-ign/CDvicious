@@ -43,7 +43,7 @@ La configuración de Playwright levanta automáticamente npm run dev en http://1
     npm install --prefix $env:PLAYWRIGHT_RUNNER --no-save @playwright/test@1.64.1
     $env:NODE_PATH = "$env:PLAYWRIGHT_RUNNER\node_modules"
     $env:PATH = "$env:PLAYWRIGHT_RUNNER\node_modules\.bin;$env:PATH"
-    npx playwright install chromium
+    playwright install chromium
 
 3. Ejecutar con el rail habilitado:
 
