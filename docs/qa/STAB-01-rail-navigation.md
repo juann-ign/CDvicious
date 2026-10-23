@@ -100,29 +100,31 @@ Estos puntos describen el código leído, no demuestran que el comportamiento fu
 
 Estos resultados son solo de las comprobaciones automatizadas. Los estados de la matriz principal continúan reflejando la ejecución manual; no convertir un test automatizado en evidencia de trackpad físico o inspección visual.
 
-| ID de matriz | Estado automatizado inicial | Evidencia / alcance |
+| ID de matriz | Estado automatizado actual | Evidencia / alcance |
 |---|---|---|
 | STAB-01-01 | PARCIAL | El click recorre los cinco capítulos; falta recorrido manual completo de ida/vuelta con wheel/trackpad. |
 | STAB-01-02 | NOT RUN | El recorrido inverso completo con wheel/trackpad no está automatizado. |
-| STAB-01-03 | FAIL provisional | Un wheel corto mantiene Deck activo, pero el wheel largo `deltaY=700` no activa Split dentro de 8 s. [Issue #84](https://github.com/juann-ign/CDvicious/issues/84). |
+| STAB-01-03 | FAIL reproducido (2/2) | En dos ejecuciones de Chromium, el wheel largo `deltaY=700` no activa Split dentro de 8 s. [Issue #84](https://github.com/juann-ign/CDvicious/issues/84). |
 | STAB-01-04 | NOT RUN | No se probó trackpad físico. La automatización emite un evento sintético de wheel de mouse. |
 | STAB-01-05 | PARCIAL | Se comprobaron panel activo e `inert` después de navegación por botones; los umbrales 45/50/55% no se recorrieron manualmente. |
 | STAB-01-06 | PASS | Click en Deck, Split, Batea, Colección y Mixtape Lab actualiza `aria-current`, panel activo e `inert`. |
-| STAB-01-07 | BLOQUEADO (infra CI) | La ejecución no llegó a probar el foco: Chromium falló al crear el browser context (`Failed to find browser context`). No clasificar como defecto de accesibilidad de la app. |
+| STAB-01-07 | BLOQUEADO (infra CI) | Dos ejecuciones agotaron el timeout al preparar el contexto de Chromium; el foco no llegó a probarse. No clasificar como defecto de accesibilidad de la app. |
 | STAB-01-08 | PASS | Resize/reload y navegación comprobados a 1920×1080 y 1366×768. |
 | STAB-01-09 | PASS | Flag ON comprobado a 760/761/762/900 px; flag OFF comprobado sin barra/rail. |
 | STAB-01-10 | PASS | Flag OFF: se mantiene Home convencional y no se monta rail ni navegación por capítulos. |
 | STAB-01-11 | PASS | Flag ON por debajo de 761 px: se desmonta rail y aparece el fallback. |
 | STAB-01-12 | PASS | Flag OFF en móvil: fallback convencional visible. |
-| STAB-01-13 | PASS | La navegación directa sigue funcionando con `prefers-reduced-motion: reduce`. |
+| STAB-01-13 | INCONSISTENTE / BLOQUEADO | La ejecución inicial pasó, pero la reejecución no encontró la navegación en el DOM al abrir la página con `prefers-reduced-motion`. Revisar arranque/hidratación o contexto CI antes de considerar el escenario aprobado. |
 
 ### Evidencia y seguimiento
 
-- [Artefacto Playwright del rail ON: video, trace y contexto de error](https://github.com/juann-ign/CDvicious/actions/runs/39902041388/artifacts/12479163144).
-- [Issue #84 — wheel largo no activa Split](https://github.com/juann-ign/CDvicious/issues/84). Se observó una vez; repetir antes de dar la causa por confirmada.
+- [Artefacto Playwright inicial del rail ON](https://github.com/juann-ign/CDvicious/actions/runs/39902041388/artifacts/12479163144).
+- [Artefacto Playwright de la reejecución del rail ON](https://github.com/juann-ign/CDvicious/actions/runs/39902702813/artifacts/12480196240).
+- [Issue #84 — wheel largo no activa Split](https://github.com/juann-ign/CDvicious/issues/84). La misma aserción de Deck → Split falló en 2/2 ejecuciones automatizadas; la causa raíz todavía no está identificada.
 - El modo `RAIL_FLAG=0` terminó con éxito: 1 prueba ejecutada y 5 pruebas exclusivas del rail omitidas correctamente.
-- El modo `RAIL_FLAG=1` terminó inicialmente con 4 pruebas aprobadas y 2 fallidas: el test de contexto de teclado (infraestructura) y el caso de wheel largo (#84).
-- **Reejecución:** al actualizar esta sección, la segunda ejecución del job `RAIL_FLAG=1` está en curso. No cambia los resultados iniciales hasta que termine.
+- El modo `RAIL_FLAG=1` de la primera ejecución pasó 4 pruebas y falló 2.
+- La reejecución del job `RAIL_FLAG=1` terminó con 3 pruebas aprobadas y 3 fallidas: wheel largo Deck → Split (mismo fallo reproducido), test de teclado (timeout preparando contexto Chromium) y reduced-motion (la navegación no apareció en el DOM dentro del timeout).
+- El modo `RAIL_FLAG=0` continúa en PASS. La automatización no sustituye las pruebas manuales de wheel físico, trackpad, foco ni inspección visual.
 
 ## Criterio de cierre actualizado
 
