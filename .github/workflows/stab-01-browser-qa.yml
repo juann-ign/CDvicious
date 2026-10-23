@@ -51,8 +51,8 @@ jobs:
           echo "NODE_PATH=/tmp/playwright-runner/node_modules" >> "$GITHUB_ENV"
           echo "/tmp/playwright-runner/node_modules/.bin" >> "$GITHUB_PATH"
 
-      - name: Install Chromium and system dependencies
-        run: playwright install --with-deps chromium
+      - name: Install Chromium browser
+        run: playwright install chromium
 
       - name: Run browser QA matrix
         run: playwright test
