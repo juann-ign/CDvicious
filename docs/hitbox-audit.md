@@ -122,3 +122,21 @@ Ninguna de estas hipótesis se presenta como una traza de navegador. Para confir
 Ticket 1.2 modifica únicamente los módulos de estilos y el hook necesarios para corregir el gating local del Deck, las cajas de la Batea/Colección/Mixtape y el click posterior al drag. No se cambiaron valores de `z-index` y `RailContext.tsx` queda intacto. La lógica de `inert` ya existente se conserva.
 
 Esta auditoría refleja una revisión estática, no una prueba de navegador. Los checks de lint, TypeScript y build deben ejecutarse en el PR; los escenarios de hit-testing, el click/drag y el retorno del wheel necesitan validación manual antes de considerar cerrada la estabilización.
+
+
+---
+
+## Addendum — STAB-02 Playwright runtime matrix (2026-10-23)
+
+The static review above is historical context; it must not be read as runtime validation. The new E2E suite is tracked in [docs/qa/STAB-02-hitbox-scroll-lock.md](./qa/STAB-02-hitbox-scroll-lock.md) and [tests/e2e/stab-02-hitbox-scroll-lock.spec.cjs](../tests/e2e/stab-02-hitbox-scroll-lock.spec.cjs).
+
+Coverage added:
+- short click vs drag of the shelf, including the 6 px drag threshold;
+- wheel response after normal pointerup and a synthetic pointercancel;
+- modal Escape, focus restoration, data-modal-open, and wheel/scroll-lock release in Batea and Colección;
+- data-chapter, data-deck-interactive, panel/overlay inert, and document.elementsFromPoint() diagnostics for Batea/Colección;
+- search, decade filter, archive filter and pagination using a deterministic fixture with 36 albums;
+- visible control bounds across 1920×1080, 1366×768, 1280×540 and 761×540 CSS-pixel viewports.
+
+**Status at commit time:** CI not yet reviewed. Do not interpret the new test source as proof that the matrix passes. The PR checks must be inspected, failures re-run, and the manual trackpad/browser-zoom checks completed before declaring STAB-02 approved. No production CSS, z-index, pointer-events or RailContext.tsx changes are included unless a reproducible failure demonstrates a specific cause.
+
