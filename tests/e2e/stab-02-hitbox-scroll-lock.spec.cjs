@@ -81,6 +81,13 @@ async function openRail(page, options = {}) {
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await expect(navigation(page)).toBeVisible();
   await expect(panels(page)).toHaveCount(5);
+
+  // The mock collection cache is lazy-loaded when Colección becomes active.
+  // Populate it once so Batea also has deterministic album hit targets.
+  await goToChapter(page, "Colección", 3);
+  await expect(
+    page.locator('section[aria-label="La Colección"] button[aria-label*="—"]').first(),
+  ).toBeVisible();
 }
 
 async function goToChapter(page, name, index) {
