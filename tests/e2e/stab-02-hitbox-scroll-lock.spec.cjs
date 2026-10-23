@@ -157,7 +157,7 @@ test("STAB-02: click corto en Batea abre modal; Escape restaura foco y scroll", 
 
   // The modal owns a rail-lock token: wheel input must not change chapters.
   await page.mouse.move(1100, 700);
-  await page.mouse.wheel(0, 700);
+  await page.mouse.wheel(0, 1000);
   await expect.poll(() => currentChapter(page)).toBe("2");
 
   await page.keyboard.press("Escape");
@@ -166,7 +166,7 @@ test("STAB-02: click corto en Batea abre modal; Escape restaura foco y scroll", 
   await expect(spine).toBeFocused();
 
   // Once the modal unmounts, its token must be released and Lenis must resume.
-  await page.mouse.wheel(0, 700);
+  await page.mouse.wheel(0, 1000);
   await expect.poll(() => currentChapter(page), { timeout: 8_000 }).toBe("3");
 });
 
@@ -204,7 +204,7 @@ test("STAB-02: drag superior a 6px en Batea no selecciona un disco y pointerup l
   ).toBe(false);
   await expect(page.getByRole("dialog")).toHaveCount(0);
 
-  await page.mouse.wheel(0, 700);
+  await page.mouse.wheel(0, 1000);
   await expect.poll(() => currentChapter(page), { timeout: 8_000 }).toBe("3");
 });
 
@@ -266,7 +266,7 @@ test("STAB-02: pointercancel durante drag libera o lock e permite wheel", async 
   ).toBe(false);
   await expect(page.getByRole("dialog")).toHaveCount(0);
 
-  await page.mouse.wheel(0, 700);
+  await page.mouse.wheel(0, 1000);
   await expect.poll(() => currentChapter(page), { timeout: 8_000 }).toBe("3");
 });
 
@@ -408,7 +408,7 @@ test("STAB-02: modal de Colección devuelve foco y libera scroll lock", async ({
   await expect(card).toBeFocused();
 
   await page.mouse.move(1100, 700);
-  await page.mouse.wheel(0, 700);
+  await page.mouse.wheel(0, 1000);
   await expect.poll(() => currentChapter(page), { timeout: 8_000 }).toBe("4");
 });
 
