@@ -94,10 +94,42 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
       wheelMultiplier: 0.85,
       virtualScroll: (data) => {
         if (data.event.type === "wheel") {
+          const target = data.event.target;
+          const targetElement =
+            target instanceof Element
+              ? target
+              : target instanceof Node
+                ? target.parentElement
+                : null;
+
+          console.debug(
+            "[rail:wheel:before-map]",
+            JSON.stringify({
+              eventDeltaX:
+                data.event instanceof WheelEvent ? data.event.deltaX : null,
+              eventDeltaY:
+                data.event instanceof WheelEvent ? data.event.deltaY : null,
+              lenisDeltaX: data.deltaX,
+              lenisDeltaY: data.deltaY,
+              targetTag: targetElement?.tagName ?? null,
+              targetClass: targetElement?.getAttribute("class") ?? null,
+              rootContainsTarget: target instanceof Node && root.contains(target),
+              wrapperWidth: wrapper.clientWidth,
+            }),
+          );
+
           if (Math.abs(data.deltaY) >= Math.abs(data.deltaX)) {
             data.deltaX = data.deltaY;
             data.deltaY = 0;
           }
+
+          console.debug(
+            "[rail:wheel:after-map]",
+            JSON.stringify({
+              deltaX: data.deltaX,
+              deltaY: data.deltaY,
+            }),
+          );
         }
 
         return true;
@@ -165,17 +197,43 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
       const activeLenis = lenisRef.current;
       const anchor = snapAnchorRef.current;
 
-      if (
-        !activeLenis ||
-        !anchor ||
-        activeLenis.isStopped ||
-        stopTokensRef.current.size > 0 ||
-        snapInProgressRef.current ||
-        document.documentElement.dataset.modalOpen === "true"
-      ) {
+      console.debug(
+        "[rail:snap:attempt]",
+        JSON.stringify({
+          scroll: activeLenis?.scroll ?? null,
+          targetScroll: activeLenis?.targetScroll ?? null,
+          anchor,
+          isStopped: activeLenis?.isStopped ?? null,
+          stopLockCount: stopTokensRef.current.size,
+          snapInProgress: snapInProgressRef.current,
+          modalOpen: document.documentElement.dataset.modalOpen === "true",
+        }),
+      );
+
+      const skipReason = !activeLenis
+        ? "missing-lenis"
+        : !anchor
+          ? "missing-anchor"
+          : activeLenis.isStopped
+            ? "lenis-stopped"
+            : stopTokensRef.current.size > 0
+              ? "stop-lock"
+              : snapInProgressRef.current
+                ? "snap-already-in-progress"
+                : document.documentElement.dataset.modalOpen === "true"
+                  ? "modal-open"
+                  : null;
+
+      if (skipReason) {
+        console.debug(
+          "[rail:snap:skip]",
+          JSON.stringify({ reason: skipReason, anchor }),
+        );
         snapAnchorRef.current = null;
         return;
       }
+
+      if (!activeLenis || !anchor) return;
 
       const viewportWidth = Math.max(
         1,
@@ -210,9 +268,31 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
       const target = targetChapter.offsetLeft;
       const currentScrollX = activeLenis.scroll;
       const dist = Math.abs(target - currentScrollX);
+
+      console.debug(
+        "[rail:snap:decision]",
+        JSON.stringify({
+          anchorIndex: anchor.index,
+          anchorScroll: anchor.scroll,
+          currentScrollX,
+          currentTargetScroll: activeLenis.targetScroll,
+          delta,
+          threshold,
+          targetIndex,
+          target,
+          dist,
+          wrapperWidth: wrapper.clientWidth,
+          currentChapter: root.dataset.chapter,
+        }),
+      );
+
       snapAnchorRef.current = null;
 
       if (dist < 6) {
+        console.debug(
+          "[rail:snap:skip]",
+          JSON.stringify({ reason: "already-at-target", dist }),
+        );
         return;
       }
 
@@ -226,6 +306,17 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
         ),
       );
 
+      console.debug(
+        "[rail:snap:start]",
+        JSON.stringify({
+          targetIndex,
+          target,
+          from: activeLenis.scroll,
+          duration: reducedMotionRef.current ? 0 : duration,
+          reducedMotion: reducedMotionRef.current,
+        }),
+      );
+
       snapInProgressRef.current = true;
       activeLenis.scrollTo(target, {
         duration: reducedMotionRef.current ? 0 : duration,
@@ -233,6 +324,15 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
         userData: { source: "chapter-snap" },
         onComplete: () => {
           snapInProgressRef.current = false;
+          console.debug(
+            "[rail:snap:complete]",
+            JSON.stringify({
+              targetIndex,
+              target,
+              finalScroll: lenisRef.current?.scroll ?? null,
+              chapter: root.dataset.chapter,
+            }),
+          );
         },
       });
     };
@@ -248,10 +348,21 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
       }
 
       if (!snapAnchorRef.current) {
+        const anchorIndex = getNearestChapterIndex(scroll);
         snapAnchorRef.current = {
-          index: getNearestChapterIndex(scroll),
+          index: anchorIndex,
           scroll,
         };
+
+        console.debug(
+          "[rail:snap:anchor]",
+          JSON.stringify({
+            anchorIndex,
+            anchorScroll: scroll,
+            wrapperWidth: wrapper.clientWidth,
+            threshold: wrapper.clientWidth * SNAP_THRESHOLD_RATIO,
+          }),
+        );
       }
 
       clearSnapTimer();
@@ -340,7 +451,29 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
     resizeObserver.observe(wrapper);
     resizeObserver.observe(content);
 
+    let lastScrollDebugAt = 0;
+
     const handleScroll = ({ scroll }: { scroll: number }) => {
+      if (process.env.NODE_ENV !== "production") {
+        const now = performance.now();
+
+        if (now - lastScrollDebugAt >= 150) {
+          lastScrollDebugAt = now;
+
+          console.debug(
+            "[rail:scroll]",
+            JSON.stringify({
+              scroll,
+              targetScroll: lenis.targetScroll,
+              velocity: lenis.velocity,
+              chapter: root.dataset.chapter,
+              snapInProgress: snapInProgressRef.current,
+              anchor: snapAnchorRef.current,
+            }),
+          );
+        }
+      }
+
       updateRailProgress(scroll);
 
       if (snapInProgressRef.current) {
