@@ -47,6 +47,8 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
   const animationFrameRef = useRef<number | null>(null);
   const snapTimerRef = useRef<number | null>(null);
   const snapInProgressRef = useRef(false);
+  const snapTargetIndexRef = useRef<number | null>(null);
+  const snapSequenceRef = useRef(0);
   const activeChapterIndexRef = useRef<number | null>(null);
   const snapAnchorRef = useRef<{
     index: number;
@@ -112,25 +114,41 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
       wheelMultiplier: 0.85,
       virtualScroll: (data) => {
         if (data.event.type === "wheel") {
-          // Capture the gesture origin before Lenis applies this wheel delta.
-          // Anchoring on the next scroll event is too late: Lenis may already
-          // have moved a substantial distance, making the snap delta look like 0.
           const activeLenis = lenisRef.current;
-
-          if (
-            (data.deltaX !== 0 || data.deltaY !== 0) &&
+          const hasWheelDelta = data.deltaX !== 0 || data.deltaY !== 0;
+          const canHandleWheel =
+            hasWheelDelta &&
             activeLenis &&
             !activeLenis.isStopped &&
             stopTokensRef.current.size === 0 &&
-            !snapAnchorRef.current &&
-            !snapInProgressRef.current &&
-            document.documentElement.dataset.modalOpen !== "true"
-          ) {
-            const anchorScroll = activeLenis.scroll;
-            snapAnchorRef.current = {
-              index: getNearestChapterIndex(anchorScroll),
-              scroll: anchorScroll,
-            };
+            document.documentElement.dataset.modalOpen !== "true";
+
+          if (canHandleWheel && activeLenis) {
+            // A new user gesture can interrupt Lenis's programmatic snap. Its
+            // old onComplete callback will not necessarily run, so release the
+            // snap latch and invalidate that callback before accepting input.
+            const interruptedTargetIndex = snapInProgressRef.current
+              ? snapTargetIndexRef.current
+              : null;
+
+            if (snapInProgressRef.current) {
+              snapSequenceRef.current += 1;
+              snapInProgressRef.current = false;
+              snapTargetIndexRef.current = null;
+            }
+
+            // Capture the gesture origin before Lenis applies this wheel delta.
+            // If the user interrupts a snap, anchor it to that snap's intended
+            // chapter so continued/reversed input still chooses the right panel.
+            if (!snapAnchorRef.current) {
+              const anchorScroll = activeLenis.scroll;
+              snapAnchorRef.current = {
+                index:
+                  interruptedTargetIndex ??
+                  getNearestChapterIndex(anchorScroll),
+                scroll: anchorScroll,
+              };
+            }
           }
 
           if (Math.abs(data.deltaY) >= Math.abs(data.deltaX)) {
@@ -247,13 +265,17 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
         ),
       );
 
+      const snapSequence = ++snapSequenceRef.current;
+      snapTargetIndexRef.current = targetIndex;
       snapInProgressRef.current = true;
       activeLenis.scrollTo(target, {
         duration: reducedMotionRef.current ? 0 : duration,
         easing: (t) => 1 - Math.pow(1 - t, 3),
         userData: { source: "chapter-snap" },
         onComplete: () => {
+          if (snapSequenceRef.current !== snapSequence) return;
           snapInProgressRef.current = false;
+          snapTargetIndexRef.current = null;
         },
       });
     };
@@ -389,6 +411,8 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
       lenis.off("scroll", handleScroll);
       resizeObserver.disconnect();
       clearSnapTimer();
+      snapSequenceRef.current += 1;
+      snapTargetIndexRef.current = null;
       snapAnchorRef.current = null;
       snapInProgressRef.current = false;
       lenis.destroy();
@@ -435,6 +459,8 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
       snapTimerRef.current = null;
     }
 
+    snapSequenceRef.current += 1;
+    snapTargetIndexRef.current = null;
     snapAnchorRef.current = null;
     snapInProgressRef.current = false;
     lenisRef.current?.stop();
@@ -447,10 +473,14 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
       return;
     }
 
+    const snapSequence = ++snapSequenceRef.current;
+    snapTargetIndexRef.current = null;
     snapInProgressRef.current = true;
     lenis.scrollTo(Math.max(0, px), {
       onComplete: () => {
+        if (snapSequenceRef.current !== snapSequence) return;
         snapInProgressRef.current = false;
+        snapTargetIndexRef.current = null;
       },
     });
   }, []);
@@ -475,12 +505,16 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
     );
     const chapter = content.children[safeIndex] as HTMLElement;
 
+    const snapSequence = ++snapSequenceRef.current;
+    snapTargetIndexRef.current = safeIndex;
     snapInProgressRef.current = true;
     snapAnchorRef.current = null;
     lenis.scrollTo(chapter.offsetLeft, {
       duration: reducedMotionRef.current ? 0 : Math.max(0, duration),
       onComplete: () => {
+        if (snapSequenceRef.current !== snapSequence) return;
         snapInProgressRef.current = false;
+        snapTargetIndexRef.current = null;
       },
     });
   }, []);
