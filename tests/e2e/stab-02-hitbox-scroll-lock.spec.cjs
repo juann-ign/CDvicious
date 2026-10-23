@@ -90,7 +90,14 @@ test("click corto en Batea abre modal; Escape restaura foco y libera scroll", as
   await goToChapter(page, "Batea", 2);
 
   const spine = await firstSpine(page);
-  await spine.click();
+  const initialBox = await spine.boundingBox();
+  expect(initialBox).not.toBeNull();
+  await page.mouse.move(initialBox.x + initialBox.width / 2, initialBox.y + initialBox.height / 2);
+  // Hover pauses the moving belt; remeasure after it settles before the short click.
+  await page.waitForTimeout(100);
+  const clickBox = await spine.boundingBox();
+  expect(clickBox).not.toBeNull();
+  await page.mouse.click(clickBox.x + clickBox.width / 2, clickBox.y + clickBox.height / 2);
   await expect(dialog(page)).toBeVisible();
   await expect(page.locator("html")).toHaveAttribute("data-modal-open", "true");
   await expect(page.getByRole("button", { name: "Cerrar" }).first()).toBeVisible();
