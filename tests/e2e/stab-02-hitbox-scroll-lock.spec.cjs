@@ -28,6 +28,19 @@ async function goToChapter(page, chapter, index) {
   await expect(activePanel(page)).toHaveCount(1);
   await expect(panels(page).nth(index)).toHaveAttribute("data-chapter-active", "true");
   await expect(page.locator("html")).toHaveAttribute("data-chapter", String(index));
+
+  // data-chapter changes at the activation threshold, before Lenis finishes the
+  // 900 ms scrollToChapter animation. Wait for actual panel alignment so tests
+  // don't open/close a modal while the rail is still moving.
+  await expect
+    .poll(
+      () =>
+        panels(page)
+          .nth(index)
+          .evaluate((panel) => Math.abs(panel.getBoundingClientRect().left)),
+      { timeout: 8_000 },
+    )
+    .toBeLessThan(2);
 }
 
 // The mock collection is loaded lazily when its chapter becomes active. Prime
