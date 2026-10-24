@@ -42,9 +42,9 @@ Los warnings aparecen tanto en lint como durante el build; no hacen fallar los c
 
 La rama parte de `main` y no cambia lógica de producto. El primer Browser QA con `RAIL_FLAG=0` pasó (2 tests pasados, 16 omitidos por ser específicos del rail habilitado).
 
-El primer Browser QA con `RAIL_FLAG=1` reportó 16 tests pasados, 1 omitido y 1 fallo de preparación: el helper `openRail` no encontró la navegación en 20 segundos. El snapshot de error muestra que ésta sí terminó montándose; el test de drag falló antes de ejercitar el drag. Se clasifica como una carrera de inicialización/hidratación preexistente de la suite, no como una regresión de producto introducida por este PR.
+El primer Browser QA con `RAIL_FLAG=1` reportó 16 tests pasados, 1 omitido y 1 fallo de preparación: `openRail` no encontró la navegación en 20 segundos. Se aumentó la espera a 45 segundos, pero el segundo run volvió a fallar en el mismo punto antes de ejercitar el drag. El snapshot de Playwright muestra la navegación montada al capturar el contexto de error después del timeout. Evidencia: https://github.com/juann-ign/CDvicious/actions/runs/40116764179. Se clasifica como una carrera reproducible de inicialización/hidratación en la suite de baseline, no como una regresión de producto introducida por este PR.
 
-**Corrección de alcance QA:** ampliar a 45 segundos las esperas de navegación, paneles y marcador `data-rail-ready` en los specs de rail. No se modifican las aserciones funcionales, no se agregan reintentos y no se toca código de producto. El rerun del commit final debe quedar verde; su conclusión se verá en los checks visibles del PR.
+**Segundo ajuste de alcance QA:** aumentar a 90 segundos las esperas de navegación, paneles y marcador `data-rail-ready` en los specs de rail; el timeout total por test pasa a 180 segundos para que la inicialización lenta no agote el límite antes de continuar con las aserciones. No se modifican las aserciones funcionales, no se agregan reintentos y no se toca código de producto. Validar el nuevo commit con los checks visibles; el trabajo no se considerará listo hasta que `RAIL_FLAG=1` quede verde.
 
 
 ## Workflows y checks esperados hacia `main`
