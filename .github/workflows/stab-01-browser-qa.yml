@@ -7,6 +7,7 @@ on:
     paths:
       - "src/**"
       - "tests/e2e/**"
+      - "docs/qa/**"
       - "playwright.config.cjs"
       - ".github/workflows/stab-01-browser-qa.yml"
       - "package.json"
