@@ -128,7 +128,13 @@ test("click corto en Batea abre modal; Escape restaura foco y libera scroll", as
 
   // Send the wheel gesture over a real hit target in Batea, not a fixed screen
   // coordinate that may be covered by a sibling overlay at different timings.
-  await spine.hover();
+  const wheelBox = await spine.boundingBox();
+  expect(wheelBox, "El hitbox de Batea debe seguir presente después de cerrar el modal").not.toBeNull();
+  await page.mouse.move(
+    wheelBox.x + wheelBox.width / 2,
+    wheelBox.y + wheelBox.height / 2,
+  );
+  await page.waitForTimeout(120);
   await page.mouse.wheel(0, 700);
   await expect.poll(() => page.locator("html").getAttribute("data-chapter"), { timeout: 8_000 }).toBe("3");
 });
