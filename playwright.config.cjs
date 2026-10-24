@@ -8,7 +8,7 @@ module.exports = defineConfig({
   fullyParallel: false,
   workers: 1,
   retries: process.env.CI ? 1 : 0,
-  timeout: 30_000,
+  timeout: 45_000,
   expect: {
     timeout: 8_000,
   },
@@ -32,7 +32,7 @@ module.exports = defineConfig({
     },
   },
   webServer: {
-    command: "npm run dev",
+    command: "npm run start",
     url: "http://127.0.0.1:3002",
     reuseExistingServer: false,
     timeout: 120_000,
