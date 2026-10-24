@@ -30,7 +30,7 @@ No se modificó lógica de producto. No se alteraron z-index, pointer-events ni 
 
 ## Ejecución local en Windows / PowerShell
 
-La configuración de Playwright levanta automáticamente npm run dev en http://127.0.0.1:3002. No inicies otro servidor en ese puerto al ejecutar el spec.
+La configuración de Playwright levanta automáticamente npm run start en http://127.0.0.1:3002. Para evitar compilación en caliente durante las pruebas, primero construí la app en producción con las variables del flag correspondiente. No inicies otro servidor en ese puerto al ejecutar el spec.
 
 1. Instalar dependencias de la aplicación:
 
@@ -50,6 +50,7 @@ La configuración de Playwright levanta automáticamente npm run dev en http://1
     $env:RAIL_FLAG = "1"
     $env:NEXT_PUBLIC_ENABLE_RAIL = "1"
     $env:NEXT_PUBLIC_SPOTIFY_MOCK = "1"
+    npm run build
     playwright test tests/e2e/stab-02-hitbox-scroll-lock.spec.cjs
 
 4. Ejecutar el fallback:
@@ -57,6 +58,7 @@ La configuración de Playwright levanta automáticamente npm run dev en http://1
     $env:RAIL_FLAG = "0"
     $env:NEXT_PUBLIC_ENABLE_RAIL = "0"
     $env:NEXT_PUBLIC_SPOTIFY_MOCK = "1"
+    npm run build
     playwright test tests/e2e/stab-02-hitbox-scroll-lock.spec.cjs
 
 ## Prueba manual complementaria con npm run dev

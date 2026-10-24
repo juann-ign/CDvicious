@@ -16,12 +16,29 @@ async function openDesktop(page, width = 1280, height = 800) {
   await page.setViewportSize({ width, height });
   await page.goto("/", { waitUntil: "domcontentloaded" });
   if (RAIL_ENABLED) {
-    await expect(navigation(page)).toBeVisible();
-    await expect(panels(page)).toHaveCount(5);
+    // HorizontalRail is loaded by a client-only dynamic import. CI can spend
+    // several seconds hydrating the 3D scene before its navigation mounts.
+    await expect(navigation(page)).toBeVisible({ timeout: 20_000 });
+    await expect(panels(page)).toHaveCount(5, { timeout: 20_000 });
+    await expect(page.locator('[data-rail-ready="true"]')).toBeVisible({ timeout: 20_000 });
   } else {
     await expect(page.locator("main")).toBeVisible();
   }
 }
+
+test("reduced-motion preference does not break direct chapter navigation", async ({
+  page,
+}) => {
+  test.skip(!RAIL_ENABLED, "El rail no debe estar montado cuando el flag está apagado.");
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await openDesktop(page);
+
+  const fifth = chapterButton(page, "Mixtape Lab");
+  await fifth.click();
+  await expect(fifth).toHaveAttribute("aria-current", "location");
+  await expect(panels(page).nth(4)).toHaveAttribute("data-chapter-active", "true");
+});
 
 test("feature flag and 761px breakpoint select the expected experience", async ({
   page,
@@ -176,16 +193,3 @@ test("resizing and reloading at desktop resolutions keeps rail navigation usable
   }
 });
 
-test("reduced-motion preference does not break direct chapter navigation", async ({
-  page,
-}) => {
-  test.skip(!RAIL_ENABLED, "El rail no debe estar montado cuando el flag está apagado.");
-
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  await openDesktop(page);
-
-  const fifth = chapterButton(page, "Mixtape Lab");
-  await fifth.click();
-  await expect(fifth).toHaveAttribute("aria-current", "location");
-  await expect(panels(page).nth(4)).toHaveAttribute("data-chapter-active", "true");
-});

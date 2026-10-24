@@ -50,7 +50,14 @@ export function DeckPinnedLayer() {
   const { data, error } = useNowPlaying(authenticated === true && deckInteractive);
   const latestDataRef = useRef(data);
   const playbackSnapshotAtStartRef = useRef(data);
-  latestDataRef.current = data;
+
+  // Keep the last real track snapshot while the Deck is off-chapter. The hook
+  // intentionally returns an empty snapshot when the Deck is not interactive,
+  // but a flight launched from Batea/Colección still needs a stable visual
+  // snapshot to bridge the disc animation.
+  if (data?.track) {
+    latestDataRef.current = data;
+  }
 
   const trackCoverUrl = data?.track?.album.images[0]?.url;
 

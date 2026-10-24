@@ -289,7 +289,7 @@ export function RailFlyingDisc({
 
   return (
     <>
-      <div ref={wrapRef} className={styles.disc} aria-hidden="true">
+      <div ref={wrapRef} className={styles.disc} aria-hidden="true" data-testid="rail-flying-disc">
         <div ref={spinnerRef} className={styles.spinner}>
           <div
             className={styles.discInner}

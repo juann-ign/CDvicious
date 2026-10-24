@@ -7,8 +7,12 @@ module.exports = defineConfig({
   testMatch: "**/*.spec.cjs",
   fullyParallel: false,
   workers: 1,
-  retries: process.env.CI ? 1 : 0,
-  timeout: 30_000,
+  // Keep CI failures visible; do not let a retry turn a flaky run green.
+  retries: 0,
+  // The rail keeps a software-rendered WebGL scene mounted during browser QA.
+  // GitHub-hosted Chromium occasionally spends >60s creating a context; allow
+  // setup to complete while keeping functional assertions and retries strict.
+  timeout: 120_000,
   expect: {
     timeout: 8_000,
   },
@@ -32,7 +36,7 @@ module.exports = defineConfig({
     },
   },
   webServer: {
-    command: "npm run dev",
+    command: "npm run start -- -H 127.0.0.1 -p 3002",
     url: "http://127.0.0.1:3002",
     reuseExistingServer: false,
     timeout: 120_000,
