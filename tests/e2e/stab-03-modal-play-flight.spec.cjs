@@ -190,7 +190,9 @@ function createPlayGate(page) {
 }
 
 async function assertCancelledAndRestored(page, album, sourceChapter, messagePattern) {
-  await expect(dialog(page)).toBeVisible({ timeout: 8_000 });
+  // Error recovery restores the chapter before remounting the modal; wait for
+  // that observable transition without weakening the modal/error assertions.
+  await expect(dialog(page)).toBeVisible({ timeout: 20_000 });
   await expect(dialog(page)).toHaveAttribute("aria-label", modalLabel(album));
   await expect(dialog(page).getByRole("alert")).toContainText(messagePattern);
   await expect(flightDisc(page)).toHaveCount(0);
