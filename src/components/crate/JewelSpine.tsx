@@ -35,13 +35,19 @@ export function JewelSpine({
       }
       onClick={onSelect}
       onPointerEnter={() => {
-        if (!reduceEffects) {
+        const railRoot = document.querySelector<HTMLElement>("[data-rail-wrapper]")?.parentElement;
+        const settledBatea = !railRoot ||
+          (railRoot.dataset.chapter === "2" && railRoot.dataset.railMoving !== "true");
+        if (settledBatea) {
           onHover?.(ref.current?.getBoundingClientRect() ?? null);
         }
       }}
       onPointerLeave={() => onHover?.(null)}
       onFocus={() => {
-        if (!reduceEffects) {
+        const railRoot = document.querySelector<HTMLElement>("[data-rail-wrapper]")?.parentElement;
+        const settledBatea = !railRoot ||
+          (railRoot.dataset.chapter === "2" && railRoot.dataset.railMoving !== "true");
+        if (settledBatea) {
           onHover?.(ref.current?.getBoundingClientRect() ?? null);
         }
       }}
