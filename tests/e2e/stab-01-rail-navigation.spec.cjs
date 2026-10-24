@@ -225,6 +225,12 @@ test("Deck crossfade keeps the disc stable and pauses WebGL only after it is hid
       timeout: 12_000,
     });
     await expect(panels(page).nth(index)).toHaveAttribute("data-chapter-active", "true");
+    await expect
+      .poll(
+        () => panels(page).nth(index).evaluate((panel) => Math.abs(panel.getBoundingClientRect().left)),
+        { timeout: 12_000 },
+      )
+      .toBeLessThan(2);
   };
   const assertMidCrossfadeKeepsDisc = async () => {
     await expect(discStage).toHaveAttribute("data-has-track", "true");
