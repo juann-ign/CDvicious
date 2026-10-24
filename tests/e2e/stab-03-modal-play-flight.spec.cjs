@@ -237,9 +237,12 @@ test("Batea y Colección seleccionan álbum; mouse y teclado cierran el modal y 
   await openRail(page);
 
   const spine = await chooseFromCrate(page, ALBUM_IN_CRATE);
-  await page.getByRole("button", { name: "Cerrar", exact: true }).last().click();
+  // Exercise Escape from Batea (not only mouse close) and preserve focus on
+  // the exact album trigger before navigating to the next chapter.
+  await page.keyboard.press("Escape");
   await expect(dialog(page)).toHaveCount(0);
   await expect(page.locator("html")).not.toHaveAttribute("data-modal-open", "true");
+  await expect(spine).toBeFocused();
 
   await goToChapter(page, "Colección", 3);
   const collection = page.getByRole("region", { name: "La Colección" });
@@ -260,6 +263,24 @@ test("Batea y Colección seleccionan álbum; mouse y teclado cierran el modal y 
   await expect(page.locator("html")).not.toHaveAttribute("data-modal-open", "true");
   await expect(card).toBeFocused();
   await expect(spine).toHaveCount(1); // The originating album control remains mounted.
+
+  // Prove the modal released the rail lock using a static hit target. The
+  // album card animates its transform on hover and sits inside Collection's
+  // scrolling content, so it is a poor surface for a wheel gesture.
+  const heading = page.locator('section[aria-label="La Colección"] h2');
+  await expect(heading).toBeVisible();
+  const headingBox = await heading.boundingBox();
+  expect(headingBox).not.toBeNull();
+  await page.mouse.move(
+    headingBox.x + headingBox.width / 2,
+    headingBox.y + headingBox.height / 2,
+  );
+  await page.waitForTimeout(150);
+  await page.mouse.wheel(0, 1200);
+  await expect
+    .poll(() => page.locator("html").getAttribute("data-chapter"), { timeout: 12_000 })
+    .toBe("4");
+  await expect(chapterButton(page, "Mixtape Lab")).toHaveAttribute("aria-current", "location");
 });
 
 test("play confirmado desde Colección: vuelo, acople y Now Playing terminan sincronizados", async ({ page }) => {

@@ -104,43 +104,6 @@ test("capítulo activo, inert y gating del Deck permanecen sincronizados", async
   }
 });
 
-test("click corto en Batea abre modal; Escape restaura foco y libera scroll", async ({ page }) => {
-  test.skip(!RAIL_ENABLED, "Requiere Batea en el rail desktop.");
-  await openRail(page);
-  await primeCollection(page);
-  await goToChapter(page, "Batea", 2);
-
-  const spine = await firstSpine(page);
-  const initialBox = await spine.boundingBox();
-  expect(initialBox).not.toBeNull();
-  await page.mouse.move(initialBox.x + initialBox.width / 2, initialBox.y + initialBox.height / 2);
-  // Hover pauses the moving belt; remeasure after it settles before the short click.
-  await page.waitForTimeout(100);
-  const clickBox = await spine.boundingBox();
-  expect(clickBox).not.toBeNull();
-  await page.mouse.click(clickBox.x + clickBox.width / 2, clickBox.y + clickBox.height / 2);
-  await expect(dialog(page)).toBeVisible();
-  await expect(page.locator("html")).toHaveAttribute("data-modal-open", "true");
-  await expect(page.getByRole("button", { name: "Cerrar" }).first()).toBeVisible();
-
-  await page.keyboard.press("Escape");
-  await expect(dialog(page)).toHaveCount(0);
-  await expect(page.locator("html")).not.toHaveAttribute("data-modal-open", "true");
-  await expect(spine).toBeFocused();
-
-  // Send the wheel gesture over a real hit target in Batea, not a fixed screen
-  // coordinate that may be covered by a sibling overlay at different timings.
-  const wheelBox = await spine.boundingBox();
-  expect(wheelBox, "El hitbox de Batea debe seguir presente después de cerrar el modal").not.toBeNull();
-  await page.mouse.move(
-    wheelBox.x + wheelBox.width / 2,
-    wheelBox.y + wheelBox.height / 2,
-  );
-  await page.waitForTimeout(120);
-  await page.mouse.wheel(0, 700);
-  await expect.poll(() => page.locator("html").getAttribute("data-chapter"), { timeout: 8_000 }).toBe("3");
-});
-
 test("drag de Batea mayor a 6px no abre modal y libera wheel después de pointerup", async ({ page }) => {
   test.skip(!RAIL_ENABLED, "Requiere Batea en el rail desktop.");
   await openRail(page);
@@ -272,42 +235,4 @@ test("búsqueda y filtros de Colección siguen accesibles con ventana baja y esc
   expect(box).not.toBeNull();
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
   await expect(filter).toBeVisible();
-});
-
-test("modal de Colección: Escape restaura foco y scroll", async ({ page }) => {
-  test.skip(!RAIL_ENABLED, "Requiere Colección en el rail desktop.");
-  await openRail(page);
-  await goToChapter(page, "Colección", 3);
-
-  const caseButton = panels(page).nth(3).locator('button[aria-label*=" — "]').first();
-  await expect(caseButton).toBeVisible();
-
-  // JewelCaseFront animates its transform on hover. Use a real mouse click after
-  // the hover transition settles instead of Playwright's stability polling,
-  // which can time out on Chromium's software-rendered rail.
-  await caseButton.scrollIntoViewIfNeeded();
-  const initialBox = await caseButton.boundingBox();
-  expect(initialBox).not.toBeNull();
-  await page.mouse.move(
-    initialBox.x + initialBox.width / 2,
-    initialBox.y + initialBox.height / 2,
-  );
-  await page.waitForTimeout(250);
-  const clickBox = await caseButton.boundingBox();
-  expect(clickBox).not.toBeNull();
-  await page.mouse.click(
-    clickBox.x + clickBox.width / 2,
-    clickBox.y + clickBox.height / 2,
-  );
-  await expect(dialog(page)).toBeVisible();
-  await page.keyboard.press("Escape");
-  await expect(dialog(page)).toHaveCount(0);
-  await expect(page.locator("html")).not.toHaveAttribute("data-modal-open", "true");
-  await expect(caseButton).toBeFocused();
-
-  // The modal's original trigger is the verified hit target inside Collection.
-  // Hovering it ensures the synthetic wheel bubbles through the active chapter.
-  await caseButton.hover();
-  await page.mouse.wheel(0, 1200);
-  await expect.poll(() => page.locator("html").getAttribute("data-chapter"), { timeout: 8_000 }).toBe("4");
 });
