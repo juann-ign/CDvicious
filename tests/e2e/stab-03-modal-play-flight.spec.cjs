@@ -216,6 +216,9 @@ async function assertCancelledAndRestored(page, album, sourceChapter, messagePat
   // de Spotify sigue intacta, sin confundir un panel inactivo con una UI congelada.
   await page.getByRole("button", { name: "Cerrar", exact: true }).last().click();
   await expect(dialog(page)).toHaveCount(0);
+  // The dialog can become visually hidden before its exit lifecycle releases
+  // the rail lock. Wait for the public modal state to clear before navigating.
+  await expect(page.locator("html")).not.toHaveAttribute("data-modal-open", "true");
   // The final recovery check validates the visible Deck/Now Playing state, not
   // pixel-perfect positioning of the pinned chapter edge. Chromium reported a
   // stable 7px residual here while data-chapter, aria-current and the Deck UI
