@@ -17,6 +17,22 @@
   outline: none;
 }
 
+.caseReduced,
+.caseReduced:hover,
+.caseReduced:focus-visible {
+  transform: none;
+  transition: none;
+}
+
+.caseReduced .edge {
+  box-shadow: none;
+  transition: none;
+}
+
+.caseReduced .gloss {
+  display: none;
+}
+
 .case:hover .edge,
 .case:focus-visible .edge {
   box-shadow: 0 0 0 1px var(--color-phosphor), 0 0 14px -4px var(--color-phosphor-glow);

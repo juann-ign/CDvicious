@@ -56,3 +56,12 @@ Esta pasada no hace un rediseño completo del VFD, no modifica la composición d
 
 ### E2E
 Se agregó cobertura Playwright para navegación y rueda que verifica el fade intermedio, la persistencia del snapshot, la pausa/reanudación del Canvas y la pausa/reanudación de la cinta de Batea. Debe pasar en ambos modos del feature flag, con `retries: 0`.
+
+
+## CI follow-up — visual sampling and transition workload
+
+The previous Browser QA run exposed two test assumptions that measured the wrong thing:
+- The test relied on the discrete `data-chapter` value emitting every index. The test now samples each panel's actual position every animation frame, verifies intermediate panels cross the viewport, and bounds the largest frame-to-frame jump.
+- The crossfade test checked intermediate opacity after waiting for the destination attribute, which could measure the completed fade. It now samples while the rail moves and checks that the track and booklet remain mounted during the midpoint.
+
+During movement the Deck Canvas uses `frameloop="demand"` and lower render quality, returning to `always` after settling and `never` when fully hidden. Batea and Collection disable interactions and expensive cosmetic effects as they cross the viewport, restoring the full presentation at rest.

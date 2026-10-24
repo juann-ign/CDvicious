@@ -5,6 +5,10 @@
   justify-content: center;
 }
 
+.wrap[data-belt-animation-enabled="false"] {
+  pointer-events: none;
+}
+
 .toolbar {
   display: flex;
   align-items: center;

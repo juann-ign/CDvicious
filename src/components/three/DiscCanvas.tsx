@@ -29,10 +29,12 @@ export function DiscCanvas({
 
   // Visibility and WebGL context state are independent: a visible tab must not
   // resume rendering while its canvas still has a lost context.
-  const frameloop =
-    renderEnabled && documentVisible && !contextLost
-      ? ("always" as const)
-      : ("never" as const);
+  const frameloop: "always" | "demand" | "never" =
+    !renderEnabled || !documentVisible || contextLost
+      ? "never"
+      : isRailMoving
+        ? "demand"
+        : "always";
   // During rail motion, reduce the still-visible Deck scene's GPU cost.
   // Full resolution and shadows resume as soon as navigation settles.
   const dpr: number | [number, number] = isRailMoving ? 1 : [1, 2];

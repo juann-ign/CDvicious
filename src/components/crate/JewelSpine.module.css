@@ -23,6 +23,39 @@
   outline: none;
 }
 
+/* Keep the shelf cheap to paint while the whole chapter is moving past. */
+.spineReduced {
+  transition: none;
+  transform: translateY(-50px);
+}
+
+.spineReduced:hover,
+.spineReduced:focus-visible {
+  transform: translateY(-50px);
+}
+
+.spineReduced .ghostDisc,
+.spineReduced .gloss {
+  display: none;
+}
+
+.spineReduced .cover {
+  filter: none;
+  opacity: 0.72;
+}
+
+.spineReduced .labelScrim {
+  background: rgba(6, 7, 9, 0.58);
+}
+
+.spineReduced .labelText {
+  text-shadow: none;
+}
+
+.spineReduced .edge {
+  box-shadow: none;
+}
+
 .case {
   position: relative;
   display: block;

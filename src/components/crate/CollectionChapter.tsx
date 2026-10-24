@@ -41,7 +41,8 @@ function decadeOf(album: AlbumItem): DecadeFilter {
 
 export function CollectionChapter() {
   const { authenticated } = useSpotifyPlayer();
-  const { scrollToChapter } = useRail();
+  const { scrollToChapter, activeChapterIndex, isRailMoving } = useRail();
+  const isCollectionInteractive = activeChapterIndex === 3 && !isRailMoving;
   const { albums: cachedAlbums, genresLoaded } = useCollectionCache();
   const albums = useMemo(() => cachedAlbums ?? [], [cachedAlbums]);
   const [loading, setLoading] = useState(false);
@@ -261,7 +262,12 @@ export function CollectionChapter() {
   }, []);
 
   return (
-    <div ref={chapterRef} className={styles.chapter}>
+    <div
+      ref={chapterRef}
+      className={styles.chapter}
+      data-collection-transition-lite={isCollectionInteractive ? "false" : "true"}
+      inert={!isCollectionInteractive}
+    >
       <header className={styles.header}>
         <div>
           <h2>LA COLECCIÓN</h2>
@@ -357,6 +363,7 @@ export function CollectionChapter() {
               <JewelCaseFront
                 key={album.id}
                 album={album}
+                reduceEffects={!isCollectionInteractive}
                 onSelect={() => handleSelect(album)}
               />
             ))}

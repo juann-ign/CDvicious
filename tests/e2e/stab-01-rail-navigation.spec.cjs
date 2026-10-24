@@ -164,7 +164,7 @@ test("short wheel followed by long wheel reaches Split; reverse wheel returns to
 });
 
 
-test("long navigation reveals intermediate chapters and keeps the VFD unobstructed", async ({
+test("long navigation visibly crosses every chapter and keeps the VFD unobstructed", async ({
   page,
 }) => {
   test.skip(!RAIL_ENABLED, "El rail no debe estar montado cuando el flag está apagado.");
@@ -178,22 +178,22 @@ test("long navigation reveals intermediate chapters and keeps the VFD unobstruct
   expect(vfdBox).not.toBeNull();
   expect(navBox.x).toBeGreaterThan(vfdBox.x + vfdBox.width + 8);
 
+  // data-chapter is a discrete active-state signal; sample visual panel geometry instead.
   await page.evaluate(() => {
-    window.__cdvChapterProgress = [];
-    let lastIndex = null;
-    const record = () => {
-      const index = Number(document.documentElement.dataset.chapter);
-      if (Number.isInteger(index) && index !== lastIndex) {
-        window.__cdvChapterProgress.push(index);
-        lastIndex = index;
-      }
+    window.__cdvRailMotionSamples = [];
+    window.__cdvStopRailMotionSampler = false;
+    const sample = () => {
+      if (window.__cdvStopRailMotionSampler) return;
+      const wrapper = document.querySelector("[data-rail-wrapper]");
+      const content = wrapper?.firstElementChild;
+      const chapters = content ? Array.from(content.children) : [];
+      window.__cdvRailMotionSamples.push({
+        at: performance.now(),
+        lefts: chapters.map((chapter) => chapter.getBoundingClientRect().left),
+      });
+      window.requestAnimationFrame(sample);
     };
-    window.__cdvChapterProgressObserver = new MutationObserver(record);
-    window.__cdvChapterProgressObserver.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["data-chapter"],
-    });
-    record();
+    sample();
   });
 
   const destination = chapterButton(page, "Mixtape Lab");
@@ -202,14 +202,40 @@ test("long navigation reveals intermediate chapters and keeps the VFD unobstruct
     timeout: 12_000,
   });
   await expect
-    .poll(() => page.evaluate(() => window.__cdvChapterProgress), {
-      timeout: 12_000,
-      intervals: [100, 150, 250],
-    })
-    .toEqual([0, 1, 2, 3, 4]);
+    .poll(
+      () => panels(page).nth(4).evaluate((panel) => Math.abs(panel.getBoundingClientRect().left)),
+      { timeout: 12_000 },
+    )
+    .toBeLessThan(2);
+
+  await page.evaluate(() => {
+    window.__cdvStopRailMotionSampler = true;
+  });
+  const samples = await page.evaluate(() => window.__cdvRailMotionSamples);
+  expect(samples.length, "La navegación larga debe producir muestras durante varios frames").toBeGreaterThan(20);
+
+  for (const index of [1, 2, 3]) {
+    const positions = samples.map((sample) => sample.lefts[index]);
+    expect(Math.max(...positions), `El capítulo ${index} debe entrar desde la derecha`).toBeGreaterThan(20);
+    expect(
+      Math.min(...positions),
+      `El capítulo ${index} debe pasar hacia la izquierda antes de llegar a Mixtape Lab`,
+    ).toBeLessThan(-20);
+  }
+
+  const viewportWidth = page.viewportSize().width;
+  const largestFrameStep = Math.max(
+    ...samples.slice(1).map((sample, index) =>
+      Math.abs(sample.lefts[1] - samples[index].lefts[1]),
+    ),
+  );
+  expect(
+    largestFrameStep,
+    "El panel no debe saltar una fracción grande del viewport entre frames",
+  ).toBeLessThan(viewportWidth * 0.45);
 });
 
-test("Deck crossfade keeps the disc stable and pauses WebGL only after it is hidden", async ({
+test("Deck crossfade stays continuous and throttles WebGL during chapter handoffs", async ({
   page,
 }) => {
   test.skip(!RAIL_ENABLED, "El rail no debe estar montado cuando el flag está apagado.");
@@ -218,8 +244,8 @@ test("Deck crossfade keeps the disc stable and pauses WebGL only after it is hid
 
   const layer = page.locator("[data-rail-overlay]");
   const discStage = layer.locator("[data-disc-render-enabled]");
-  const canvas = page.locator("[data-disc-frameloop]").first();
-  const go = async (name, index) => {
+  const canvas = layer.locator("[data-disc-frameloop]").first();
+  const goAndSettle = async (name, index) => {
     await chapterButton(page, name).click();
     await expect(page.locator("html")).toHaveAttribute("data-chapter", String(index), {
       timeout: 12_000,
@@ -232,18 +258,66 @@ test("Deck crossfade keeps the disc stable and pauses WebGL only after it is hid
       )
       .toBeLessThan(2);
   };
-  const assertMidCrossfadeKeepsDisc = async () => {
+  const startSampler = async () => {
+    await page.evaluate(() => {
+      window.__cdvCrossfadeSamples = [];
+      window.__cdvCrossfadeSamplerStopped = false;
+      const sample = () => {
+        if (window.__cdvCrossfadeSamplerStopped) return;
+        const wrapper = document.querySelector("[data-rail-wrapper]");
+        const railRoot = wrapper?.parentElement;
+        const overlay = document.querySelector("[data-rail-overlay]");
+        const disc = overlay?.querySelector("[data-disc-render-enabled]");
+        const canvas = overlay?.querySelector("[data-disc-frameloop]");
+        const booklet = overlay?.querySelector("[data-rail-booklet]");
+        const collection = document.querySelector("[data-collection-transition-lite]");
+        const opacity = overlay
+          ? Number.parseFloat(getComputedStyle(overlay).opacity)
+          : Number.NaN;
+        window.__cdvCrossfadeSamples.push({
+          moving: railRoot?.getAttribute("data-rail-moving") === "true",
+          opacity,
+          frameloop: canvas?.getAttribute("data-disc-frameloop") ?? null,
+          quality: canvas?.getAttribute("data-disc-quality") ?? null,
+          hasTrack: disc?.getAttribute("data-has-track") ?? null,
+          hasBooklet: Boolean(booklet),
+          collectionLite: collection?.getAttribute("data-collection-transition-lite") ?? null,
+        });
+        window.requestAnimationFrame(sample);
+      };
+      sample();
+    });
+  };
+  const resetSamples = async () => {
+    await page.evaluate(() => {
+      window.__cdvCrossfadeSamples = [];
+    });
+  };
+  const expectToObserveMidFade = async () => {
+    await expect
+      .poll(
+        () =>
+          page.evaluate(() =>
+            window.__cdvCrossfadeSamples.some(
+              (sample) =>
+                sample.moving &&
+                sample.opacity > 0.05 &&
+                sample.opacity < 0.95 &&
+                sample.frameloop === "demand" &&
+                sample.quality === "transition" &&
+                sample.hasTrack === "true" &&
+                sample.hasBooklet,
+            ),
+          ),
+        { timeout: 5_000, intervals: [30, 50, 100] },
+      )
+      .toBe(true);
     await expect(discStage).toHaveAttribute("data-has-track", "true");
     await expect(discStage).toHaveAttribute("data-disc-render-enabled", "true");
-    const opacity = await layer.evaluate((element) =>
-      Number.parseFloat(getComputedStyle(element).opacity),
-    );
-    expect(opacity, "El overlay debe seguir visible durante el cruce, no desaparecer de golpe").toBeGreaterThan(0.05);
-    expect(opacity, "El overlay debe estar siguiendo el scroll, no quedarse totalmente opaco").toBeLessThan(0.95);
-    await expect(canvas).toHaveAttribute("data-disc-frameloop", "always");
+    await expect(canvas).toHaveAttribute("data-disc-frameloop", "demand");
     await expect(canvas).toHaveAttribute("data-disc-quality", "transition");
   };
-  const assertDeckIsFullyHidden = async () => {
+  const expectDeckHidden = async () => {
     await expect(layer).toHaveAttribute("data-deck-hidden", "true", {
       timeout: 10_000,
     });
@@ -260,37 +334,66 @@ test("Deck crossfade keeps the disc stable and pauses WebGL only after it is hid
     "La opacidad del overlay debe depender del progreso de Lenis y no de una segunda transición CSS",
   ).toBe("0s");
 
-  // Navigation: split -> Batea must retain the track and booklet while the
-  // scroll-driven fade is in progress, then pause the invisible WebGL canvas.
-  await go("Split", 1);
+  // Menu navigation: observe the moving midpoint before waiting for destination alignment.
+  await goAndSettle("Split", 1);
+  await startSampler();
   await chapterButton(page, "Batea").click();
-  await expect(page.locator("html")).toHaveAttribute("data-chapter", "2", {
-    timeout: 12_000,
-  });
-  await assertMidCrossfadeKeepsDisc();
-  await assertDeckIsFullyHidden();
+  await expectToObserveMidFade();
+  await expect
+    .poll(
+      () => panels(page).nth(2).evaluate((panel) => Math.abs(panel.getBoundingClientRect().left)),
+      { timeout: 12_000 },
+    )
+    .toBeLessThan(2);
+  await expectDeckHidden();
+  await expect(page.locator('[data-batea-animation-enabled="true"]')).toHaveCount(1);
 
-  // Collection should not keep the invisible Deck scene rendering.
-  await go("Colección", 3);
-  await expect(canvas).toHaveAttribute("data-disc-frameloop", "never");
+  // Collection is lightweight/inert while crossing and restores cards when settled.
+  await resetSamples();
+  await chapterButton(page, "Colección").click();
+  await expect
+    .poll(
+      () =>
+        page.evaluate(() =>
+          window.__cdvCrossfadeSamples.some(
+            (sample) => sample.moving && sample.collectionLite === "true",
+          ),
+        ),
+      { timeout: 5_000, intervals: [30, 50, 100] },
+    )
+    .toBe(true);
+  await expect
+    .poll(
+      () => panels(page).nth(3).evaluate((panel) => Math.abs(panel.getBoundingClientRect().left)),
+      { timeout: 12_000 },
+    )
+    .toBeLessThan(2);
+  await expect(panels(page).nth(3).locator("[data-collection-transition-lite]"))
+    .toHaveAttribute("data-collection-transition-lite", "false");
 
-  // Returning to Split should re-enable the same persistent scene and data.
-  await go("Split", 1);
-  await expect(layer).toHaveAttribute("data-deck-hidden", "false", {
-    timeout: 10_000,
-  });
+  // Returning to Split restores the Deck renderer and the same track snapshot.
+  await goAndSettle("Split", 1);
+  await expect(layer).toHaveAttribute("data-deck-hidden", "false", { timeout: 10_000 });
   await expect(discStage).toHaveAttribute("data-disc-render-enabled", "true");
   await expect(discStage).toHaveAttribute("data-has-track", "true");
   await expect(canvas).toHaveAttribute("data-disc-frameloop", "always");
 
-  // Wheel/trackpad must use the same continuous fade as chapter-menu navigation.
+  // Wheel/trackpad must share the same continuous fade and WebGL demand mode.
+  await resetSamples();
   await page.mouse.move(400, 100);
   await page.mouse.wheel(0, 700);
-  await expect(page.locator("html")).toHaveAttribute("data-chapter", "2", {
-    timeout: 12_000,
+  await expectToObserveMidFade();
+  await expect
+    .poll(
+      () => panels(page).nth(2).evaluate((panel) => Math.abs(panel.getBoundingClientRect().left)),
+      { timeout: 12_000 },
+    )
+    .toBeLessThan(2);
+  await expectDeckHidden();
+
+  await page.evaluate(() => {
+    window.__cdvCrossfadeSamplerStopped = true;
   });
-  await assertMidCrossfadeKeepsDisc();
-  await assertDeckIsFullyHidden();
 });
 
 test("Batea marquee pauses during rail movement and resumes only when Batea settles", async ({
@@ -305,6 +408,8 @@ test("Batea marquee pauses during rail movement and resumes only when Batea sett
   const beltMotion = page.locator('[data-belt-animation-enabled]');
 
   await expect(bateaMotion).toHaveAttribute("data-batea-animation-enabled", "false");
+  await expect(beltMotion).toHaveAttribute("data-belt-animation-enabled", "false");
+  expect(await beltMotion.evaluate((element) => getComputedStyle(element).pointerEvents)).toBe("none");
 
   // A long jump must pass through Batea without running its decorative RAF loop.
   await chapterButton(page, "Mixtape Lab").click();
@@ -321,9 +426,8 @@ test("Batea marquee pauses during rail movement and resumes only when Batea sett
   await expect(panels(page).nth(2)).toHaveAttribute("data-chapter-active", "true");
   await expect(rail).toHaveAttribute("data-rail-moving", "false", { timeout: 10_000 });
   await expect(bateaMotion).toHaveAttribute("data-batea-animation-enabled", "true");
-  if (await beltMotion.count()) {
-    await expect(beltMotion).toHaveAttribute("data-belt-animation-enabled", "true");
-  }
+  await expect(beltMotion).toHaveAttribute("data-belt-animation-enabled", "true");
+  expect(await beltMotion.evaluate((element) => getComputedStyle(element).pointerEvents)).toBe("auto");
 
   // Leaving Batea via navigation disables the marquee during movement.
   await chapterButton(page, "Colección").click();

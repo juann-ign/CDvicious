@@ -13,6 +13,7 @@
      * transition adds a second timing curve and makes the overlay lag input. */
   opacity: calc(1 - var(--pHideDeck));
   transition: none;
+  will-change: opacity;
 }
 
 .interactive {

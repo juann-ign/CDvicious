@@ -65,6 +65,7 @@ export function CrateShelf({
     <div
       className={styles.wrap}
       data-belt-animation-enabled={animationEnabled ? "true" : "false"}
+      inert={!animationEnabled}
     >
       <div className={styles.toolbar}>
         <div className={styles.pageNav}>
@@ -130,6 +131,7 @@ export function CrateShelf({
                     artist={album.artists.map((a) => a.name).join(", ")}
                     coverUrl={album.images[0]?.url || ""}
                     tilt={(i % 5) * 0.5 - 1}
+                    reduceEffects={!animationEnabled}
                     onSelect={() => onSelect(album)}
                     onHover={(rect) => setHover(rect ? { album, rect } : null)}
                   />
