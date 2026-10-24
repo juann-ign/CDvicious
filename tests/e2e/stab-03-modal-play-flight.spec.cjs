@@ -83,7 +83,8 @@ async function openCollection(page) {
 
 async function chooseFromCollection(page, album) {
   await openCollection(page);
-  const card = page.getByRole("button", {
+  const collection = page.getByRole("region", { name: "La Colección" });
+  const card = collection.getByRole("button", {
     name: albumButtonName(album),
     exact: true,
   });
@@ -117,8 +118,23 @@ async function chooseFromCrate(page, album) {
   expect(index, "El lomo de " + album.name + " debe tener un hitbox dentro de la batea visible").toBeGreaterThanOrEqual(0);
 
   const spine = candidates.nth(index);
-  await spine.hover(); // Pauses the decorative belt before interaction.
-  await spine.click();
+  const initialBox = await spine.boundingBox();
+  expect(initialBox, "El lomo visible debe tener bounding box").not.toBeNull();
+
+  // The belt moves continuously, so Playwright's locator.hover() never sees a
+  // stable target. Move the pointer directly into it; the shelf stage pauses
+  // drift on pointerenter, then remeasure before clicking.
+  await page.mouse.move(
+    initialBox.x + initialBox.width / 2,
+    initialBox.y + initialBox.height / 2,
+  );
+  await page.waitForTimeout(150);
+  const clickBox = await spine.boundingBox();
+  expect(clickBox, "El lomo debe permanecer visible tras pausar la batea").not.toBeNull();
+  await page.mouse.click(
+    clickBox.x + clickBox.width / 2,
+    clickBox.y + clickBox.height / 2,
+  );
   await expect(dialog(page)).toBeVisible();
   await expect(dialog(page)).toHaveAttribute("aria-label", modalLabel(album));
   return spine;
@@ -199,7 +215,8 @@ test("Batea y Colección seleccionan álbum; mouse y teclado cierran el modal y 
   await expect(page.locator("html")).not.toHaveAttribute("data-modal-open", "true");
 
   await goToChapter(page, "Colección", 3);
-  const card = page.getByRole("button", {
+  const collection = page.getByRole("region", { name: "La Colección" });
+  const card = collection.getByRole("button", {
     name: albumButtonName(ALBUM_IN_COLLECTION),
     exact: true,
   });
