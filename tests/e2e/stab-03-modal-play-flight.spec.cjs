@@ -187,8 +187,7 @@ async function assertCancelledAndRestored(page, album, sourceChapter, messagePat
   await expect(flightDisc(page)).toHaveCount(0);
   await expect(page.locator("html")).toHaveAttribute("data-chapter", String(sourceChapter));
   await expect(panels(page).nth(sourceChapter)).toHaveAttribute("data-chapter-active", "true");
-  await expect(deckArtist(page)).toHaveText(INITIAL_ALBUM.artists[0].name);
-  await expect(deckDisplay(page)).toHaveAttribute("data-is-playing", "true");
+  await expect(page.locator("html")).toHaveAttribute("data-modal-open", "true");
   expect(
     await page.locator("html").getAttribute("data-disc-flight-playback-ready"),
     "Una reproducción rechazada no debe dejar el Deck esperando la confirmación",
@@ -203,6 +202,16 @@ async function assertCancelledAndRestored(page, album, sourceChapter, messagePat
     events.some((event) => event.name === "cdvicious:disc-flight-playback-started"),
     "No debe anunciarse playback-started si Spotify no confirmó",
   ).toBe(false);
+
+  // El Deck no está activo mientras el modal devuelve al capítulo de origen.
+  // Cerramos el modal y volvemos a Deck para validar que la instantánea previa
+  // de Spotify sigue intacta, sin confundir un panel inactivo con una UI congelada.
+  await page.getByRole("button", { name: "Cerrar", exact: true }).last().click();
+  await expect(dialog(page)).toHaveCount(0);
+  await goToChapter(page, "Deck", 0);
+  await expect(deckArtist(page)).toHaveText(INITIAL_ALBUM.artists[0].name);
+  await expect(deckDisplay(page)).toHaveAttribute("data-is-playing", "true");
+  await expect(flightDisc(page)).toHaveCount(0);
 }
 
 test("Batea y Colección seleccionan álbum; mouse y teclado cierran el modal y restauran foco", async ({ page }) => {
