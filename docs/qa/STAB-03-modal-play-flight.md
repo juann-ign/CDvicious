@@ -1,45 +1,51 @@
 # STAB-03 — Regresión modal → play → flying disc → Deck
 
-**Branch:** \`qa/stab-03-modal-play-flight\`  
-**Scope:** sólo selección de álbum, modal, petición de reproducción, vuelo, acople al Deck y reconciliación de Now Playing.  
-**Producto:** no se cambió lógica de reproducción. Se añadieron selectores \`data-testid\` de observabilidad para que Playwright pueda verificar el estado visual real.
+**Branch:** `qa/stab-03-modal-play-flight`  
+**Scope:** selección de álbum, modal, petición de reproducción, vuelo, acople al Deck y reconciliación de Now Playing.
 
 ## Cobertura automatizada
 
-El spec \`tests/e2e/stab-03-modal-play-flight.spec.cjs\` corre con \`NEXT_PUBLIC_SPOTIFY_MOCK=1\` y reemplaza \`POST /api/play\` desde Playwright para controlar la respuesta y el momento en que llega.
+El spec `tests/e2e/stab-03-modal-play-flight.spec.cjs` corre con `NEXT_PUBLIC_SPOTIFY_MOCK=1` y controla desde Playwright la respuesta y el momento en que llega `POST /api/play`.
 
-| Caso | Condición | Resultado exigido |
+| Caso | Condición | Resultado esperado |
 |---|---|---|
-| Selección y cierre | Seleccionar desde Batea con mouse; seleccionar desde Colección con Enter | Modal correcto, cierre por mouse/Escape, atributo \`data-modal-open\` eliminado y foco restaurado a la tarjeta original |
-| Play confirmado | Respuesta \`200 { success: true }\` | La petición contiene el URI del álbum y el device mock; el disco vuela; eventos en orden \`flight-started → flight-arrived → playback-ready → playback-started\`; el disco temporal desaparece, el Deck vuelve al capítulo 0 y Now Playing refleja el álbum elegido con estado playing |
-| Autenticación | Respuesta simulada \`401 AUTH_REQUIRED\` desde Batea | Vuelo cancelado, modal reabierto con feedback, retorno al capítulo de origen y reproducción/track visuales anteriores restaurados |
-| Dispositivo no disponible | Respuesta simulada \`409 DEVICE_NOT_AVAILABLE\` desde Colección | Mismo rollback; feedback de dispositivo en el modal |
-| Spotify no confirma | Respuesta simulada \`502 SPOTIFY_PLAY_FAILED\` desde Colección | No se emite \`playback-started\`, no queda vuelo y el modal conserva el feedback de fallo |
-| Red caída | Request de \`/api/play\` abortado por Playwright desde Batea | Feedback de conexión; no queda vuelo ni estado de Deck en transición |
+| Selección y cierre | Seleccionar desde Batea con mouse; seleccionar desde Colección con Enter | Modal correcto; cierre por mouse/Escape; se elimina `data-modal-open` y se restaura el foco |
+| Play confirmado | Respuesta simulada `200 { success: true }` | Petición con el URI del álbum y device mock; vuelo visible; eventos ordenados `flight-started → flight-arrived → playback-ready → playback-started`; disco temporal eliminado y Deck/Now Playing sincronizados |
+| Autenticación | Respuesta simulada `401 AUTH_REQUIRED` desde Batea | Vuelo cancelado, retorno al capítulo de origen, modal reabierto con feedback y pista previa restaurada |
+| Dispositivo no disponible | Respuesta simulada `409 DEVICE_NOT_AVAILABLE` desde Colección | Mismo rollback y feedback de dispositivo |
+| Spotify no confirma | Respuesta simulada `502 SPOTIFY_PLAY_FAILED` desde Colección | No se emite `playback-started`, no queda vuelo y el modal conserva el mensaje de error |
+| Red caída | Request de `/api/play` abortado desde Batea | Feedback de conexión; no queda vuelo ni estado transitorio del Deck |
 
-Las fallas de reproducción se responden deliberadamente **después de comprobar que el vuelo ya está montado**. Esto ejercita la cancelación durante el vuelo, no solamente los errores previos al inicio.
+Las fallas de reproducción se responden **después de comprobar que el vuelo está montado**, para ejercitar la cancelación durante la transición y no sólo un error previo al vuelo.
 
-## Ejecución en CI
+## Defecto encontrado durante la regresión
 
-El workflow existente **STAB-01 Browser QA** ejecuta todos los specs \`tests/e2e/**/*.spec.cjs\` con \`RAIL_FLAG=0\` y \`RAIL_FLAG=1\`. Este spec marca los escenarios del rail como omitidos si el flag está apagado; el resto de la matriz de fallback sigue ejecutándose.
+- **Condición de reproducción:** lanzar Play desde un álbum abierto en Batea o Colección y responder la petición de reproducción con autenticación rechazada, dispositivo no disponible, error de Spotify o fallo de red.
+- **Esperado:** cancelar el disco temporal, volver al capítulo de origen y reabrir allí el modal con feedback.
+- **Real observado en CI:** el vuelo desaparecía y el modal volvía con feedback, pero el rail quedaba en `data-chapter="0"` (Deck); las pruebas esperaban capítulo `2` (Batea) o `3` (Colección). Las cuatro variantes de error reproducían el mismo resultado.
+- **Evidencia:** [Browser QA rail habilitado — ejecución fallida](https://github.com/juann-ign/CDvicious/actions/runs/40067150458); el log muestra `Expected: "2"/"3"`, `Received: "0"` con `data-modal-open="true"`.
+- **Clasificación:** coordinación de la recuperación del flujo de reproducción con el estado de navegación del rail; no era un error de mensaje del modal.
+- **Corrección incorporada:** `scrollToChapter(index, 0)` aplica la navegación instantánea de forma inmediata. Antes, Lenis podía esperar al siguiente `requestAnimationFrame`; el modal de recuperación volvía a montar y detenía Lenis antes de que cambiara el capítulo. La corrección permite restaurar el capítulo antes de bloquear otra vez la navegación. La matriz posterior debe confirmar el arreglo en los cuatro escenarios.
+- **Deck/Now Playing:** se conserva la última instantánea válida mientras Deck está fuera del capítulo activo, para que cancelar el vuelo no capture un snapshot vacío ni pierda el track previo.
 
-El workflow instala Playwright fuera de las dependencias de la aplicación, usando la versión fijada en la configuración del workflow. En local, seguir los comandos de ejecución definidos en \`docs/qa/STAB-02-hitbox-scroll-lock.md\` y ejecutar:
+## Evidencia y límites
 
-\`\`\`powershell
+- La suite registra eventos `cdvicious:disc-flight-*` y adjunta screenshot, video y trace de Playwright cuando hay fallos.
+- `data-testid="rail-flying-disc"` y `data-testid="deck-now-playing"` exponen la presencia del vuelo y el estado visual del VFD; no cambian el comportamiento.
+- Autenticación, dispositivo no disponible y red se simulan en el navegador. Esto no valida credenciales reales, el SDK live de Spotify ni un dispositivo físico.
+- La respuesta exitosa automatizada confirma el contrato del flujo usando el mock. Antes del release sigue siendo necesaria una prueba manual con una sesión Spotify autenticada y dispositivo disponible.
+
+## Ejecución local
+
+El workflow **STAB-01 Browser QA** corre todos los specs con `RAIL_FLAG=0` y `RAIL_FLAG=1`. Para ejecutar sólo esta matriz localmente, seguir la instalación de Playwright externo que figura en `docs/qa/STAB-02-hitbox-scroll-lock.md` y usar:
+
+```powershell
 $env:RAIL_FLAG = "1"
 $env:NEXT_PUBLIC_ENABLE_RAIL = "1"
 $env:NEXT_PUBLIC_SPOTIFY_MOCK = "1"
 playwright test tests/e2e/stab-03-modal-play-flight.spec.cjs
-\`\`\`
-
-## Evidencia y clasificación
-
-- La suite guarda la secuencia de eventos \`cdvicious:disc-flight-*\` dentro del contexto del navegador; las aserciones incluyen el array de eventos al fallar.
-- Los marcadores \`data-testid="rail-flying-disc"\` y \`data-testid="deck-now-playing"\` permiten comprobar presencia del vuelo, artista actual y estado \`data-is-playing\`. Son atributos de test, sin efecto de comportamiento.
-- Los errores de autenticación, disponibilidad de dispositivo y red son **simulados desde el navegador** para probar la reacción de UI. No prueban credenciales reales, el SDK real de Spotify, hardware/dispositivo físico ni la respuesta live de Spotify.
-- El éxito automatizado verifica la confirmación simulada de \`/api/play\` y el contrato de eventos; la confirmación real en una sesión autenticada de Spotify queda como validación manual antes de release.
-- Si un test encuentra una diferencia entre el estado visual y el esperado, clasificarla como modal, playback/API o estado del Deck/Now Playing según la primera aserción que falla; adjuntar los artefactos Playwright del job y no enmascarar el fallo ampliando timeouts sin atribuir su causa.
+```
 
 ## Criterio de salida
 
-La regresión se considera validada sólo si el build y ambos jobs de Browser QA terminan en verde en el commit final, sin fallos ocultos por reintentos, y si la prueba de reproducción real con Spotify se confirma manualmente. Los defectos de entorno live que no puedan reproducirse con el mock deben quedar como tickets separados con condición de reproducción, esperado vs. real, evidencia y módulo responsable.
+No considerar validada la regresión hasta que Build y ambos jobs Browser QA terminen correctamente en el código final, sin fallos ocultos por reintentos. La verificación manual de Spotify real queda pendiente; cualquier otro fallo debe documentarse con condición, esperado vs. real, evidencia y clasificación.
