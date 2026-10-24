@@ -9,10 +9,9 @@ module.exports = defineConfig({
   workers: 1,
   // Keep CI failures visible; do not let a retry turn a flaky run green.
   retries: 0,
-  // The rail keeps a software-rendered WebGL scene mounted during browser QA.
-  // GitHub-hosted Chromium occasionally spends >60s creating a context; allow
-  // setup to complete while keeping functional assertions and retries strict.
-  timeout: 120_000,
+  // The rail's client-only navigation can mount late after repeated WebGL contexts
+  // in hosted Chromium. Allow a slow fixture setup while keeping retries disabled.
+  timeout: 180_000,
   expect: {
     timeout: 8_000,
   },
