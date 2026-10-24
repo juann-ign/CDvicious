@@ -10,6 +10,7 @@ import { LyricsBooklet } from "@/components/LyricsBooklet";
 import { useNowPlaying } from "@/hooks/useNowPlaying";
 import { useDominantColor } from "@/hooks/useDominantColor";
 import { useSpotifyPlayer } from "@/components/SpotifyPlayerProvider";
+import { useRail } from "./RailContext";
 import pageStyles from "@/app/page.module.css";
 import styles from "./DeckPinnedLayer.module.css";
 
@@ -19,7 +20,9 @@ type DiscFlightStage = "idle" | "flying" | "docked";
 
 export function DeckPinnedLayer() {
   const { authenticated } = useSpotifyPlayer();
+  const { isRailMoving } = useRail();
   const [deckInteractive, setDeckInteractive] = useState(true);
+  const [deckHidden, setDeckHidden] = useState(false);
   const [flightStage, setFlightStage] = useState<DiscFlightStage>("idle");
   const [frozenData, setFrozenData] = useState<NowPlayingResponse | null>(null);
   const [visualPlaybackReady, setVisualPlaybackReady] = useState(true);
@@ -35,13 +38,14 @@ export function DeckPinnedLayer() {
 
     const update = () => {
       setDeckInteractive(railRoot.dataset.deckInteractive !== "false");
+      setDeckHidden(railRoot.dataset.deckHidden === "true");
     };
 
     update();
     const observer = new MutationObserver(update);
     observer.observe(railRoot, {
       attributes: true,
-      attributeFilter: ["data-deck-interactive"],
+      attributeFilter: ["data-deck-interactive", "data-deck-hidden"],
     });
 
     return () => observer.disconnect();
@@ -156,7 +160,14 @@ export function DeckPinnedLayer() {
     }
   }, [data, flightPlaybackStarted]);
 
-  const visibleData = flightStage === "flying" ? frozenData : data;
+  // Keep the last real track mounted while DeckPinnedLayer fades out.
+  // The polling hook intentionally returns an empty snapshot off-chapter;
+  // using that empty value here would swap the CD/booklet midway through the fade.
+  const visibleData = flightStage === "flying"
+    ? frozenData
+    : deckInteractive
+      ? data
+      : latestDataRef.current;
   const isDockedBeforePlayback =
     flightStage === "docked" && !flightPlaybackStarted;
   const visibleIsPlaying =
@@ -178,6 +189,7 @@ export function DeckPinnedLayer() {
       style={stageStyle}
       data-rail-overlay
       data-deck-interactive={deckInteractive ? "true" : "false"}
+      data-deck-hidden={deckHidden ? "true" : "false"}
     >
       <header className={pageStyles.topControlBar}>
         <div className={pageStyles.brandCorner}>
@@ -195,6 +207,8 @@ export function DeckPinnedLayer() {
               track={visibleData?.track ?? null}
               isPlaying={visibleIsPlaying}
               accentColor={accentColor}
+              renderEnabled={!deckHidden}
+              isRailMoving={isRailMoving}
             />
           </div>
         </div>
