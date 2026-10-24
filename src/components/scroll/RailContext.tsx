@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
@@ -24,8 +25,6 @@ type RailLockToken = symbol;
 
 type RailContextValue = {
   isReady: boolean;
-  activeChapterIndex: number;
-  isRailMoving: boolean;
   start: (token: RailLockToken) => void;
   stop: (token: RailLockToken) => void;
   scrollToX: (px: number) => void;
@@ -39,6 +38,8 @@ type RailProviderProps = {
 };
 
 export const RailContext = createContext<RailContextValue | null>(null);
+const RailNavigationContext = createContext<number | null>(null);
+const RailMotionContext = createContext<boolean | null>(null);
 
 export function RailProvider({ children, overlay, navigation }: RailProviderProps) {
   const rootRef = useRef<HTMLDivElement>(null);
@@ -112,9 +113,13 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
       if (railIdleTimerRef.current !== null) {
         window.clearTimeout(railIdleTimerRef.current);
       }
+      // Publish motion synchronously so compositor optimizations and observers
+      // can react before Lenis emits its first scroll frame.
+      root.dataset.railMoving = "true";
       setIsRailMoving(true);
       railIdleTimerRef.current = window.setTimeout(() => {
         railIdleTimerRef.current = null;
+        root.dataset.railMoving = "false";
         setIsRailMoving(false);
       }, RAIL_IDLE_DELAY_MS);
     };
@@ -444,6 +449,7 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
         railIdleTimerRef.current = null;
       }
       setIsRailMoving(false);
+      root.dataset.railMoving = "false";
       resizeObserver.disconnect();
       clearSnapTimer();
       scheduleWheelSnap = null;
@@ -594,19 +600,16 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
     });
   }, []);
 
-  const value: RailContextValue = {
-    isReady,
-    activeChapterIndex,
-    isRailMoving,
-    start,
-    stop,
-    scrollToX,
-    scrollToChapter,
-  };
+  const value = useMemo<RailContextValue>(
+    () => ({ isReady, start, stop, scrollToX, scrollToChapter }),
+    [isReady, start, stop, scrollToX, scrollToChapter],
+  );
 
   return (
     <RailContext.Provider value={value}>
-      <div
+      <RailNavigationContext.Provider value={activeChapterIndex}>
+        <RailMotionContext.Provider value={isRailMoving}>
+          <div
         ref={rootRef}
         className={styles.root}
         data-rail-ready={isReady ? "true" : "false"}
@@ -624,9 +627,27 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
         </div>
         {overlay}
         {navigation}
-      </div>
+          </div>
+        </RailMotionContext.Provider>
+      </RailNavigationContext.Provider>
     </RailContext.Provider>
   );
+}
+
+export function useRailNavigation(): number {
+  const activeChapterIndex = useContext(RailNavigationContext);
+  if (activeChapterIndex === null) {
+    throw new Error("useRailNavigation must be used inside a RailProvider");
+  }
+  return activeChapterIndex;
+}
+
+export function useRailMotion(): boolean {
+  const isRailMoving = useContext(RailMotionContext);
+  if (isRailMoving === null) {
+    throw new Error("useRailMotion must be used inside a RailProvider");
+  }
+  return isRailMoving;
 }
 
 export function useRail(): RailContextValue {

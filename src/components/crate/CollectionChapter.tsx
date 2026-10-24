@@ -41,8 +41,7 @@ function decadeOf(album: AlbumItem): DecadeFilter {
 
 export function CollectionChapter() {
   const { authenticated } = useSpotifyPlayer();
-  const { scrollToChapter, activeChapterIndex, isRailMoving } = useRail();
-  const isCollectionInteractive = activeChapterIndex === 3 && !isRailMoving;
+  const { scrollToChapter } = useRail();
   const { albums: cachedAlbums, genresLoaded } = useCollectionCache();
   const albums = useMemo(() => cachedAlbums ?? [], [cachedAlbums]);
   const [loading, setLoading] = useState(false);
@@ -72,6 +71,25 @@ export function CollectionChapter() {
       requestStartedRef.current = false;
     }
   }, [authenticated]);
+
+  useEffect(() => {
+    const railRoot = document.querySelector<HTMLElement>("[data-rail-wrapper]")?.parentElement;
+    const chapter = chapterRef.current;
+    if (!railRoot || !chapter) return;
+
+    const syncMotionState = () => {
+      chapter.dataset.collectionTransitionLite = String(
+        railRoot.dataset.chapter !== "3" || railRoot.dataset.railMoving === "true",
+      );
+    };
+    syncMotionState();
+    const observer = new MutationObserver(syncMotionState);
+    observer.observe(railRoot, {
+      attributes: true,
+      attributeFilter: ["data-chapter", "data-rail-moving"],
+    });
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const readActiveChapter = () => {
@@ -265,7 +283,7 @@ export function CollectionChapter() {
     <div
       ref={chapterRef}
       className={styles.chapter}
-      data-collection-transition-lite={isCollectionInteractive ? "false" : "true"}
+      data-collection-transition-lite="true"
     >
       <header className={styles.header}>
         <div>
@@ -362,7 +380,6 @@ export function CollectionChapter() {
               <JewelCaseFront
                 key={album.id}
                 album={album}
-                reduceEffects={!isCollectionInteractive}
                 onSelect={() => handleSelect(album)}
               />
             ))}

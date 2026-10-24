@@ -8,7 +8,6 @@ interface JewelSpineProps {
   artist: string;
   coverUrl: string;
   tilt: number;
-  reduceEffects?: boolean;
   onSelect: () => void;
   onHover?: (rect: DOMRect | null) => void;
 }
@@ -18,7 +17,6 @@ export function JewelSpine({
   artist,
   coverUrl,
   tilt,
-  reduceEffects = false,
   onSelect,
   onHover,
 }: JewelSpineProps) {
@@ -28,9 +26,7 @@ export function JewelSpine({
     <button
       ref={ref}
       type="button"
-      className={[styles.spine, reduceEffects ? styles.spineReduced : ""]
-        .filter(Boolean)
-        .join(" ")}
+      className={styles.spine}
       style={
         {
           "--tilt": `${tilt}deg`,

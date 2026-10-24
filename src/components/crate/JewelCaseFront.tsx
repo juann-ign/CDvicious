@@ -7,20 +7,13 @@ import styles from "./JewelCaseFront.module.css";
 interface JewelCaseFrontProps {
   album: AlbumItem;
   onSelect: (originEl: HTMLElement) => void;
-  reduceEffects?: boolean;
 }
 
-export function JewelCaseFront({
-  album,
-  onSelect,
-  reduceEffects = false,
-}: JewelCaseFrontProps) {
+export function JewelCaseFront({ album, onSelect }: JewelCaseFrontProps) {
   return (
     <button
       type="button"
-      className={[styles.case, reduceEffects ? styles.caseReduced : ""]
-        .filter(Boolean)
-        .join(" ")}
+      className={styles.case}
       onClick={(e) => onSelect(e.currentTarget)}
       aria-label={`${album.artists.map((a) => a.name).join(", ")} — ${album.name}`}
     >

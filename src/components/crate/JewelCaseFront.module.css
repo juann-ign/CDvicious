@@ -17,19 +17,24 @@
   outline: none;
 }
 
-.caseReduced,
-.caseReduced:hover,
-.caseReduced:focus-visible {
+:global([data-rail-moving="true"]) .case,
+:global([data-rail-moving="true"]) .case:hover,
+:global([data-rail-moving="true"]) .case:focus-visible,
+:global([data-chapter]:not([data-chapter="3"])) .case,
+:global([data-chapter]:not([data-chapter="3"])) .case:hover,
+:global([data-chapter]:not([data-chapter="3"])) .case:focus-visible {
   transform: none;
   transition: none;
 }
 
-.caseReduced .edge {
+:global([data-rail-moving="true"]) .case .edge,
+:global([data-chapter]:not([data-chapter="3"])) .case .edge {
   box-shadow: none;
   transition: none;
 }
 
-.caseReduced .gloss {
+:global([data-rail-moving="true"]) .case .gloss,
+:global([data-chapter]:not([data-chapter="3"])) .case .gloss {
   display: none;
 }
 

@@ -224,14 +224,19 @@ test("long navigation visibly crosses every chapter and keeps the VFD unobstruct
   }
 
   const viewportWidth = page.viewportSize().width;
-  const largestFrameStep = Math.max(
-    ...samples.slice(1).map((sample, index) =>
-      Math.abs(sample.lefts[1] - samples[index].lefts[1]),
-    ),
+  const frameSteps = samples.slice(1).map((sample, index) => ({
+    delta: Math.abs(sample.lefts[1] - samples[index].lefts[1]),
+    elapsed: sample.at - samples[index].at,
+    from: samples[index].lefts[1],
+    to: sample.lefts[1],
+  }));
+  const largestFrame = frameSteps.reduce(
+    (largest, step) => step.delta > largest.delta ? step : largest,
+    { delta: 0, elapsed: 0, from: 0, to: 0 },
   );
   expect(
-    largestFrameStep,
-    "El panel no debe saltar una fracción grande del viewport entre frames",
+    largestFrame.delta,
+    "Salto de posición demasiado grande entre frames: " + JSON.stringify(largestFrame),
   ).toBeLessThan(viewportWidth * 0.45);
 });
 

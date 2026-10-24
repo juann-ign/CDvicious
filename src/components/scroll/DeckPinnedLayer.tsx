@@ -10,7 +10,7 @@ import { LyricsBooklet } from "@/components/LyricsBooklet";
 import { useNowPlaying } from "@/hooks/useNowPlaying";
 import { useDominantColor } from "@/hooks/useDominantColor";
 import { useSpotifyPlayer } from "@/components/SpotifyPlayerProvider";
-import { useRail } from "./RailContext";
+import { useRailMotion } from "./RailContext";
 import pageStyles from "@/app/page.module.css";
 import styles from "./DeckPinnedLayer.module.css";
 
@@ -21,7 +21,7 @@ type DiscFlightStage = "idle" | "flying" | "docked";
 
 export function DeckPinnedLayer() {
   const { authenticated } = useSpotifyPlayer();
-  const { isRailMoving } = useRail();
+  const isRailMoving = useRailMotion();
   const [deckInteractive, setDeckInteractive] = useState(true);
   const [deckHidden, setDeckHidden] = useState(false);
   const [awaitingPlaybackSnapshot, setAwaitingPlaybackSnapshot] = useState(false);

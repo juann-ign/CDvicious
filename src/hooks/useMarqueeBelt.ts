@@ -44,6 +44,7 @@ export function useMarqueeBelt({
   const [page, setPage] = useState(0);
 
   const pausedRef = useRef(paused);
+  const enabledRef = useRef(enabled);
   const speedRef = useRef(speed);
   const lenRef = useRef(length);
   const pagesRef = useRef(pages);
@@ -51,6 +52,7 @@ export function useMarqueeBelt({
   const onGrabEndRef = useRef(onGrabEnd);
 
   pausedRef.current = paused;
+  enabledRef.current = enabled;
   onGrabStartRef.current = onGrabStart;
   onGrabEndRef.current = onGrabEnd;
   speedRef.current = speed;
@@ -59,10 +61,38 @@ export function useMarqueeBelt({
 
   useEffect(() => {
     if (!enabled || !length) return;
-    let raf = 0;
+
+    const railRoot = document.querySelector<HTMLElement>("[data-rail-wrapper]")?.parentElement;
+    let raf: number | null = null;
     let prev = performance.now();
 
+    const canAnimate = () =>
+      enabledRef.current &&
+      (!railRoot ||
+        (railRoot.dataset.chapter === "2" &&
+          railRoot.dataset.railMoving !== "true"));
+
+    const stopLoop = () => {
+      if (raf !== null) {
+        window.cancelAnimationFrame(raf);
+        raf = null;
+      }
+      target.current = null;
+      velocity.current = 0;
+    };
+
+    const startLoop = () => {
+      if (raf !== null || !canAnimate()) return;
+      prev = performance.now();
+      raf = window.requestAnimationFrame(tick);
+    };
+
     const tick = (now: number) => {
+      raf = null;
+      if (!canAnimate()) {
+        stopLoop();
+        return;
+      }
       const dt = Math.min(48, now - prev) / 1000;
       prev = now;
       const len = lenRef.current;
@@ -99,11 +129,27 @@ export function useMarqueeBelt({
         setPage(p);
       }
 
-      raf = requestAnimationFrame(tick);
+      raf = window.requestAnimationFrame(tick);
     };
 
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
+    const syncRailState = () => {
+      if (canAnimate()) startLoop();
+      else stopLoop();
+    };
+
+    const observer = railRoot ? new MutationObserver(syncRailState) : null;
+    observer?.observe(railRoot!, {
+      attributes: true,
+      attributeFilter: ["data-chapter", "data-rail-moving"],
+    });
+    document.addEventListener("visibilitychange", syncRailState);
+    syncRailState();
+
+    return () => {
+      observer?.disconnect();
+      document.removeEventListener("visibilitychange", syncRailState);
+      stopLoop();
+    };
   }, [enabled, length]);
 
   const goTo = (p: number) => {
