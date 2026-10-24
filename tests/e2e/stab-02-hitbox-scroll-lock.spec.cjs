@@ -197,7 +197,17 @@ test("hit-testing en Batea y Colección entrega el pointer al panel activo", asy
     { chapter: "Colección", index: 3 },
   ]) {
     await goToChapter(page, item.chapter, item.index);
-    const target = panels(page).nth(item.index).locator('button[aria-label*=" — "]').first();
+    const panel = panels(page).nth(item.index);
+
+    // Pause Batea's moving marquee before measuring a hit target. Without this,
+    // the button can move between boundingBox() and elementsFromPoint(), so the
+    // test measures an old coordinate rather than the current pointer target.
+    if (item.chapter === "Batea") {
+      await panel.locator('[class*="stage"]').first().hover();
+      await page.waitForTimeout(180);
+    }
+
+    const target = panel.locator('button[aria-label*=" — "]').first();
     await expect(target).toBeVisible();
     const box = await target.boundingBox();
     expect(box).not.toBeNull();
