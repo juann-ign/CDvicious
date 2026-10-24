@@ -7,7 +7,8 @@ module.exports = defineConfig({
   testMatch: "**/*.spec.cjs",
   fullyParallel: false,
   workers: 1,
-  retries: process.env.CI ? 1 : 0,
+  // Keep CI failures visible; do not let a retry turn a flaky run green.
+  retries: 0,
   timeout: 45_000,
   expect: {
     timeout: 8_000,
