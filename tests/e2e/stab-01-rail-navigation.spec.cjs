@@ -209,6 +209,84 @@ test("long navigation reveals intermediate chapters and keeps the VFD unobstruct
     .toEqual([0, 1, 2, 3, 4]);
 });
 
+test("Deck crossfade keeps the disc stable and pauses WebGL only after it is hidden", async ({
+  page,
+}) => {
+  test.skip(!RAIL_ENABLED, "El rail no debe estar montado cuando el flag está apagado.");
+
+  await openDesktop(page);
+
+  const layer = page.locator("[data-rail-overlay]");
+  const discStage = layer.locator("[data-disc-render-enabled]");
+  const canvas = page.locator("[data-disc-frameloop]").first();
+  const go = async (name, index) => {
+    await chapterButton(page, name).click();
+    await expect(page.locator("html")).toHaveAttribute("data-chapter", String(index), {
+      timeout: 12_000,
+    });
+    await expect(panels(page).nth(index)).toHaveAttribute("data-chapter-active", "true");
+  };
+  const assertMidCrossfadeKeepsDisc = async () => {
+    await expect(discStage).toHaveAttribute("data-has-track", "true");
+    await expect(discStage).toHaveAttribute("data-disc-render-enabled", "true");
+    const opacity = await layer.evaluate((element) =>
+      Number.parseFloat(getComputedStyle(element).opacity),
+    );
+    expect(opacity, "El overlay debe seguir visible durante el cruce, no desaparecer de golpe").toBeGreaterThan(0.05);
+    expect(opacity, "El overlay debe estar siguiendo el scroll, no quedarse totalmente opaco").toBeLessThan(0.95);
+    await expect(canvas).toHaveAttribute("data-disc-frameloop", "always");
+    await expect(canvas).toHaveAttribute("data-disc-quality", "transition");
+  };
+  const assertDeckIsFullyHidden = async () => {
+    await expect(layer).toHaveAttribute("data-deck-hidden", "true", {
+      timeout: 10_000,
+    });
+    await expect(discStage).toHaveAttribute("data-disc-render-enabled", "false");
+    await expect(canvas).toHaveAttribute("data-disc-frameloop", "never");
+  };
+
+  await expect(discStage).toHaveAttribute("data-has-track", "true", { timeout: 15_000 });
+  await expect(canvas).toHaveAttribute("data-disc-frameloop", "always", {
+    timeout: 15_000,
+  });
+  expect(
+    await layer.evaluate((element) => getComputedStyle(element).transitionDuration),
+    "La opacidad del overlay debe depender del progreso de Lenis y no de una segunda transición CSS",
+  ).toBe("0s");
+
+  // Navigation: split -> Batea must retain the track and booklet while the
+  // scroll-driven fade is in progress, then pause the invisible WebGL canvas.
+  await go("Split", 1);
+  await chapterButton(page, "Batea").click();
+  await expect(page.locator("html")).toHaveAttribute("data-chapter", "2", {
+    timeout: 12_000,
+  });
+  await assertMidCrossfadeKeepsDisc();
+  await assertDeckIsFullyHidden();
+
+  // Collection should not keep the invisible Deck scene rendering.
+  await go("Colección", 3);
+  await expect(canvas).toHaveAttribute("data-disc-frameloop", "never");
+
+  // Returning to Split should re-enable the same persistent scene and data.
+  await go("Split", 1);
+  await expect(layer).toHaveAttribute("data-deck-hidden", "false", {
+    timeout: 10_000,
+  });
+  await expect(discStage).toHaveAttribute("data-disc-render-enabled", "true");
+  await expect(discStage).toHaveAttribute("data-has-track", "true");
+  await expect(canvas).toHaveAttribute("data-disc-frameloop", "always");
+
+  // Wheel/trackpad must use the same continuous fade as chapter-menu navigation.
+  await page.mouse.move(400, 100);
+  await page.mouse.wheel(0, 700);
+  await expect(page.locator("html")).toHaveAttribute("data-chapter", "2", {
+    timeout: 12_000,
+  });
+  await assertMidCrossfadeKeepsDisc();
+  await assertDeckIsFullyHidden();
+});
+
 test("Batea marquee pauses during rail movement and resumes only when Batea settles", async ({
   page,
 }) => {
