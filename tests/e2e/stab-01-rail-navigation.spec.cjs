@@ -16,10 +16,11 @@ async function openDesktop(page, width = 1280, height = 800) {
   await page.setViewportSize({ width, height });
   await page.goto("/", { waitUntil: "domcontentloaded" });
   if (RAIL_ENABLED) {
-    await expect(navigation(page)).toBeVisible();
-    await expect(panels(page)).toHaveCount(5);
-    // SSR can expose navigation before React effects initialize Lenis.
-    await expect(page.locator('[data-rail-ready="true"]')).toBeVisible();
+    // HorizontalRail is loaded by a client-only dynamic import. CI can spend
+    // several seconds hydrating the 3D scene before its navigation mounts.
+    await expect(navigation(page)).toBeVisible({ timeout: 20_000 });
+    await expect(panels(page)).toHaveCount(5, { timeout: 20_000 });
+    await expect(page.locator('[data-rail-ready="true"]')).toBeVisible({ timeout: 20_000 });
   } else {
     await expect(page.locator("main")).toBeVisible();
   }
