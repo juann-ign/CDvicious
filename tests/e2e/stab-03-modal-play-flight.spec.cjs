@@ -53,7 +53,6 @@ async function openRail(page) {
   test.skip(!RAIL_ENABLED, "El flujo flying-disc requiere el rail desktop habilitado.");
   await expect(page.getByRole("navigation", { name: NAV_LABEL })).toBeVisible();
   await expect(panels(page)).toHaveCount(5);
-  await expect(deckArtist()).toHaveCount(0).catch(() => undefined);
   await expect(deckArtist(page)).toHaveText(INITIAL_ALBUM.artists[0].name, {
     timeout: 8_000,
   });
@@ -216,7 +215,7 @@ test("Batea y Colección seleccionan álbum; mouse y teclado cierran el modal y 
   await expect(dialog(page)).toHaveCount(0);
   await expect(page.locator("html")).not.toHaveAttribute("data-modal-open", "true");
   await expect(card).toBeFocused();
-  await expect(spine).toHaveCount(3); // It remains mounted after returning to Collection.
+  await expect(spine).toHaveCount(1); // The originating control remains mounted after the rail transition.
 });
 
 test("play confirmado desde Colección: vuelo, acople y Now Playing terminan sincronizados", async ({ page }) => {
