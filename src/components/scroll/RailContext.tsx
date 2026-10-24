@@ -513,13 +513,30 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
     snapTargetIndexRef.current = safeIndex;
     snapInProgressRef.current = true;
     snapAnchorRef.current = null;
+
+    const onComplete = () => {
+      if (snapSequenceRef.current !== snapSequence) return;
+      snapInProgressRef.current = false;
+      snapTargetIndexRef.current = null;
+    };
+
+    // Error recovery reopens the album modal immediately after restoring the
+    // source chapter. A duration: 0 scroll that waits for Lenis's next RAF can
+    // be stopped by the modal's layout effect before the chapter actually
+    // changes, leaving the modal over Deck while the original flight is gone.
+    // Commit instant navigation synchronously for zero-duration and reduced-
+    // motion requests so callers can safely restore UI state in the same tick.
+    if (duration <= 0 || reducedMotionRef.current) {
+      lenis.scrollTo(chapter.offsetLeft, {
+        immediate: true,
+        onComplete,
+      });
+      return;
+    }
+
     lenis.scrollTo(chapter.offsetLeft, {
-      duration: reducedMotionRef.current ? 0 : Math.max(0, duration),
-      onComplete: () => {
-        if (snapSequenceRef.current !== snapSequence) return;
-        snapInProgressRef.current = false;
-        snapTargetIndexRef.current = null;
-      },
+      duration,
+      onComplete,
     });
   }, []);
 
