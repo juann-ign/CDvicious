@@ -38,12 +38,13 @@ Las fallas de reproducción se responden **después de comprobar que el vuelo es
 
 ## Ejecución local
 
-El workflow **STAB-01 Browser QA** corre todos los specs con `RAIL_FLAG=0` y `RAIL_FLAG=1`. Para ejecutar sólo esta matriz localmente, seguir la instalación de Playwright externo que figura en `docs/qa/STAB-02-hitbox-scroll-lock.md` y usar:
+El workflow **STAB-01 Browser QA** corre todos los specs con `RAIL_FLAG=0` y `RAIL_FLAG=1`. Para ejecutar sólo esta matriz localmente, seguir la instalación de Playwright externo que figura en `docs/qa/STAB-02-hitbox-scroll-lock.md`. El runner levanta `npm run start`, así que compilá la app con las variables del flag antes de ejecutarlo:
 
 ```powershell
 $env:RAIL_FLAG = "1"
 $env:NEXT_PUBLIC_ENABLE_RAIL = "1"
 $env:NEXT_PUBLIC_SPOTIFY_MOCK = "1"
+npm run build
 playwright test tests/e2e/stab-03-modal-play-flight.spec.cjs
 ```
 
