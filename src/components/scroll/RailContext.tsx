@@ -225,7 +225,10 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
         wrapper.clientWidth || window.innerWidth,
       );
       const threshold = viewportWidth * SNAP_THRESHOLD_RATIO;
-      const delta = activeLenis.scroll - anchor.scroll;
+      // Lenis eases `scroll` toward `targetScroll`; decide the snap from the
+      // destination requested by the complete wheel gesture, not an intermediate
+      // animation frame that can still be below the chapter threshold.
+      const delta = activeLenis.targetScroll - anchor.scroll;
       const lastChapterIndex = content.children.length - 1;
 
       let targetIndex = anchor.index;
@@ -551,7 +554,7 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
 
   return (
     <RailContext.Provider value={value}>
-      <div ref={rootRef} className={styles.root}>
+      <div ref={rootRef} className={styles.root} data-rail-ready={isReady ? "true" : "false"}>
         <div
           ref={wrapperRef}
           className={styles.wrapper}
