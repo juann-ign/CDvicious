@@ -15,9 +15,17 @@ interface DiscProps {
   track: SpotifyTrack | null;
   isPlaying: boolean;
   accentColor: string;
+  renderEnabled?: boolean;
+  isRailMoving?: boolean;
 }
 
-export function Disc({ track, isPlaying, accentColor }: DiscProps) {
+export function Disc({
+  track,
+  isPlaying,
+  accentColor,
+  renderEnabled = true,
+  isRailMoving = false,
+}: DiscProps) {
   const [isTrackRevealed, setIsTrackRevealed] = useState(true);
   const trackId = track?.id;
 
@@ -46,6 +54,9 @@ export function Disc({ track, isPlaying, accentColor }: DiscProps) {
       ref={(el) => {
         discRegistry.discTarget = el;
       }}
+      data-disc-render-enabled={renderEnabled ? "true" : "false"}
+      data-disc-motion-active={isRailMoving ? "true" : "false"}
+      data-has-track={track ? "true" : "false"}
     >
       <div
         className={`${styles.discGlow} ${isPlaying ? styles.isActive : ""}`}
@@ -56,6 +67,8 @@ export function Disc({ track, isPlaying, accentColor }: DiscProps) {
           track={track}
           isPlaying={isPlaying}
           accentColor={accentColor}
+          renderEnabled={renderEnabled}
+          isRailMoving={isRailMoving}
         />
       </div>
     </div>
