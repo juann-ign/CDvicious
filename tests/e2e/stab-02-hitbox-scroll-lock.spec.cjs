@@ -207,7 +207,32 @@ test("hit-testing en Batea y Colección entrega el pointer al panel activo", asy
       await page.waitForTimeout(180);
     }
 
-    const target = panel.locator('button[aria-label*=" — "]').first();
+    const candidates = panel.locator('button[aria-label*=" — "]');
+    // The first DOM copy in Batea may be outside its clipped viewport. Choose
+    // a button whose centre is geometrically inside its clipping surface and
+    // the browser viewport, then independently verify the actual hit stack.
+    const visibleIndex = await candidates.evaluateAll((nodes) =>
+      nodes.findIndex((node) => {
+        const rect = node.getBoundingClientRect();
+        const x = rect.left + rect.width / 2;
+        const y = rect.top + rect.height / 2;
+        const clip = node.closest('[class*="viewport"]') || node.closest("section");
+        if (!clip || rect.width <= 0 || rect.height <= 0) return false;
+        const bounds = clip.getBoundingClientRect();
+        const style = getComputedStyle(node);
+        return style.visibility === "visible" &&
+          style.display !== "none" &&
+          x >= Math.max(0, bounds.left + 4) &&
+          x <= Math.min(innerWidth, bounds.right - 4) &&
+          y >= Math.max(0, bounds.top + 4) &&
+          y <= Math.min(innerHeight, bounds.bottom - 4);
+      }),
+    );
+    expect(
+      visibleIndex,
+      "No hay un botón completamente visible para verificar hit-testing en " + item.chapter,
+    ).toBeGreaterThanOrEqual(0);
+    const target = candidates.nth(visibleIndex);
     await expect(target).toBeVisible();
     const box = await target.boundingBox();
     expect(box).not.toBeNull();

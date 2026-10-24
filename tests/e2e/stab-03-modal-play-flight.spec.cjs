@@ -159,7 +159,7 @@ async function openCaseAndPlay(page, album) {
   }).click();
 }
 
-function createPlayGate(page) {
+function createPlayGate(page, onSuccess) {
   let resolveOutcome;
   let resolveRequest;
   const outcomePromise = new Promise((resolve) => {
@@ -178,6 +178,9 @@ function createPlayGate(page) {
     if (outcome.kind === "abort") {
       await route.abort("failed");
       return;
+    }
+    if (outcome.kind === "response" && outcome.status >= 200 && outcome.status < 300) {
+      onSuccess?.();
     }
     await route.fulfill({
       status: outcome.status,
@@ -288,7 +291,45 @@ test("Batea y Colección seleccionan álbum; mouse y teclado cierran el modal y 
 test("play confirmado desde Colección: vuelo, acople y Now Playing terminan sincronizados", async ({ page }) => {
   test.skip(!RAIL_ENABLED, "El flujo flying-disc requiere RAIL_FLAG=1.");
   await openRail(page);
-  const gate = createPlayGate(page);
+
+  // The play endpoint is gated below, so provide the corresponding simulated
+  // Now Playing state once the gate confirms success. The production mock
+  // endpoint otherwise always reports INITIAL_ALBUM, regardless of play calls.
+  let confirmedAlbum = null;
+  await page.route("**/api/now-playing", async (route) => {
+    if (!confirmedAlbum) {
+      await route.continue();
+      return;
+    }
+    const album = confirmedAlbum;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        isPlaying: true,
+        progressMs: 42_000,
+        durationMs: 150_000,
+        track: {
+          id: `mock-track-${album.id}-1`,
+          name: "DEMO TRACK 01",
+          duration_ms: 150_000,
+          artists: album.artists.map((artist) => ({ name: artist.name })),
+          album: {
+            name: album.name,
+            images: album.images.map((image) => ({
+              url: image.url,
+              width: image.width,
+              height: image.height,
+            })),
+          },
+        },
+      }),
+    });
+  });
+
+  const gate = createPlayGate(page, () => {
+    confirmedAlbum = ALBUM_IN_COLLECTION;
+  });
   await chooseFromCollection(page, ALBUM_IN_COLLECTION);
   await openCaseAndPlay(page, ALBUM_IN_COLLECTION);
 
