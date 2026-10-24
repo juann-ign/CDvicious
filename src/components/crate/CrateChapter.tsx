@@ -87,8 +87,14 @@ export function CrateChapter() {
           albumId: album.id,
           message: result.message ?? "Spotify no confirmó la reproducción. Podés intentarlo de nuevo.",
         });
-        setSelected(album);
-        window.requestAnimationFrame(() => scrollToChapter(sourceChapter, 0));
+        // Restore navigation before remounting the modal: its layout effect
+        // acquires a Lenis stop token, which would make scrollToChapter a no-op.
+        // The flight state is already cleared, so this frame runs after the disc
+        // has unmounted and before the recovery modal locks the rail again.
+        window.requestAnimationFrame(() => {
+          scrollToChapter(sourceChapter, 0);
+          setSelected(album);
+        });
       })
       .catch(() => {
         window.dispatchEvent(new Event("cdvicious:disc-flight-cancelled"));
@@ -97,8 +103,14 @@ export function CrateChapter() {
           albumId: album.id,
           message: "No se pudo conectar con Spotify. Revisá tu conexión e intentá de nuevo.",
         });
-        setSelected(album);
-        window.requestAnimationFrame(() => scrollToChapter(sourceChapter, 0));
+        // Restore navigation before remounting the modal: its layout effect
+        // acquires a Lenis stop token, which would make scrollToChapter a no-op.
+        // The flight state is already cleared, so this frame runs after the disc
+        // has unmounted and before the recovery modal locks the rail again.
+        window.requestAnimationFrame(() => {
+          scrollToChapter(sourceChapter, 0);
+          setSelected(album);
+        });
       });
   }, [scrollToChapter]);
 
