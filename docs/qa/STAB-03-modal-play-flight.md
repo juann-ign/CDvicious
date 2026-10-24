@@ -9,6 +9,8 @@ Las verificaciones de cierre, restauración del foco y desbloqueo del wheel est�
 
 `HorizontalRail` se importa dinámicamente del lado cliente. Los helpers de Playwright esperan hasta 20 segundos para que aparezcan la navegación y `data-rail-ready="true"` antes de interactuar, porque en CI la inicialización de la escena 3D/WebGL puede superar la espera corta sin que exista un fallo funcional. Las pruebas mantienen intactas las aserciones de navegación, foco, filtros y reproducción.
 
+La configuración asigna hasta 120 segundos por test para contabilizar el tiempo de inicialización de contextos Chromium bajo renderizado WebGL por software. Se mantiene `retries: 0`: el margen es para completar el setup, no para ocultar fallos funcionales. El test de drag pausa la batea antes de medir el hitbox y verifica explícitamente que el estado `dragging` se activa y se libera al hacer `pointerup`; después envía el wheel desde el encabezado estático del capítulo para comprobar que la navegación quedó desbloqueada.
+
 El spec `tests/e2e/stab-03-modal-play-flight.spec.cjs` corre con `NEXT_PUBLIC_SPOTIFY_MOCK=1` y controla desde Playwright la respuesta y el momento en que llega `POST /api/play`.
 
 | Caso | Condición | Resultado esperado |
