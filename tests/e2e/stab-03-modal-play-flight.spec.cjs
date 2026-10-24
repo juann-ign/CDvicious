@@ -53,6 +53,8 @@ async function openRail(page) {
   test.skip(!RAIL_ENABLED, "El flujo flying-disc requiere el rail desktop habilitado.");
   await expect(page.getByRole("navigation", { name: NAV_LABEL })).toBeVisible();
   await expect(panels(page)).toHaveCount(5);
+  // Navigation is server-rendered; wait for the client-side Lenis effect before interacting.
+  await expect(page.locator('[data-rail-ready="true"]')).toBeVisible();
   await expect(deckArtist(page)).toHaveText(INITIAL_ALBUM.artists[0].name, {
     timeout: 8_000,
   });
