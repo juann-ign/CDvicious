@@ -30,6 +30,14 @@ async function goToChapter(page, chapter, index) {
   await expect(page.locator("html")).toHaveAttribute("data-chapter", String(index));
 }
 
+// The mock collection is loaded lazily when its chapter becomes active. Prime
+// the shared client cache before exercising Batea, which consumes that cache too.
+async function primeCollection(page) {
+  await goToChapter(page, "Colección", 3);
+  const collection = panels(page).nth(3);
+  await expect(collection.locator('button[aria-label*=" — "]').first()).toBeVisible();
+}
+
 async function firstSpine(page) {
   const spines = panels(page).nth(2).locator('button[aria-label*=" — "]');
   const index = await spines.evaluateAll((nodes) => {
@@ -51,11 +59,8 @@ async function firstSpine(page) {
 }
 
 test("flag apagado conserva el fallback y no monta hit targets del rail", async ({ page }) => {
+  test.skip(RAIL_ENABLED, "Este chequeo se ejecuta solo con el rail apagado.");
   await openRail(page);
-  if (RAIL_ENABLED) {
-    test.skip();
-    return;
-  }
   await expect(page.getByRole("navigation", { name: NAV_LABEL })).toHaveCount(0);
   await expect(page.locator("[data-rail-wrapper]")).toHaveCount(0);
   await expect(page.locator("[data-rail-overlay]")).toHaveCount(0);
@@ -87,6 +92,7 @@ test("capítulo activo, inert y gating del Deck permanecen sincronizados", async
 test("click corto en Batea abre modal; Escape restaura foco y libera scroll", async ({ page }) => {
   test.skip(!RAIL_ENABLED, "Requiere Batea en el rail desktop.");
   await openRail(page);
+  await primeCollection(page);
   await goToChapter(page, "Batea", 2);
 
   const spine = await firstSpine(page);
@@ -115,6 +121,7 @@ test("click corto en Batea abre modal; Escape restaura foco y libera scroll", as
 test("drag de Batea mayor a 6px no abre modal y libera wheel después de pointerup", async ({ page }) => {
   test.skip(!RAIL_ENABLED, "Requiere Batea en el rail desktop.");
   await openRail(page);
+  await primeCollection(page);
   await goToChapter(page, "Batea", 2);
 
   const spine = await firstSpine(page);
@@ -140,6 +147,7 @@ test("drag de Batea mayor a 6px no abre modal y libera wheel después de pointer
 test("pointercancel en un drag capturado libera el bloqueo del rail", async ({ page }) => {
   test.skip(!RAIL_ENABLED, "Requiere Batea en el rail desktop.");
   await openRail(page);
+  await primeCollection(page);
   await goToChapter(page, "Batea", 2);
 
   const viewport = panels(page).nth(2).locator('[class*="viewport"]').first();
@@ -171,6 +179,7 @@ test("pointercancel en un drag capturado libera el bloqueo del rail", async ({ p
 test("hit-testing en Batea y Colección entrega el pointer al panel activo", async ({ page }) => {
   test.skip(!RAIL_ENABLED, "Requiere rail desktop habilitado.");
   await openRail(page);
+  await primeCollection(page);
 
   for (const item of [
     { chapter: "Batea", index: 2 },
@@ -214,14 +223,16 @@ test("búsqueda y filtros de Colección siguen accesibles con ventana baja y esc
   await openRail(page, { width: 1280, height: 600 });
   await goToChapter(page, "Colección", 3);
 
-  const search = page.getByRole("searchbox", { name: "Buscar artista o álbum" });
+  const collection = panels(page).nth(3);
+  const search = collection.getByRole("searchbox", { name: "Buscar artista o álbum" });
+  const neonRooms = collection.getByRole("button", { name: /— Neon Rooms$/ });
   await expect(search).toBeVisible();
   await search.fill("Neon Rooms");
-  await expect(page.getByRole("button", { name: /— Neon Rooms$/ })).toBeVisible();
+  await expect(neonRooms.first()).toBeVisible();
 
-  await page.getByRole("button", { name: "2010s", exact: true }).click();
-  await expect(page.getByRole("button", { name: /— Neon Rooms$/ })).toHaveCount(0);
-  await page.getByRole("button", { name: "TODAS", exact: true }).click();
+  await collection.getByRole("button", { name: "2010s", exact: true }).click();
+  await expect(neonRooms).toHaveCount(0);
+  await collection.getByRole("button", { name: "TODAS", exact: true }).click();
   await search.fill("");
 
   // CSS zoom scales layout but does not operate the browser chrome zoom control.
@@ -231,7 +242,7 @@ test("búsqueda y filtros de Colección siguen accesibles con ventana baja y esc
   await expect(nextPage).toBeVisible();
   await expect(nextPage).toBeDisabled();
 
-  const filter = page.getByRole("button", { name: "TODAS", exact: true });
+  const filter = collection.getByRole("button", { name: "TODAS", exact: true });
   const box = await filter.boundingBox();
   expect(box).not.toBeNull();
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
@@ -253,6 +264,6 @@ test("modal de Colección: Escape restaura foco y scroll", async ({ page }) => {
   await expect(caseButton).toBeFocused();
 
   await page.mouse.move(1200, 650);
-  await page.mouse.wheel(0, 700);
+  await page.mouse.wheel(0, 1200);
   await expect.poll(() => page.locator("html").getAttribute("data-chapter"), { timeout: 8_000 }).toBe("4");
 });
