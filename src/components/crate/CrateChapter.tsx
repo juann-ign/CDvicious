@@ -82,23 +82,23 @@ export function CrateChapter() {
         if (result.success) return;
 
         window.dispatchEvent(new Event("cdvicious:disc-flight-cancelled"));
-        scrollToChapter(sourceChapter, 0);
         setFlight(null);
         setPlayErrorForAlbum({
           albumId: album.id,
           message: result.message ?? "Spotify no confirmó la reproducción. Podés intentarlo de nuevo.",
         });
         setSelected(album);
+        window.requestAnimationFrame(() => scrollToChapter(sourceChapter, 0));
       })
       .catch(() => {
         window.dispatchEvent(new Event("cdvicious:disc-flight-cancelled"));
-        scrollToChapter(sourceChapter, 0);
         setFlight(null);
         setPlayErrorForAlbum({
           albumId: album.id,
           message: "No se pudo conectar con Spotify. Revisá tu conexión e intentá de nuevo.",
         });
         setSelected(album);
+        window.requestAnimationFrame(() => scrollToChapter(sourceChapter, 0));
       });
   }, [scrollToChapter]);
 
