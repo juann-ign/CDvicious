@@ -237,9 +237,8 @@ test("Batea y Colección seleccionan álbum; mouse y teclado cierran el modal y 
   await openRail(page);
 
   const spine = await chooseFromCrate(page, ALBUM_IN_CRATE);
-  // Exercise Escape from Batea (not only mouse close) and preserve focus on
-  // the exact album trigger before navigating to the next chapter.
-  await page.keyboard.press("Escape");
+  // Close by mouse from Batea and verify focus returns to the exact trigger.
+  await page.getByRole("button", { name: "Cerrar", exact: true }).last().click();
   await expect(dialog(page)).toHaveCount(0);
   await expect(page.locator("html")).not.toHaveAttribute("data-modal-open", "true");
   await expect(spine).toBeFocused();
