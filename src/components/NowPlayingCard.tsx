@@ -22,12 +22,12 @@ export function NowPlayingCard({
     // EL CHASIS DEL EQUIPO (Faceplate de metal oscuro/plástico mate)
     <div className={styles.chassis}>
       {/* DISPLAY VFD INCRUSTADO */}
-      <div className={styles.vfdDisplay}>
-        <div className={styles.vfdTrackName}>
+      <div className={styles.vfdDisplay} data-testid="deck-now-playing" data-is-playing={isPlaying ? "true" : "false"}>
+        <div className={styles.vfdTrackName} data-testid="deck-now-playing-track">
           {track ? track.name : error ? "ERR: SIN SEÑAL" : "INSERT DISC"}
         </div>
 
-        <div className={styles.vfdArtist}>
+        <div className={styles.vfdArtist} data-testid="deck-now-playing-artist">
           {track ? track.artists.map((a) => a.name).join(" // ") : "---"}
         </div>
 
