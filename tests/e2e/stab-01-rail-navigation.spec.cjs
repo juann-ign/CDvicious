@@ -18,6 +18,8 @@ async function openDesktop(page, width = 1280, height = 800) {
   if (RAIL_ENABLED) {
     await expect(navigation(page)).toBeVisible();
     await expect(panels(page)).toHaveCount(5);
+    // SSR can expose navigation before React effects initialize Lenis.
+    await expect(page.locator('[data-rail-ready="true"]')).toBeVisible();
   } else {
     await expect(page.locator("main")).toBeVisible();
   }
