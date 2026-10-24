@@ -62,15 +62,14 @@
   height: clamp(370px, 25vw, 550px);
 
   opacity: var(--pSplit);
-  filter: blur(calc(7px * (1 - var(--pSplit))));
   transform-origin: 100% 58%;
+  backface-visibility: hidden;
   transform:
-    translate3d(calc((1 - var(--pSplit)) * 38vw), 0, 0)
-    rotateY(calc(18deg * (1 - var(--pSplit))))
+    translate3d(calc((1 - var(--pSplit)) * 28vw), 0, 0)
     rotateZ(-0.8deg)
-    scale(calc(0.96 + (0.04 * var(--pSplit))));
+    scale(calc(0.98 + (0.02 * var(--pSplit))));
 
-  will-change: transform, opacity, filter;
+  will-change: transform, opacity;
 }
 
 @media (max-width: 1200px) {
@@ -105,7 +104,6 @@
   }
 
   .bookletLayer {
-    filter: none;
-    transform: translate3d(0, 0, 0) rotateY(0deg) rotateZ(-0.8deg) scale(1);
+    transform: translate3d(0, 0, 0) rotateZ(-0.8deg) scale(1);
   }
 }

@@ -21,7 +21,6 @@ export function JewelCaseFront({
       className={[styles.case, reduceEffects ? styles.caseReduced : ""]
         .filter(Boolean)
         .join(" ")}
-      disabled={reduceEffects}
       onClick={(e) => onSelect(e.currentTarget)}
       aria-label={`${album.artists.map((a) => a.name).join(", ")} — ${album.name}`}
     >

@@ -48,6 +48,7 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
   const stopTokensRef = useRef(new Set<RailLockToken>());
   const animationFrameRef = useRef<number | null>(null);
   const railIdleTimerRef = useRef<number | null>(null);
+  const markRailMovingRef = useRef<(() => void) | null>(null);
   const snapTimerRef = useRef<number | null>(null);
   const snapInProgressRef = useRef(false);
   const snapTargetIndexRef = useRef<number | null>(null);
@@ -107,6 +108,18 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
     document.documentElement.style.overflow = "hidden";
     document.body.style.overflow = "hidden";
 
+    const markRailMoving = () => {
+      if (railIdleTimerRef.current !== null) {
+        window.clearTimeout(railIdleTimerRef.current);
+      }
+      setIsRailMoving(true);
+      railIdleTimerRef.current = window.setTimeout(() => {
+        railIdleTimerRef.current = null;
+        setIsRailMoving(false);
+      }, RAIL_IDLE_DELAY_MS);
+    };
+    markRailMovingRef.current = markRailMoving;
+
     let scheduleWheelSnap: (() => void) | null = null;
 
     const lenis = new Lenis({
@@ -130,6 +143,7 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
             document.documentElement.dataset.modalOpen !== "true";
 
           if (canHandleWheel && activeLenis) {
+            markRailMoving();
             // A new user gesture can interrupt Lenis's programmatic snap. Its
             // old onComplete callback will not necessarily run, so release the
             // snap latch and invalidate that callback before accepting input.
@@ -404,15 +418,7 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
     resizeObserver.observe(content);
 
     const handleScroll = ({ scroll }: { scroll: number }) => {
-      if (railIdleTimerRef.current !== null) {
-        window.clearTimeout(railIdleTimerRef.current);
-      }
-      setIsRailMoving(true);
-      railIdleTimerRef.current = window.setTimeout(() => {
-        railIdleTimerRef.current = null;
-        setIsRailMoving(false);
-      }, RAIL_IDLE_DELAY_MS);
-
+      markRailMoving();
       updateRailProgress(scroll);
     };
 
@@ -432,6 +438,7 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
       }
 
       lenis.off("scroll", handleScroll);
+      markRailMovingRef.current = null;
       if (railIdleTimerRef.current !== null) {
         window.clearTimeout(railIdleTimerRef.current);
         railIdleTimerRef.current = null;
@@ -505,6 +512,7 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
     const snapSequence = ++snapSequenceRef.current;
     snapTargetIndexRef.current = null;
     snapInProgressRef.current = true;
+    if (!reducedMotionRef.current) markRailMovingRef.current?.();
     lenis.scrollTo(Math.max(0, px), {
       onComplete: () => {
         if (snapSequenceRef.current !== snapSequence) return;
@@ -553,6 +561,7 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
       duration ??
       Math.min(3.25, Math.max(0.72, chapterDistance * 0.78));
 
+    if (!reducedMotionRef.current) markRailMovingRef.current?.();
     const snapSequence = ++snapSequenceRef.current;
     snapTargetIndexRef.current = safeIndex;
     snapInProgressRef.current = true;

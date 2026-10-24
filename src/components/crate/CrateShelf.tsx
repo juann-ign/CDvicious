@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useMarqueeBelt } from "@/hooks/useMarqueeBelt";
 import { JewelSpine } from "./JewelSpine";
 import { JewelFlyout } from "./JewelFlyout";
@@ -46,6 +46,10 @@ export function CrateShelf({
     return () => ro.disconnect();
   }, [albums.length]);
 
+  useEffect(() => {
+    if (!animationEnabled) setHover(null);
+  }, [animationEnabled]);
+
   const pages = Math.max(1, Math.min(MAX_PAGES, albums.length));
 
   const { containerRef, trackRef, isDragging, page, goTo, stepPage } =
@@ -65,7 +69,6 @@ export function CrateShelf({
     <div
       className={styles.wrap}
       data-belt-animation-enabled={animationEnabled ? "true" : "false"}
-      inert={!animationEnabled}
     >
       <div className={styles.toolbar}>
         <div className={styles.pageNav}>

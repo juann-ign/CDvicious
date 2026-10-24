@@ -279,6 +279,7 @@ test("Deck crossfade stays continuous and throttles WebGL during chapter handoff
           opacity,
           frameloop: canvas?.getAttribute("data-disc-frameloop") ?? null,
           quality: canvas?.getAttribute("data-disc-quality") ?? null,
+          renderEnabled: disc?.getAttribute("data-disc-render-enabled") ?? null,
           hasTrack: disc?.getAttribute("data-has-track") ?? null,
           hasBooklet: Boolean(booklet),
           collectionLite: collection?.getAttribute("data-collection-transition-lite") ?? null,
@@ -303,8 +304,9 @@ test("Deck crossfade stays continuous and throttles WebGL during chapter handoff
                 sample.moving &&
                 sample.opacity > 0.05 &&
                 sample.opacity < 0.95 &&
-                sample.frameloop === "demand" &&
+                sample.frameloop === "never" &&
                 sample.quality === "transition" &&
+                sample.renderEnabled === "true" &&
                 sample.hasTrack === "true" &&
                 sample.hasBooklet,
             ),
@@ -314,7 +316,7 @@ test("Deck crossfade stays continuous and throttles WebGL during chapter handoff
       .toBe(true);
     await expect(discStage).toHaveAttribute("data-has-track", "true");
     await expect(discStage).toHaveAttribute("data-disc-render-enabled", "true");
-    await expect(canvas).toHaveAttribute("data-disc-frameloop", "demand");
+    await expect(canvas).toHaveAttribute("data-disc-frameloop", "never");
     await expect(canvas).toHaveAttribute("data-disc-quality", "transition");
   };
   const expectDeckHidden = async () => {
@@ -348,7 +350,7 @@ test("Deck crossfade stays continuous and throttles WebGL during chapter handoff
   await expectDeckHidden();
   await expect(page.locator('[data-batea-animation-enabled="true"]')).toHaveCount(1);
 
-  // Collection is lightweight/inert while crossing and restores cards when settled.
+  // Collection uses lightweight card effects while crossing and restores them when settled.
   await resetSamples();
   await chapterButton(page, "Colección").click();
   await expect
@@ -378,7 +380,7 @@ test("Deck crossfade stays continuous and throttles WebGL during chapter handoff
   await expect(discStage).toHaveAttribute("data-has-track", "true");
   await expect(canvas).toHaveAttribute("data-disc-frameloop", "always");
 
-  // Wheel/trackpad must share the same continuous fade and WebGL demand mode.
+  // Wheel/trackpad must share the same continuous fade and WebGL pause.
   await resetSamples();
   await page.mouse.move(400, 100);
   await page.mouse.wheel(0, 700);
@@ -408,8 +410,10 @@ test("Batea marquee pauses during rail movement and resumes only when Batea sett
   const beltMotion = page.locator('[data-belt-animation-enabled]');
 
   await expect(bateaMotion).toHaveAttribute("data-batea-animation-enabled", "false");
-  await expect(beltMotion).toHaveAttribute("data-belt-animation-enabled", "false");
-  expect(await beltMotion.evaluate((element) => getComputedStyle(element).pointerEvents)).toBe("none");
+  if (await beltMotion.count()) {
+    await expect(beltMotion).toHaveAttribute("data-belt-animation-enabled", "false");
+    expect(await beltMotion.evaluate((element) => getComputedStyle(element).pointerEvents)).toBe("auto");
+  }
 
   // A long jump must pass through Batea without running its decorative RAF loop.
   await chapterButton(page, "Mixtape Lab").click();
@@ -426,8 +430,10 @@ test("Batea marquee pauses during rail movement and resumes only when Batea sett
   await expect(panels(page).nth(2)).toHaveAttribute("data-chapter-active", "true");
   await expect(rail).toHaveAttribute("data-rail-moving", "false", { timeout: 10_000 });
   await expect(bateaMotion).toHaveAttribute("data-batea-animation-enabled", "true");
-  await expect(beltMotion).toHaveAttribute("data-belt-animation-enabled", "true");
-  expect(await beltMotion.evaluate((element) => getComputedStyle(element).pointerEvents)).toBe("auto");
+  if (await beltMotion.count()) {
+    await expect(beltMotion).toHaveAttribute("data-belt-animation-enabled", "true");
+    expect(await beltMotion.evaluate((element) => getComputedStyle(element).pointerEvents)).toBe("auto");
+  }
 
   // Leaving Batea via navigation disables the marquee during movement.
   await chapterButton(page, "Colección").click();

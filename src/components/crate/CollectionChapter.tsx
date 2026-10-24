@@ -266,7 +266,6 @@ export function CollectionChapter() {
       ref={chapterRef}
       className={styles.chapter}
       data-collection-transition-lite={isCollectionInteractive ? "false" : "true"}
-      inert={!isCollectionInteractive}
     >
       <header className={styles.header}>
         <div>
