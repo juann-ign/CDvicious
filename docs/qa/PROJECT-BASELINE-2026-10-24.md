@@ -2,67 +2,63 @@
 
 ## Alcance
 
-Línea base del proyecto desde un checkout limpio de `main`. Esta rama agrega este registro y un ajuste acotado a la espera de inicialización de Playwright; no modifica lógica ni código de producto, ni dependencias.
+Línea base ejecutada en GitHub Actions sobre un checkout limpio del PR contra \`main\`. La rama añade este informe y contiene ajustes acotados a la estabilidad de la suite Playwright; no modifica lógica ni código de producto, ni dependencias.
 
-## Comandos requeridos
+## Comandos solicitados
 
-Se deben registrar los resultados observados de:
+El workflow existente \`.github/workflows/build.yml\` ejecuta los cuatro comandos en PRs dirigidos a \`main\`. Usa Node.js 24 y ejecuta \`npm ci --no-audit --no-fund --loglevel=error\`, que sigue siendo una instalación limpia; solo desactiva audit/funding y reduce mensajes.
 
-1. `npm ci`
-2. `npm run lint`
-3. `npm run test`
-4. `npm run build`
+Resultados observados sobre el commit \`b35a47090670339d3222f46fc294e5e71d17545f\`:
 
-El workflow existente `.github/workflows/build.yml` ejecuta esos cuatro pasos en pull requests dirigidos a `main`. Usa Node.js 24 y ejecuta `npm ci --no-audit --no-fund --loglevel=error`, equivalente a `npm ci` para instalación limpia con auditoría y mensajes de financiación desactivados.
-
-## Resultados de línea base (checkout limpio de PR hacia `main`)
-
-Los comandos se ejecutaron en GitHub Actions desde un checkout limpio de la rama, cuyo código de aplicación es idéntico a `main`. El workflow existente añade flags a `npm ci` para desactivar audit/funding; sigue siendo una instalación limpia.
-
-| Comando | Resultado observado | Evidencia / diagnóstico |
+| Comando | Resultado | Evidencia |
 |---|---|---|
-| `npm ci` | **PASS** | `Build`, paso Install dependencies, terminó correctamente |
-| `npm run lint` | **PASS con warnings** | Exit code 0. Advertencias preexistentes detalladas abajo |
-| `npm run test` | **PASS** | El script actual ejecuta `tsc --noEmit`; terminó correctamente |
-| `npm run build` | **PASS** | Compilación de producción completada; páginas estáticas generadas 16/16 |
+| \`npm ci\` | **PASS** | Paso Install dependencies del workflow Build |
+| \`npm run lint\` | **PASS con warnings** | Exit code 0; warnings no bloqueantes enumerados abajo |
+| \`npm run test\` | **PASS** | El script actual ejecuta \`tsc --noEmit\`; no es una suite de tests unitarios |
+| \`npm run build\` | **PASS** | Compilación completada; generación estática 16/16 |
 
-Evidencia de ejecución inicial: https://github.com/juann-ign/CDvicious/actions/runs/40115789236
+Build sobre el commit validado: https://github.com/juann-ign/CDvicious/actions/runs/40122014571
 
-### Warnings de lint no bloqueantes observados en el baseline
+### Warnings no bloqueantes de lint/build
 
-- `next lint` está deprecado y se eliminará en Next.js 16.
-- `src/components/crate/CrateChapter.tsx:24`: warning `react-hooks/exhaustive-deps` sobre `dragLockTokenRef.current` en cleanup.
-- `src/components/crate/JewelCaseDetailModal.tsx:380`: mismo tipo de warning sobre `railLockTokenRef.current`.
-- `src/components/crate/MixtapeChapter.tsx:46`: mismo tipo de warning sobre `exportLockTokenRef.current`.
-- `src/lib/nowPlayingStore.ts:29`: `lastPollStartedAt` se asigna pero no se utiliza.
+- \`next lint\` está deprecado y se eliminará en Next.js 16.
+- \`src/components/crate/CrateChapter.tsx:24\`: warning \`react-hooks/exhaustive-deps\` sobre \`dragLockTokenRef.current\` durante cleanup.
+- \`src/components/crate/JewelCaseDetailModal.tsx:380\`: warning del mismo tipo sobre \`railLockTokenRef.current\`.
+- \`src/components/crate/MixtapeChapter.tsx:46\`: warning del mismo tipo sobre \`exportLockTokenRef.current\`.
+- \`src/lib/nowPlayingStore.ts:29\`: \`lastPollStartedAt\` se asigna pero no se utiliza.
 
-Los warnings aparecen tanto en lint como durante el build; no hacen fallar los comandos. Quedan fuera de este PR porque no son necesarios para establecer la línea base.
+Los mismos warnings aparecen en lint y build y no hacen fallar el pipeline. Se dejan fuera de alcance porque no impiden establecer la línea base y no forman parte de los cambios de QA.
 
-## Clasificación baseline vs. regresión del PR
+## Browser QA: ciclos y diagnóstico
 
-La rama parte de `main` y no cambia lógica de producto. El primer Browser QA con `RAIL_FLAG=0` pasó (2 tests pasados, 16 omitidos por ser específicos del rail habilitado).
+Los primeros ciclos detectaron fallos en la suite Playwright con \`RAIL_FLAG=1\`. Se corrigió la instrumentación del test sin eliminar tests, debilitar las aserciones funcionales ni activar retries:
 
-El primer Browser QA con `RAIL_FLAG=1` reportó 16 tests pasados, 1 omitido y 1 fallo de preparación: `openRail` no encontró la navegación en 20 segundos. Se aumentó la espera a 45 segundos, pero el segundo run volvió a fallar en el mismo punto antes de ejercitar el drag. El snapshot de Playwright muestra la navegación montada al capturar el contexto de error después del timeout. Evidencia: https://github.com/juann-ign/CDvicious/actions/runs/40116764179. Se clasifica como una carrera reproducible de inicialización/hidratación en la suite de baseline, no como una regresión de producto introducida por este PR.
+- Inicialización del rail: la navegación/paneles client-only podían tardar más que el timeout anterior de CI. Las esperas de navegación, paneles y \`data-rail-ready\` se ampliaron a 90 s; el timeout total por test se ajustó a 180 s. \`retries: 0\` se mantiene.
+- Hit-testing de Batea: el marquee se desplazaba entre tomar el bounding box y comprobar \`elementsFromPoint\`. El test pausa el marquee antes de medir y elige un botón cuyo centro esté dentro del viewport y del área visible del panel.
+- Rechazo de reproducción: el test esperaba el modal restaurado solo 8 s. Se amplió esa espera a 20 s, manteniendo las aserciones sobre modal, alerta, capítulo de origen, vuelo y eventos de cancelación.
+- Reproducción confirmada: el mock E2E de \`/api/now-playing\` siempre devolvía el álbum inicial. El test ahora simula el álbum confirmado después de una respuesta de reproducción exitosa, para verificar correctamente sincronización entre vuelo y Now Playing sin tocar comportamiento de producción.
 
-**Segundo ajuste de alcance QA:** aumentar a 90 segundos las esperas de navegación, paneles y marcador `data-rail-ready` en los specs de rail; el timeout total por test pasa a 180 segundos para que la inicialización lenta no agote el límite antes de continuar con las aserciones. No se modifican las aserciones funcionales, no se agregan reintentos y no se toca código de producto. Validar el nuevo commit con los checks visibles; el trabajo no se considerará listo hasta que `RAIL_FLAG=1` quede verde.
+La evidencia del ciclo inicial de fallos se conserva en https://github.com/juann-ign/CDvicious/actions/runs/40117697191. Se trata de problemas reproducibles en la configuración/fixture de Browser QA de esta rama; la evidencia final demuestra que los tests funcionales vuelven a pasar con las aserciones intactas. No se atribuye una regresión a código de producto porque este PR no lo modifica.
 
-### Tercer ciclo de validación
+### Resultado final de Browser QA
 
-La ejecución de Browser QA sobre el commit `aabd94a` (https://github.com/juann-ign/CDvicious/actions/runs/40117697191) llegó a 15 tests pasados y 2 fallidos en `RAIL_FLAG=1`:
+Commit validado: \`b35a47090670339d3222f46fc294e5e71d17545f\`.
 
-- `stab-02`, hit-testing: el centro de un botón de Batea ya no correspondía al elemento al evaluar `elementsFromPoint`; la batea animada se había desplazado entre medir el bounding box y verificar el hit target. Se pausó el marquee sobre la zona estática antes de medir.
-- `stab-03`, rechazo de autenticación: no se encontró el modal restaurado dentro de 8 segundos tras cancelar el vuelo. Se amplió solo esa espera a 20 segundos; siguen vigentes las aserciones de modal, mensaje de error, capítulo de origen, disco y eventos de cancelación.
+- **\`RAIL_FLAG=0\`: PASS** — 2 tests pasaron y 16 se omitieron porque cubren comportamiento exclusivo del rail habilitado.
+- **\`RAIL_FLAG=1\`: PASS** — 17 tests pasaron y 1 se omitió por su condición de ejecución.
+- No hubo fallos en los dos jobs. No se habilitaron retries.
 
-Estos fallos aparecieron en la suite de baseline y no en código de producto modificado por este PR. No se eliminó ni se marcó como skip ninguno de los tests funcionales. El nuevo Build para el commit `ea004f2` terminó en verde (instalación, lint, typecheck y build). La matriz Browser QA para ese mismo commit está en ejecución; hasta que ambos jobs terminen en verde, el PR no se considera listo para merge.
+Evidencia: https://github.com/juann-ign/CDvicious/actions/runs/40122014570
 
+## Workflows y checks hacia \`main\`
 
-## Workflows y checks esperados hacia `main`
+- **Build** — \`.github/workflows/build.yml\`: instalación limpia, lint, typecheck mediante \`npm run test\` y build de producción; se dispara para todo PR hacia \`main\`.
+- **STAB-01 Browser QA** — \`.github/workflows/stab-01-browser-qa.yml\`: jobs separados con \`RAIL_FLAG=0\` y \`RAIL_FLAG=1\`; los filtros de rutas incluyen \`src/**\`, \`tests/e2e/**\`, \`docs/qa/**\`, configuración de Playwright y manifiestos npm.
 
-- **Build** — `.github/workflows/build.yml`: `npm ci`, `npm run lint`, `npm run test`, `npm run build`. Se dispara en todo pull request con base `main`.
-- **STAB-01 Browser QA** — `.github/workflows/stab-01-browser-qa.yml`: dos jobs, `RAIL_FLAG=0` y `RAIL_FLAG=1`; se dispara cuando un PR a `main` cambia archivos en las rutas filtradas del workflow, incluyendo `src/**`, `tests/e2e/**`, `docs/qa/**`, los archivos de configuración de Playwright y los manifiestos npm.
+Los workflows definen qué ejecuciones se disparan; no se deben confundir con una regla de checks obligatorios. La configuración de protección de rama consultada no declara checks requeridos. El informe registra los resultados visibles de los workflows.
 
-Los checks obligatorios de protección de rama no se infieren de los workflows; se deben contrastar con los checks visibles en el PR y con la configuración de branch protection/rulesets si el acceso lo permite.
+## Estado de salida
 
-## Criterio de salida
+Sobre el commit \`b35a47090670339d3222f46fc294e5e71d17545f\`, **Build y ambos jobs de Browser QA terminaron en verde**. No queda un fallo reproducible pendiente en esos checks. Las advertencias de lint son no bloqueantes y se distinguen de fallas.
 
-El baseline queda aprobado únicamente cuando los resultados visibles de los checks ejecutados sobre el commit final se registran aquí. Este PR debe quedar abierto para revisión humana y no se debe mergear automáticamente.
+Este PR debe permanecer abierto para revisión humana. No se debe mergear automáticamente.
