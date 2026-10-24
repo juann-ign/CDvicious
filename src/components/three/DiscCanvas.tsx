@@ -10,9 +10,17 @@ interface DiscCanvasProps {
   track: SpotifyTrack | null;
   isPlaying: boolean;
   accentColor: string;
+  renderEnabled?: boolean;
+  isRailMoving?: boolean;
 }
 
-export function DiscCanvas({ track, isPlaying, accentColor }: DiscCanvasProps) {
+export function DiscCanvas({
+  track,
+  isPlaying,
+  accentColor,
+  renderEnabled = true,
+  isRailMoving = false,
+}: DiscCanvasProps) {
   const [canvasElement, setCanvasElement] = useState<HTMLCanvasElement | null>(
     null,
   );
@@ -22,7 +30,12 @@ export function DiscCanvas({ track, isPlaying, accentColor }: DiscCanvasProps) {
   // Visibility and WebGL context state are independent: a visible tab must not
   // resume rendering while its canvas still has a lost context.
   const frameloop =
-    documentVisible && !contextLost ? ("always" as const) : ("never" as const);
+    renderEnabled && documentVisible && !contextLost
+      ? ("always" as const)
+      : ("never" as const);
+  // During rail motion, reduce the still-visible Deck scene's GPU cost.
+  // Full resolution and shadows resume as soon as navigation settles.
+  const dpr: number | [number, number] = isRailMoving ? 1 : [1, 2];
 
   useEffect(() => {
     const updateVisibility = () => {
@@ -67,9 +80,11 @@ export function DiscCanvas({ track, isPlaying, accentColor }: DiscCanvasProps) {
 
   return (
     <Canvas
-      shadows
-      dpr={[1, 2]}
+      shadows={!isRailMoving}
+      dpr={dpr}
       frameloop={frameloop}
+      data-disc-frameloop={frameloop}
+      data-disc-quality={isRailMoving ? "transition" : "full"}
       camera={{ position: [0, 0.7, 4.6], fov: 40 }}
       onCreated={({ camera, gl }) => {
         camera.lookAt(0, 0, 0);
