@@ -46,6 +46,15 @@ El primer Browser QA con `RAIL_FLAG=1` reportó 16 tests pasados, 1 omitido y 1 
 
 **Segundo ajuste de alcance QA:** aumentar a 90 segundos las esperas de navegación, paneles y marcador `data-rail-ready` en los specs de rail; el timeout total por test pasa a 180 segundos para que la inicialización lenta no agote el límite antes de continuar con las aserciones. No se modifican las aserciones funcionales, no se agregan reintentos y no se toca código de producto. Validar el nuevo commit con los checks visibles; el trabajo no se considerará listo hasta que `RAIL_FLAG=1` quede verde.
 
+### Tercer ciclo de validación
+
+La ejecución de Browser QA sobre el commit `aabd94a` (https://github.com/juann-ign/CDvicious/actions/runs/40117697191) llegó a 15 tests pasados y 2 fallidos en `RAIL_FLAG=1`:
+
+- `stab-02`, hit-testing: el centro de un botón de Batea ya no correspondía al elemento al evaluar `elementsFromPoint`; la batea animada se había desplazado entre medir el bounding box y verificar el hit target. Se pausó el marquee sobre la zona estática antes de medir.
+- `stab-03`, rechazo de autenticación: no se encontró el modal restaurado dentro de 8 segundos tras cancelar el vuelo. Se amplió solo esa espera a 20 segundos; siguen vigentes las aserciones de modal, mensaje de error, capítulo de origen, disco y eventos de cancelación.
+
+Estos fallos aparecieron en la suite de baseline y no en código de producto modificado por este PR. No se eliminó ni se marcó como skip ninguno de los tests funcionales. El nuevo Build para el commit `ea004f2` terminó en verde (instalación, lint, typecheck y build). La matriz Browser QA para ese mismo commit está en ejecución; hasta que ambos jobs terminen en verde, el PR no se considera listo para merge.
+
 
 ## Workflows y checks esperados hacia `main`
 
