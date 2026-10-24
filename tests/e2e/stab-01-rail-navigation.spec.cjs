@@ -241,7 +241,7 @@ test("Batea marquee pauses during rail movement and resumes only when Batea sett
     await expect(beltMotion).toHaveAttribute("data-belt-animation-enabled", "true");
   }
 
-  // Leaving Batea disables the marquee until the next time the chapter is idle.
+  // Leaving Batea via navigation disables the marquee during movement.
   await chapterButton(page, "Colección").click();
   await expect(rail).toHaveAttribute("data-rail-moving", "true", { timeout: 3_000 });
   await expect(bateaMotion).toHaveAttribute("data-batea-animation-enabled", "false");
@@ -251,6 +251,23 @@ test("Batea marquee pauses during rail movement and resumes only when Batea sett
   if (await beltMotion.count()) {
     await expect(beltMotion).toHaveAttribute("data-belt-animation-enabled", "false");
   }
+
+  // Wheel/trackpad motion must apply the same pause when returning to Batea.
+  await page.mouse.move(400, 100);
+  await page.mouse.wheel(0, -700);
+  await expect(rail).toHaveAttribute("data-rail-moving", "true", { timeout: 3_000 });
+  await expect(bateaMotion).toHaveAttribute("data-batea-animation-enabled", "false");
+  await expect(panels(page).nth(2)).toHaveAttribute("data-chapter-active", "true");
+  await expect(rail).toHaveAttribute("data-rail-moving", "false", { timeout: 10_000 });
+  await expect(bateaMotion).toHaveAttribute("data-batea-animation-enabled", "true");
+
+  // And it must pause again for a wheel gesture leaving Batea.
+  await page.mouse.wheel(0, 700);
+  await expect(rail).toHaveAttribute("data-rail-moving", "true", { timeout: 3_000 });
+  await expect(bateaMotion).toHaveAttribute("data-batea-animation-enabled", "false");
+  await expect(panels(page).nth(3)).toHaveAttribute("data-chapter-active", "true");
+  await expect(rail).toHaveAttribute("data-rail-moving", "false", { timeout: 10_000 });
+  await expect(bateaMotion).toHaveAttribute("data-batea-animation-enabled", "false");
 });
 
 test("resizing and reloading at desktop resolutions keeps rail navigation usable", async ({
