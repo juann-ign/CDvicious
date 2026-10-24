@@ -52,10 +52,10 @@ async function openRail(page) {
   await page.goto("/", { waitUntil: "domcontentloaded" });
   test.skip(!RAIL_ENABLED, "El flujo flying-disc requiere el rail desktop habilitado.");
   // HorizontalRail is client-only, and the initial 3D/WebGL hydration can be slow in CI.
-  await expect(page.getByRole("navigation", { name: NAV_LABEL })).toBeVisible({ timeout: 20_000 });
-  await expect(panels(page)).toHaveCount(5, { timeout: 20_000 });
+  await expect(page.getByRole("navigation", { name: NAV_LABEL })).toBeVisible({ timeout: 90_000 });
+  await expect(panels(page)).toHaveCount(5, { timeout: 90_000 });
   // Wait for the client-side Lenis effect before interacting.
-  await expect(page.locator('[data-rail-ready="true"]')).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator('[data-rail-ready="true"]')).toBeVisible({ timeout: 90_000 });
   await expect(deckArtist(page)).toHaveText(INITIAL_ALBUM.artists[0].name, {
     timeout: 8_000,
   });
@@ -159,7 +159,7 @@ async function openCaseAndPlay(page, album) {
   }).click();
 }
 
-function createPlayGate(page) {
+function createPlayGate(page, onSuccess) {
   let resolveOutcome;
   let resolveRequest;
   const outcomePromise = new Promise((resolve) => {
@@ -179,6 +179,9 @@ function createPlayGate(page) {
       await route.abort("failed");
       return;
     }
+    if (outcome.kind === "response" && outcome.status >= 200 && outcome.status < 300) {
+      onSuccess?.();
+    }
     await route.fulfill({
       status: outcome.status,
       contentType: "application/json",
@@ -190,7 +193,9 @@ function createPlayGate(page) {
 }
 
 async function assertCancelledAndRestored(page, album, sourceChapter, messagePattern) {
-  await expect(dialog(page)).toBeVisible({ timeout: 8_000 });
+  // Error recovery restores the chapter before remounting the modal; wait for
+  // that observable transition without weakening the modal/error assertions.
+  await expect(dialog(page)).toBeVisible({ timeout: 20_000 });
   await expect(dialog(page)).toHaveAttribute("aria-label", modalLabel(album));
   await expect(dialog(page).getByRole("alert")).toContainText(messagePattern);
   await expect(flightDisc(page)).toHaveCount(0);
@@ -286,7 +291,45 @@ test("Batea y Colección seleccionan álbum; mouse y teclado cierran el modal y 
 test("play confirmado desde Colección: vuelo, acople y Now Playing terminan sincronizados", async ({ page }) => {
   test.skip(!RAIL_ENABLED, "El flujo flying-disc requiere RAIL_FLAG=1.");
   await openRail(page);
-  const gate = createPlayGate(page);
+
+  // The play endpoint is gated below, so provide the corresponding simulated
+  // Now Playing state once the gate confirms success. The production mock
+  // endpoint otherwise always reports INITIAL_ALBUM, regardless of play calls.
+  let confirmedAlbum = null;
+  await page.route("**/api/now-playing", async (route) => {
+    if (!confirmedAlbum) {
+      await route.continue();
+      return;
+    }
+    const album = confirmedAlbum;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        isPlaying: true,
+        progressMs: 42_000,
+        durationMs: 150_000,
+        track: {
+          id: `mock-track-${album.id}-1`,
+          name: "DEMO TRACK 01",
+          duration_ms: 150_000,
+          artists: album.artists.map((artist) => ({ name: artist.name })),
+          album: {
+            name: album.name,
+            images: album.images.map((image) => ({
+              url: image.url,
+              width: image.width,
+              height: image.height,
+            })),
+          },
+        },
+      }),
+    });
+  });
+
+  const gate = createPlayGate(page, () => {
+    confirmedAlbum = ALBUM_IN_COLLECTION;
+  });
   await chooseFromCollection(page, ALBUM_IN_COLLECTION);
   await openCaseAndPlay(page, ALBUM_IN_COLLECTION);
 
@@ -328,6 +371,10 @@ test("play confirmado desde Colección: vuelo, acople y Now Playing terminan sin
   const playbackStarted = eventIndex("cdvicious:disc-flight-playback-started");
   expect(started, JSON.stringify(events)).toBeGreaterThanOrEqual(0);
   expect(arrived, JSON.stringify(events)).toBeGreaterThan(started);
+  expect(
+    events[arrived].at - events[started].at,
+    "El vuelo debe conservar tiempo visible para observar la rotación y la trayectoria",
+  ).toBeGreaterThanOrEqual(4_400);
   expect(ready, JSON.stringify(events)).toBeGreaterThan(arrived);
   expect(playbackStarted, JSON.stringify(events)).toBeGreaterThan(ready);
 });

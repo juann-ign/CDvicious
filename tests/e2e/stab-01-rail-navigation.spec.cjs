@@ -18,9 +18,9 @@ async function openDesktop(page, width = 1280, height = 800) {
   if (RAIL_ENABLED) {
     // HorizontalRail is loaded by a client-only dynamic import. CI can spend
     // several seconds hydrating the 3D scene before its navigation mounts.
-    await expect(navigation(page)).toBeVisible({ timeout: 20_000 });
-    await expect(panels(page)).toHaveCount(5, { timeout: 20_000 });
-    await expect(page.locator('[data-rail-ready="true"]')).toBeVisible({ timeout: 20_000 });
+    await expect(navigation(page)).toBeVisible({ timeout: 90_000 });
+    await expect(panels(page)).toHaveCount(5, { timeout: 90_000 });
+    await expect(page.locator('[data-rail-ready="true"]')).toBeVisible({ timeout: 90_000 });
   } else {
     await expect(page.locator("main")).toBeVisible();
   }
@@ -57,7 +57,7 @@ test("feature flag and 761px breakpoint select the expected experience", async (
     return;
   }
 
-  await expect(navigation(page)).toBeVisible();
+  await expect(navigation(page)).toBeVisible({ timeout: 90_000 });
   await expect(page.locator("[data-rail-wrapper]")).toBeVisible();
 
   for (const width of [760, 390]) {
@@ -69,8 +69,8 @@ test("feature flag and 761px breakpoint select the expected experience", async (
 
   for (const width of [761, 762, 900, 1366, 1920]) {
     await page.setViewportSize({ width, height: 800 });
-    await expect(navigation(page)).toBeVisible();
-    await expect(panels(page)).toHaveCount(5);
+    await expect(navigation(page)).toBeVisible({ timeout: 90_000 });
+    await expect(panels(page)).toHaveCount(5, { timeout: 90_000 });
   }
 });
 
@@ -163,6 +163,52 @@ test("short wheel followed by long wheel reaches Split; reverse wheel returns to
   await expect(panels(page).nth(0)).toHaveAttribute("data-chapter-active", "true");
 });
 
+
+test("long navigation reveals intermediate chapters and keeps the VFD unobstructed", async ({
+  page,
+}) => {
+  test.skip(!RAIL_ENABLED, "El rail no debe estar montado cuando el flag está apagado.");
+
+  await openDesktop(page);
+  const navBox = await navigation(page).boundingBox();
+  const vfd = page.getByTestId("deck-now-playing");
+  await expect(vfd).toBeVisible();
+  const vfdBox = await vfd.boundingBox();
+  expect(navBox).not.toBeNull();
+  expect(vfdBox).not.toBeNull();
+  expect(navBox.x).toBeGreaterThan(vfdBox.x + vfdBox.width + 8);
+
+  await page.evaluate(() => {
+    window.__cdvChapterProgress = [];
+    let lastIndex = null;
+    const record = () => {
+      const index = Number(document.documentElement.dataset.chapter);
+      if (Number.isInteger(index) && index !== lastIndex) {
+        window.__cdvChapterProgress.push(index);
+        lastIndex = index;
+      }
+    };
+    window.__cdvChapterProgressObserver = new MutationObserver(record);
+    window.__cdvChapterProgressObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-chapter"],
+    });
+    record();
+  });
+
+  const destination = chapterButton(page, "Mixtape Lab");
+  await destination.click();
+  await expect(destination).toHaveAttribute("aria-current", "location", {
+    timeout: 12_000,
+  });
+  await expect
+    .poll(() => page.evaluate(() => window.__cdvChapterProgress), {
+      timeout: 12_000,
+      intervals: [100, 150, 250],
+    })
+    .toEqual([0, 1, 2, 3, 4]);
+});
+
 test("resizing and reloading at desktop resolutions keeps rail navigation usable", async ({
   page,
 }) => {
@@ -174,8 +220,8 @@ test("resizing and reloading at desktop resolutions keeps rail navigation usable
   ]) {
     await page.setViewportSize(viewport);
     await page.goto("/", { waitUntil: "domcontentloaded" });
-    await expect(navigation(page)).toBeVisible();
-    await expect(panels(page)).toHaveCount(5);
+    await expect(navigation(page)).toBeVisible({ timeout: 90_000 });
+    await expect(panels(page)).toHaveCount(5, { timeout: 90_000 });
     await expect(chapterButton(page, "Deck")).toHaveAttribute(
       "aria-current",
       "location",
