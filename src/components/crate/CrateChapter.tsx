@@ -153,7 +153,7 @@ export function CrateChapter() {
         ) : (
           <CrateShelf
             animationEnabled={isShelfAnimationEnabled}
-            albums={albums.slice(0, SHELF_COUNT)
+            albums={albums.slice(0, SHELF_COUNT)}
             onSelect={handleSelect}
             onGrabStart={handleGrabStart}
             onGrabEnd={handleGrabEnd}
