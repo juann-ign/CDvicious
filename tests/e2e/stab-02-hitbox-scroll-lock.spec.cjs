@@ -17,6 +17,8 @@ async function openRail(page, viewport = { width: 1280, height: 800 }) {
   if (RAIL_ENABLED) {
     await expect(page.getByRole("navigation", { name: NAV_LABEL })).toBeVisible();
     await expect(panels(page)).toHaveCount(5);
+    // Avoid clicks and wheel input before the client effect has initialized Lenis.
+    await expect(page.locator('[data-rail-ready="true"]')).toBeVisible();
   } else {
     await expect(page.locator("main")).toBeVisible();
   }
