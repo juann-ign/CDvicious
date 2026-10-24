@@ -215,7 +215,7 @@ test("Batea y Colección seleccionan álbum; mouse y teclado cierran el modal y 
   await expect(dialog(page)).toHaveCount(0);
   await expect(page.locator("html")).not.toHaveAttribute("data-modal-open", "true");
   await expect(card).toBeFocused();
-  await expect(spine).toHaveCount(1); // The originating control remains mounted after the rail transition.
+  await expect(spine).toHaveCount(3); // The Batea belt renders three copies of each album.
 });
 
 test("play confirmado desde Colección: vuelo, acople y Now Playing terminan sincronizados", async ({ page }) => {
