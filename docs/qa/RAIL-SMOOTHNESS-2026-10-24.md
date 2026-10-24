@@ -30,3 +30,29 @@ Los problemas de saltos, rueda y vuelo pertenecen a EPIC 2.4 (Playback transitio
 ## Alcance diferido
 
 Esta pasada no hace un rediseño completo del VFD, no modifica la composición de los capítulos a fondo y no cambia lógica de reproducción de producción. Esos trabajos quedan sujetos a review visual en EPIC 2.6.2.
+
+
+## Follow-up — Crossfade y rendimiento del Deck (2026-10-24)
+
+### Causa encontrada
+- `--pHideDeck` ya sigue el scroll frame a frame; `transition: opacity 120ms` agregaba una segunda interpolación y hacía que el overlay persiguiera el movimiento en lugar de acompañarlo.
+- Al cambiar `data-deck-interactive` al llegar al punto medio de Split → Batea, el hook de Now Playing devuelve un snapshot vacío. Usarlo directamente reemplazaba la pista a mitad del fade, aunque el CD y el booklet todavía se veían parcialmente.
+- El Canvas WebGL seguía en `frameloop="always"` aunque el overlay estuviera completamente transparente.
+
+### Correcciones
+- Mantener el último snapshot de pista durante el fade y cambiarlo solo cuando vuelve a haber un snapshot real.
+- Vincular la opacidad exclusivamente al progreso del rail (sin transición CSS secundaria).
+- Bajar temporalmente DPR a 1 y deshabilitar sombras durante cualquier movimiento del rail; restaurar calidad completa cuando se asienta.
+- Detener el frame loop del CD cuando el overlay ya está visualmente oculto, manteniendo el canvas montado para conservar el destino del vuelo del disco.
+- Batea pausa su RAF decorativo hasta que su capítulo está activo y el rail queda quieto.
+
+### Criterios de aceptación manual
+1. Split → Batea con menú: la pista se conserva durante todo el fade, sin salto del arte ni desaparición temprana del CD/booklet.
+2. Split → Batea con rueda/trackpad: misma continuidad visual; la opacidad sigue el desplazamiento sin retraso adicional.
+3. Al terminar de salir del Deck, el Canvas pasa a `frameloop="never"`; al volver a Deck/Split se reactiva.
+4. Batea → Colección y los recorridos largos hacia Mixtape no producen tirones perceptibles al pasar por Batea.
+5. Confirmar que reproducir desde Batea/Colección conserva el destino de vuelo del disco y que el modal sigue funcionando.
+6. Confirmar que `prefers-reduced-motion: reduce` y `RAIL_FLAG=0` conservan su comportamiento previo.
+
+### E2E
+Se agregó cobertura Playwright para navegación y rueda que verifica el fade intermedio, la persistencia del snapshot, la pausa/reanudación del Canvas y la pausa/reanudación de la cinta de Batea. Debe pasar en ambos modos del feature flag, con `retries: 0`.
