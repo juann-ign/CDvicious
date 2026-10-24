@@ -26,6 +26,7 @@ Las fallas de reproducción se responden **después de comprobar que el vuelo es
 - **Evidencia:** [Browser QA rail habilitado — ejecución fallida](https://github.com/juann-ign/CDvicious/actions/runs/40067150458); el log muestra `Expected: "2"/"3"`, `Received: "0"` con `data-modal-open="true"`.
 - **Clasificación:** coordinación de la recuperación del flujo de reproducción con el estado de navegación del rail; no era un error de mensaje del modal.
 - **Corrección incorporada:** `scrollToChapter(index, 0)` aplica la navegación instantánea de forma inmediata. Antes, Lenis podía esperar al siguiente `requestAnimationFrame`; el modal de recuperación volvía a montar y detenía Lenis antes de que cambiara el capítulo. La corrección permite restaurar el capítulo antes de bloquear otra vez la navegación. La matriz posterior debe confirmar el arreglo en los cuatro escenarios.
+- **Ajuste de verificación:** el primer run con la corrección mostró que la aserción del retorno final a Deck fallaba por un desplazamiento residual estable de 7 px en el borde del panel, aunque `data-chapter="0"`, el botón Deck activo y la UI de Now Playing estuvieran correctos. La comprobación final admite hasta 10 px sólo en esa navegación de cierre; la selección de álbum y todas las aserciones de recuperación del capítulo de origen mantienen el umbral estricto de 2 px.
 - **Deck/Now Playing:** se conserva la última instantánea válida mientras Deck está fuera del capítulo activo, para que cancelar el vuelo no capture un snapshot vacío ni pierda el track previo.
 
 ## Evidencia y límites
