@@ -7,6 +7,8 @@
 
 Las verificaciones de cierre, restauración del foco y desbloqueo del wheel están agrupadas en el escenario de selección Batea/Colección de STAB-03. Se evita crear contextos WebGL duplicados para repetir las mismas interacciones; STAB-02 conserva la cobertura independiente de drag, `pointercancel`, hit-testing, estado `inert` y filtros.
 
+`HorizontalRail` se importa dinámicamente del lado cliente. Los helpers de Playwright esperan hasta 20 segundos para que aparezcan la navegación y `data-rail-ready="true"` antes de interactuar, porque en CI la inicialización de la escena 3D/WebGL puede superar la espera corta sin que exista un fallo funcional. Las pruebas mantienen intactas las aserciones de navegación, foco, filtros y reproducción.
+
 El spec `tests/e2e/stab-03-modal-play-flight.spec.cjs` corre con `NEXT_PUBLIC_SPOTIFY_MOCK=1` y controla desde Playwright la respuesta y el momento en que llega `POST /api/play`.
 
 | Caso | Condición | Resultado esperado |
