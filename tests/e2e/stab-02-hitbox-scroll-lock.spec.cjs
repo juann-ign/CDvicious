@@ -281,7 +281,24 @@ test("modal de Colección: Escape restaura foco y scroll", async ({ page }) => {
 
   const caseButton = panels(page).nth(3).locator('button[aria-label*=" — "]').first();
   await expect(caseButton).toBeVisible();
-  await caseButton.click();
+
+  // JewelCaseFront animates its transform on hover. Use a real mouse click after
+  // the hover transition settles instead of Playwright's stability polling,
+  // which can time out on Chromium's software-rendered rail.
+  await caseButton.scrollIntoViewIfNeeded();
+  const initialBox = await caseButton.boundingBox();
+  expect(initialBox).not.toBeNull();
+  await page.mouse.move(
+    initialBox.x + initialBox.width / 2,
+    initialBox.y + initialBox.height / 2,
+  );
+  await page.waitForTimeout(250);
+  const clickBox = await caseButton.boundingBox();
+  expect(clickBox).not.toBeNull();
+  await page.mouse.click(
+    clickBox.x + clickBox.width / 2,
+    clickBox.y + clickBox.height / 2,
+  );
   await expect(dialog(page)).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(dialog(page)).toHaveCount(0);

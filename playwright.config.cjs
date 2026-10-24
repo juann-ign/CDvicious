@@ -9,7 +9,8 @@ module.exports = defineConfig({
   workers: 1,
   // Keep CI failures visible; do not let a retry turn a flaky run green.
   retries: 0,
-  timeout: 45_000,
+  // Chromium + WebGL context setup can be slow in GitHub-hosted CI.
+  timeout: 60_000,
   expect: {
     timeout: 8_000,
   },

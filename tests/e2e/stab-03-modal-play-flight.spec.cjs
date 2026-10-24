@@ -60,18 +60,18 @@ async function openRail(page) {
   });
 }
 
-async function goToChapter(page, name, index, alignmentTolerance = 2) {
+async function goToChapter(page, name, index, alignmentTolerance = 2, timeout = 8_000) {
   await chapterButton(page, name).click();
-  await expect(chapterButton(page, name)).toHaveAttribute("aria-current", "location");
-  await expect(page.locator("html")).toHaveAttribute("data-chapter", String(index));
-  await expect(panels(page).nth(index)).toHaveAttribute("data-chapter-active", "true");
+  await expect(chapterButton(page, name)).toHaveAttribute("aria-current", "location", { timeout });
+  await expect(page.locator("html")).toHaveAttribute("data-chapter", String(index), { timeout });
+  await expect(panels(page).nth(index)).toHaveAttribute("data-chapter-active", "true", { timeout });
   await expect
     .poll(
       () =>
         panels(page)
           .nth(index)
           .evaluate((panel) => Math.abs(panel.getBoundingClientRect().left)),
-      { timeout: 8_000 },
+      { timeout },
     )
     .toBeLessThan(alignmentTolerance);
 }
@@ -223,7 +223,10 @@ async function assertCancelledAndRestored(page, album, sourceChapter, messagePat
   // pixel-perfect positioning of the pinned chapter edge. Chromium reported a
   // stable 7px residual here while data-chapter, aria-current and the Deck UI
   // were correct. Keep strict 2px alignment for all interactions with album UI.
-  await goToChapter(page, "Deck", 0, 10);
+  // The Deck return is the final visual-state check after a modal exit and
+  // a software-rendered flying-disc transition; allow that one navigation up
+  // to 15 seconds without relaxing any source-chapter rollback assertions.
+  await goToChapter(page, "Deck", 0, 10, 15_000);
   await expect(deckArtist(page)).toHaveText(INITIAL_ALBUM.artists[0].name);
   await expect(deckDisplay(page)).toHaveAttribute("data-is-playing", "true");
   await expect(flightDisc(page)).toHaveCount(0);
