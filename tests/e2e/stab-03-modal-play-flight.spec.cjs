@@ -183,7 +183,7 @@ function createPlayGate(page) {
 async function assertCancelledAndRestored(page, album, sourceChapter, messagePattern) {
   await expect(dialog(page)).toBeVisible({ timeout: 8_000 });
   await expect(dialog(page)).toHaveAttribute("aria-label", modalLabel(album));
-  await expect(page.getByRole("alert")).toContainText(messagePattern);
+  await expect(dialog(page).getByRole("alert")).toContainText(messagePattern);
   await expect(flightDisc(page)).toHaveCount(0);
   await expect(page.locator("html")).toHaveAttribute("data-chapter", String(sourceChapter));
   await expect(panels(page).nth(sourceChapter)).toHaveAttribute("data-chapter-active", "true");
@@ -241,7 +241,7 @@ test("Batea y Colección seleccionan álbum; mouse y teclado cierran el modal y 
   await expect(dialog(page)).toHaveCount(0);
   await expect(page.locator("html")).not.toHaveAttribute("data-modal-open", "true");
   await expect(card).toBeFocused();
-  await expect(spine).toHaveCount(3); // The Batea belt renders three copies of each album.
+  await expect(spine).toHaveCount(1); // The originating album control remains mounted.
 });
 
 test("play confirmado desde Colección: vuelo, acople y Now Playing terminan sincronizados", async ({ page }) => {
