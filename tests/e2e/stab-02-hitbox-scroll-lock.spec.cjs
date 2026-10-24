@@ -17,10 +17,10 @@ async function openRail(page, viewport = { width: 1280, height: 800 }) {
   if (RAIL_ENABLED) {
     // HorizontalRail is loaded by a client-only dynamic import. CI can spend
     // several seconds hydrating the 3D scene before its navigation mounts.
-    await expect(page.getByRole("navigation", { name: NAV_LABEL })).toBeVisible({ timeout: 20_000 });
-    await expect(panels(page)).toHaveCount(5, { timeout: 20_000 });
+    await expect(page.getByRole("navigation", { name: NAV_LABEL })).toBeVisible({ timeout: 45_000 });
+    await expect(panels(page)).toHaveCount(5, { timeout: 45_000 });
     // Avoid clicks and wheel input before the client effect has initialized Lenis.
-    await expect(page.locator('[data-rail-ready="true"]')).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator('[data-rail-ready="true"]')).toBeVisible({ timeout: 45_000 });
   } else {
     await expect(page.locator("main")).toBeVisible();
   }
@@ -236,8 +236,8 @@ test("búsqueda y filtros de Colección siguen accesibles con ventana baja y esc
   // the unrelated dynamic-import/hydration timing of a cold page load.
   await openRail(page);
   await page.setViewportSize({ width: 1280, height: 600 });
-  await expect(page.getByRole("navigation", { name: NAV_LABEL })).toBeVisible();
-  await expect(panels(page)).toHaveCount(5);
+  await expect(page.getByRole("navigation", { name: NAV_LABEL })).toBeVisible({ timeout: 45_000 });
+  await expect(panels(page)).toHaveCount(5, { timeout: 45_000 });
   await expect(page.locator('[data-rail-ready="true"]')).toBeVisible();
   await goToChapter(page, "Colección", 3);
 

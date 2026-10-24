@@ -2,7 +2,7 @@
 
 ## Alcance
 
-Línea base del proyecto desde un checkout limpio de `main`. Esta rama sólo agrega este registro; no modifica código de producto, dependencias ni configuración funcional. La ejecución de CI sobre el PR instala las dependencias y valida el árbol de la aplicación, que es idéntico a `main` en este baseline.
+Línea base del proyecto desde un checkout limpio de `main`. Esta rama agrega este registro y un ajuste acotado a la espera de inicialización de Playwright; no modifica lógica ni código de producto, ni dependencias.
 
 ## Comandos requeridos
 
@@ -15,20 +15,37 @@ Se deben registrar los resultados observados de:
 
 El workflow existente `.github/workflows/build.yml` ejecuta esos cuatro pasos en pull requests dirigidos a `main`. Usa Node.js 24 y ejecuta `npm ci --no-audit --no-fund --loglevel=error`, equivalente a `npm ci` para instalación limpia con auditoría y mensajes de financiación desactivados.
 
-## Estado de la ejecución
+## Resultados de línea base (checkout limpio de PR hacia `main`)
 
-Pendiente de verificar los checks de GitHub Actions de este PR. No se considera exitoso ningún comando hasta observar el resultado del paso correspondiente.
+Los comandos se ejecutaron en GitHub Actions desde un checkout limpio de la rama, cuyo código de aplicación es idéntico a `main`. El workflow existente añade flags a `npm ci` para desactivar audit/funding; sigue siendo una instalación limpia.
 
-| Comando | Resultado | Evidencia / diagnóstico |
+| Comando | Resultado observado | Evidencia / diagnóstico |
 |---|---|---|
-| `npm ci` | Pendiente | CI: Install dependencies |
-| `npm run lint` | Pendiente | CI: Lint |
-| `npm run test` | Pendiente | CI: Typecheck |
-| `npm run build` | Pendiente | CI: Production build |
+| `npm ci` | **PASS** | `Build`, paso Install dependencies, terminó correctamente |
+| `npm run lint` | **PASS con warnings** | Exit code 0. Advertencias preexistentes detalladas abajo |
+| `npm run test` | **PASS** | El script actual ejecuta `tsc --noEmit`; terminó correctamente |
+| `npm run build` | **PASS** | Compilación de producción completada; páginas estáticas generadas 16/16 |
 
-## Clasificación baseline vs. regresión
+Evidencia de ejecución inicial: https://github.com/juann-ign/CDvicious/actions/runs/40115789236
 
-Como el único cambio de esta rama es este documento, cualquier fallo de lint, typecheck o build será preexistente en el código que parte de `main`, salvo que la evidencia muestre que la documentación o el cambio de rama afecta al workflow. No se deben introducir correcciones de producto ni refactors en este PR. Si se encuentra un error reproducible, registrar el comando, mensaje completo y clasificación; corregirlo sólo si es una corrección estrictamente necesaria para hacer ejecutable el baseline y separar ese cambio del registro.
+### Warnings de lint no bloqueantes observados en el baseline
+
+- `next lint` está deprecado y se eliminará en Next.js 16.
+- `src/components/crate/CrateChapter.tsx:24`: warning `react-hooks/exhaustive-deps` sobre `dragLockTokenRef.current` en cleanup.
+- `src/components/crate/JewelCaseDetailModal.tsx:380`: mismo tipo de warning sobre `railLockTokenRef.current`.
+- `src/components/crate/MixtapeChapter.tsx:46`: mismo tipo de warning sobre `exportLockTokenRef.current`.
+- `src/lib/nowPlayingStore.ts:29`: `lastPollStartedAt` se asigna pero no se utiliza.
+
+Los warnings aparecen tanto en lint como durante el build; no hacen fallar los comandos. Quedan fuera de este PR porque no son necesarios para establecer la línea base.
+
+## Clasificación baseline vs. regresión del PR
+
+La rama parte de `main` y no cambia lógica de producto. El primer Browser QA con `RAIL_FLAG=0` pasó (2 tests pasados, 16 omitidos por ser específicos del rail habilitado).
+
+El primer Browser QA con `RAIL_FLAG=1` reportó 16 tests pasados, 1 omitido y 1 fallo de preparación: el helper `openRail` no encontró la navegación en 20 segundos. El snapshot de error muestra que ésta sí terminó montándose; el test de drag falló antes de ejercitar el drag. Se clasifica como una carrera de inicialización/hidratación preexistente de la suite, no como una regresión de producto introducida por este PR.
+
+**Corrección de alcance QA:** ampliar a 45 segundos las esperas de navegación, paneles y marcador `data-rail-ready` en los specs de rail. No se modifican las aserciones funcionales, no se agregan reintentos y no se toca código de producto. El rerun del commit final debe quedar verde; su conclusión se verá en los checks visibles del PR.
+
 
 ## Workflows y checks esperados hacia `main`
 

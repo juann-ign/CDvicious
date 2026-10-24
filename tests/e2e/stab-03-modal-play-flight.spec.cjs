@@ -52,10 +52,10 @@ async function openRail(page) {
   await page.goto("/", { waitUntil: "domcontentloaded" });
   test.skip(!RAIL_ENABLED, "El flujo flying-disc requiere el rail desktop habilitado.");
   // HorizontalRail is client-only, and the initial 3D/WebGL hydration can be slow in CI.
-  await expect(page.getByRole("navigation", { name: NAV_LABEL })).toBeVisible({ timeout: 20_000 });
-  await expect(panels(page)).toHaveCount(5, { timeout: 20_000 });
+  await expect(page.getByRole("navigation", { name: NAV_LABEL })).toBeVisible({ timeout: 45_000 });
+  await expect(panels(page)).toHaveCount(5, { timeout: 45_000 });
   // Wait for the client-side Lenis effect before interacting.
-  await expect(page.locator('[data-rail-ready="true"]')).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator('[data-rail-ready="true"]')).toBeVisible({ timeout: 45_000 });
   await expect(deckArtist(page)).toHaveText(INITIAL_ALBUM.artists[0].name, {
     timeout: 8_000,
   });

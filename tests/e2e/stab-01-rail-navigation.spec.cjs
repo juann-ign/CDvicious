@@ -18,9 +18,9 @@ async function openDesktop(page, width = 1280, height = 800) {
   if (RAIL_ENABLED) {
     // HorizontalRail is loaded by a client-only dynamic import. CI can spend
     // several seconds hydrating the 3D scene before its navigation mounts.
-    await expect(navigation(page)).toBeVisible({ timeout: 20_000 });
-    await expect(panels(page)).toHaveCount(5, { timeout: 20_000 });
-    await expect(page.locator('[data-rail-ready="true"]')).toBeVisible({ timeout: 20_000 });
+    await expect(navigation(page)).toBeVisible({ timeout: 45_000 });
+    await expect(panels(page)).toHaveCount(5, { timeout: 45_000 });
+    await expect(page.locator('[data-rail-ready="true"]')).toBeVisible({ timeout: 45_000 });
   } else {
     await expect(page.locator("main")).toBeVisible();
   }
@@ -57,7 +57,7 @@ test("feature flag and 761px breakpoint select the expected experience", async (
     return;
   }
 
-  await expect(navigation(page)).toBeVisible();
+  await expect(navigation(page)).toBeVisible({ timeout: 45_000 });
   await expect(page.locator("[data-rail-wrapper]")).toBeVisible();
 
   for (const width of [760, 390]) {
@@ -69,8 +69,8 @@ test("feature flag and 761px breakpoint select the expected experience", async (
 
   for (const width of [761, 762, 900, 1366, 1920]) {
     await page.setViewportSize({ width, height: 800 });
-    await expect(navigation(page)).toBeVisible();
-    await expect(panels(page)).toHaveCount(5);
+    await expect(navigation(page)).toBeVisible({ timeout: 45_000 });
+    await expect(panels(page)).toHaveCount(5, { timeout: 45_000 });
   }
 });
 
@@ -174,8 +174,8 @@ test("resizing and reloading at desktop resolutions keeps rail navigation usable
   ]) {
     await page.setViewportSize(viewport);
     await page.goto("/", { waitUntil: "domcontentloaded" });
-    await expect(navigation(page)).toBeVisible();
-    await expect(panels(page)).toHaveCount(5);
+    await expect(navigation(page)).toBeVisible({ timeout: 45_000 });
+    await expect(panels(page)).toHaveCount(5, { timeout: 45_000 });
     await expect(chapterButton(page, "Deck")).toHaveAttribute(
       "aria-current",
       "location",
