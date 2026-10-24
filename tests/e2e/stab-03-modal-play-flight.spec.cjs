@@ -99,42 +99,48 @@ async function chooseFromCrate(page, album) {
   await openCollection(page); // Collection cache is shared and loaded lazily.
   await goToChapter(page, "Batea", 2);
 
-  const candidates = page
-    .locator('section[aria-label="La Batea"] button[aria-label="' + albumButtonName(album) + '"]');
-  const index = await candidates.evaluateAll((nodes) => {
-    const viewport = nodes[0]?.closest('[class*="viewport"]');
-    const bounds = viewport?.getBoundingClientRect();
+  const crate = panels(page).nth(2);
+  const stage = crate.locator('[class*="stage"]').first();
+  const viewport = crate.locator('[class*="viewport"]').first();
+  const candidates = crate.locator(
+    'button[aria-label="' + albumButtonName(album) + '"]',
+  );
+
+  // Pause the moving belt by hovering the static stage, not the moving spine.
+  // Playwright's locator.hover waits for layout stability and otherwise times
+  // out while the decorative belt keeps translating.
+  await stage.hover();
+  await page.waitForTimeout(150);
+
+  const visibleIndex = await candidates.evaluateAll((nodes) => {
+    const bounds = nodes[0]?.closest('[class*="viewport"]')?.getBoundingClientRect();
     if (!bounds) return -1;
 
     return nodes.findIndex((node) => {
       const rect = node.getBoundingClientRect();
+      const style = getComputedStyle(node);
       const x = rect.left + rect.width / 2;
       const y = rect.top + rect.height / 2;
       return rect.width > 0 && rect.height > 0 &&
+        style.visibility === "visible" &&
+        style.display !== "none" &&
         x >= bounds.left + 4 && x <= bounds.right - 4 &&
         y >= bounds.top + 4 && y <= bounds.bottom - 4;
     });
   });
-  expect(index, "El lomo de " + album.name + " debe tener un hitbox dentro de la batea visible").toBeGreaterThanOrEqual(0);
 
-  const spine = candidates.nth(index);
-  const initialBox = await spine.boundingBox();
-  expect(initialBox, "El lomo visible debe tener bounding box").not.toBeNull();
+  expect(
+    visibleIndex,
+    "El lomo de " + album.name + " debe tener un hitbox dentro de la batea visible",
+  ).toBeGreaterThanOrEqual(0);
 
-  // The belt moves continuously, so Playwright's locator.hover() never sees a
-  // stable target. Move the pointer directly into it; the shelf stage pauses
-  // drift on pointerenter, then remeasure before clicking.
-  await page.mouse.move(
-    initialBox.x + initialBox.width / 2,
-    initialBox.y + initialBox.height / 2,
-  );
-  await page.waitForTimeout(150);
-  const clickBox = await spine.boundingBox();
-  expect(clickBox, "El lomo debe permanecer visible tras pausar la batea").not.toBeNull();
-  await page.mouse.click(
-    clickBox.x + clickBox.width / 2,
-    clickBox.y + clickBox.height / 2,
-  );
+  const spine = candidates.nth(visibleIndex);
+  const box = await spine.boundingBox();
+  expect(box).not.toBeNull();
+
+  // Click the centre of the now-paused visible copy; avoid locator.hover's
+  // stability polling on an element that was moving moments earlier.
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
   await expect(dialog(page)).toBeVisible();
   await expect(dialog(page)).toHaveAttribute("aria-label", modalLabel(album));
   return spine;
