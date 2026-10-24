@@ -113,7 +113,9 @@ test("click corto en Batea abre modal; Escape restaura foco y libera scroll", as
   await expect(page.locator("html")).not.toHaveAttribute("data-modal-open", "true");
   await expect(spine).toBeFocused();
 
-  await page.mouse.move(1200, 650);
+  // Send the wheel gesture over a real hit target in Batea, not a fixed screen
+  // coordinate that may be covered by a sibling overlay at different timings.
+  await spine.hover();
   await page.mouse.wheel(0, 700);
   await expect.poll(() => page.locator("html").getAttribute("data-chapter"), { timeout: 8_000 }).toBe("3");
 });
@@ -139,7 +141,8 @@ test("drag de Batea mayor a 6px no abre modal y libera wheel después de pointer
   await expect(page.locator("html")).not.toHaveAttribute("data-modal-open", "true");
   await expect(panels(page).nth(2)).toHaveAttribute("data-chapter-active", "true");
 
-  await page.mouse.move(1200, 650);
+  const shelfViewport = panels(page).nth(2).locator('[class*="viewport"]').first();
+  await shelfViewport.hover();
   await page.mouse.wheel(0, 700);
   await expect.poll(() => page.locator("html").getAttribute("data-chapter"), { timeout: 8_000 }).toBe("3");
 });
@@ -171,7 +174,8 @@ test("pointercancel en un drag capturado libera el bloqueo del rail", async ({ p
   await page.mouse.up();
 
   await expect(dialog(page)).toHaveCount(0);
-  await page.mouse.move(1200, 650);
+  const shelfViewport = panels(page).nth(2).locator('[class*="viewport"]').first();
+  await shelfViewport.hover();
   await page.mouse.wheel(0, 700);
   await expect.poll(() => page.locator("html").getAttribute("data-chapter"), { timeout: 8_000 }).toBe("3");
 });
@@ -263,7 +267,9 @@ test("modal de Colección: Escape restaura foco y scroll", async ({ page }) => {
   await expect(page.locator("html")).not.toHaveAttribute("data-modal-open", "true");
   await expect(caseButton).toBeFocused();
 
-  await page.mouse.move(1200, 650);
+  // The modal's original trigger is the verified hit target inside Collection.
+  // Hovering it ensures the synthetic wheel bubbles through the active chapter.
+  await caseButton.hover();
   await page.mouse.wheel(0, 1200);
   await expect.poll(() => page.locator("html").getAttribute("data-chapter"), { timeout: 8_000 }).toBe("4");
 });
