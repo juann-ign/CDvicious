@@ -15,7 +15,8 @@ import styles from "./CrateChapter.module.css";
 const SHELF_COUNT = 18;
 
 export function CrateChapter() {
-  const { stop, start, scrollToChapter } = useRail();
+  const { stop, start, scrollToChapter, activeChapterIndex, isRailMoving } = useRail();
+  const isShelfAnimationEnabled = activeChapterIndex === 2 && !isRailMoving;
   const dragLockTokenRef = useRef(Symbol("crate-shelf-drag"));
   const { albums: cachedAlbums } = useCollectionCache();
 
@@ -133,7 +134,10 @@ export function CrateChapter() {
         : albums.length + " DISCS";
 
   return (
-    <div className={styles.chapter}>
+    <div
+      className={styles.chapter}
+      data-batea-animation-enabled={isShelfAnimationEnabled ? "true" : "false"}
+    >
       <header className={styles.header}>
         <div>
           <h2>LA BATEA</h2>
@@ -148,7 +152,8 @@ export function CrateChapter() {
           <div className={styles.emptyState}>ARCHIVO VACÍO</div>
         ) : (
           <CrateShelf
-            albums={albums.slice(0, SHELF_COUNT)}
+            animationEnabled={isShelfAnimationEnabled}
+            albums={albums.slice(0, SHELF_COUNT)
             onSelect={handleSelect}
             onGrabStart={handleGrabStart}
             onGrabEnd={handleGrabEnd}

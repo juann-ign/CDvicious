@@ -13,6 +13,7 @@ import Lenis from "lenis";
 import styles from "./RailProvider.module.css";
 
 const SNAP_IDLE_DELAY_MS = 120;
+const RAIL_IDLE_DELAY_MS = 180;
 const SNAP_THRESHOLD_RATIO = 0.2;
 const SNAP_MIN_DURATION_SECONDS = 0.62;
 const SNAP_MAX_DURATION_SECONDS = 0.92;
@@ -24,6 +25,7 @@ type RailLockToken = symbol;
 type RailContextValue = {
   isReady: boolean;
   activeChapterIndex: number;
+  isRailMoving: boolean;
   start: (token: RailLockToken) => void;
   stop: (token: RailLockToken) => void;
   scrollToX: (px: number) => void;
@@ -45,6 +47,7 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
   const lenisRef = useRef<Lenis | null>(null);
   const stopTokensRef = useRef(new Set<RailLockToken>());
   const animationFrameRef = useRef<number | null>(null);
+  const railIdleTimerRef = useRef<number | null>(null);
   const snapTimerRef = useRef<number | null>(null);
   const snapInProgressRef = useRef(false);
   const snapTargetIndexRef = useRef<number | null>(null);
@@ -63,6 +66,7 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
   });
   const [isReady, setIsReady] = useState(false);
   const [activeChapterIndex, setActiveChapterIndex] = useState(0);
+  const [isRailMoving, setIsRailMoving] = useState(false);
 
   useEffect(() => {
     const root = rootRef.current;
@@ -400,6 +404,15 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
     resizeObserver.observe(content);
 
     const handleScroll = ({ scroll }: { scroll: number }) => {
+      if (railIdleTimerRef.current !== null) {
+        window.clearTimeout(railIdleTimerRef.current);
+      }
+      setIsRailMoving(true);
+      railIdleTimerRef.current = window.setTimeout(() => {
+        railIdleTimerRef.current = null;
+        setIsRailMoving(false);
+      }, RAIL_IDLE_DELAY_MS);
+
       updateRailProgress(scroll);
     };
 
@@ -419,6 +432,11 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
       }
 
       lenis.off("scroll", handleScroll);
+      if (railIdleTimerRef.current !== null) {
+        window.clearTimeout(railIdleTimerRef.current);
+        railIdleTimerRef.current = null;
+      }
+      setIsRailMoving(false);
       resizeObserver.disconnect();
       clearSnapTimer();
       scheduleWheelSnap = null;
@@ -570,6 +588,7 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
   const value: RailContextValue = {
     isReady,
     activeChapterIndex,
+    isRailMoving,
     start,
     stop,
     scrollToX,
@@ -578,7 +597,12 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
 
   return (
     <RailContext.Provider value={value}>
-      <div ref={rootRef} className={styles.root} data-rail-ready={isReady ? "true" : "false"}>
+      <div
+        ref={rootRef}
+        className={styles.root}
+        data-rail-ready={isReady ? "true" : "false"}
+        data-rail-moving={isRailMoving ? "true" : "false"}
+      >
         <div
           ref={wrapperRef}
           className={styles.wrapper}

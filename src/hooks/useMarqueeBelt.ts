@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 interface Options {
   speed?: number;
+  enabled?: boolean;
   paused?: boolean;
   length: number;
   pages?: number;
@@ -22,6 +23,7 @@ const ring = (a: number, b: number, len: number) => {
 
 export function useMarqueeBelt({
   speed = 24,
+  enabled = true,
   paused = false,
   length,
   pages = 1,
@@ -56,7 +58,7 @@ export function useMarqueeBelt({
   pagesRef.current = pages;
 
   useEffect(() => {
-    if (!length) return;
+    if (!enabled || !length) return;
     let raf = 0;
     let prev = performance.now();
 
@@ -102,7 +104,7 @@ export function useMarqueeBelt({
 
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [length]);
+  }, [enabled, length]);
 
   const goTo = (p: number) => {
     const len = lenRef.current;

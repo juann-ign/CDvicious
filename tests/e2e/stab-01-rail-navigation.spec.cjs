@@ -209,6 +209,50 @@ test("long navigation reveals intermediate chapters and keeps the VFD unobstruct
     .toEqual([0, 1, 2, 3, 4]);
 });
 
+test("Batea marquee pauses during rail movement and resumes only when Batea settles", async ({
+  page,
+}) => {
+  test.skip(!RAIL_ENABLED, "El rail no debe estar montado cuando el flag está apagado.");
+
+  await openDesktop(page);
+
+  const rail = page.locator('[data-rail-ready="true"]');
+  const bateaMotion = page.locator('[data-batea-animation-enabled]');
+  const beltMotion = page.locator('[data-belt-animation-enabled]');
+
+  await expect(bateaMotion).toHaveAttribute("data-batea-animation-enabled", "false");
+
+  // A long jump must pass through Batea without running its decorative RAF loop.
+  await chapterButton(page, "Mixtape Lab").click();
+  await expect(rail).toHaveAttribute("data-rail-moving", "true", { timeout: 3_000 });
+  await expect(bateaMotion).toHaveAttribute("data-batea-animation-enabled", "false");
+  await expect(panels(page).nth(4)).toHaveAttribute("data-chapter-active", "true");
+  await expect(rail).toHaveAttribute("data-rail-moving", "false", { timeout: 10_000 });
+  await expect(bateaMotion).toHaveAttribute("data-batea-animation-enabled", "false");
+
+  // On arriving at Batea the belt may run again only after Lenis has settled.
+  await chapterButton(page, "Batea").click();
+  await expect(rail).toHaveAttribute("data-rail-moving", "true", { timeout: 3_000 });
+  await expect(bateaMotion).toHaveAttribute("data-batea-animation-enabled", "false");
+  await expect(panels(page).nth(2)).toHaveAttribute("data-chapter-active", "true");
+  await expect(rail).toHaveAttribute("data-rail-moving", "false", { timeout: 10_000 });
+  await expect(bateaMotion).toHaveAttribute("data-batea-animation-enabled", "true");
+  if (await beltMotion.count()) {
+    await expect(beltMotion).toHaveAttribute("data-belt-animation-enabled", "true");
+  }
+
+  // Leaving Batea disables the marquee until the next time the chapter is idle.
+  await chapterButton(page, "Colección").click();
+  await expect(rail).toHaveAttribute("data-rail-moving", "true", { timeout: 3_000 });
+  await expect(bateaMotion).toHaveAttribute("data-batea-animation-enabled", "false");
+  await expect(panels(page).nth(3)).toHaveAttribute("data-chapter-active", "true");
+  await expect(rail).toHaveAttribute("data-rail-moving", "false", { timeout: 10_000 });
+  await expect(bateaMotion).toHaveAttribute("data-batea-animation-enabled", "false");
+  if (await beltMotion.count()) {
+    await expect(beltMotion).toHaveAttribute("data-belt-animation-enabled", "false");
+  }
+});
+
 test("resizing and reloading at desktop resolutions keeps rail navigation usable", async ({
   page,
 }) => {

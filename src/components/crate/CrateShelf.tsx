@@ -9,6 +9,7 @@ import styles from "./CrateShelf.module.css";
 
 interface CrateShelfProps {
   albums: AlbumItem[];
+  animationEnabled?: boolean;
   onSelect: (album: AlbumItem) => void;
   onGrabStart?: () => void;
   onGrabEnd?: () => void;
@@ -20,6 +21,7 @@ const MAX_PAGES = 6;
 
 export function CrateShelf({
   albums,
+  animationEnabled = true,
   onSelect,
   onGrabStart,
   onGrabEnd,
@@ -49,6 +51,7 @@ export function CrateShelf({
   const { containerRef, trackRef, isDragging, page, goTo, stepPage } =
     useMarqueeBelt({
       speed: 60,
+      enabled: animationEnabled,
       paused: !driftEnabled || hovering || albums.length === 0,
       length,
       pages,
@@ -59,7 +62,10 @@ export function CrateShelf({
   if (albums.length === 0) return null;
 
   return (
-    <div className={styles.wrap}>
+    <div
+      className={styles.wrap}
+      data-belt-animation-enabled={animationEnabled ? "true" : "false"}
+    >
       <div className={styles.toolbar}>
         <div className={styles.pageNav}>
           <button
