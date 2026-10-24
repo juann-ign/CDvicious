@@ -5,11 +5,13 @@
 
 ## Cobertura automatizada
 
+Las verificaciones de cierre, restauración del foco y desbloqueo del wheel están agrupadas en el escenario de selección Batea/Colección de STAB-03. Se evita crear contextos WebGL duplicados para repetir las mismas interacciones; STAB-02 conserva la cobertura independiente de drag, `pointercancel`, hit-testing, estado `inert` y filtros.
+
 El spec `tests/e2e/stab-03-modal-play-flight.spec.cjs` corre con `NEXT_PUBLIC_SPOTIFY_MOCK=1` y controla desde Playwright la respuesta y el momento en que llega `POST /api/play`.
 
 | Caso | Condición | Resultado esperado |
 |---|---|---|
-| Selección y cierre | Seleccionar desde Batea con mouse; seleccionar desde Colección con Enter | Modal correcto; cierre por mouse/Escape; se elimina `data-modal-open` y se restaura el foco |
+| Selección, cierre y bloqueo del rail | Seleccionar desde Batea con mouse y cerrar con mouse; seleccionar desde Colección con Enter y cerrar con Escape | Modal correcto, `data-modal-open` se elimina, se restaura el foco y el wheel avanza a Mixtape Lab después del cierre |
 | Play confirmado | Respuesta simulada `200 { success: true }` | Petición con el URI del álbum y device mock; vuelo visible; eventos ordenados `flight-started → flight-arrived → playback-ready → playback-started`; disco temporal eliminado y Deck/Now Playing sincronizados |
 | Autenticación | Respuesta simulada `401 AUTH_REQUIRED` desde Batea | Vuelo cancelado, retorno al capítulo de origen, modal reabierto con feedback y pista previa restaurada |
 | Dispositivo no disponible | Respuesta simulada `409 DEVICE_NOT_AVAILABLE` desde Colección | Mismo rollback y feedback de dispositivo |
