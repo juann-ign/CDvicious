@@ -26,6 +26,20 @@ async function openDesktop(page, width = 1280, height = 800) {
   }
 }
 
+test("reduced-motion preference does not break direct chapter navigation", async ({
+  page,
+}) => {
+  test.skip(!RAIL_ENABLED, "El rail no debe estar montado cuando el flag está apagado.");
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await openDesktop(page);
+
+  const fifth = chapterButton(page, "Mixtape Lab");
+  await fifth.click();
+  await expect(fifth).toHaveAttribute("aria-current", "location");
+  await expect(panels(page).nth(4)).toHaveAttribute("data-chapter-active", "true");
+});
+
 test("feature flag and 761px breakpoint select the expected experience", async ({
   page,
 }) => {
@@ -179,16 +193,3 @@ test("resizing and reloading at desktop resolutions keeps rail navigation usable
   }
 });
 
-test("reduced-motion preference does not break direct chapter navigation", async ({
-  page,
-}) => {
-  test.skip(!RAIL_ENABLED, "El rail no debe estar montado cuando el flag está apagado.");
-
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  await openDesktop(page);
-
-  const fifth = chapterButton(page, "Mixtape Lab");
-  await fifth.click();
-  await expect(fifth).toHaveAttribute("aria-current", "location");
-  await expect(panels(page).nth(4)).toHaveAttribute("data-chapter-active", "true");
-});
