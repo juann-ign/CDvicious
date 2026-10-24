@@ -13,7 +13,7 @@ import Lenis from "lenis";
 import styles from "./RailProvider.module.css";
 
 const SNAP_IDLE_DELAY_MS = 120;
-const RAIL_IDLE_DELAY_MS = 180;
+const RAIL_IDLE_DELAY_MS = 250;
 const SNAP_THRESHOLD_RATIO = 0.2;
 const SNAP_MIN_DURATION_SECONDS = 0.62;
 const SNAP_MAX_DURATION_SECONDS = 0.92;
