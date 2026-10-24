@@ -29,6 +29,8 @@ jobs:
         rail_flag: ["0", "1"]
     env:
       RAIL_FLAG: ${{ matrix.rail_flag }}
+      NEXT_PUBLIC_ENABLE_RAIL: ${{ matrix.rail_flag }}
+      NEXT_PUBLIC_SPOTIFY_MOCK: "1"
       NEXT_TELEMETRY_DISABLED: "1"
 
     steps:
@@ -43,6 +45,9 @@ jobs:
 
       - name: Install application dependencies
         run: npm ci --no-audit --no-fund --loglevel=error
+
+      - name: Build production app for browser QA
+        run: npm run build
 
       - name: Install pinned Playwright runner outside the application
         run: |
