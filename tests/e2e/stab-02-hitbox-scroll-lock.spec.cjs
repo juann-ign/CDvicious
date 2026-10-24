@@ -208,7 +208,14 @@ test("hit-testing en Batea y Colección entrega el pointer al panel activo", asy
 
 test("búsqueda y filtros de Colección siguen accesibles con ventana baja y escala CSS 125%", async ({ page }) => {
   test.skip(!RAIL_ENABLED, "Requiere Colección en el rail desktop.");
-  await openRail(page, { width: 1280, height: 600 });
+  // Mount and initialize the desktop rail at the standard viewport first.
+  // Then reduce only the height: this test targets short-window layout, not
+  // the unrelated dynamic-import/hydration timing of a cold page load.
+  await openRail(page);
+  await page.setViewportSize({ width: 1280, height: 600 });
+  await expect(page.getByRole("navigation", { name: NAV_LABEL })).toBeVisible();
+  await expect(panels(page)).toHaveCount(5);
+  await expect(page.locator('[data-rail-ready="true"]')).toBeVisible();
   await goToChapter(page, "Colección", 3);
 
   const collection = panels(page).nth(3);
