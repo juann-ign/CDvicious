@@ -326,16 +326,21 @@ test("play confirmado desde Colección: vuelo, acople y Now Playing terminan sin
 
   gate.respond({ kind: "response", status: 200, body: { success: true } });
 
-  await expect(deckArtist(page)).toHaveText(ALBUM_IN_COLLECTION.artists[0].name, {
-    timeout: 15_000,
-  });
-  await expect(deckDisplay(page)).toHaveAttribute("data-is-playing", "true", {
-    timeout: 8_000,
-  });
-  await expect(flightDisc(page)).toHaveCount(0, { timeout: 8_000 });
-  await expect(page.locator("html")).toHaveAttribute("data-chapter", "0", {
-    timeout: 8_000,
-  });
+  // HTTP acceptance starts the playback handoff, but the VFD intentionally
+  // keeps the previous confirmed snapshot while the CD is still travelling.
+  // Wait for the actual playback-started event instead of asserting against
+  // the VFD during the in-flight phase.
+  await expect
+    .poll(
+      () =>
+        page.evaluate(() =>
+          (window.__cdvFlightEvents ?? []).some(
+            (event) => event.name === "cdvicious:disc-flight-playback-started",
+          ),
+        ),
+      { timeout: 60_000, intervals: [100, 250, 500] },
+    )
+    .toBe(true);
 
   const events = await page.evaluate(() => window.__cdvFlightEvents ?? []);
   const eventIndex = (name) => events.findIndex((event) => event.name === name);
@@ -368,6 +373,19 @@ test("play confirmado desde Colección: vuelo, acople y Now Playing terminan sin
     confirmedEvent.detail?.snapshot?.isPlaying,
     "El evento de confirmación debe llevar evidencia de reproducción activa",
   ).toBe(true);
+
+  // Wait until the animation has docked and the rail has returned to Deck.
+  // Only then is the VFD expected to replace its frozen previous snapshot.
+  await expect(flightDisc(page)).toHaveCount(0, { timeout: 30_000 });
+  await expect(page.locator("html")).toHaveAttribute("data-chapter", "0", {
+    timeout: 30_000,
+  });
+  await expect(deckArtist(page)).toHaveText(ALBUM_IN_COLLECTION.artists[0].name, {
+    timeout: 8_000,
+  });
+  await expect(deckDisplay(page)).toHaveAttribute("data-is-playing", "true", {
+    timeout: 8_000,
+  });
 });
 
 const failureScenarios = [
