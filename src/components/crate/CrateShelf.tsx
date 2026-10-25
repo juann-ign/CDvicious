@@ -9,6 +9,7 @@ import styles from "./CrateShelf.module.css";
 
 interface CrateShelfProps {
   albums: AlbumItem[];
+  animationEnabled?: boolean;
   onSelect: (album: AlbumItem) => void;
   onGrabStart?: () => void;
   onGrabEnd?: () => void;
@@ -20,6 +21,7 @@ const MAX_PAGES = 6;
 
 export function CrateShelf({
   albums,
+  animationEnabled = true,
   onSelect,
   onGrabStart,
   onGrabEnd,
@@ -32,7 +34,6 @@ export function CrateShelf({
     rect: DOMRect;
   } | null>(null);
   const firstCopyRef = useRef<HTMLDivElement>(null);
-  const wrapRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
     const measure = () => {
@@ -46,31 +47,15 @@ export function CrateShelf({
   }, [albums.length]);
 
   useEffect(() => {
-    const railRoot = document.querySelector<HTMLElement>("[data-rail-wrapper]")?.parentElement;
-    const wrap = wrapRef.current;
-    if (!wrap) return;
-
-    const syncMotionState = () => {
-      const enabled = !railRoot ||
-        (railRoot.dataset.chapter === "2" && railRoot.dataset.railMoving !== "true");
-      wrap.dataset.beltAnimationEnabled = String(enabled);
-      if (!enabled) setHover(null);
-    };
-
-    syncMotionState();
-    const observer = railRoot ? new MutationObserver(syncMotionState) : null;
-    observer?.observe(railRoot!, {
-      attributes: true,
-      attributeFilter: ["data-chapter", "data-rail-moving"],
-    });
-    return () => observer?.disconnect();
-  }, []);
+    if (!animationEnabled) setHover(null);
+  }, [animationEnabled]);
 
   const pages = Math.max(1, Math.min(MAX_PAGES, albums.length));
 
   const { containerRef, trackRef, isDragging, page, goTo, stepPage } =
     useMarqueeBelt({
       speed: 60,
+      enabled: animationEnabled,
       paused: !driftEnabled || hovering || albums.length === 0,
       length,
       pages,
@@ -82,9 +67,8 @@ export function CrateShelf({
 
   return (
     <div
-      ref={wrapRef}
       className={styles.wrap}
-      data-belt-animation-enabled="false"
+      data-belt-animation-enabled={animationEnabled ? "true" : "false"}
     >
       <div className={styles.toolbar}>
         <div className={styles.pageNav}>
@@ -150,13 +134,9 @@ export function CrateShelf({
                     artist={album.artists.map((a) => a.name).join(", ")}
                     coverUrl={album.images[0]?.url || ""}
                     tilt={(i % 5) * 0.5 - 1}
+                    reduceEffects={!animationEnabled}
                     onSelect={() => onSelect(album)}
-                    onHover={(rect) => {
-                      const railRoot = document.querySelector<HTMLElement>("[data-rail-wrapper]")?.parentElement;
-                      const settledBatea = !railRoot ||
-                        (railRoot.dataset.chapter === "2" && railRoot.dataset.railMoving !== "true");
-                      setHover(rect && settledBatea ? { album, rect } : null);
-                    }}
+                    onHover={(rect) => setHover(rect ? { album, rect } : null)}
                   />
                 ))}
               </div>

@@ -65,24 +65,3 @@ The previous Browser QA run exposed two test assumptions that measured the wrong
 - The crossfade test checked intermediate opacity after waiting for the destination attribute, which could measure the completed fade. It now samples while the rail moves and checks that the track and booklet remain mounted during the midpoint.
 
 During movement the Deck Canvas uses `frameloop="demand"` and lower render quality, returning to `always` after settling and `never` when fully hidden. Batea and Collection disable interactions and expensive cosmetic effects as they cross the viewport, restoring the full presentation at rest.
-
-
-## Tercer loop — aislar los fallos del último Browser QA
-
-- El test de navegación y el de crossfade fijan explícitamente `prefers-reduced-motion: no-preference`: miden interpolación, así que no dependen de la preferencia del host CI. La prueba específica de reduced-motion sigue validando el modo accesible por separado.
-- Se revirtió el polling temporal adicional que se había agregado al Deck al confirmar playback; interfería con la sincronización del mock de Now Playing. Se conserva el gating normal por capítulo y la instantánea congelada durante el vuelo.
-
-
-## Cuarto loop — causa raíz de duración y cancelación de drag
-
-La documentación de Lenis 1.3.26 confirma que `duration` no tiene efecto cuando hay un `lerp` definido. El rail configuraba `lerp: 0.09` globalmente y luego solicitaba duraciones explícitas para navegación y snap; esos llamados no estaban usando las curvas de tiempo declaradas. Los llamados programáticos con duración ahora especifican `lerp: 0` (o `1` bajo movimiento reducido), dejando intacto el suavizado de rueda ordinario.
-
-También se mantiene una ventana breve de supresión del click después de cualquier drag capturado, incluido `pointercancel`, para evitar que una cancelación seguida de `pointerup` abra accidentalmente el modal del álbum.
-
-
-## Quinto loop — evitar repintado global y conservar el snapshot de mock
-
-La pasada de CI posterior al arreglo de Lenis midió un salto de 1249 px sobre 525 ms: la duración ya se aplica, pero todavía había un parón en la transición. Se redujo el trabajo que ocurre en el mismo frame:
-- DeckPinnedLayer ya no se suscribe al cambio de movimiento del rail, así que no rerenderiza el VFD, el booklet y el layout completo al iniciar/finalizar una navegación. El estado de movimiento se lee en el componente Disc y solo actualiza su subtree WebGL.
-- Los selectores CSS de la batea y la colección se limitan a sus propios contenedores mediante `data-batea-animation-enabled` y `data-collection-transition-lite`; se evita invalidar todas las galerías al cambiar el `data-chapter` global.
-- En modo mock, `useNowPlaying` mantiene la suscripción al snapshot mientras Deck está fuera de capítulo, pero no adquiere el timer de progreso hasta estar activo. Esto permite que una selección/play confirmada durante el vuelo actualice la instantánea que se mostrará al acoplar el CD.

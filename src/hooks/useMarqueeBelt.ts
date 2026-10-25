@@ -44,7 +44,6 @@ export function useMarqueeBelt({
   const [page, setPage] = useState(0);
 
   const pausedRef = useRef(paused);
-  const enabledRef = useRef(enabled);
   const speedRef = useRef(speed);
   const lenRef = useRef(length);
   const pagesRef = useRef(pages);
@@ -52,7 +51,6 @@ export function useMarqueeBelt({
   const onGrabEndRef = useRef(onGrabEnd);
 
   pausedRef.current = paused;
-  enabledRef.current = enabled;
   onGrabStartRef.current = onGrabStart;
   onGrabEndRef.current = onGrabEnd;
   speedRef.current = speed;
@@ -61,38 +59,10 @@ export function useMarqueeBelt({
 
   useEffect(() => {
     if (!enabled || !length) return;
-
-    const railRoot = document.querySelector<HTMLElement>("[data-rail-wrapper]")?.parentElement;
-    let raf: number | null = null;
+    let raf = 0;
     let prev = performance.now();
 
-    const canAnimate = () =>
-      enabledRef.current &&
-      (!railRoot ||
-        (railRoot.dataset.chapter === "2" &&
-          railRoot.dataset.railMoving !== "true"));
-
-    const stopLoop = () => {
-      if (raf !== null) {
-        window.cancelAnimationFrame(raf);
-        raf = null;
-      }
-      target.current = null;
-      velocity.current = 0;
-    };
-
-    const startLoop = () => {
-      if (raf !== null || !canAnimate()) return;
-      prev = performance.now();
-      raf = window.requestAnimationFrame(tick);
-    };
-
     const tick = (now: number) => {
-      raf = null;
-      if (!canAnimate()) {
-        stopLoop();
-        return;
-      }
       const dt = Math.min(48, now - prev) / 1000;
       prev = now;
       const len = lenRef.current;
@@ -129,27 +99,11 @@ export function useMarqueeBelt({
         setPage(p);
       }
 
-      raf = window.requestAnimationFrame(tick);
+      raf = requestAnimationFrame(tick);
     };
 
-    const syncRailState = () => {
-      if (canAnimate()) startLoop();
-      else stopLoop();
-    };
-
-    const observer = railRoot ? new MutationObserver(syncRailState) : null;
-    observer?.observe(railRoot!, {
-      attributes: true,
-      attributeFilter: ["data-chapter", "data-rail-moving"],
-    });
-    document.addEventListener("visibilitychange", syncRailState);
-    syncRailState();
-
-    return () => {
-      observer?.disconnect();
-      document.removeEventListener("visibilitychange", syncRailState);
-      stopLoop();
-    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
   }, [enabled, length]);
 
   const goTo = (p: number) => {
@@ -192,24 +146,22 @@ export function useMarqueeBelt({
       const wasCaptured = captured.current;
       const currentPointerId = pointerId.current;
 
-      if (wasCaptured) {
-        // A captured drag must never turn into an album click, including the
-        // synthetic pointercancel → pointerup sequence used by browser QA.
+      if (wasCaptured && snap) {
         suppressNextClick = true;
         if (suppressClickTimer !== null) {
           window.clearTimeout(suppressClickTimer);
         }
-        suppressClickTimer = window.setTimeout(clearClickSuppression, 250);
+        // Pointerup is normally followed immediately by click. Clear the
+        // guard shortly afterward if the browser does not dispatch that click.
+        suppressClickTimer = window.setTimeout(clearClickSuppression, 0);
 
-        if (snap) {
-          const len = lenRef.current;
-          const nPages = pagesRef.current;
+        const len = lenRef.current;
+        const nPages = pagesRef.current;
 
-          if (len > 0) {
-            const stop =
-              Math.round((offset.current / len) * nPages) * (len / nPages);
-            target.current = offset.current + ring(offset.current, stop, len);
-          }
+        if (len > 0) {
+          const stop =
+            Math.round((offset.current / len) * nPages) * (len / nPages);
+          target.current = offset.current + ring(offset.current, stop, len);
         }
       }
 

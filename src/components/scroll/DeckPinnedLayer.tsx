@@ -14,6 +14,7 @@ import pageStyles from "@/app/page.module.css";
 import styles from "./DeckPinnedLayer.module.css";
 
 const DISC_PLAYBACK_START_DELAY_MS = 1_000;
+const PLAYBACK_SNAPSHOT_TIMEOUT_MS = 15_000;
 
 type DiscFlightStage = "idle" | "flying" | "docked";
 
@@ -21,12 +22,14 @@ export function DeckPinnedLayer() {
   const { authenticated } = useSpotifyPlayer();
   const [deckInteractive, setDeckInteractive] = useState(true);
   const [deckHidden, setDeckHidden] = useState(false);
+  const [awaitingPlaybackSnapshot, setAwaitingPlaybackSnapshot] = useState(false);
   const [flightStage, setFlightStage] = useState<DiscFlightStage>("idle");
   const [frozenData, setFrozenData] = useState<NowPlayingResponse | null>(null);
   const [visualPlaybackReady, setVisualPlaybackReady] = useState(true);
   const [flightPlaybackStarted, setFlightPlaybackStarted] = useState(false);
   const flightStageRef = useRef<DiscFlightStage>("idle");
   const playbackDelayRef = useRef<number | null>(null);
+  const playbackSnapshotTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
     const overlay = document.querySelector<HTMLElement>("[data-rail-overlay]");
@@ -49,7 +52,9 @@ export function DeckPinnedLayer() {
     return () => observer.disconnect();
   }, []);
 
-  const { data, error } = useNowPlaying(authenticated === true && deckInteractive);
+  const { data, error } = useNowPlaying(
+    authenticated === true && (deckInteractive || awaitingPlaybackSnapshot),
+  );
   const latestDataRef = useRef(data);
   const playbackSnapshotAtStartRef = useRef(data);
 
@@ -82,8 +87,16 @@ export function DeckPinnedLayer() {
         playbackDelayRef.current = null;
       }
     };
+    const clearPlaybackSnapshotTimeout = () => {
+      if (playbackSnapshotTimeoutRef.current !== null) {
+        window.clearTimeout(playbackSnapshotTimeoutRef.current);
+        playbackSnapshotTimeoutRef.current = null;
+      }
+    };
      const handleFlightStarted = () => {
       clearPlaybackDelay();
+      clearPlaybackSnapshotTimeout();
+      setAwaitingPlaybackSnapshot(false);
       delete document.documentElement.dataset.discFlightPlaybackReady;
       flightStageRef.current = "flying";
       setFlightStage("flying");
@@ -116,6 +129,8 @@ export function DeckPinnedLayer() {
 
     const cancelFlight = () => {
       clearPlaybackDelay();
+      clearPlaybackSnapshotTimeout();
+      setAwaitingPlaybackSnapshot(false);
       delete document.documentElement.dataset.discFlightPlaybackReady;
       flightStageRef.current = "idle";
       setFlightStage("idle");
@@ -129,6 +144,14 @@ export function DeckPinnedLayer() {
       flightStageRef.current = "idle";
       setFlightStage("idle");
       setFlightPlaybackStarted(true);
+      // A play request can start from Batea/Collection while Now Playing polling
+      // is suspended. Temporarily resume it until the confirmed track arrives.
+      setAwaitingPlaybackSnapshot(true);
+      clearPlaybackSnapshotTimeout();
+      playbackSnapshotTimeoutRef.current = window.setTimeout(() => {
+        playbackSnapshotTimeoutRef.current = null;
+        setAwaitingPlaybackSnapshot(false);
+      }, PLAYBACK_SNAPSHOT_TIMEOUT_MS);
     };
 
     window.addEventListener("cdvicious:disc-flight-started", handleFlightStarted);
@@ -144,16 +167,22 @@ export function DeckPinnedLayer() {
       window.removeEventListener("cdvicious:disc-flight-cancelled", cancelFlight);
       window.removeEventListener("cdvicious:disc-flight-playback-started", handlePlaybackStarted);
       clearPlaybackDelay();
+      clearPlaybackSnapshotTimeout();
     };
   }, []);
 
   useEffect(() => {
     if (
       flightPlaybackStarted &&
-      data &&
+      data?.track &&
       data !== playbackSnapshotAtStartRef.current
     ) {
       setFlightPlaybackStarted(false);
+      setAwaitingPlaybackSnapshot(false);
+      if (playbackSnapshotTimeoutRef.current !== null) {
+        window.clearTimeout(playbackSnapshotTimeoutRef.current);
+        playbackSnapshotTimeoutRef.current = null;
+      }
     }
   }, [data, flightPlaybackStarted]);
 

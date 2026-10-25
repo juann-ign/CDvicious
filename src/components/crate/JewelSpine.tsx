@@ -8,6 +8,7 @@ interface JewelSpineProps {
   artist: string;
   coverUrl: string;
   tilt: number;
+  reduceEffects?: boolean;
   onSelect: () => void;
   onHover?: (rect: DOMRect | null) => void;
 }
@@ -17,6 +18,7 @@ export function JewelSpine({
   artist,
   coverUrl,
   tilt,
+  reduceEffects = false,
   onSelect,
   onHover,
 }: JewelSpineProps) {
@@ -26,7 +28,9 @@ export function JewelSpine({
     <button
       ref={ref}
       type="button"
-      className={styles.spine}
+      className={[styles.spine, reduceEffects ? styles.spineReduced : ""]
+        .filter(Boolean)
+        .join(" ")}
       style={
         {
           "--tilt": `${tilt}deg`,
@@ -35,19 +39,13 @@ export function JewelSpine({
       }
       onClick={onSelect}
       onPointerEnter={() => {
-        const railRoot = document.querySelector<HTMLElement>("[data-rail-wrapper]")?.parentElement;
-        const settledBatea = !railRoot ||
-          (railRoot.dataset.chapter === "2" && railRoot.dataset.railMoving !== "true");
-        if (settledBatea) {
+        if (!reduceEffects) {
           onHover?.(ref.current?.getBoundingClientRect() ?? null);
         }
       }}
       onPointerLeave={() => onHover?.(null)}
       onFocus={() => {
-        const railRoot = document.querySelector<HTMLElement>("[data-rail-wrapper]")?.parentElement;
-        const settledBatea = !railRoot ||
-          (railRoot.dataset.chapter === "2" && railRoot.dataset.railMoving !== "true");
-        if (settledBatea) {
+        if (!reduceEffects) {
           onHover?.(ref.current?.getBoundingClientRect() ?? null);
         }
       }}

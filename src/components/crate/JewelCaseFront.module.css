@@ -17,24 +17,19 @@
   outline: none;
 }
 
-:global([data-rail-moving="true"]) .case,
-:global([data-rail-moving="true"]) .case:hover,
-:global([data-rail-moving="true"]) .case:focus-visible,
-:global([data-collection-transition-lite="true"]) .case,
-:global([data-collection-transition-lite="true"]) .case:hover,
-:global([data-collection-transition-lite="true"]) .case:focus-visible {
+.caseReduced,
+.caseReduced:hover,
+.caseReduced:focus-visible {
   transform: none;
   transition: none;
 }
 
-:global([data-rail-moving="true"]) .case .edge,
-:global([data-collection-transition-lite="true"]) .case .edge {
+.caseReduced .edge {
   box-shadow: none;
   transition: none;
 }
 
-:global([data-rail-moving="true"]) .case .gloss,
-:global([data-collection-transition-lite="true"]) .case .gloss {
+.caseReduced .gloss {
   display: none;
 }
 

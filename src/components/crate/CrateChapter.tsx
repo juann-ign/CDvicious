@@ -15,9 +15,9 @@ import styles from "./CrateChapter.module.css";
 const SHELF_COUNT = 18;
 
 export function CrateChapter() {
-  const { stop, start, scrollToChapter } = useRail();
+  const { stop, start, scrollToChapter, activeChapterIndex, isRailMoving } = useRail();
+  const isShelfAnimationEnabled = activeChapterIndex === 2 && !isRailMoving;
   const dragLockTokenRef = useRef(Symbol("crate-shelf-drag"));
-  const chapterRef = useRef<HTMLDivElement>(null);
   const { albums: cachedAlbums } = useCollectionCache();
 
   useEffect(() => {
@@ -25,26 +25,6 @@ export function CrateChapter() {
       start(dragLockTokenRef.current);
     };
   }, [start]);
-
-  useEffect(() => {
-    const railRoot = document.querySelector<HTMLElement>("[data-rail-wrapper]")?.parentElement;
-    const chapter = chapterRef.current;
-    if (!railRoot || !chapter) return;
-
-    const syncMotionState = () => {
-      chapter.dataset.bateaAnimationEnabled = String(
-        railRoot.dataset.chapter === "2" && railRoot.dataset.railMoving !== "true",
-      );
-    };
-
-    syncMotionState();
-    const observer = new MutationObserver(syncMotionState);
-    observer.observe(railRoot, {
-      attributes: true,
-      attributeFilter: ["data-chapter", "data-rail-moving"],
-    });
-    return () => observer.disconnect();
-  }, []);
   const albums = cachedAlbums ?? [];
   const [loading] = useState(false);
   const [rateLimitSeconds] = useState<number | null>(null);
@@ -155,9 +135,8 @@ export function CrateChapter() {
 
   return (
     <div
-      ref={chapterRef}
       className={styles.chapter}
-      data-batea-animation-enabled="false"
+      data-batea-animation-enabled={isShelfAnimationEnabled ? "true" : "false"}
     >
       <header className={styles.header}>
         <div>
@@ -173,6 +152,7 @@ export function CrateChapter() {
           <div className={styles.emptyState}>ARCHIVO VACÍO</div>
         ) : (
           <CrateShelf
+            animationEnabled={isShelfAnimationEnabled}
             albums={albums.slice(0, SHELF_COUNT)}
             onSelect={handleSelect}
             onGrabStart={handleGrabStart}

@@ -23,43 +23,36 @@
   outline: none;
 }
 
-/* Reduce shelf paint work with CSS while Batea is inactive or the rail moves.
-   These selectors avoid rerendering every spine to toggle decorative effects. */
-:global([data-rail-moving="true"]) .spine,
-:global([data-rail-moving="true"]) .spine:hover,
-:global([data-rail-moving="true"]) .spine:focus-visible,
-:global([data-batea-animation-enabled="false"]) .spine,
-:global([data-batea-animation-enabled="false"]) .spine:hover,
-:global([data-batea-animation-enabled="false"]) .spine:focus-visible {
+/* Keep the shelf cheap to paint while the whole chapter is moving past. */
+.spineReduced {
   transition: none;
   transform: translateY(-50px);
 }
 
-:global([data-rail-moving="true"]) .spine .ghostDisc,
-:global([data-rail-moving="true"]) .spine .gloss,
-:global([data-batea-animation-enabled="false"]) .spine .ghostDisc,
-:global([data-batea-animation-enabled="false"]) .spine .gloss {
+.spineReduced:hover,
+.spineReduced:focus-visible {
+  transform: translateY(-50px);
+}
+
+.spineReduced .ghostDisc,
+.spineReduced .gloss {
   display: none;
 }
 
-:global([data-rail-moving="true"]) .spine .cover,
-:global([data-batea-animation-enabled="false"]) .spine .cover {
+.spineReduced .cover {
   filter: none;
   opacity: 0.72;
 }
 
-:global([data-rail-moving="true"]) .spine .labelScrim,
-:global([data-batea-animation-enabled="false"]) .spine .labelScrim {
+.spineReduced .labelScrim {
   background: rgba(6, 7, 9, 0.58);
 }
 
-:global([data-rail-moving="true"]) .spine .labelText,
-:global([data-batea-animation-enabled="false"]) .spine .labelText {
+.spineReduced .labelText {
   text-shadow: none;
 }
 
-:global([data-rail-moving="true"]) .spine .edge,
-:global([data-batea-animation-enabled="false"]) .spine .edge {
+.spineReduced .edge {
   box-shadow: none;
 }
 

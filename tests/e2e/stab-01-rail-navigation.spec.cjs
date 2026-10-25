@@ -322,7 +322,7 @@ test("Deck crossfade stays continuous and throttles WebGL during chapter handoff
                 sample.hasBooklet,
             ),
           ),
-        { timeout: 5_000, intervals: [30, 50, 100] },
+        { timeout: 10_000, intervals: [16, 30, 50] },
       )
       .toBe(true);
     await expect(discStage).toHaveAttribute("data-has-track", "true");
