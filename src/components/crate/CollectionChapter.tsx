@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSpotifyPlayer } from "@/components/SpotifyPlayerProvider";
-import { useRail } from "@/components/scroll/RailContext";
+import { useRailActions } from "@/components/scroll/RailContext";
 import {
   loadCollection,
   loadCollectionGenres,
@@ -41,7 +41,7 @@ function decadeOf(album: AlbumItem): DecadeFilter {
 
 export function CollectionChapter() {
   const { authenticated } = useSpotifyPlayer();
-  const { scrollToChapter } = useRail();
+  const { scrollToChapter } = useRailActions();
   const { albums: cachedAlbums, genresLoaded } = useCollectionCache();
   const albums = useMemo(() => cachedAlbums ?? [], [cachedAlbums]);
   const [loading, setLoading] = useState(false);
@@ -73,18 +73,57 @@ export function CollectionChapter() {
   }, [authenticated]);
 
   useEffect(() => {
+    const railRoot = document.querySelector<HTMLElement>(
+      "[data-rail-wrapper]",
+    )?.parentElement;
+    if (!railRoot) return;
+
+    // Do not fetch and mount the full Collection grid just because a long
+    // chapter jump passes through it. Load only after Collection is settled.
     const readActiveChapter = () => {
-      setIsActiveChapter(document.documentElement.dataset.chapter === "3");
+      const settledCollection =
+        railRoot.dataset.chapter === "3" &&
+        railRoot.dataset.railMoving !== "true";
+      setIsActiveChapter((current) =>
+        current === settledCollection ? current : settledCollection,
+      );
     };
 
     readActiveChapter();
 
     const observer = new MutationObserver(readActiveChapter);
-    observer.observe(document.documentElement, {
+    observer.observe(railRoot, {
       attributes: true,
-      attributeFilter: ["data-chapter"],
+      attributeFilter: ["data-chapter", "data-rail-moving"],
     });
 
+    return () => observer.disconnect();
+  }, []);
+
+  // Update visual quality with attributes only; a full grid render during
+  // wheel motion can stall the same main thread that advances Lenis.
+  useEffect(() => {
+    const railRoot = document.querySelector<HTMLElement>(
+      "[data-rail-wrapper]",
+    )?.parentElement;
+    const chapter = chapterRef.current;
+    if (!railRoot || !chapter) return;
+
+    const sync = () => {
+      const lightweight =
+        railRoot.dataset.chapter !== "3" ||
+        railRoot.dataset.railMoving === "true";
+      chapter.setAttribute(
+        "data-collection-transition-lite",
+        lightweight ? "true" : "false",
+      );
+    };
+    sync();
+    const observer = new MutationObserver(sync);
+    observer.observe(railRoot, {
+      attributes: true,
+      attributeFilter: ["data-chapter", "data-rail-moving"],
+    });
     return () => observer.disconnect();
   }, []);
 
@@ -261,7 +300,11 @@ export function CollectionChapter() {
   }, []);
 
   return (
-    <div ref={chapterRef} className={styles.chapter}>
+    <div
+      ref={chapterRef}
+      className={styles.chapter}
+      data-collection-transition-lite="true"
+    >
       <header className={styles.header}>
         <div>
           <h2>LA COLECCIÓN</h2>

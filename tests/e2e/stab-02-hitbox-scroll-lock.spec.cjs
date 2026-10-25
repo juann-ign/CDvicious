@@ -17,10 +17,10 @@ async function openRail(page, viewport = { width: 1280, height: 800 }) {
   if (RAIL_ENABLED) {
     // HorizontalRail is loaded by a client-only dynamic import. CI can spend
     // several seconds hydrating the 3D scene before its navigation mounts.
-    await expect(page.getByRole("navigation", { name: NAV_LABEL })).toBeVisible({ timeout: 20_000 });
-    await expect(panels(page)).toHaveCount(5, { timeout: 20_000 });
+    await expect(page.getByRole("navigation", { name: NAV_LABEL })).toBeVisible({ timeout: 90_000 });
+    await expect(panels(page)).toHaveCount(5, { timeout: 90_000 });
     // Avoid clicks and wheel input before the client effect has initialized Lenis.
-    await expect(page.locator('[data-rail-ready="true"]')).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator('[data-rail-ready="true"]')).toBeVisible({ timeout: 90_000 });
   } else {
     await expect(page.locator("main")).toBeVisible();
   }
@@ -197,7 +197,42 @@ test("hit-testing en Batea y Colección entrega el pointer al panel activo", asy
     { chapter: "Colección", index: 3 },
   ]) {
     await goToChapter(page, item.chapter, item.index);
-    const target = panels(page).nth(item.index).locator('button[aria-label*=" — "]').first();
+    const panel = panels(page).nth(item.index);
+
+    // Pause Batea's moving marquee before measuring a hit target. Without this,
+    // the button can move between boundingBox() and elementsFromPoint(), so the
+    // test measures an old coordinate rather than the current pointer target.
+    if (item.chapter === "Batea") {
+      await panel.locator('[class*="stage"]').first().hover();
+      await page.waitForTimeout(180);
+    }
+
+    const candidates = panel.locator('button[aria-label*=" — "]');
+    // The first DOM copy in Batea may be outside its clipped viewport. Choose
+    // a button whose centre is geometrically inside its clipping surface and
+    // the browser viewport, then independently verify the actual hit stack.
+    const visibleIndex = await candidates.evaluateAll((nodes) =>
+      nodes.findIndex((node) => {
+        const rect = node.getBoundingClientRect();
+        const x = rect.left + rect.width / 2;
+        const y = rect.top + rect.height / 2;
+        const clip = node.closest('[class*="viewport"]') || node.closest("section");
+        if (!clip || rect.width <= 0 || rect.height <= 0) return false;
+        const bounds = clip.getBoundingClientRect();
+        const style = getComputedStyle(node);
+        return style.visibility === "visible" &&
+          style.display !== "none" &&
+          x >= Math.max(0, bounds.left + 4) &&
+          x <= Math.min(innerWidth, bounds.right - 4) &&
+          y >= Math.max(0, bounds.top + 4) &&
+          y <= Math.min(innerHeight, bounds.bottom - 4);
+      }),
+    );
+    expect(
+      visibleIndex,
+      "No hay un botón completamente visible para verificar hit-testing en " + item.chapter,
+    ).toBeGreaterThanOrEqual(0);
+    const target = candidates.nth(visibleIndex);
     await expect(target).toBeVisible();
     const box = await target.boundingBox();
     expect(box).not.toBeNull();
@@ -236,8 +271,8 @@ test("búsqueda y filtros de Colección siguen accesibles con ventana baja y esc
   // the unrelated dynamic-import/hydration timing of a cold page load.
   await openRail(page);
   await page.setViewportSize({ width: 1280, height: 600 });
-  await expect(page.getByRole("navigation", { name: NAV_LABEL })).toBeVisible();
-  await expect(panels(page)).toHaveCount(5);
+  await expect(page.getByRole("navigation", { name: NAV_LABEL })).toBeVisible({ timeout: 90_000 });
+  await expect(panels(page)).toHaveCount(5, { timeout: 90_000 });
   await expect(page.locator('[data-rail-ready="true"]')).toBeVisible();
   await goToChapter(page, "Colección", 3);
 

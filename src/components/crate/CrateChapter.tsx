@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useRail } from "@/components/scroll/RailContext";
+import { useRailActions } from "@/components/scroll/RailContext";
 import { useCollectionCache } from "@/lib/collectionClient";
 import {
   JewelCaseDetailModal,
@@ -15,8 +15,9 @@ import styles from "./CrateChapter.module.css";
 const SHELF_COUNT = 18;
 
 export function CrateChapter() {
-  const { stop, start, scrollToChapter } = useRail();
+  const { stop, start, scrollToChapter } = useRailActions();
   const dragLockTokenRef = useRef(Symbol("crate-shelf-drag"));
+  const chapterRef = useRef<HTMLDivElement>(null);
   const { albums: cachedAlbums } = useCollectionCache();
 
   useEffect(() => {
@@ -24,6 +25,32 @@ export function CrateChapter() {
       start(dragLockTokenRef.current);
     };
   }, [start]);
+
+  // Drive motion styling through DOM attributes; don't re-render all shelf
+  // spines each time a rail gesture starts or settles.
+  useEffect(() => {
+    const railRoot = document.querySelector<HTMLElement>(
+      "[data-rail-wrapper]",
+    )?.parentElement;
+    if (!railRoot || !chapterRef.current) return;
+
+    const sync = () => {
+      const enabled =
+        railRoot.dataset.chapter === "2" &&
+        railRoot.dataset.railMoving !== "true";
+      chapterRef.current?.setAttribute(
+        "data-batea-animation-enabled",
+        enabled ? "true" : "false",
+      );
+    };
+    sync();
+    const observer = new MutationObserver(sync);
+    observer.observe(railRoot, {
+      attributes: true,
+      attributeFilter: ["data-chapter", "data-rail-moving"],
+    });
+    return () => observer.disconnect();
+  }, []);
   const albums = cachedAlbums ?? [];
   const [loading] = useState(false);
   const [rateLimitSeconds] = useState<number | null>(null);
@@ -133,7 +160,11 @@ export function CrateChapter() {
         : albums.length + " DISCS";
 
   return (
-    <div className={styles.chapter}>
+    <div
+      ref={chapterRef}
+      className={styles.chapter}
+      data-batea-animation-enabled="false"
+    >
       <header className={styles.header}>
         <div>
           <h2>LA BATEA</h2>

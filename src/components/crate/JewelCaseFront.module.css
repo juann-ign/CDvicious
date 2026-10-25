@@ -17,6 +17,22 @@
   outline: none;
 }
 
+.caseReduced,
+.caseReduced:hover,
+.caseReduced:focus-visible {
+  transform: none;
+  transition: none;
+}
+
+.caseReduced .edge {
+  box-shadow: none;
+  transition: none;
+}
+
+.caseReduced .gloss {
+  display: none;
+}
+
 .case:hover .edge,
 .case:focus-visible .edge {
   box-shadow: 0 0 0 1px var(--color-phosphor), 0 0 14px -4px var(--color-phosphor-glow);
@@ -62,4 +78,23 @@
     rgba(255, 255, 255, 0.04) 54%,
     transparent 66%
   );
+}
+
+
+/* Animate card details only when Collection is the settled active chapter. */
+:global([data-collection-transition-lite="true"]) .case,
+:global([data-rail-moving="true"]) .case {
+  transform: none;
+  transition: none;
+}
+
+:global([data-collection-transition-lite="true"]) .case .edge,
+:global([data-rail-moving="true"]) .case .edge {
+  box-shadow: none;
+  transition: none;
+}
+
+:global([data-collection-transition-lite="true"]) .case .gloss,
+:global([data-rail-moving="true"]) .case .gloss {
+  display: none;
 }

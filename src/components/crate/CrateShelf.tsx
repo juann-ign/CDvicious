@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useMarqueeBelt } from "@/hooks/useMarqueeBelt";
 import { JewelSpine } from "./JewelSpine";
 import { JewelFlyout } from "./JewelFlyout";
@@ -32,6 +32,7 @@ export function CrateShelf({
     rect: DOMRect;
   } | null>(null);
   const firstCopyRef = useRef<HTMLDivElement>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
     const measure = () => {
@@ -44,11 +45,37 @@ export function CrateShelf({
     return () => ro.disconnect();
   }, [albums.length]);
 
+  useEffect(() => {
+    const railRoot = document.querySelector<HTMLElement>(
+      "[data-rail-wrapper]",
+    )?.parentElement;
+    if (!railRoot || !wrapRef.current) return;
+
+    const sync = () => {
+      const enabled =
+        railRoot.dataset.chapter === "2" &&
+        railRoot.dataset.railMoving !== "true";
+      wrapRef.current?.setAttribute(
+        "data-belt-animation-enabled",
+        enabled ? "true" : "false",
+      );
+      if (!enabled) setHover((current) => (current === null ? current : null));
+    };
+    sync();
+    const observer = new MutationObserver(sync);
+    observer.observe(railRoot, {
+      attributes: true,
+      attributeFilter: ["data-chapter", "data-rail-moving"],
+    });
+    return () => observer.disconnect();
+  }, []);
+
   const pages = Math.max(1, Math.min(MAX_PAGES, albums.length));
 
   const { containerRef, trackRef, isDragging, page, goTo, stepPage } =
     useMarqueeBelt({
       speed: 60,
+      enabled: albums.length > 0,
       paused: !driftEnabled || hovering || albums.length === 0,
       length,
       pages,
@@ -59,7 +86,11 @@ export function CrateShelf({
   if (albums.length === 0) return null;
 
   return (
-    <div className={styles.wrap}>
+    <div
+      ref={wrapRef}
+      className={styles.wrap}
+      data-belt-animation-enabled="false"
+    >
       <div className={styles.toolbar}>
         <div className={styles.pageNav}>
           <button

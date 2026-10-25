@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 interface Options {
   speed?: number;
+  enabled?: boolean;
   paused?: boolean;
   length: number;
   pages?: number;
@@ -22,6 +23,7 @@ const ring = (a: number, b: number, len: number) => {
 
 export function useMarqueeBelt({
   speed = 24,
+  enabled = true,
   paused = false,
   length,
   pages = 1,
@@ -56,15 +58,36 @@ export function useMarqueeBelt({
   pagesRef.current = pages;
 
   useEffect(() => {
-    if (!length) return;
-    let raf = 0;
+    if (!enabled || !length) return;
+
+    const railRoot = document.querySelector<HTMLElement>(
+      "[data-rail-wrapper]",
+    )?.parentElement;
+    let raf: number | null = null;
+    let disposed = false;
     let prev = performance.now();
 
+    const canAnimate = () =>
+      !railRoot ||
+      (railRoot.dataset.chapter === "2" &&
+        railRoot.dataset.railMoving !== "true");
+
+    const stop = () => {
+      if (raf !== null) {
+        cancelAnimationFrame(raf);
+        raf = null;
+      }
+    };
+
     const tick = (now: number) => {
+      raf = null;
+      if (disposed || !canAnimate()) return;
+
       const dt = Math.min(48, now - prev) / 1000;
       prev = now;
       const len = lenRef.current;
       const nPages = pagesRef.current;
+      if (len <= 0) return;
 
       if (target.current !== null) {
         const d = ring(offset.current, target.current, len);
@@ -82,7 +105,6 @@ export function useMarqueeBelt({
       }
 
       offset.current = ((offset.current % len) + len) % len;
-
       if (trackRef.current) {
         trackRef.current.style.transform =
           "translate3d(" + -offset.current + "px,0,0)";
@@ -100,9 +122,30 @@ export function useMarqueeBelt({
       raf = requestAnimationFrame(tick);
     };
 
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [length]);
+    const sync = () => {
+      if (canAnimate()) {
+        if (raf === null && !disposed) {
+          prev = performance.now();
+          raf = requestAnimationFrame(tick);
+        }
+      } else {
+        stop();
+      }
+    };
+
+    const observer = railRoot ? new MutationObserver(sync) : null;
+    observer?.observe(railRoot!, {
+      attributes: true,
+      attributeFilter: ["data-chapter", "data-rail-moving"],
+    });
+    sync();
+
+    return () => {
+      disposed = true;
+      stop();
+      observer?.disconnect();
+    };
+  }, [enabled, length]);
 
   const goTo = (p: number) => {
     const len = lenRef.current;
@@ -212,7 +255,19 @@ export function useMarqueeBelt({
     };
 
     const up = () => finish(true);
-    const cancel = () => finish(false);
+    const cancel = () => {
+      const wasCaptured = captured.current;
+      finish(false);
+      if (!wasCaptured) return;
+
+      // A mouseup may still be followed by click after cancellation. Suppress
+      // that click so a cancelled drag cannot open the album modal.
+      suppressNextClick = true;
+      if (suppressClickTimer !== null) {
+        window.clearTimeout(suppressClickTimer);
+      }
+      suppressClickTimer = window.setTimeout(clearClickSuppression, 500);
+    };
     const lostCapture = () => finish(false);
 
     el.addEventListener("pointerdown", down);

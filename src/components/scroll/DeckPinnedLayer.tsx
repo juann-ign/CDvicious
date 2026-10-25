@@ -8,24 +8,50 @@ import { Disc } from "@/components/Disc";
 import { NowPlayingCard } from "@/components/NowPlayingCard";
 import { LyricsBooklet } from "@/components/LyricsBooklet";
 import { useNowPlaying } from "@/hooks/useNowPlaying";
+import * as mockSpotifyStore from "@/lib/mockSpotifyStore";
 import { useDominantColor } from "@/hooks/useDominantColor";
 import { useSpotifyPlayer } from "@/components/SpotifyPlayerProvider";
 import pageStyles from "@/app/page.module.css";
 import styles from "./DeckPinnedLayer.module.css";
 
 const DISC_PLAYBACK_START_DELAY_MS = 1_000;
+const PLAYBACK_SNAPSHOT_TIMEOUT_MS = 15_000;
 
 type DiscFlightStage = "idle" | "flying" | "docked";
 
+type ExpectedPlaybackAlbum = {
+  albumName: string;
+  artistNames: string[];
+  snapshot?: NowPlayingResponse | null;
+};
+
+function trackMatchesAlbum(
+  track: NonNullable<NowPlayingResponse["track"]>,
+  expected: ExpectedPlaybackAlbum,
+) {
+  return (
+    track.album.name === expected.albumName &&
+    expected.artistNames.every((name) =>
+      track.artists.some((artist) => artist.name === name),
+    )
+  );
+}
+
 export function DeckPinnedLayer() {
   const { authenticated } = useSpotifyPlayer();
-  const [deckInteractive, setDeckInteractive] = useState(true);
+  const layerRef = useRef<HTMLDivElement>(null);
+  const [deckHidden, setDeckHidden] = useState(false);
+  const [awaitingPlaybackSnapshot, setAwaitingPlaybackSnapshot] = useState(false);
   const [flightStage, setFlightStage] = useState<DiscFlightStage>("idle");
   const [frozenData, setFrozenData] = useState<NowPlayingResponse | null>(null);
   const [visualPlaybackReady, setVisualPlaybackReady] = useState(true);
   const [flightPlaybackStarted, setFlightPlaybackStarted] = useState(false);
+  const [playbackSnapshotOverride, setPlaybackSnapshotOverride] =
+    useState<NowPlayingResponse | null>(null);
   const flightStageRef = useRef<DiscFlightStage>("idle");
+  const expectedPlaybackAlbumRef = useRef<ExpectedPlaybackAlbum | null>(null);
   const playbackDelayRef = useRef<number | null>(null);
+  const playbackSnapshotTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
     const overlay = document.querySelector<HTMLElement>("[data-rail-overlay]");
@@ -34,20 +60,30 @@ export function DeckPinnedLayer() {
     if (!railRoot) return;
 
     const update = () => {
-      setDeckInteractive(railRoot.dataset.deckInteractive !== "false");
+      const interactive = railRoot.dataset.deckInteractive !== "false";
+      const interactiveValue = interactive ? "true" : "false";
+      if (layerRef.current?.dataset.deckInteractive !== interactiveValue) {
+        layerRef.current?.setAttribute("data-deck-interactive", interactiveValue);
+      }
+
+      const hidden = railRoot.dataset.deckHidden === "true";
+      setDeckHidden((current) => (current === hidden ? current : hidden));
     };
 
     update();
     const observer = new MutationObserver(update);
     observer.observe(railRoot, {
       attributes: true,
-      attributeFilter: ["data-deck-interactive"],
+      attributeFilter: ["data-deck-interactive", "data-deck-hidden"],
     });
 
     return () => observer.disconnect();
   }, []);
 
-  const { data, error } = useNowPlaying(authenticated === true && deckInteractive);
+  const { data, error } = useNowPlaying(
+    authenticated === true &&
+      (!deckHidden || awaitingPlaybackSnapshot || flightStage !== "idle"),
+  );
   const latestDataRef = useRef(data);
   const playbackSnapshotAtStartRef = useRef(data);
 
@@ -55,7 +91,7 @@ export function DeckPinnedLayer() {
   // intentionally returns an empty snapshot when the Deck is not interactive,
   // but a flight launched from Batea/Colección still needs a stable visual
   // snapshot to bridge the disc animation.
-  if (data?.track) {
+  if (data?.track && !playbackSnapshotOverride) {
     latestDataRef.current = data;
   }
 
@@ -80,9 +116,18 @@ export function DeckPinnedLayer() {
         playbackDelayRef.current = null;
       }
     };
-
-    const handleFlightStarted = () => {
+    const clearPlaybackSnapshotTimeout = () => {
+      if (playbackSnapshotTimeoutRef.current !== null) {
+        window.clearTimeout(playbackSnapshotTimeoutRef.current);
+        playbackSnapshotTimeoutRef.current = null;
+      }
+    };
+     const handleFlightStarted = () => {
       clearPlaybackDelay();
+      clearPlaybackSnapshotTimeout();
+      setAwaitingPlaybackSnapshot(false);
+      setPlaybackSnapshotOverride(null);
+      expectedPlaybackAlbumRef.current = null;
       delete document.documentElement.dataset.discFlightPlaybackReady;
       flightStageRef.current = "flying";
       setFlightStage("flying");
@@ -115,6 +160,10 @@ export function DeckPinnedLayer() {
 
     const cancelFlight = () => {
       clearPlaybackDelay();
+      clearPlaybackSnapshotTimeout();
+      setAwaitingPlaybackSnapshot(false);
+      setPlaybackSnapshotOverride(null);
+      expectedPlaybackAlbumRef.current = null;
       delete document.documentElement.dataset.discFlightPlaybackReady;
       flightStageRef.current = "idle";
       setFlightStage("idle");
@@ -123,11 +172,47 @@ export function DeckPinnedLayer() {
       setFlightPlaybackStarted(false);
     };
 
-    const handlePlaybackStarted = () => {
-      playbackSnapshotAtStartRef.current = latestDataRef.current;
+    const handlePlaybackStarted = (event: Event) => {
+      const detail = (event as CustomEvent<ExpectedPlaybackAlbum>).detail;
+      expectedPlaybackAlbumRef.current = detail ?? null;
+
+      // In mock mode the play endpoint publishes the confirmed album before
+      // this event. Read the store synchronously so a missed/late subscription
+      // cannot leave the VFD on the previous album for an entire poll cycle.
+      const mockSnapshot =
+        process.env.NEXT_PUBLIC_SPOTIFY_MOCK === "1"
+          ? detail?.snapshot ?? mockSpotifyStore.getSnapshot().data
+          : null;
+      if (
+        mockSnapshot?.track &&
+        (!detail || trackMatchesAlbum(mockSnapshot.track, detail))
+      ) {
+        latestDataRef.current = mockSnapshot;
+        setPlaybackSnapshotOverride(mockSnapshot);
+        playbackSnapshotAtStartRef.current = mockSnapshot;
+        // A snapshot included in the successful mock-play event is authoritative:
+        // stop waiting for the next subscription notification but keep the
+        // snapshot override visible until the store has caught up.
+        if (detail?.snapshot?.track && detail.snapshot.isPlaying) {
+          setFlightPlaybackStarted(false);
+          setAwaitingPlaybackSnapshot(false);
+          clearPlaybackSnapshotTimeout();
+        }
+      } else {
+        playbackSnapshotAtStartRef.current = latestDataRef.current;
+      }
+
       flightStageRef.current = "idle";
       setFlightStage("idle");
       setFlightPlaybackStarted(true);
+      // Keep polling active until Now Playing confirms the album that was asked
+      // to play, not merely until any progress/isPlaying object refresh arrives.
+      setAwaitingPlaybackSnapshot(true);
+      clearPlaybackSnapshotTimeout();
+      playbackSnapshotTimeoutRef.current = window.setTimeout(() => {
+        playbackSnapshotTimeoutRef.current = null;
+        setAwaitingPlaybackSnapshot(false);
+      }, PLAYBACK_SNAPSHOT_TIMEOUT_MS);
     };
 
     window.addEventListener("cdvicious:disc-flight-started", handleFlightStarted);
@@ -143,20 +228,44 @@ export function DeckPinnedLayer() {
       window.removeEventListener("cdvicious:disc-flight-cancelled", cancelFlight);
       window.removeEventListener("cdvicious:disc-flight-playback-started", handlePlaybackStarted);
       clearPlaybackDelay();
+      clearPlaybackSnapshotTimeout();
     };
   }, []);
 
   useEffect(() => {
-    if (
-      flightPlaybackStarted &&
-      data &&
-      data !== playbackSnapshotAtStartRef.current
-    ) {
-      setFlightPlaybackStarted(false);
-    }
-  }, [data, flightPlaybackStarted]);
+    if (!data?.track) return;
 
-  const visibleData = flightStage === "flying" ? frozenData : data;
+    const expectedAlbum = expectedPlaybackAlbumRef.current;
+    const isConfirmedPlayback = expectedAlbum
+      ? trackMatchesAlbum(data.track, expectedAlbum) && data.isPlaying
+      : data !== playbackSnapshotAtStartRef.current;
+
+    if (flightPlaybackStarted && isConfirmedPlayback) {
+      setFlightPlaybackStarted(false);
+      setAwaitingPlaybackSnapshot(false);
+      setPlaybackSnapshotOverride(null);
+      if (playbackSnapshotTimeoutRef.current !== null) {
+        window.clearTimeout(playbackSnapshotTimeoutRef.current);
+        playbackSnapshotTimeoutRef.current = null;
+      }
+    } else if (
+      playbackSnapshotOverride?.track &&
+      data.track.id === playbackSnapshotOverride.track.id &&
+      data.isPlaying
+    ) {
+      // Live store has caught up to the synchronous mock snapshot; resume
+      // rendering from the subscribed value and discard the temporary override.
+      setPlaybackSnapshotOverride(null);
+    }
+  }, [data, flightPlaybackStarted, playbackSnapshotOverride]);
+
+  // Keep the last real track mounted while DeckPinnedLayer fades out.
+  // The polling hook intentionally returns an empty snapshot off-chapter;
+  // using that empty value here would swap the CD/booklet midway through the fade.
+  const visibleData = flightStage === "flying"
+    ? frozenData
+    : playbackSnapshotOverride ??
+      (deckHidden ? latestDataRef.current : data);
   const isDockedBeforePlayback =
     flightStage === "docked" && !flightPlaybackStarted;
   const visibleIsPlaying =
@@ -176,8 +285,10 @@ export function DeckPinnedLayer() {
     <div
       className={styles.layer}
       style={stageStyle}
+      ref={layerRef}
       data-rail-overlay
-      data-deck-interactive={deckInteractive ? "true" : "false"}
+      data-deck-interactive="true"
+      data-deck-hidden={deckHidden ? "true" : "false"}
     >
       <header className={pageStyles.topControlBar}>
         <div className={pageStyles.brandCorner}>
@@ -195,6 +306,7 @@ export function DeckPinnedLayer() {
               track={visibleData?.track ?? null}
               isPlaying={visibleIsPlaying}
               accentColor={accentColor}
+              renderEnabled={!deckHidden}
             />
           </div>
         </div>

@@ -7,6 +7,7 @@
    ========================================================= */
 
 .chassis {
+  box-sizing: border-box;
   background-color: var(--color-surface);
 
   padding: var(--space-5);
@@ -29,6 +30,7 @@
    ========================================================= */
 
 .vfdDisplay {
+  box-sizing: border-box;
   width: 100%;
 
   padding: var(--space-3) var(--space-5);
@@ -48,7 +50,7 @@
 
 .vfdTrackName {
   font-family: var(--type-vfd-font);
-  font-size: var(--type-vfd-size);
+  font-size: clamp(26px, 1.8vw, 32px);
   font-weight: var(--type-vfd-weight);
   letter-spacing: var(--type-vfd-spacing);
   line-height: var(--type-vfd-leading);
@@ -68,7 +70,7 @@
 
 .vfdArtist {
   font-family: var(--type-vfd-secondary-font);
-  font-size: var(--type-vfd-secondary-size);
+  font-size: clamp(14px, 1.05vw, 18px);
   font-weight: var(--type-vfd-secondary-weight);
   letter-spacing: var(--type-vfd-secondary-spacing);
   line-height: var(--type-vfd-secondary-leading);

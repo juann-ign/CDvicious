@@ -6,13 +6,23 @@ import type { SpotifyTrack } from "@/types/spotify";
 import { DiscMesh } from "./DiscMesh";
 import { Environment } from "@react-three/drei";
 
+const FULL_DPR: [number, number] = [1, 2];
+
 interface DiscCanvasProps {
   track: SpotifyTrack | null;
   isPlaying: boolean;
   accentColor: string;
+  renderEnabled?: boolean;
+  isRailMoving?: boolean;
 }
 
-export function DiscCanvas({ track, isPlaying, accentColor }: DiscCanvasProps) {
+export function DiscCanvas({
+  track,
+  isPlaying,
+  accentColor,
+  renderEnabled = true,
+  isRailMoving = false,
+}: DiscCanvasProps) {
   const [canvasElement, setCanvasElement] = useState<HTMLCanvasElement | null>(
     null,
   );
@@ -21,8 +31,13 @@ export function DiscCanvas({ track, isPlaying, accentColor }: DiscCanvasProps) {
 
   // Visibility and WebGL context state are independent: a visible tab must not
   // resume rendering while its canvas still has a lost context.
-  const frameloop =
-    documentVisible && !contextLost ? ("always" as const) : ("never" as const);
+  const frameloop: "always" | "never" =
+    !renderEnabled || !documentVisible || contextLost || isRailMoving
+      ? "never"
+      : "always";
+  // Avoid reconfiguring renderer DPR and shadows during wheel input. R3F
+  // renderer changes can block the main thread right as Lenis begins moving.
+  // Keep the last composited frame and pause only the render loop.
 
   useEffect(() => {
     const updateVisibility = () => {
@@ -68,8 +83,10 @@ export function DiscCanvas({ track, isPlaying, accentColor }: DiscCanvasProps) {
   return (
     <Canvas
       shadows
-      dpr={[1, 2]}
+      dpr={FULL_DPR}
       frameloop={frameloop}
+      data-disc-frameloop={frameloop}
+      data-disc-quality={isRailMoving ? "transition" : "full"}
       camera={{ position: [0, 0.7, 4.6], fov: 40 }}
       onCreated={({ camera, gl }) => {
         camera.lookAt(0, 0, 0);

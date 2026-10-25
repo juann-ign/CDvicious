@@ -23,6 +23,39 @@
   outline: none;
 }
 
+/* Keep the shelf cheap to paint while the whole chapter is moving past. */
+.spineReduced {
+  transition: none;
+  transform: translateY(-50px);
+}
+
+.spineReduced:hover,
+.spineReduced:focus-visible {
+  transform: translateY(-50px);
+}
+
+.spineReduced .ghostDisc,
+.spineReduced .gloss {
+  display: none;
+}
+
+.spineReduced .cover {
+  filter: none;
+  opacity: 0.72;
+}
+
+.spineReduced .labelScrim {
+  background: rgba(6, 7, 9, 0.58);
+}
+
+.spineReduced .labelText {
+  text-shadow: none;
+}
+
+.spineReduced .edge {
+  box-shadow: none;
+}
+
 .case {
   position: relative;
   display: block;
@@ -134,4 +167,37 @@
     inset 4px 0 10px rgba(0, 0, 0, 0.4),
     inset 0 -10px 14px rgba(0, 0, 0, 0.4),
     0 8px 16px rgba(0, 0, 0, 0.6);
+}
+
+
+/* Keep the shelf inexpensive to paint without toggling props on every spine. */
+:global([data-rail-moving="true"]) .spine,
+:global([data-batea-animation-enabled="false"]) .spine {
+  transition: none;
+  transform: translateY(-50px);
+}
+
+:global([data-rail-moving="true"]) .spine:hover,
+:global([data-rail-moving="true"]) .spine:focus-visible,
+:global([data-batea-animation-enabled="false"]) .spine:hover,
+:global([data-batea-animation-enabled="false"]) .spine:focus-visible {
+  transform: translateY(-50px);
+}
+
+:global([data-rail-moving="true"]) .spine .ghostDisc,
+:global([data-rail-moving="true"]) .spine .gloss,
+:global([data-batea-animation-enabled="false"]) .spine .ghostDisc,
+:global([data-batea-animation-enabled="false"]) .spine .gloss {
+  display: none;
+}
+
+:global([data-rail-moving="true"]) .spine .cover,
+:global([data-batea-animation-enabled="false"]) .spine .cover {
+  filter: none;
+  opacity: 0.72;
+}
+
+:global([data-rail-moving="true"]) .spine .edge,
+:global([data-batea-animation-enabled="false"]) .spine .edge {
+  box-shadow: none;
 }

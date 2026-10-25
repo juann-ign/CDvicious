@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
@@ -12,23 +13,27 @@ import {
 import Lenis from "lenis";
 import styles from "./RailProvider.module.css";
 
-const SNAP_IDLE_DELAY_MS = 140;
+const SNAP_IDLE_DELAY_MS = 120;
+const RAIL_IDLE_DELAY_MS = 250;
 const SNAP_THRESHOLD_RATIO = 0.2;
-const SNAP_MIN_DURATION_SECONDS = 0.16;
-const SNAP_MAX_DURATION_SECONDS = 0.48;
 const CHAPTER_FORWARD_THRESHOLD = 0.55;
 const CHAPTER_BACKWARD_THRESHOLD = 0.45;
 
 type RailLockToken = symbol;
 
-type RailContextValue = {
+type RailActionsContextValue = {
   isReady: boolean;
-  activeChapterIndex: number;
   start: (token: RailLockToken) => void;
   stop: (token: RailLockToken) => void;
   scrollToX: (px: number) => void;
   scrollToChapter: (index: number, duration?: number) => void;
 };
+
+type RailNavigationContextValue = {
+  activeChapterIndex: number;
+};
+
+type RailContextValue = RailActionsContextValue & RailNavigationContextValue;
 
 type RailProviderProps = {
   children: ReactNode;
@@ -36,7 +41,9 @@ type RailProviderProps = {
   navigation?: ReactNode;
 };
 
-export const RailContext = createContext<RailContextValue | null>(null);
+export const RailContext = createContext<RailActionsContextValue | null>(null);
+export const RailNavigationContext =
+  createContext<RailNavigationContextValue | null>(null);
 
 export function RailProvider({ children, overlay, navigation }: RailProviderProps) {
   const rootRef = useRef<HTMLDivElement>(null);
@@ -45,10 +52,13 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
   const lenisRef = useRef<Lenis | null>(null);
   const stopTokensRef = useRef(new Set<RailLockToken>());
   const animationFrameRef = useRef<number | null>(null);
+  const railIdleTimerRef = useRef<number | null>(null);
+  const markRailMovingRef = useRef<(() => void) | null>(null);
   const snapTimerRef = useRef<number | null>(null);
   const snapInProgressRef = useRef(false);
   const snapTargetIndexRef = useRef<number | null>(null);
   const snapSequenceRef = useRef(0);
+  const programmaticSourceRef = useRef<"menu" | "wheel" | null>(null);
   const activeChapterIndexRef = useRef<number | null>(null);
   const snapAnchorRef = useRef<{
     index: number;
@@ -74,6 +84,7 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
     }
 
     activeChapterIndexRef.current = null;
+    root.dataset.railMoving = "false";
 
     const previousHtmlOverflow = document.documentElement.style.overflow;
     const previousBodyOverflow = document.body.style.overflow;
@@ -103,6 +114,39 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
     document.documentElement.style.overflow = "hidden";
     document.body.style.overflow = "hidden";
 
+    const scheduleRailIdleCheck = () => {
+      railIdleTimerRef.current = window.setTimeout(() => {
+        railIdleTimerRef.current = null;
+        const activeLenis = lenisRef.current;
+
+        // A long frame or a busy main thread must not falsely signal that the
+        // rail settled while Lenis is still moving toward its destination.
+        if (activeLenis?.isScrolling || snapInProgressRef.current) {
+          scheduleRailIdleCheck();
+          return;
+        }
+
+        if (root.dataset.railMoving !== "false") {
+          root.dataset.railMoving = "false";
+        }
+      }, RAIL_IDLE_DELAY_MS);
+    };
+
+    const markRailMoving = () => {
+      if (railIdleTimerRef.current !== null) {
+        window.clearTimeout(railIdleTimerRef.current);
+        railIdleTimerRef.current = null;
+      }
+      if (root.dataset.railMoving !== "true") {
+        root.dataset.railMoving = "true";
+      }
+      scheduleRailIdleCheck();
+    };
+    markRailMovingRef.current = markRailMoving;
+
+
+    let scheduleWheelSnap: (() => void) | null = null;
+
     const lenis = new Lenis({
       wrapper,
       content,
@@ -124,6 +168,8 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
             document.documentElement.dataset.modalOpen !== "true";
 
           if (canHandleWheel && activeLenis) {
+            markRailMoving();
+            const interruptedSource = programmaticSourceRef.current;
             // A new user gesture can interrupt Lenis's programmatic snap. Its
             // old onComplete callback will not necessarily run, so release the
             // snap latch and invalidate that callback before accepting input.
@@ -147,12 +193,21 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
                 ? activeLenis.targetScroll
                 : activeLenis.scroll;
               snapAnchorRef.current = {
+                // If a user interrupts a menu jump, anchor the next wheel
+                // gesture to the chapter nearest the actual current position,
+                // not the abandoned far-away destination.
                 index:
-                  interruptedTargetIndex ??
-                  getNearestChapterIndex(anchorScroll),
+                  interruptedSource === "menu"
+                    ? getNearestChapterIndex(anchorScroll)
+                    : interruptedTargetIndex ??
+                      getNearestChapterIndex(anchorScroll),
                 scroll: anchorScroll,
               };
             }
+
+            // Schedule from the wheel gesture itself, not the RAF-driven scroll
+            // stream; otherwise the chapter decision can feel late after input ends.
+            scheduleWheelSnap?.();
           }
 
           if (Math.abs(data.deltaY) >= Math.abs(data.deltaX)) {
@@ -262,35 +317,28 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
         return;
       }
 
-      const vw = Math.max(1, window.innerWidth);
-      const dist01 = Math.min(1, dist / vw);
-      const duration = Math.max(
-        SNAP_MIN_DURATION_SECONDS,
-        Math.min(
-          SNAP_MAX_DURATION_SECONDS,
-          0.18 + dist01 * 0.28,
-        ),
-      );
-
       const snapSequence = ++snapSequenceRef.current;
       snapTargetIndexRef.current = targetIndex;
       snapInProgressRef.current = true;
+      programmaticSourceRef.current = "wheel";
       activeLenis.scrollTo(target, {
-        duration: reducedMotionRef.current ? 0 : duration,
-        easing: (t) => 1 - Math.pow(1 - t, 3),
+        lerp: reducedMotionRef.current ? 1 : 0.16,
         userData: { source: "chapter-snap" },
         onComplete: () => {
           if (snapSequenceRef.current !== snapSequence) return;
           snapInProgressRef.current = false;
           snapTargetIndexRef.current = null;
+          programmaticSourceRef.current = null;
         },
       });
     };
 
-    const armSnapTimer = (scroll: number) => {
+    scheduleWheelSnap = () => {
+      const activeLenis = lenisRef.current;
+
       if (
-        snapInProgressRef.current ||
-        lenis.isStopped ||
+        !activeLenis ||
+        activeLenis.isStopped ||
         stopTokensRef.current.size > 0 ||
         document.documentElement.dataset.modalOpen === "true"
       ) {
@@ -298,9 +346,10 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
       }
 
       if (!snapAnchorRef.current) {
+        const anchorScroll = activeLenis.scroll;
         snapAnchorRef.current = {
-          index: getNearestChapterIndex(scroll),
-          scroll,
+          index: getNearestChapterIndex(anchorScroll),
+          scroll: anchorScroll,
         };
       }
 
@@ -361,11 +410,30 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
 
       root.style.setProperty("--pSplit", String(splitProgress));
       root.style.setProperty("--pHideDeck", String(hideDeckProgress));
-      root.dataset.splitActive = splitProgress > 0.05 ? "true" : "false";
-      root.dataset.deckHidden = hideDeckProgress >= 0.98 ? "true" : "false";
-      root.dataset.chapter = String(activeChapterIndex);
-      root.dataset.deckInteractive = activeChapterIndex < 2 ? "true" : "false";
-      document.documentElement.dataset.chapter = String(activeChapterIndex);
+
+      // These attributes are observed by chapters, the Deck and the marquee.
+      // Assigning the same value on every Lenis frame still queues mutation
+      // records, so only publish discrete state changes.
+      const splitActive = splitProgress > 0.05 ? "true" : "false";
+      const deckHidden = hideDeckProgress >= 0.98 ? "true" : "false";
+      const chapter = String(activeChapterIndex);
+      const deckInteractive = activeChapterIndex < 2 ? "true" : "false";
+
+      if (root.dataset.splitActive !== splitActive) {
+        root.dataset.splitActive = splitActive;
+      }
+      if (root.dataset.deckHidden !== deckHidden) {
+        root.dataset.deckHidden = deckHidden;
+      }
+      if (root.dataset.chapter !== chapter) {
+        root.dataset.chapter = chapter;
+      }
+      if (root.dataset.deckInteractive !== deckInteractive) {
+        root.dataset.deckInteractive = deckInteractive;
+      }
+      if (document.documentElement.dataset.chapter !== chapter) {
+        document.documentElement.dataset.chapter = chapter;
+      }
 
       Array.from(content.children).forEach((child, index) => {
         const panel = child as HTMLElement;
@@ -391,19 +459,30 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
     resizeObserver.observe(content);
 
     const handleScroll = ({ scroll }: { scroll: number }) => {
+      markRailMoving();
       updateRailProgress(scroll);
-
-      if (snapInProgressRef.current) {
-        return;
-      }
-
-      armSnapTimer(scroll);
     };
 
     lenis.on("scroll", handleScroll);
 
+    // A long main-thread stall (for example, WebGL compositing) must not be
+    // counted as animation time: Lenis would otherwise catch up in one huge
+    // scroll step on the first frame after the stall. Advance a monotonic,
+    // capped clock so navigation resumes smoothly instead of jumping chapters.
+    const MAX_FRAME_DELTA_MS = 32;
+    let previousFrameTime: number | null = null;
+    let lenisAnimationTime = 0;
     const raf = (time: number) => {
-      lenis.raf(time);
+      if (previousFrameTime === null) {
+        previousFrameTime = time;
+        lenisAnimationTime = time;
+      } else {
+        const elapsed = Math.max(0, time - previousFrameTime);
+        previousFrameTime = time;
+        lenisAnimationTime += Math.min(elapsed, MAX_FRAME_DELTA_MS);
+      }
+
+      lenis.raf(lenisAnimationTime);
       animationFrameRef.current = window.requestAnimationFrame(raf);
     };
 
@@ -416,8 +495,16 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
       }
 
       lenis.off("scroll", handleScroll);
+      programmaticSourceRef.current = null;
+      markRailMovingRef.current = null;
+      if (railIdleTimerRef.current !== null) {
+        window.clearTimeout(railIdleTimerRef.current);
+        railIdleTimerRef.current = null;
+      }
+      delete root.dataset.railMoving;
       resizeObserver.disconnect();
       clearSnapTimer();
+      scheduleWheelSnap = null;
       snapSequenceRef.current += 1;
       snapTargetIndexRef.current = null;
       snapAnchorRef.current = null;
@@ -459,6 +546,7 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
   }, []);
 
   const stop = useCallback((token: RailLockToken) => {
+    programmaticSourceRef.current = null;
     stopTokensRef.current.add(token);
 
     if (snapTimerRef.current !== null) {
@@ -474,6 +562,7 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
   }, []);
 
   const scrollToX = useCallback((px: number) => {
+    programmaticSourceRef.current = null;
     const lenis = lenisRef.current;
 
     if (!lenis || lenis.isStopped || stopTokensRef.current.size > 0) {
@@ -483,6 +572,7 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
     const snapSequence = ++snapSequenceRef.current;
     snapTargetIndexRef.current = null;
     snapInProgressRef.current = true;
+    if (!reducedMotionRef.current) markRailMovingRef.current?.();
     lenis.scrollTo(Math.max(0, px), {
       onComplete: () => {
         if (snapSequenceRef.current !== snapSequence) return;
@@ -492,7 +582,7 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
     });
   }, []);
 
-  const scrollToChapter = useCallback((index: number, duration = 0.9) => {
+  const scrollToChapter = useCallback((index: number, duration?: number) => {
     const lenis = lenisRef.current;
     const content = contentRef.current;
 
@@ -506,12 +596,33 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
       return;
     }
 
+    programmaticSourceRef.current = null;
+    if (snapTimerRef.current !== null) {
+      window.clearTimeout(snapTimerRef.current);
+      snapTimerRef.current = null;
+    }
+    snapAnchorRef.current = null;
+
     const safeIndex = Math.min(
       Math.max(0, Math.floor(index)),
       content.children.length - 1,
     );
     const chapter = content.children[safeIndex] as HTMLElement;
+    const distance = Math.abs(chapter.offsetLeft - lenis.scroll);
+    if (distance < 2 && !snapInProgressRef.current) {
+      return;
+    }
 
+    const viewportWidth = Math.max(
+      1,
+      wrapperRef.current?.clientWidth || window.innerWidth,
+    );
+    const chapterDistance = distance / viewportWidth;
+    const resolvedDuration =
+      duration ??
+      Math.min(3.25, Math.max(0.72, chapterDistance * 0.78));
+
+    if (!reducedMotionRef.current) markRailMovingRef.current?.();
     const snapSequence = ++snapSequenceRef.current;
     snapTargetIndexRef.current = safeIndex;
     snapInProgressRef.current = true;
@@ -521,63 +632,75 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
       if (snapSequenceRef.current !== snapSequence) return;
       snapInProgressRef.current = false;
       snapTargetIndexRef.current = null;
+      programmaticSourceRef.current = null;
     };
 
-    // Error recovery reopens the album modal immediately after restoring the
-    // source chapter. A duration: 0 scroll that waits for Lenis's next RAF can
-    // be stopped by the modal's layout effect before the chapter actually
-    // changes, leaving the modal over Deck while the original flight is gone.
-    // Commit instant navigation synchronously for zero-duration and reduced-
-    // motion requests so callers can safely restore UI state in the same tick.
-    if (duration <= 0 || reducedMotionRef.current) {
+    if ((duration !== undefined && duration <= 0) || reducedMotionRef.current) {
       lenis.scrollTo(chapter.offsetLeft, {
         immediate: true,
+        force: true,
         onComplete,
       });
       return;
     }
 
+    programmaticSourceRef.current = "menu";
+    // A chapter-menu action is a deliberate navigation, not wheel inertia.
+    // Use the duration-based path consistently so long jumps remain visibly
+    // continuous across all intermediate chapters and can be interrupted by input.
     lenis.scrollTo(chapter.offsetLeft, {
-      duration,
+      duration: resolvedDuration,
+      easing: (t) => 0.5 - Math.cos(Math.PI * t) / 2,
       onComplete,
     });
   }, []);
-
-  const value: RailContextValue = {
-    isReady,
-    activeChapterIndex,
-    start,
-    stop,
-    scrollToX,
-    scrollToChapter,
-  };
+  const actionsValue = useMemo<RailActionsContextValue>(
+    () => ({ isReady, start, stop, scrollToX, scrollToChapter }),
+    [isReady, start, stop, scrollToX, scrollToChapter],
+  );
+  const navigationValue = useMemo<RailNavigationContextValue>(
+    () => ({ activeChapterIndex }),
+    [activeChapterIndex],
+  );
 
   return (
-    <RailContext.Provider value={value}>
-      <div ref={rootRef} className={styles.root} data-rail-ready={isReady ? "true" : "false"}>
+    <RailContext.Provider value={actionsValue}>
+      <RailNavigationContext.Provider value={navigationValue}>
         <div
-          ref={wrapperRef}
-          className={styles.wrapper}
-          data-rail-wrapper
-          aria-label="Horizontal rail"
+          ref={rootRef}
+          className={styles.root}
+          data-rail-ready={isReady ? "true" : "false"}
         >
-          <div ref={contentRef} className={styles.content}>
-            {children}
+          <div
+            ref={wrapperRef}
+            className={styles.wrapper}
+            data-rail-wrapper
+            aria-label="Horizontal rail"
+          >
+            <div ref={contentRef} className={styles.content}>
+              {children}
+            </div>
           </div>
+          {overlay}
+          {navigation}
         </div>
-        {overlay}
-        {navigation}
-      </div>
+      </RailNavigationContext.Provider>
     </RailContext.Provider>
   );
 }
 
-export function useRail(): RailContextValue {
+export function useRailActions(): RailActionsContextValue {
   const context = useContext(RailContext);
-
-  if (!context) {
-    throw new Error("useRail must be used inside a RailProvider");
-  }
-
+  if (!context) throw new Error("useRailActions must be used inside a RailProvider");
   return context;
+}
+
+export function useRailNavigation(): RailNavigationContextValue {
+  const context = useContext(RailNavigationContext);
+  if (!context) throw new Error("useRailNavigation must be used inside a RailProvider");
+  return context;
+}
+
+export function useRail(): RailContextValue {
+  return { ...useRailActions(), ...useRailNavigation() };
 }

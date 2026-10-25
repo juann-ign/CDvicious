@@ -8,6 +8,7 @@ interface JewelSpineProps {
   artist: string;
   coverUrl: string;
   tilt: number;
+  reduceEffects?: boolean;
   onSelect: () => void;
   onHover?: (rect: DOMRect | null) => void;
 }
@@ -17,6 +18,7 @@ export function JewelSpine({
   artist,
   coverUrl,
   tilt,
+  reduceEffects = false,
   onSelect,
   onHover,
 }: JewelSpineProps) {
@@ -26,7 +28,9 @@ export function JewelSpine({
     <button
       ref={ref}
       type="button"
-      className={styles.spine}
+      className={[styles.spine, reduceEffects ? styles.spineReduced : ""]
+        .filter(Boolean)
+        .join(" ")}
       style={
         {
           "--tilt": `${tilt}deg`,
@@ -34,11 +38,17 @@ export function JewelSpine({
         } as React.CSSProperties
       }
       onClick={onSelect}
-      onPointerEnter={() =>
-        onHover?.(ref.current?.getBoundingClientRect() ?? null)
-      }
+      onPointerEnter={() => {
+        if (!reduceEffects) {
+          onHover?.(ref.current?.getBoundingClientRect() ?? null);
+        }
+      }}
       onPointerLeave={() => onHover?.(null)}
-      onFocus={() => onHover?.(ref.current?.getBoundingClientRect() ?? null)}
+      onFocus={() => {
+        if (!reduceEffects) {
+          onHover?.(ref.current?.getBoundingClientRect() ?? null);
+        }
+      }}
       onBlur={() => onHover?.(null)}
       aria-label={`${artist} — ${title}`}
     >

@@ -26,7 +26,7 @@ const PARTICLES = Array.from({ length: 12 }, (_, index) => {
 });
 
 const DOCK_PULSE_DURATION_MS = 900;
-const FLIGHT_DURATION_SECONDS = 3.6;
+const FLIGHT_DURATION_SECONDS = 4.8;
 
 export function RailFlyingDisc({
   coverUrl,
@@ -70,7 +70,6 @@ export function RailFlyingDisc({
     const path = { p: 0 };
     let lastX = fromX;
     let lastY = fromY;
-    let spin = 0;
     let tween: gsap.core.Tween | null = null;
     let fadeComplete = false;
 
@@ -217,15 +216,15 @@ export function RailFlyingDisc({
         const travelAngle =
           distance > 0.1 ? (Math.atan2(dy, dx) * 180) / Math.PI : 0;
 
-        spin += distance * 1.5 + 1.8;
-
         setX(x - fromX);
         setY(y - fromY);
         setRotate(travelAngle);
         setRotationX(30 * Math.max(0, Math.min(1, (p - 0.8) / 0.2)));
         setScaleX((size / fromSize) * (1 + Math.min(0.06, distance / 90)));
         setScaleY((size / fromSize) * (1 - Math.min(0.025, distance / 180)));
-        setSpinnerRotate(spin - travelAngle);
+        // Tie rotation to normalized progress so dropped frames do not change
+        // the spin rate or create frame-count-dependent bursts of rotation.
+        setSpinnerRotate(p * 1080 - travelAngle);
         lastX = x;
         lastY = y;
 

@@ -45,6 +45,16 @@ The home experience should evolve from a standalone 100vh player into a physical
 - Add the futuristic depth/glass treatment only where it reinforces the physical metaphor.
 - Validate loading, responsive behavior and Spotify regressions.
 
+### 2.6.1 — Rail smoothness and navigation ergonomics
+- Scale chapter-menu transitions with traveled chapter distance; long jumps should visibly traverse intermediate chapters.
+- Schedule wheel snapping from user gesture intent and use eased, perceptible transitions without adding retries or skipping functional states.
+- Keep the chapter menu away from the central VFD/player focus area.
+- Make the temporary flying disc flight and rotation time-based and stable across dropped frames.
+
+### 2.6.2 — VFD visual hierarchy (follow-up polish)
+- The current polish pass increases the VFD's usable width and text scale enough to restore its role as a primary hardware readout.
+- A dedicated visual pass remains on the roadmap for finer VFD layout, responsive typography, track metadata hierarchy, and full hardware-panel composition. It should be reviewed separately from rail-motion tuning.
+
 ## Review cadence
 
 One epic is implemented and reviewed before starting the next one. Each epic has its own branch and PR so visual feedback can be incorporated without mixing unrelated changes.

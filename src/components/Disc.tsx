@@ -15,11 +15,40 @@ interface DiscProps {
   track: SpotifyTrack | null;
   isPlaying: boolean;
   accentColor: string;
+  renderEnabled?: boolean;
 }
 
-export function Disc({ track, isPlaying, accentColor }: DiscProps) {
+export function Disc({
+  track,
+  isPlaying,
+  accentColor,
+  renderEnabled = true,
+}: DiscProps) {
   const [isTrackRevealed, setIsTrackRevealed] = useState(true);
+  const [isRailMoving, setIsRailMoving] = useState(false);
   const trackId = track?.id;
+
+  // Keep motion-local rendering updates inside the Disc subtree. Subscribing
+  // DeckPinnedLayer itself rerenders the pinned VFD, booklet and layout on each
+  // rail handoff, which can stall the scroll animation.
+  useEffect(() => {
+    const railRoot = document.querySelector<HTMLElement>(
+      "[data-rail-wrapper]",
+    )?.parentElement;
+    if (!railRoot) return;
+
+    const syncMotionState = () => {
+      setIsRailMoving(railRoot.dataset.railMoving === "true");
+    };
+    syncMotionState();
+
+    const observer = new MutationObserver(syncMotionState);
+    observer.observe(railRoot, {
+      attributes: true,
+      attributeFilter: ["data-rail-moving"],
+    });
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     if (!trackId) {
@@ -46,6 +75,9 @@ export function Disc({ track, isPlaying, accentColor }: DiscProps) {
       ref={(el) => {
         discRegistry.discTarget = el;
       }}
+      data-disc-render-enabled={renderEnabled ? "true" : "false"}
+      data-disc-motion-active={isRailMoving ? "true" : "false"}
+      data-has-track={track ? "true" : "false"}
     >
       <div
         className={`${styles.discGlow} ${isPlaying ? styles.isActive : ""}`}
@@ -56,6 +88,8 @@ export function Disc({ track, isPlaying, accentColor }: DiscProps) {
           track={track}
           isPlaying={isPlaying}
           accentColor={accentColor}
+          renderEnabled={renderEnabled}
+          isRailMoving={isRailMoving}
         />
       </div>
     </div>
