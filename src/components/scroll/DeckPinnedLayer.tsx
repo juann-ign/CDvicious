@@ -22,6 +22,7 @@ type DiscFlightStage = "idle" | "flying" | "docked";
 type ExpectedPlaybackAlbum = {
   albumName: string;
   artistNames: string[];
+  snapshot?: NowPlayingResponse | null;
 };
 
 function trackMatchesAlbum(
@@ -180,7 +181,7 @@ export function DeckPinnedLayer() {
       // cannot leave the VFD on the previous album for an entire poll cycle.
       const mockSnapshot =
         process.env.NEXT_PUBLIC_SPOTIFY_MOCK === "1"
-          ? mockSpotifyStore.getSnapshot().data
+          ? detail?.snapshot ?? mockSpotifyStore.getSnapshot().data
           : null;
       if (
         mockSnapshot?.track &&
@@ -189,6 +190,14 @@ export function DeckPinnedLayer() {
         latestDataRef.current = mockSnapshot;
         setPlaybackSnapshotOverride(mockSnapshot);
         playbackSnapshotAtStartRef.current = mockSnapshot;
+        // A snapshot included in the successful mock-play event is authoritative:
+        // stop waiting for the next subscription notification but keep the
+        // snapshot override visible until the store has caught up.
+        if (detail?.snapshot?.track && detail.snapshot.isPlaying) {
+          setFlightPlaybackStarted(false);
+          setAwaitingPlaybackSnapshot(false);
+          clearPlaybackSnapshotTimeout();
+        }
       } else {
         playbackSnapshotAtStartRef.current = latestDataRef.current;
       }
