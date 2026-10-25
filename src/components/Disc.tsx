@@ -16,7 +16,6 @@ interface DiscProps {
   isPlaying: boolean;
   accentColor: string;
   renderEnabled?: boolean;
-  isRailMoving?: boolean;
 }
 
 export function Disc({
@@ -24,10 +23,32 @@ export function Disc({
   isPlaying,
   accentColor,
   renderEnabled = true,
-  isRailMoving = false,
 }: DiscProps) {
   const [isTrackRevealed, setIsTrackRevealed] = useState(true);
+  const [isRailMoving, setIsRailMoving] = useState(false);
   const trackId = track?.id;
+
+  // Keep motion-local rendering updates inside the Disc subtree. Subscribing
+  // DeckPinnedLayer itself rerenders the pinned VFD, booklet and layout on each
+  // rail handoff, which can stall the scroll animation.
+  useEffect(() => {
+    const railRoot = document.querySelector<HTMLElement>(
+      "[data-rail-wrapper]",
+    )?.parentElement;
+    if (!railRoot) return;
+
+    const syncMotionState = () => {
+      setIsRailMoving(railRoot.dataset.railMoving === "true");
+    };
+    syncMotionState();
+
+    const observer = new MutationObserver(syncMotionState);
+    observer.observe(railRoot, {
+      attributes: true,
+      attributeFilter: ["data-rail-moving"],
+    });
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     if (!trackId) {
