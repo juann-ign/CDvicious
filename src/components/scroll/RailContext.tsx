@@ -403,11 +403,30 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
 
       root.style.setProperty("--pSplit", String(splitProgress));
       root.style.setProperty("--pHideDeck", String(hideDeckProgress));
-      root.dataset.splitActive = splitProgress > 0.05 ? "true" : "false";
-      root.dataset.deckHidden = hideDeckProgress >= 0.98 ? "true" : "false";
-      root.dataset.chapter = String(activeChapterIndex);
-      root.dataset.deckInteractive = activeChapterIndex < 2 ? "true" : "false";
-      document.documentElement.dataset.chapter = String(activeChapterIndex);
+
+      // These attributes are observed by chapters, the Deck and the marquee.
+      // Assigning the same value on every Lenis frame still queues mutation
+      // records, so only publish discrete state changes.
+      const splitActive = splitProgress > 0.05 ? "true" : "false";
+      const deckHidden = hideDeckProgress >= 0.98 ? "true" : "false";
+      const chapter = String(activeChapterIndex);
+      const deckInteractive = activeChapterIndex < 2 ? "true" : "false";
+
+      if (root.dataset.splitActive !== splitActive) {
+        root.dataset.splitActive = splitActive;
+      }
+      if (root.dataset.deckHidden !== deckHidden) {
+        root.dataset.deckHidden = deckHidden;
+      }
+      if (root.dataset.chapter !== chapter) {
+        root.dataset.chapter = chapter;
+      }
+      if (root.dataset.deckInteractive !== deckInteractive) {
+        root.dataset.deckInteractive = deckInteractive;
+      }
+      if (document.documentElement.dataset.chapter !== chapter) {
+        document.documentElement.dataset.chapter = chapter;
+      }
 
       Array.from(content.children).forEach((child, index) => {
         const panel = child as HTMLElement;
