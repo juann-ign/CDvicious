@@ -73,16 +73,28 @@ export function CollectionChapter() {
   }, [authenticated]);
 
   useEffect(() => {
+    const railRoot = document.querySelector<HTMLElement>(
+      "[data-rail-wrapper]",
+    )?.parentElement;
+    if (!railRoot) return;
+
+    // Do not fetch and mount the full Collection grid just because a long
+    // chapter jump passes through it. Load only after Collection is settled.
     const readActiveChapter = () => {
-      setIsActiveChapter(document.documentElement.dataset.chapter === "3");
+      const settledCollection =
+        railRoot.dataset.chapter === "3" &&
+        railRoot.dataset.railMoving !== "true";
+      setIsActiveChapter((current) =>
+        current === settledCollection ? current : settledCollection,
+      );
     };
 
     readActiveChapter();
 
     const observer = new MutationObserver(readActiveChapter);
-    observer.observe(document.documentElement, {
+    observer.observe(railRoot, {
       attributes: true,
-      attributeFilter: ["data-chapter"],
+      attributeFilter: ["data-chapter", "data-rail-moving"],
     });
 
     return () => observer.disconnect();

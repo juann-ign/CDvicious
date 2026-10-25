@@ -20,7 +20,7 @@ type DiscFlightStage = "idle" | "flying" | "docked";
 
 export function DeckPinnedLayer() {
   const { authenticated } = useSpotifyPlayer();
-  const [deckInteractive, setDeckInteractive] = useState(true);
+  const layerRef = useRef<HTMLDivElement>(null);
   const [deckHidden, setDeckHidden] = useState(false);
   const [awaitingPlaybackSnapshot, setAwaitingPlaybackSnapshot] = useState(false);
   const [flightStage, setFlightStage] = useState<DiscFlightStage>("idle");
@@ -38,8 +38,14 @@ export function DeckPinnedLayer() {
     if (!railRoot) return;
 
     const update = () => {
-      setDeckInteractive(railRoot.dataset.deckInteractive !== "false");
-      setDeckHidden(railRoot.dataset.deckHidden === "true");
+      const interactive = railRoot.dataset.deckInteractive !== "false";
+      const interactiveValue = interactive ? "true" : "false";
+      if (layerRef.current?.dataset.deckInteractive !== interactiveValue) {
+        layerRef.current?.setAttribute("data-deck-interactive", interactiveValue);
+      }
+
+      const hidden = railRoot.dataset.deckHidden === "true";
+      setDeckHidden((current) => (current === hidden ? current : hidden));
     };
 
     update();
@@ -54,7 +60,7 @@ export function DeckPinnedLayer() {
 
   const { data, error } = useNowPlaying(
     authenticated === true &&
-      (deckInteractive || awaitingPlaybackSnapshot || flightStage !== "idle"),
+      (!deckHidden || awaitingPlaybackSnapshot || flightStage !== "idle"),
   );
   const latestDataRef = useRef(data);
   const playbackSnapshotAtStartRef = useRef(data);
@@ -214,8 +220,9 @@ export function DeckPinnedLayer() {
     <div
       className={styles.layer}
       style={stageStyle}
+      ref={layerRef}
       data-rail-overlay
-      data-deck-interactive={deckInteractive ? "true" : "false"}
+      data-deck-interactive="true"
       data-deck-hidden={deckHidden ? "true" : "false"}
     >
       <header className={pageStyles.topControlBar}>

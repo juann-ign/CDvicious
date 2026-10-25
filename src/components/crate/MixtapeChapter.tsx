@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRail } from "@/components/scroll/RailContext";
+import { useRailActions } from "@/components/scroll/RailContext";
 import { useCollectionCache } from "@/lib/collectionClient";
 import type { AlbumItem } from "@/types/crate";
 import styles from "./MixtapeChapter.module.css";
@@ -37,7 +37,7 @@ export function MixtapeChapter({
 }: {
   spotifyBridge?: MixtapeSpotifyBridge;
 }) {
-  const { stop, start } = useRail();
+  const { stop, start } = useRailActions();
   const exportLockTokenRef = useRef(Symbol("mixtape-export"));
   const { albums: cachedAlbums } = useCollectionCache();
 
