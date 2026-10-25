@@ -26,7 +26,7 @@ const PARTICLES = Array.from({ length: 12 }, (_, index) => {
 });
 
 const DOCK_PULSE_DURATION_MS = 900;
-const FLIGHT_DURATION_SECONDS = 4.6;
+const FLIGHT_DURATION_SECONDS = 4.8;
 
 export function RailFlyingDisc({
   coverUrl,
