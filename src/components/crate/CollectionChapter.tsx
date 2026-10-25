@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSpotifyPlayer } from "@/components/SpotifyPlayerProvider";
-import { useRail } from "@/components/scroll/RailContext";
+import { useRailActions } from "@/components/scroll/RailContext";
 import {
   loadCollection,
   loadCollectionGenres,
@@ -41,8 +41,7 @@ function decadeOf(album: AlbumItem): DecadeFilter {
 
 export function CollectionChapter() {
   const { authenticated } = useSpotifyPlayer();
-  const { scrollToChapter, activeChapterIndex, isRailMoving } = useRail();
-  const isCollectionInteractive = activeChapterIndex === 3 && !isRailMoving;
+  const { scrollToChapter } = useRailActions();
   const { albums: cachedAlbums, genresLoaded } = useCollectionCache();
   const albums = useMemo(() => cachedAlbums ?? [], [cachedAlbums]);
   const [loading, setLoading] = useState(false);
@@ -86,6 +85,33 @@ export function CollectionChapter() {
       attributeFilter: ["data-chapter"],
     });
 
+    return () => observer.disconnect();
+  }, []);
+
+  // Update visual quality with attributes only; a full grid render during
+  // wheel motion can stall the same main thread that advances Lenis.
+  useEffect(() => {
+    const railRoot = document.querySelector<HTMLElement>(
+      "[data-rail-wrapper]",
+    )?.parentElement;
+    const chapter = chapterRef.current;
+    if (!railRoot || !chapter) return;
+
+    const sync = () => {
+      const lightweight =
+        railRoot.dataset.chapter !== "3" ||
+        railRoot.dataset.railMoving === "true";
+      chapter.setAttribute(
+        "data-collection-transition-lite",
+        lightweight ? "true" : "false",
+      );
+    };
+    sync();
+    const observer = new MutationObserver(sync);
+    observer.observe(railRoot, {
+      attributes: true,
+      attributeFilter: ["data-chapter", "data-rail-moving"],
+    });
     return () => observer.disconnect();
   }, []);
 
@@ -265,7 +291,7 @@ export function CollectionChapter() {
     <div
       ref={chapterRef}
       className={styles.chapter}
-      data-collection-transition-lite={isCollectionInteractive ? "false" : "true"}
+      data-collection-transition-lite="true"
     >
       <header className={styles.header}>
         <div>
@@ -362,7 +388,6 @@ export function CollectionChapter() {
               <JewelCaseFront
                 key={album.id}
                 album={album}
-                reduceEffects={!isCollectionInteractive}
                 onSelect={() => handleSelect(album)}
               />
             ))}

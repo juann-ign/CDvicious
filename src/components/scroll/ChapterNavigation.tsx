@@ -1,6 +1,6 @@
 "use client";
 
-import { useRail } from "./RailContext";
+import { useRailActions, useRailNavigation } from "./RailContext";
 import styles from "./ChapterNavigation.module.css";
 
 const CHAPTERS = [
@@ -12,7 +12,8 @@ const CHAPTERS = [
 ];
 
 export function ChapterNavigation() {
-  const { activeChapterIndex, scrollToChapter } = useRail();
+  const { activeChapterIndex } = useRailNavigation();
+  const { scrollToChapter } = useRailActions();
 
   return (
     <nav className={styles.navigation} aria-label="Navegación por capítulos">

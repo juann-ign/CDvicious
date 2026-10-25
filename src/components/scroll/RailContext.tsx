@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
@@ -22,15 +23,19 @@ const CHAPTER_BACKWARD_THRESHOLD = 0.45;
 
 type RailLockToken = symbol;
 
-type RailContextValue = {
+type RailActionsContextValue = {
   isReady: boolean;
-  activeChapterIndex: number;
-  isRailMoving: boolean;
   start: (token: RailLockToken) => void;
   stop: (token: RailLockToken) => void;
   scrollToX: (px: number) => void;
   scrollToChapter: (index: number, duration?: number) => void;
 };
+
+type RailNavigationContextValue = {
+  activeChapterIndex: number;
+};
+
+type RailContextValue = RailActionsContextValue & RailNavigationContextValue;
 
 type RailProviderProps = {
   children: ReactNode;
@@ -38,7 +43,9 @@ type RailProviderProps = {
   navigation?: ReactNode;
 };
 
-export const RailContext = createContext<RailContextValue | null>(null);
+export const RailContext = createContext<RailActionsContextValue | null>(null);
+export const RailNavigationContext =
+  createContext<RailNavigationContextValue | null>(null);
 
 export function RailProvider({ children, overlay, navigation }: RailProviderProps) {
   const rootRef = useRef<HTMLDivElement>(null);
@@ -67,7 +74,6 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
   });
   const [isReady, setIsReady] = useState(false);
   const [activeChapterIndex, setActiveChapterIndex] = useState(0);
-  const [isRailMoving, setIsRailMoving] = useState(false);
 
   useEffect(() => {
     const root = rootRef.current;
@@ -79,6 +85,7 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
     }
 
     activeChapterIndexRef.current = null;
+    root.dataset.railMoving = "false";
 
     const previousHtmlOverflow = document.documentElement.style.overflow;
     const previousBodyOverflow = document.body.style.overflow;
@@ -112,10 +119,14 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
       if (railIdleTimerRef.current !== null) {
         window.clearTimeout(railIdleTimerRef.current);
       }
-      setIsRailMoving(true);
+      if (root.dataset.railMoving !== "true") {
+        root.dataset.railMoving = "true";
+      }
       railIdleTimerRef.current = window.setTimeout(() => {
         railIdleTimerRef.current = null;
-        setIsRailMoving(false);
+        if (root.dataset.railMoving !== "false") {
+          root.dataset.railMoving = "false";
+        }
       }, RAIL_IDLE_DELAY_MS);
     };
     markRailMovingRef.current = markRailMoving;
@@ -447,7 +458,7 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
         window.clearTimeout(railIdleTimerRef.current);
         railIdleTimerRef.current = null;
       }
-      setIsRailMoving(false);
+      delete root.dataset.railMoving;
       resizeObserver.disconnect();
       clearSnapTimer();
       scheduleWheelSnap = null;
@@ -601,47 +612,53 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
     });
   }, []);
 
-  const value: RailContextValue = {
-    isReady,
-    activeChapterIndex,
-    isRailMoving,
-    start,
-    stop,
-    scrollToX,
-    scrollToChapter,
-  };
+  const actionsValue = useMemo<RailActionsContextValue>(
+    () => ({ isReady, start, stop, scrollToX, scrollToChapter }),
+    [isReady, start, stop, scrollToX, scrollToChapter],
+  );
+  const navigationValue = useMemo<RailNavigationContextValue>(
+    () => ({ activeChapterIndex }),
+    [activeChapterIndex],
+  );
 
   return (
-    <RailContext.Provider value={value}>
-      <div
-        ref={rootRef}
-        className={styles.root}
-        data-rail-ready={isReady ? "true" : "false"}
-        data-rail-moving={isRailMoving ? "true" : "false"}
-      >
+    <RailContext.Provider value={actionsValue}>
+      <RailNavigationContext.Provider value={navigationValue}>
         <div
-          ref={wrapperRef}
-          className={styles.wrapper}
-          data-rail-wrapper
-          aria-label="Horizontal rail"
+          ref={rootRef}
+          className={styles.root}
+          data-rail-ready={isReady ? "true" : "false"}
         >
-          <div ref={contentRef} className={styles.content}>
-            {children}
+          <div
+            ref={wrapperRef}
+            className={styles.wrapper}
+            data-rail-wrapper
+            aria-label="Horizontal rail"
+          >
+            <div ref={contentRef} className={styles.content}>
+              {children}
+            </div>
           </div>
+          {overlay}
+          {navigation}
         </div>
-        {overlay}
-        {navigation}
-      </div>
+      </RailNavigationContext.Provider>
     </RailContext.Provider>
   );
 }
 
-export function useRail(): RailContextValue {
+export function useRailActions(): RailActionsContextValue {
   const context = useContext(RailContext);
-
-  if (!context) {
-    throw new Error("useRail must be used inside a RailProvider");
-  }
-
+  if (!context) throw new Error("useRailActions must be used inside a RailProvider");
   return context;
+}
+
+export function useRailNavigation(): RailNavigationContextValue {
+  const context = useContext(RailNavigationContext);
+  if (!context) throw new Error("useRailNavigation must be used inside a RailProvider");
+  return context;
+}
+
+export function useRail(): RailContextValue {
+  return { ...useRailActions(), ...useRailNavigation() };
 }
