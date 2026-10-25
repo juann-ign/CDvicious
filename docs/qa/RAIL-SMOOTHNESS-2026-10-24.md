@@ -65,3 +65,9 @@ The previous Browser QA run exposed two test assumptions that measured the wrong
 - The crossfade test checked intermediate opacity after waiting for the destination attribute, which could measure the completed fade. It now samples while the rail moves and checks that the track and booklet remain mounted during the midpoint.
 
 During movement the Deck Canvas uses `frameloop="demand"` and lower render quality, returning to `always` after settling and `never` when fully hidden. Batea and Collection disable interactions and expensive cosmetic effects as they cross the viewport, restoring the full presentation at rest.
+
+
+## Tercer loop — aislar los fallos del último Browser QA
+
+- El test de navegación y el de crossfade fijan explícitamente `prefers-reduced-motion: no-preference`: miden interpolación, así que no dependen de la preferencia del host CI. La prueba específica de reduced-motion sigue validando el modo accesible por separado.
+- Se revirtió el polling temporal adicional que se había agregado al Deck al confirmar playback; interfería con la sincronización del mock de Now Playing. Se conserva el gating normal por capítulo y la instantánea congelada durante el vuelo.

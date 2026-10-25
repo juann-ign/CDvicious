@@ -169,7 +169,10 @@ test("long navigation visibly crosses every chapter and keeps the VFD unobstruct
 }) => {
   test.skip(!RAIL_ENABLED, "El rail no debe estar montado cuando el flag está apagado.");
 
+  await page.emulateMedia({ reducedMotion: "no-preference" });
   await openDesktop(page);
+  expect(await page.evaluate(() => window.matchMedia("(prefers-reduced-motion: reduce)").matches))
+    .toBe(false);
   const navBox = await navigation(page).boundingBox();
   const vfd = page.getByTestId("deck-now-playing");
   await expect(vfd).toBeVisible();
@@ -245,7 +248,10 @@ test("Deck crossfade stays continuous and throttles WebGL during chapter handoff
 }) => {
   test.skip(!RAIL_ENABLED, "El rail no debe estar montado cuando el flag está apagado.");
 
+  await page.emulateMedia({ reducedMotion: "no-preference" });
   await openDesktop(page);
+  expect(await page.evaluate(() => window.matchMedia("(prefers-reduced-motion: reduce)").matches))
+    .toBe(false);
 
   const layer = page.locator("[data-rail-overlay]");
   const discStage = layer.locator("[data-disc-render-enabled]");

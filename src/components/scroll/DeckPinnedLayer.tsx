@@ -15,7 +15,6 @@ import pageStyles from "@/app/page.module.css";
 import styles from "./DeckPinnedLayer.module.css";
 
 const DISC_PLAYBACK_START_DELAY_MS = 1_000;
-const PLAYBACK_SNAPSHOT_TIMEOUT_MS = 15_000;
 
 type DiscFlightStage = "idle" | "flying" | "docked";
 
@@ -24,14 +23,12 @@ export function DeckPinnedLayer() {
   const isRailMoving = useRailMotion();
   const [deckInteractive, setDeckInteractive] = useState(true);
   const [deckHidden, setDeckHidden] = useState(false);
-  const [awaitingPlaybackSnapshot, setAwaitingPlaybackSnapshot] = useState(false);
   const [flightStage, setFlightStage] = useState<DiscFlightStage>("idle");
   const [frozenData, setFrozenData] = useState<NowPlayingResponse | null>(null);
   const [visualPlaybackReady, setVisualPlaybackReady] = useState(true);
   const [flightPlaybackStarted, setFlightPlaybackStarted] = useState(false);
   const flightStageRef = useRef<DiscFlightStage>("idle");
   const playbackDelayRef = useRef<number | null>(null);
-  const playbackSnapshotTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
     const overlay = document.querySelector<HTMLElement>("[data-rail-overlay]");
@@ -54,9 +51,7 @@ export function DeckPinnedLayer() {
     return () => observer.disconnect();
   }, []);
 
-  const { data, error } = useNowPlaying(
-    authenticated === true && (deckInteractive || awaitingPlaybackSnapshot),
-  );
+  const { data, error } = useNowPlaying(authenticated === true && deckInteractive);
   const latestDataRef = useRef(data);
   const playbackSnapshotAtStartRef = useRef(data);
 
@@ -89,17 +84,8 @@ export function DeckPinnedLayer() {
         playbackDelayRef.current = null;
       }
     };
-    const clearPlaybackSnapshotTimeout = () => {
-      if (playbackSnapshotTimeoutRef.current !== null) {
-        window.clearTimeout(playbackSnapshotTimeoutRef.current);
-        playbackSnapshotTimeoutRef.current = null;
-      }
-    };
-
-    const handleFlightStarted = () => {
+     const handleFlightStarted = () => {
       clearPlaybackDelay();
-      clearPlaybackSnapshotTimeout();
-      setAwaitingPlaybackSnapshot(false);
       delete document.documentElement.dataset.discFlightPlaybackReady;
       flightStageRef.current = "flying";
       setFlightStage("flying");
@@ -132,8 +118,6 @@ export function DeckPinnedLayer() {
 
     const cancelFlight = () => {
       clearPlaybackDelay();
-      clearPlaybackSnapshotTimeout();
-      setAwaitingPlaybackSnapshot(false);
       delete document.documentElement.dataset.discFlightPlaybackReady;
       flightStageRef.current = "idle";
       setFlightStage("idle");
@@ -147,14 +131,6 @@ export function DeckPinnedLayer() {
       flightStageRef.current = "idle";
       setFlightStage("idle");
       setFlightPlaybackStarted(true);
-      // Playback can originate off-chapter, where Now Playing polling is normally
-      // suspended. Resume it briefly so the persistent Deck receives the confirmed track.
-      setAwaitingPlaybackSnapshot(true);
-      clearPlaybackSnapshotTimeout();
-      playbackSnapshotTimeoutRef.current = window.setTimeout(() => {
-        playbackSnapshotTimeoutRef.current = null;
-        setAwaitingPlaybackSnapshot(false);
-      }, PLAYBACK_SNAPSHOT_TIMEOUT_MS);
     };
 
     window.addEventListener("cdvicious:disc-flight-started", handleFlightStarted);
@@ -170,22 +146,16 @@ export function DeckPinnedLayer() {
       window.removeEventListener("cdvicious:disc-flight-cancelled", cancelFlight);
       window.removeEventListener("cdvicious:disc-flight-playback-started", handlePlaybackStarted);
       clearPlaybackDelay();
-      clearPlaybackSnapshotTimeout();
     };
   }, []);
 
   useEffect(() => {
     if (
       flightPlaybackStarted &&
-      data?.track &&
+      data &&
       data !== playbackSnapshotAtStartRef.current
     ) {
       setFlightPlaybackStarted(false);
-      setAwaitingPlaybackSnapshot(false);
-      if (playbackSnapshotTimeoutRef.current !== null) {
-        window.clearTimeout(playbackSnapshotTimeoutRef.current);
-        playbackSnapshotTimeoutRef.current = null;
-      }
     }
   }, [data, flightPlaybackStarted]);
 
