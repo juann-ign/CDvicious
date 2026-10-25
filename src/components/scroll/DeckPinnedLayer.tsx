@@ -8,6 +8,7 @@ import { Disc } from "@/components/Disc";
 import { NowPlayingCard } from "@/components/NowPlayingCard";
 import { LyricsBooklet } from "@/components/LyricsBooklet";
 import { useNowPlaying } from "@/hooks/useNowPlaying";
+import * as mockSpotifyStore from "@/lib/mockSpotifyStore";
 import { useDominantColor } from "@/hooks/useDominantColor";
 import { useSpotifyPlayer } from "@/components/SpotifyPlayerProvider";
 import pageStyles from "@/app/page.module.css";
@@ -18,6 +19,23 @@ const PLAYBACK_SNAPSHOT_TIMEOUT_MS = 15_000;
 
 type DiscFlightStage = "idle" | "flying" | "docked";
 
+type ExpectedPlaybackAlbum = {
+  albumName: string;
+  artistNames: string[];
+};
+
+function trackMatchesAlbum(
+  track: NonNullable<NowPlayingResponse["track"]>,
+  expected: ExpectedPlaybackAlbum,
+) {
+  return (
+    track.album.name === expected.albumName &&
+    expected.artistNames.every((name) =>
+      track.artists.some((artist) => artist.name === name),
+    )
+  );
+}
+
 export function DeckPinnedLayer() {
   const { authenticated } = useSpotifyPlayer();
   const layerRef = useRef<HTMLDivElement>(null);
@@ -27,7 +45,10 @@ export function DeckPinnedLayer() {
   const [frozenData, setFrozenData] = useState<NowPlayingResponse | null>(null);
   const [visualPlaybackReady, setVisualPlaybackReady] = useState(true);
   const [flightPlaybackStarted, setFlightPlaybackStarted] = useState(false);
+  const [playbackSnapshotOverride, setPlaybackSnapshotOverride] =
+    useState<NowPlayingResponse | null>(null);
   const flightStageRef = useRef<DiscFlightStage>("idle");
+  const expectedPlaybackAlbumRef = useRef<ExpectedPlaybackAlbum | null>(null);
   const playbackDelayRef = useRef<number | null>(null);
   const playbackSnapshotTimeoutRef = useRef<number | null>(null);
 
@@ -69,7 +90,7 @@ export function DeckPinnedLayer() {
   // intentionally returns an empty snapshot when the Deck is not interactive,
   // but a flight launched from Batea/Colección still needs a stable visual
   // snapshot to bridge the disc animation.
-  if (data?.track) {
+  if (data?.track && !playbackSnapshotOverride) {
     latestDataRef.current = data;
   }
 
@@ -104,6 +125,8 @@ export function DeckPinnedLayer() {
       clearPlaybackDelay();
       clearPlaybackSnapshotTimeout();
       setAwaitingPlaybackSnapshot(false);
+      setPlaybackSnapshotOverride(null);
+      expectedPlaybackAlbumRef.current = null;
       delete document.documentElement.dataset.discFlightPlaybackReady;
       flightStageRef.current = "flying";
       setFlightStage("flying");
@@ -138,6 +161,8 @@ export function DeckPinnedLayer() {
       clearPlaybackDelay();
       clearPlaybackSnapshotTimeout();
       setAwaitingPlaybackSnapshot(false);
+      setPlaybackSnapshotOverride(null);
+      expectedPlaybackAlbumRef.current = null;
       delete document.documentElement.dataset.discFlightPlaybackReady;
       flightStageRef.current = "idle";
       setFlightStage("idle");
@@ -146,13 +171,33 @@ export function DeckPinnedLayer() {
       setFlightPlaybackStarted(false);
     };
 
-    const handlePlaybackStarted = () => {
-      playbackSnapshotAtStartRef.current = latestDataRef.current;
+    const handlePlaybackStarted = (event: Event) => {
+      const detail = (event as CustomEvent<ExpectedPlaybackAlbum>).detail;
+      expectedPlaybackAlbumRef.current = detail ?? null;
+
+      // In mock mode the play endpoint publishes the confirmed album before
+      // this event. Read the store synchronously so a missed/late subscription
+      // cannot leave the VFD on the previous album for an entire poll cycle.
+      const mockSnapshot =
+        process.env.NEXT_PUBLIC_SPOTIFY_MOCK === "1"
+          ? mockSpotifyStore.getSnapshot().data
+          : null;
+      if (
+        mockSnapshot?.track &&
+        (!detail || trackMatchesAlbum(mockSnapshot.track, detail))
+      ) {
+        latestDataRef.current = mockSnapshot;
+        setPlaybackSnapshotOverride(mockSnapshot);
+        playbackSnapshotAtStartRef.current = mockSnapshot;
+      } else {
+        playbackSnapshotAtStartRef.current = latestDataRef.current;
+      }
+
       flightStageRef.current = "idle";
       setFlightStage("idle");
       setFlightPlaybackStarted(true);
-      // A play request can start from Batea/Collection while Now Playing polling
-      // is suspended. Temporarily resume it until the confirmed track arrives.
+      // Keep polling active until Now Playing confirms the album that was asked
+      // to play, not merely until any progress/isPlaying object refresh arrives.
       setAwaitingPlaybackSnapshot(true);
       clearPlaybackSnapshotTimeout();
       playbackSnapshotTimeoutRef.current = window.setTimeout(() => {
@@ -179,28 +224,39 @@ export function DeckPinnedLayer() {
   }, []);
 
   useEffect(() => {
-    if (
-      flightPlaybackStarted &&
-      data?.track &&
-      data !== playbackSnapshotAtStartRef.current
-    ) {
+    if (!data?.track) return;
+
+    const expectedAlbum = expectedPlaybackAlbumRef.current;
+    const isConfirmedPlayback = expectedAlbum
+      ? trackMatchesAlbum(data.track, expectedAlbum) && data.isPlaying
+      : data !== playbackSnapshotAtStartRef.current;
+
+    if (flightPlaybackStarted && isConfirmedPlayback) {
       setFlightPlaybackStarted(false);
       setAwaitingPlaybackSnapshot(false);
+      setPlaybackSnapshotOverride(null);
       if (playbackSnapshotTimeoutRef.current !== null) {
         window.clearTimeout(playbackSnapshotTimeoutRef.current);
         playbackSnapshotTimeoutRef.current = null;
       }
+    } else if (
+      playbackSnapshotOverride?.track &&
+      data.track.id === playbackSnapshotOverride.track.id &&
+      data.isPlaying
+    ) {
+      // Live store has caught up to the synchronous mock snapshot; resume
+      // rendering from the subscribed value and discard the temporary override.
+      setPlaybackSnapshotOverride(null);
     }
-  }, [data, flightPlaybackStarted]);
+  }, [data, flightPlaybackStarted, playbackSnapshotOverride]);
 
   // Keep the last real track mounted while DeckPinnedLayer fades out.
   // The polling hook intentionally returns an empty snapshot off-chapter;
   // using that empty value here would swap the CD/booklet midway through the fade.
   const visibleData = flightStage === "flying"
     ? frozenData
-    : !deckHidden
-      ? data
-      : latestDataRef.current;
+    : playbackSnapshotOverride ??
+      (deckHidden ? latestDataRef.current : data);
   const isDockedBeforePlayback =
     flightStage === "docked" && !flightPlaybackStarted;
   const visibleIsPlaying =

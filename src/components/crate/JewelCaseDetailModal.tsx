@@ -501,7 +501,14 @@ export function JewelCaseDetailModal({
           await player.seek(0).catch(() => undefined);
           await player.resume();
           await restoreVolume();
-          window.dispatchEvent(new Event("cdvicious:disc-flight-playback-started"));
+          window.dispatchEvent(
+            new CustomEvent("cdvicious:disc-flight-playback-started", {
+              detail: {
+                albumName: album.name,
+                artistNames: album.artists.map((artist) => artist.name),
+              },
+            }),
+          );
           window.dispatchEvent(new Event("cdvicious:player_state_changed"));
           return { success: true };
         } catch {

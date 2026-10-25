@@ -115,19 +115,33 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
     document.documentElement.style.overflow = "hidden";
     document.body.style.overflow = "hidden";
 
-    const markRailMoving = () => {
-      if (railIdleTimerRef.current !== null) {
-        window.clearTimeout(railIdleTimerRef.current);
-      }
-      if (root.dataset.railMoving !== "true") {
-        root.dataset.railMoving = "true";
-      }
+    const scheduleRailIdleCheck = () => {
       railIdleTimerRef.current = window.setTimeout(() => {
         railIdleTimerRef.current = null;
+        const activeLenis = lenisRef.current;
+
+        // A long frame or a busy main thread must not falsely signal that the
+        // rail settled while Lenis is still moving toward its destination.
+        if (activeLenis?.isScrolling || snapInProgressRef.current) {
+          scheduleRailIdleCheck();
+          return;
+        }
+
         if (root.dataset.railMoving !== "false") {
           root.dataset.railMoving = "false";
         }
       }, RAIL_IDLE_DELAY_MS);
+    };
+
+    const markRailMoving = () => {
+      if (railIdleTimerRef.current !== null) {
+        window.clearTimeout(railIdleTimerRef.current);
+        railIdleTimerRef.current = null;
+      }
+      if (root.dataset.railMoving !== "true") {
+        root.dataset.railMoving = "true";
+      }
+      scheduleRailIdleCheck();
     };
     markRailMovingRef.current = markRailMoving;
 
