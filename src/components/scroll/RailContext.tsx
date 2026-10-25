@@ -60,6 +60,10 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
   const snapInProgressRef = useRef(false);
   const snapTargetIndexRef = useRef<number | null>(null);
   const snapSequenceRef = useRef(0);
+  const programmaticRafRef = useRef<number | null>(null);
+  const programmaticSequenceRef = useRef(0);
+  const programmaticSourceRef = useRef<"menu" | "wheel" | null>(null);
+  const cancelProgrammaticAnimationRef = useRef<(() => void) | null>(null);
   const activeChapterIndexRef = useRef<number | null>(null);
   const snapAnchorRef = useRef<{
     index: number;
@@ -145,6 +149,16 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
     };
     markRailMovingRef.current = markRailMoving;
 
+    const cancelProgrammaticAnimation = () => {
+      programmaticSequenceRef.current += 1;
+      if (programmaticRafRef.current !== null) {
+        window.cancelAnimationFrame(programmaticRafRef.current);
+        programmaticRafRef.current = null;
+      }
+      programmaticSourceRef.current = null;
+    };
+    cancelProgrammaticAnimationRef.current = cancelProgrammaticAnimation;
+
     let scheduleWheelSnap: (() => void) | null = null;
 
     const lenis = new Lenis({
@@ -169,6 +183,8 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
 
           if (canHandleWheel && activeLenis) {
             markRailMoving();
+            const interruptedSource = programmaticSourceRef.current;
+            cancelProgrammaticAnimationRef.current?.();
             // A new user gesture can interrupt Lenis's programmatic snap. Its
             // old onComplete callback will not necessarily run, so release the
             // snap latch and invalidate that callback before accepting input.
@@ -192,9 +208,14 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
                 ? activeLenis.targetScroll
                 : activeLenis.scroll;
               snapAnchorRef.current = {
+                // If a user interrupts a menu jump, anchor the next wheel
+                // gesture to the chapter nearest the actual current position,
+                // not the abandoned far-away destination.
                 index:
-                  interruptedTargetIndex ??
-                  getNearestChapterIndex(anchorScroll),
+                  interruptedSource === "menu"
+                    ? getNearestChapterIndex(anchorScroll)
+                    : interruptedTargetIndex ??
+                      getNearestChapterIndex(anchorScroll),
                 scroll: anchorScroll,
               };
             }
@@ -324,6 +345,7 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
       const snapSequence = ++snapSequenceRef.current;
       snapTargetIndexRef.current = targetIndex;
       snapInProgressRef.current = true;
+      programmaticSourceRef.current = "wheel";
       activeLenis.scrollTo(target, {
         duration: reducedMotionRef.current ? 0 : duration,
         // Use Lenis's duration-based easing path for wheel snapping.
@@ -335,6 +357,7 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
           if (snapSequenceRef.current !== snapSequence) return;
           snapInProgressRef.current = false;
           snapTargetIndexRef.current = null;
+          programmaticSourceRef.current = null;
         },
       });
     };
@@ -485,6 +508,8 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
       }
 
       lenis.off("scroll", handleScroll);
+      cancelProgrammaticAnimation();
+      cancelProgrammaticAnimationRef.current = null;
       markRailMovingRef.current = null;
       if (railIdleTimerRef.current !== null) {
         window.clearTimeout(railIdleTimerRef.current);
@@ -535,6 +560,7 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
   }, []);
 
   const stop = useCallback((token: RailLockToken) => {
+    cancelProgrammaticAnimationRef.current?.();
     stopTokensRef.current.add(token);
 
     if (snapTimerRef.current !== null) {
@@ -550,6 +576,7 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
   }, []);
 
   const scrollToX = useCallback((px: number) => {
+    cancelProgrammaticAnimationRef.current?.();
     const lenis = lenisRef.current;
 
     if (!lenis || lenis.isStopped || stopTokensRef.current.size > 0) {
@@ -583,19 +610,22 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
       return;
     }
 
-    const safeIndex = Math.min(
-      Math.max(0, Math.floor(index)),
-      content.children.length - 1,
-    );
+    cancelProgrammaticAnimationRef.current?.();
     if (snapTimerRef.current !== null) {
       window.clearTimeout(snapTimerRef.current);
       snapTimerRef.current = null;
     }
     snapAnchorRef.current = null;
 
+    const safeIndex = Math.min(
+      Math.max(0, Math.floor(index)),
+      content.children.length - 1,
+    );
     const chapter = content.children[safeIndex] as HTMLElement;
-    const distance = Math.abs(chapter.offsetLeft - lenis.scroll);
-    if (distance < 6 && !snapInProgressRef.current) {
+    const startScroll = lenis.scroll;
+    const targetScroll = chapter.offsetLeft;
+    const distance = Math.abs(targetScroll - startScroll);
+    if (distance < 2 && !snapInProgressRef.current) {
       return;
     }
 
@@ -610,40 +640,65 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
 
     if (!reducedMotionRef.current) markRailMovingRef.current?.();
     const snapSequence = ++snapSequenceRef.current;
+    const animationSequence = ++programmaticSequenceRef.current;
     snapTargetIndexRef.current = safeIndex;
     snapInProgressRef.current = true;
     snapAnchorRef.current = null;
 
-    const onComplete = () => {
+    const finish = () => {
       if (snapSequenceRef.current !== snapSequence) return;
       snapInProgressRef.current = false;
       snapTargetIndexRef.current = null;
+      programmaticSourceRef.current = null;
+      programmaticRafRef.current = null;
     };
 
-    // Error recovery reopens the album modal immediately after restoring the
-    // source chapter. A duration: 0 scroll that waits for Lenis's next RAF can
-    // be stopped by the modal's layout effect before the chapter actually
-    // changes, leaving the modal over Deck while the original flight is gone.
-    // Commit instant navigation synchronously for zero-duration and reduced-
-    // motion requests so callers can safely restore UI state in the same tick.
     if ((duration !== undefined && duration <= 0) || reducedMotionRef.current) {
-      lenis.scrollTo(chapter.offsetLeft, {
+      lenis.scrollTo(targetScroll, {
         immediate: true,
-        onComplete,
+        force: true,
+        onComplete: finish,
       });
       return;
     }
 
-    lenis.scrollTo(chapter.offsetLeft, {
-      duration: resolvedDuration,
-      // Keep menu navigation explicitly time-based. The destination should
-      // traverse intermediate chapters instead of inheriting a frame-dependent
-      // interpolation mode.
-      easing: (t) => 0.5 - Math.cos(Math.PI * t) / 2,
-      onComplete,
-    });
-  }, []);
+    // Clear any in-flight Lenis interpolation before starting our own single
+    // clock. Immediate writes on each RAF keep Lenis's internal state aligned
+    // with the rendered scroll position and guarantee the first frame starts
+    // at the current position rather than jumping toward the destination.
+    const nudge = startScroll > 0 ? startScroll - 1 : startScroll + 1;
+    lenis.scrollTo(nudge, { immediate: true, force: true });
+    lenis.scrollTo(startScroll, { immediate: true, force: true });
 
+    programmaticSourceRef.current = "menu";
+    const durationMs = Math.max(1, resolvedDuration * 1000);
+    let animationStart: number | null = null;
+
+    const tick = (now: number) => {
+      if (
+        programmaticSequenceRef.current !== animationSequence ||
+        lenisRef.current !== lenis ||
+        lenis.isStopped ||
+        stopTokensRef.current.size > 0
+      ) {
+        return;
+      }
+
+      if (animationStart === null) animationStart = now;
+      const progress = Math.min(1, Math.max(0, (now - animationStart) / durationMs));
+      const eased = 0.5 - Math.cos(Math.PI * progress) / 2;
+      const nextScroll = startScroll + (targetScroll - startScroll) * eased;
+      lenis.scrollTo(nextScroll, { immediate: true, force: true });
+
+      if (progress < 1) {
+        programmaticRafRef.current = window.requestAnimationFrame(tick);
+      } else {
+        finish();
+      }
+    };
+
+    programmaticRafRef.current = window.requestAnimationFrame(tick);
+  }, []);
   const actionsValue = useMemo<RailActionsContextValue>(
     () => ({ isReady, start, stop, scrollToX, scrollToChapter }),
     [isReady, start, stop, scrollToX, scrollToChapter],
