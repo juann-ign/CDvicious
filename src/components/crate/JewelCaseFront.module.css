@@ -20,21 +20,21 @@
 :global([data-rail-moving="true"]) .case,
 :global([data-rail-moving="true"]) .case:hover,
 :global([data-rail-moving="true"]) .case:focus-visible,
-:global([data-chapter]:not([data-chapter="3"])) .case,
-:global([data-chapter]:not([data-chapter="3"])) .case:hover,
-:global([data-chapter]:not([data-chapter="3"])) .case:focus-visible {
+:global([data-collection-transition-lite="true"]) .case,
+:global([data-collection-transition-lite="true"]) .case:hover,
+:global([data-collection-transition-lite="true"]) .case:focus-visible {
   transform: none;
   transition: none;
 }
 
 :global([data-rail-moving="true"]) .case .edge,
-:global([data-chapter]:not([data-chapter="3"])) .case .edge {
+:global([data-collection-transition-lite="true"]) .case .edge {
   box-shadow: none;
   transition: none;
 }
 
 :global([data-rail-moving="true"]) .case .gloss,
-:global([data-chapter]:not([data-chapter="3"])) .case .gloss {
+:global([data-collection-transition-lite="true"]) .case .gloss {
   display: none;
 }
 

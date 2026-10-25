@@ -28,38 +28,38 @@
 :global([data-rail-moving="true"]) .spine,
 :global([data-rail-moving="true"]) .spine:hover,
 :global([data-rail-moving="true"]) .spine:focus-visible,
-:global([data-chapter]:not([data-chapter="2"])) .spine,
-:global([data-chapter]:not([data-chapter="2"])) .spine:hover,
-:global([data-chapter]:not([data-chapter="2"])) .spine:focus-visible {
+:global([data-batea-animation-enabled="false"]) .spine,
+:global([data-batea-animation-enabled="false"]) .spine:hover,
+:global([data-batea-animation-enabled="false"]) .spine:focus-visible {
   transition: none;
   transform: translateY(-50px);
 }
 
 :global([data-rail-moving="true"]) .spine .ghostDisc,
 :global([data-rail-moving="true"]) .spine .gloss,
-:global([data-chapter]:not([data-chapter="2"])) .spine .ghostDisc,
-:global([data-chapter]:not([data-chapter="2"])) .spine .gloss {
+:global([data-batea-animation-enabled="false"]) .spine .ghostDisc,
+:global([data-batea-animation-enabled="false"]) .spine .gloss {
   display: none;
 }
 
 :global([data-rail-moving="true"]) .spine .cover,
-:global([data-chapter]:not([data-chapter="2"])) .spine .cover {
+:global([data-batea-animation-enabled="false"]) .spine .cover {
   filter: none;
   opacity: 0.72;
 }
 
 :global([data-rail-moving="true"]) .spine .labelScrim,
-:global([data-chapter]:not([data-chapter="2"])) .spine .labelScrim {
+:global([data-batea-animation-enabled="false"]) .spine .labelScrim {
   background: rgba(6, 7, 9, 0.58);
 }
 
 :global([data-rail-moving="true"]) .spine .labelText,
-:global([data-chapter]:not([data-chapter="2"])) .spine .labelText {
+:global([data-batea-animation-enabled="false"]) .spine .labelText {
   text-shadow: none;
 }
 
 :global([data-rail-moving="true"]) .spine .edge,
-:global([data-chapter]:not([data-chapter="2"])) .spine .edge {
+:global([data-batea-animation-enabled="false"]) .spine .edge {
   box-shadow: none;
 }
 
