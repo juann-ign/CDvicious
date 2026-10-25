@@ -6,6 +6,8 @@ import type { SpotifyTrack } from "@/types/spotify";
 import { DiscMesh } from "./DiscMesh";
 import { Environment } from "@react-three/drei";
 
+const FULL_DPR: [number, number] = [1, 2];
+
 interface DiscCanvasProps {
   track: SpotifyTrack | null;
   isPlaying: boolean;
@@ -33,9 +35,9 @@ export function DiscCanvas({
     !renderEnabled || !documentVisible || contextLost || isRailMoving
       ? "never"
       : "always";
-  // Keep the last rendered frame composited by CSS while the rail moves.
-  // Restart continuous rendering and full quality when navigation settles.
-  const dpr: number | [number, number] = isRailMoving ? 1 : [1, 2];
+  // Avoid reconfiguring renderer DPR and shadows during wheel input. R3F
+  // renderer changes can block the main thread right as Lenis begins moving.
+  // Keep the last composited frame and pause only the render loop.
 
   useEffect(() => {
     const updateVisibility = () => {
@@ -80,8 +82,8 @@ export function DiscCanvas({
 
   return (
     <Canvas
-      shadows={!isRailMoving}
-      dpr={dpr}
+      shadows
+      dpr={FULL_DPR}
       frameloop={frameloop}
       data-disc-frameloop={frameloop}
       data-disc-quality={isRailMoving ? "transition" : "full"}

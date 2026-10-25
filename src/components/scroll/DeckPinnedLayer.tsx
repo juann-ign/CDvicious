@@ -53,7 +53,8 @@ export function DeckPinnedLayer() {
   }, []);
 
   const { data, error } = useNowPlaying(
-    authenticated === true && (deckInteractive || awaitingPlaybackSnapshot),
+    authenticated === true &&
+      (deckInteractive || awaitingPlaybackSnapshot || flightStage !== "idle"),
   );
   const latestDataRef = useRef(data);
   const playbackSnapshotAtStartRef = useRef(data);
