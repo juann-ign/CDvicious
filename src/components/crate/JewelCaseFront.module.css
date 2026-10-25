@@ -79,3 +79,22 @@
     transparent 66%
   );
 }
+
+
+/* Animate card details only when Collection is the settled active chapter. */
+:global([data-collection-transition-lite="true"]) .case,
+:global([data-rail-moving="true"]) .case {
+  transform: none;
+  transition: none;
+}
+
+:global([data-collection-transition-lite="true"]) .case .edge,
+:global([data-rail-moving="true"]) .case .edge {
+  box-shadow: none;
+  transition: none;
+}
+
+:global([data-collection-transition-lite="true"]) .case .gloss,
+:global([data-rail-moving="true"]) .case .gloss {
+  display: none;
+}
