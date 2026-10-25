@@ -16,8 +16,6 @@ import styles from "./RailProvider.module.css";
 const SNAP_IDLE_DELAY_MS = 120;
 const RAIL_IDLE_DELAY_MS = 250;
 const SNAP_THRESHOLD_RATIO = 0.2;
-const SNAP_MIN_DURATION_SECONDS = 0.62;
-const SNAP_MAX_DURATION_SECONDS = 0.92;
 const CHAPTER_FORWARD_THRESHOLD = 0.55;
 const CHAPTER_BACKWARD_THRESHOLD = 0.45;
 
@@ -318,16 +316,6 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
       if (dist < 6) {
         return;
       }
-
-      const vw = Math.max(1, window.innerWidth);
-      const dist01 = Math.min(1, dist / vw);
-      const duration = Math.max(
-        SNAP_MIN_DURATION_SECONDS,
-        Math.min(
-          SNAP_MAX_DURATION_SECONDS,
-          0.62 + dist01 * 0.3,
-        ),
-      );
 
       const snapSequence = ++snapSequenceRef.current;
       snapTargetIndexRef.current = targetIndex;
