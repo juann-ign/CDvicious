@@ -465,8 +465,24 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
 
     lenis.on("scroll", handleScroll);
 
+    // A long main-thread stall (for example, WebGL compositing) must not be
+    // counted as animation time: Lenis would otherwise catch up in one huge
+    // scroll step on the first frame after the stall. Advance a monotonic,
+    // capped clock so navigation resumes smoothly instead of jumping chapters.
+    const MAX_FRAME_DELTA_MS = 32;
+    let previousFrameTime: number | null = null;
+    let lenisAnimationTime = 0;
     const raf = (time: number) => {
-      lenis.raf(time);
+      if (previousFrameTime === null) {
+        previousFrameTime = time;
+        lenisAnimationTime = time;
+      } else {
+        const elapsed = Math.max(0, time - previousFrameTime);
+        previousFrameTime = time;
+        lenisAnimationTime += Math.min(elapsed, MAX_FRAME_DELTA_MS);
+      }
+
+      lenis.raf(lenisAnimationTime);
       animationFrameRef.current = window.requestAnimationFrame(raf);
     };
 
