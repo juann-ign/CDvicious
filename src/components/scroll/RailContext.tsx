@@ -301,9 +301,10 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
       snapInProgressRef.current = true;
       activeLenis.scrollTo(target, {
         duration: reducedMotionRef.current ? 0 : duration,
-        // Lenis' instance-level lerp (0.09) overrides duration/easing unless
-        // the programmatic animation explicitly opts into duration mode.
-        lerp: reducedMotionRef.current ? 1 : 0,
+        // Keep a non-zero interpolation factor. Lenis treats an explicit
+        // lerp as the animation mode, so lerp: 0 collapses long chapter snaps
+        // into a discontinuous jump instead of a gradual handoff.
+        lerp: reducedMotionRef.current ? 1 : 0.08,
         easing: (t) => 0.5 - Math.cos(Math.PI * t) / 2,
         userData: { source: "chapter-snap" },
         onComplete: () => {
@@ -592,9 +593,9 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
 
     lenis.scrollTo(chapter.offsetLeft, {
       duration: resolvedDuration,
-      // The global wheel lerp makes Lenis ignore duration for programmatic
-      // navigation. Use its time-based easing so long jumps cross every panel.
-      lerp: 0,
+      // Lenis uses lerp when it is provided, rather than its duration-based
+      // animation. A small non-zero value keeps long chapter jumps continuous.
+      lerp: 0.08,
       easing: (t) => 0.5 - Math.cos(Math.PI * t) / 2,
       onComplete,
     });
