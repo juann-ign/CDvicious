@@ -35,7 +35,7 @@ async function openRail(page) {
     ];
     window.__cdvFlightEvents = [];
     for (const name of eventNames) {
-      window.addEventListener(name, () => {
+      window.addEventListener(name, (event) => {
         window.__cdvFlightEvents.push({
           name,
           at: performance.now(),
