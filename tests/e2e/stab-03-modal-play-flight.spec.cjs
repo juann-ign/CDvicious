@@ -292,44 +292,11 @@ test("play confirmado desde Colección: vuelo, acople y Now Playing terminan sin
   test.skip(!RAIL_ENABLED, "El flujo flying-disc requiere RAIL_FLAG=1.");
   await openRail(page);
 
-  // The play endpoint is gated below, so provide the corresponding simulated
-  // Now Playing state once the gate confirms success. The production mock
-  // endpoint otherwise always reports INITIAL_ALBUM, regardless of play calls.
-  let confirmedAlbum = null;
-  await page.route("**/api/now-playing", async (route) => {
-    if (!confirmedAlbum) {
-      await route.continue();
-      return;
-    }
-    const album = confirmedAlbum;
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({
-        isPlaying: true,
-        progressMs: 42_000,
-        durationMs: 150_000,
-        track: {
-          id: `mock-track-${album.id}-1`,
-          name: "DEMO TRACK 01",
-          duration_ms: 150_000,
-          artists: album.artists.map((artist) => ({ name: artist.name })),
-          album: {
-            name: album.name,
-            images: album.images.map((image) => ({
-              url: image.url,
-              width: image.width,
-              height: image.height,
-            })),
-          },
-        },
-      }),
-    });
-  });
-
-  const gate = createPlayGate(page, () => {
-    confirmedAlbum = ALBUM_IN_COLLECTION;
-  });
+  // Playback in mock mode is published by loadMockAlbum() into the client's
+  // in-memory mockSpotifyStore after /api/play confirms success. Intercepting
+  // /api/now-playing cannot update that store, so do not fake an unused route.
+  // The test asserts that the real mock playback path updates the Deck. 
+  const gate = createPlayGate(page);
   await chooseFromCollection(page, ALBUM_IN_COLLECTION);
   await openCaseAndPlay(page, ALBUM_IN_COLLECTION);
 
