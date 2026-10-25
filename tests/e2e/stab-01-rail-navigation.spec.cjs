@@ -190,8 +190,13 @@ test("long navigation visibly crosses every chapter and keeps the VFD unobstruct
       const wrapper = document.querySelector("[data-rail-wrapper]");
       const content = wrapper?.firstElementChild;
       const chapters = content ? Array.from(content.children) : [];
+      const railRoot = wrapper?.parentElement;
       window.__cdvRailMotionSamples.push({
         at: performance.now(),
+        scrollLeft: wrapper?.scrollLeft ?? null,
+        chapter: railRoot?.getAttribute("data-chapter") ?? null,
+        railMoving: railRoot?.getAttribute("data-rail-moving") ?? null,
+        contentTransform: content ? getComputedStyle(content).transform : null,
         lefts: chapters.map((chapter) => chapter.getBoundingClientRect().left),
       });
       window.requestAnimationFrame(sample);
@@ -232,6 +237,12 @@ test("long navigation visibly crosses every chapter and keeps the VFD unobstruct
     elapsed: sample.at - samples[index].at,
     from: samples[index].lefts[1],
     to: sample.lefts[1],
+    scrollFrom: samples[index].scrollLeft,
+    scrollTo: sample.scrollLeft,
+    chapterFrom: samples[index].chapter,
+    chapterTo: sample.chapter,
+    movingFrom: samples[index].railMoving,
+    movingTo: sample.railMoving,
   }));
 
   // Geometry is sampled by requestAnimationFrame, but browser/CI scheduling can
