@@ -198,7 +198,7 @@ export function DeckPinnedLayer() {
   // using that empty value here would swap the CD/booklet midway through the fade.
   const visibleData = flightStage === "flying"
     ? frozenData
-    : deckInteractive
+    : !deckHidden
       ? data
       : latestDataRef.current;
   const isDockedBeforePlayback =
