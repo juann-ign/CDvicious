@@ -343,7 +343,7 @@ test("Deck crossfade stays continuous and throttles WebGL during chapter handoff
                 Number.isFinite(sample.opacity) &&
                 sample.opacity > 0.05 &&
                 sample.opacity < 0.95 &&
-                sample.frameloop === "never" &&
+                sample.frameloop === "demand" &&
                 sample.quality === "transition" &&
                 sample.renderEnabled === "true" &&
                 sample.hasTrack === "true" &&
