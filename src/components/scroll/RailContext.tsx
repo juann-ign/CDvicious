@@ -629,22 +629,14 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
     }
 
     programmaticSourceRef.current = "menu";
-    // Use exactly one Lenis animation mode. Explicitly timed movements (the
-    // flying disc handoff) stay duration-based; chapter-menu jumps use native
-    // time-based lerping to keep the first frame bounded and interruptible.
-    if (duration !== undefined) {
-      lenis.scrollTo(chapter.offsetLeft, {
-        duration: resolvedDuration,
-        easing: (t) => 0.5 - Math.cos(Math.PI * t) / 2,
-        onComplete,
-      });
-    } else {
-      const lerp = chapterDistance >= 2 ? 0.055 : 0.16;
-      lenis.scrollTo(chapter.offsetLeft, {
-        lerp,
-        onComplete,
-      });
-    }
+    // A chapter-menu action is a deliberate navigation, not wheel inertia.
+    // Use the duration-based path consistently so long jumps remain visibly
+    // continuous across all intermediate chapters and can be interrupted by input.
+    lenis.scrollTo(chapter.offsetLeft, {
+      duration: resolvedDuration,
+      easing: (t) => 0.5 - Math.cos(Math.PI * t) / 2,
+      onComplete,
+    });
   }, []);
   const actionsValue = useMemo<RailActionsContextValue>(
     () => ({ isReady, start, stop, scrollToX, scrollToChapter }),
