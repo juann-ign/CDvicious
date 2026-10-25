@@ -192,22 +192,24 @@ export function useMarqueeBelt({
       const wasCaptured = captured.current;
       const currentPointerId = pointerId.current;
 
-      if (wasCaptured && snap) {
+      if (wasCaptured) {
+        // A captured drag must never turn into an album click, including the
+        // synthetic pointercancel → pointerup sequence used by browser QA.
         suppressNextClick = true;
         if (suppressClickTimer !== null) {
           window.clearTimeout(suppressClickTimer);
         }
-        // Pointerup is normally followed immediately by click. Clear the
-        // guard shortly afterward if the browser does not dispatch that click.
-        suppressClickTimer = window.setTimeout(clearClickSuppression, 0);
+        suppressClickTimer = window.setTimeout(clearClickSuppression, 250);
 
-        const len = lenRef.current;
-        const nPages = pagesRef.current;
+        if (snap) {
+          const len = lenRef.current;
+          const nPages = pagesRef.current;
 
-        if (len > 0) {
-          const stop =
-            Math.round((offset.current / len) * nPages) * (len / nPages);
-          target.current = offset.current + ring(offset.current, stop, len);
+          if (len > 0) {
+            const stop =
+              Math.round((offset.current / len) * nPages) * (len / nPages);
+            target.current = offset.current + ring(offset.current, stop, len);
+          }
         }
       }
 

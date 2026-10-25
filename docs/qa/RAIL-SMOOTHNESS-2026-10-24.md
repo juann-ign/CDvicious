@@ -71,3 +71,10 @@ During movement the Deck Canvas uses `frameloop="demand"` and lower render quali
 
 - El test de navegación y el de crossfade fijan explícitamente `prefers-reduced-motion: no-preference`: miden interpolación, así que no dependen de la preferencia del host CI. La prueba específica de reduced-motion sigue validando el modo accesible por separado.
 - Se revirtió el polling temporal adicional que se había agregado al Deck al confirmar playback; interfería con la sincronización del mock de Now Playing. Se conserva el gating normal por capítulo y la instantánea congelada durante el vuelo.
+
+
+## Cuarto loop — causa raíz de duración y cancelación de drag
+
+La documentación de Lenis 1.3.26 confirma que `duration` no tiene efecto cuando hay un `lerp` definido. El rail configuraba `lerp: 0.09` globalmente y luego solicitaba duraciones explícitas para navegación y snap; esos llamados no estaban usando las curvas de tiempo declaradas. Los llamados programáticos con duración ahora especifican `lerp: 0` (o `1` bajo movimiento reducido), dejando intacto el suavizado de rueda ordinario.
+
+También se mantiene una ventana breve de supresión del click después de cualquier drag capturado, incluido `pointercancel`, para evitar que una cancelación seguida de `pointerup` abra accidentalmente el modal del álbum.
