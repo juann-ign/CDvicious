@@ -361,6 +361,16 @@ export function DeckPinnedLayer() {
 
   const visibleIsPlaying =
     !isPlaybackPending && (visibleData?.isPlaying ?? false);
+  const playbackStatus =
+    playbackState.attempt?.status === "pending"
+      ? "pending"
+      : playbackState.attempt?.status === "failed"
+        ? "failed"
+        : playbackState.attempt?.status === "degraded"
+          ? "degraded"
+          : visibleData
+            ? "confirmed"
+            : "unavailable";
   const visibleProgressMs = isPlaybackPending
     ? null
     : (visibleData?.progressMs ?? null);
@@ -406,6 +416,7 @@ export function DeckPinnedLayer() {
               track={visibleData?.track ?? null}
               isPlaying={visibleIsPlaying}
               error={error}
+              playbackStatus={playbackStatus}
               progressMs={visibleProgressMs}
               durationMs={visibleData?.durationMs ?? null}
             />
