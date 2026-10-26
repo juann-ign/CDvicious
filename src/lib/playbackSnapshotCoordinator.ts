@@ -74,7 +74,8 @@ export function createPlaybackSnapshotCoordinator({
 }: CoordinatorOptions = {}) {
   let confirmedSnapshot = isValidSnapshot(initialSnapshot) ? initialSnapshot : null;
   let attempt: PlaybackAttempt | null = null;
-  let lastProcessedRequestSeq = 0;
+  let lastProcessedRequestSeq = -1;
+  let ignoreObservationsStartedBeforeAt = Number.NEGATIVE_INFINITY;
 
   const getState = (): PlaybackCoordinatorState => ({
     confirmedSnapshot,
@@ -121,6 +122,7 @@ export function createPlaybackSnapshotCoordinator({
       attempt = { ...attempt, status: "superseded", reason: "SUPERSEDED_BY_NEW_ATTEMPT" };
     }
 
+    ignoreObservationsStartedBeforeAt = startedAt;
     attempt = {
       id: attemptId,
       targetAlbumUri,
@@ -167,6 +169,7 @@ export function createPlaybackSnapshotCoordinator({
   const observeSnapshot = (input: Observation) => {
     if (!isValidSnapshot(input.snapshot)) return getState();
     if (input.receivedAt < input.requestStartedAt) return getState();
+    if (input.requestStartedAt < ignoreObservationsStartedBeforeAt) return getState();
 
     if (attempt?.status === "pending") {
       // During a play attempt, only that attempt's own fresh target snapshot
@@ -179,8 +182,9 @@ export function createPlaybackSnapshotCoordinator({
     return getState();
   };
 
-  const rejectAttempt = (attemptId: string, reason: string, _at = now()) => {
+  const rejectAttempt = (attemptId: string, reason: string, at = now()) => {
     if (!isCurrentPendingAttempt(attemptId)) return getState();
+    ignoreObservationsStartedBeforeAt = Math.max(ignoreObservationsStartedBeforeAt, at);
     attempt = { ...attempt, status: "failed", reason };
     return getState();
   };
@@ -188,6 +192,7 @@ export function createPlaybackSnapshotCoordinator({
   const expireAttempt = (attemptId: string, at = now()) => {
     if (!isCurrentPendingAttempt(attemptId)) return getState();
     if (at < attempt.startedAt + confirmationTimeoutMs) return getState();
+    ignoreObservationsStartedBeforeAt = Math.max(ignoreObservationsStartedBeforeAt, at);
     attempt = { ...attempt, status: "degraded", reason: "CONFIRMATION_TIMEOUT" };
     return getState();
   };
