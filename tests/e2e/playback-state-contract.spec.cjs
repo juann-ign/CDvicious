@@ -30,8 +30,8 @@ async function waitForDeck(page) {
   await expect(page.getByRole("navigation", { name: NAV_LABEL })).toBeVisible({ timeout: 90_000 });
   await expect(panels(page)).toHaveCount(5, { timeout: 90_000 });
   await expect(page.locator('[data-rail-ready="true"]')).toBeVisible({ timeout: 90_000 });
-  await expect(deckTrack).toHaveText("DEMO TRACK 01", { timeout: 15_000 });
-  await expect(deckArtist).toHaveText(INITIAL_ALBUM.artists[0].name, { timeout: 15_000 });
+  await expect(deckTrack(page)).toHaveText("DEMO TRACK 01", { timeout: 15_000 });
+  await expect(deckArtist(page)).toHaveText(INITIAL_ALBUM.artists[0].name, { timeout: 15_000 });
 }
 
 async function goToChapter(page, name, index, timeout = 12_000) {
