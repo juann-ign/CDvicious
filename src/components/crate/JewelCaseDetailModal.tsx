@@ -524,14 +524,8 @@ export function JewelCaseDetailModal({
             }),
           );
 
-          if (process.env.NEXT_PUBLIC_SPOTIFY_MOCK === "1") {
-            mockSpotifyStore.loadMockAlbum(album);
-          }
-
-          // Spotify starts preparing playback while the CD is in transit.
-          // Pause it while muted, then restart from 0 after docking + 1 second
-          // so the listener doesn't miss the opening seconds during the flight.
-          await player.pause().catch(() => undefined);
+          // Keep the device muted during the flight. A failed or late attempt
+          // must not mutate the mock player's authoritative snapshot.
 
           // A missing/mismatched ready signal is not a successful playback.
           const remainingReadyWaitMs = Math.max(
@@ -556,6 +550,10 @@ export function JewelCaseDetailModal({
             };
           }
 
+          if (process.env.NEXT_PUBLIC_SPOTIFY_MOCK === "1") {
+            mockSpotifyStore.loadMockAlbum(album);
+          }
+          await player.pause().catch(() => undefined);
           await player.seek(0).catch(() => undefined);
           await player.resume();
           await restoreVolume();
