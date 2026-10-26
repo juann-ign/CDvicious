@@ -413,6 +413,7 @@ const subscribe = (listener: () => void) => {
 };
 
 const getSnapshot = () => snapshot;
+const getLatestIssuedRequestSeq = () => nextRequestSeq;
 
 const refreshForPlaybackConfirmation = () => {
   if (
@@ -455,6 +456,7 @@ const release = () => {
 export {
   acquire,
   getSnapshot,
+  getLatestIssuedRequestSeq,
   refresh,
   refreshForPlaybackConfirmation,
   release,
