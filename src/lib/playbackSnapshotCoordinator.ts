@@ -137,7 +137,7 @@ export function createPlaybackSnapshotCoordinator({
   };
 
   const markCommandAccepted = (attemptId: string, at = now()) => {
-    if (!isCurrentPendingAttempt(attemptId)) return getState();
+    if (!attempt || !isCurrentPendingAttempt(attemptId)) return getState();
     attempt = { ...attempt, commandAcceptedAt: at };
     return getState();
   };
@@ -183,14 +183,14 @@ export function createPlaybackSnapshotCoordinator({
   };
 
   const rejectAttempt = (attemptId: string, reason: string, at = now()) => {
-    if (!isCurrentPendingAttempt(attemptId)) return getState();
+    if (!attempt || !isCurrentPendingAttempt(attemptId)) return getState();
     ignoreObservationsStartedBeforeAt = Math.max(ignoreObservationsStartedBeforeAt, at);
     attempt = { ...attempt, status: "failed", reason };
     return getState();
   };
 
   const expireAttempt = (attemptId: string, at = now()) => {
-    if (!isCurrentPendingAttempt(attemptId)) return getState();
+    if (!attempt || !isCurrentPendingAttempt(attemptId)) return getState();
     if (at < attempt.startedAt + confirmationTimeoutMs) return getState();
     ignoreObservationsStartedBeforeAt = Math.max(ignoreObservationsStartedBeforeAt, at);
     attempt = { ...attempt, status: "degraded", reason: "CONFIRMATION_TIMEOUT" };
