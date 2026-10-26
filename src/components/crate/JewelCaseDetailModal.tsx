@@ -26,6 +26,7 @@ const CASE_CLOSE_START_MS = 240;
 const CASE_CLOSE_MS = 620;
 const POST_CLOSE_HOLD_MS = 160;
 const EXIT_MS = 340;
+const PLAYBACK_CONFIRMATION_TIMEOUT_MS = 15_000;
 
 const FOCUSABLE_SELECTOR = [
   "a[href]",
@@ -533,9 +534,13 @@ export function JewelCaseDetailModal({
           await player.pause().catch(() => undefined);
 
           // A missing/mismatched ready signal is not a successful playback.
+          const remainingReadyWaitMs = Math.max(
+            0,
+            attemptStartedAt + PLAYBACK_CONFIRMATION_TIMEOUT_MS - Date.now(),
+          );
           const playbackReady = await waitForWindowEvent(
             "cdvicious:disc-flight-playback-ready",
-            15_000,
+            remainingReadyWaitMs,
             attemptId,
           );
           if (!playbackReady) {
