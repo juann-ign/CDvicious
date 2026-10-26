@@ -10,17 +10,17 @@ export type PlaybackSnapshot = {
   progressMs: number | null;
   durationMs: number | null;
   track: {
-    id?: string;
+    id: string;
     uri?: string;
-    name?: string;
-    artists?: { name: string }[];
-    album?: {
+    name: string;
+    artists: { name: string }[];
+    duration_ms: number;
+    album: {
       id?: string;
       uri?: string;
-      name?: string;
-      images?: { url: string; width?: number; height?: number }[];
+      name: string;
+      images: { url: string; width: number; height: number }[];
     };
-    [key: string]: unknown;
   } | null;
 };
 
