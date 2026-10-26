@@ -9,7 +9,7 @@ interface NowPlayingCardProps {
   error: boolean;
   progressMs: number | null;
   durationMs: number | null;
-  playbackStatus: "unavailable" | "confirmed" | "pending" | "failed" | "degraded";
+  playbackStatus?: "unavailable" | "confirmed" | "pending" | "failed" | "degraded";
 }
 
 export function NowPlayingCard({
@@ -20,6 +20,8 @@ export function NowPlayingCard({
   durationMs,
   playbackStatus,
 }: NowPlayingCardProps) {
+  const displayPlaybackStatus = playbackStatus ?? (track ? "confirmed" : "unavailable");
+
   return (
     // EL CHASIS DEL EQUIPO (Faceplate de metal oscuro/plástico mate)
     <div className={styles.chassis}>
@@ -28,7 +30,7 @@ export function NowPlayingCard({
         className={styles.vfdDisplay}
         data-testid="deck-now-playing"
         data-is-playing={isPlaying ? "true" : "false"}
-        data-playback-status={playbackStatus}
+        data-playback-status={displayPlaybackStatus}
       >
         <div className={styles.vfdTrackName} data-testid="deck-now-playing-track">
           {track ? track.name : error ? "ERR: SIN SEÑAL" : "INSERT DISC"}
