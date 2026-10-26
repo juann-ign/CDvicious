@@ -18,6 +18,8 @@ export async function GET() {
           duration_ms: 150_000,
           artists: album.artists.map((artist) => ({ name: artist.name })),
           album: {
+            id: album.id,
+            uri: album.uri,
             name: album.name,
             images: album.images.map((image) => ({
               url: image.url,
