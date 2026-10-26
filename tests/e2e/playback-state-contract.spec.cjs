@@ -79,37 +79,37 @@ test.describe("EP2-T2 — contrato observable de estado de playback", () => {
   });
 
   test("carga inicial: track y reproducción reflejan el snapshot inicial", async ({ page }) => {
-    await expect(deckTrack).toHaveText("DEMO TRACK 01");
-    await expect(deckArtist).toHaveText(INITIAL_ALBUM.artists[0].name);
+    await expect(deckTrack(page)).toHaveText("DEMO TRACK 01");
+    await expect(deckArtist(page)).toHaveText(INITIAL_ALBUM.artists[0].name);
     await expect(deckDisplay(page)).toHaveAttribute("data-is-playing", "true");
   });
 
   test("pausa y reanudación conservan la identidad de la pista", async ({ page }) => {
-    const initialTrack = await deckTrack.textContent();
-    const initialArtist = await deckArtist.textContent();
+    const initialTrack = await deckTrack(page).textContent();
+    const initialArtist = await deckArtist(page).textContent();
 
     await page.getByRole("button", { name: "Play/Pause" }).click();
     await expect(deckDisplay(page)).toHaveAttribute("data-is-playing", "false");
-    await expect(deckTrack).toHaveText(initialTrack);
-    await expect(deckArtist).toHaveText(initialArtist);
+    await expect(deckTrack(page)).toHaveText(initialTrack);
+    await expect(deckArtist(page)).toHaveText(initialArtist);
 
     await page.getByRole("button", { name: "Play/Pause" }).click();
     await expect(deckDisplay(page)).toHaveAttribute("data-is-playing", "true");
-    await expect(deckTrack).toHaveText(initialTrack);
-    await expect(deckArtist).toHaveText(initialArtist);
+    await expect(deckTrack(page)).toHaveText(initialTrack);
+    await expect(deckArtist(page)).toHaveText(initialArtist);
   });
 
   test("cambio de pista: Next/Previous actualiza la pista sin inventar otro álbum", async ({ page }) => {
-    const initialArtist = await deckArtist.textContent();
+    const initialArtist = await deckArtist(page).textContent();
 
     await page.getByRole("button", { name: "Next" }).click();
-    await expect(deckTrack).toHaveText("DEMO TRACK 02");
-    await expect(deckArtist).toHaveText(initialArtist);
+    await expect(deckTrack(page)).toHaveText("DEMO TRACK 02");
+    await expect(deckArtist(page)).toHaveText(initialArtist);
     await expect(deckDisplay(page)).toHaveAttribute("data-is-playing", "true");
 
     await page.getByRole("button", { name: "Previous" }).click();
-    await expect(deckTrack).toHaveText("DEMO TRACK 01");
-    await expect(deckArtist).toHaveText(initialArtist);
+    await expect(deckTrack(page)).toHaveText("DEMO TRACK 01");
+    await expect(deckArtist(page)).toHaveText(initialArtist);
     await expect(deckDisplay(page)).toHaveAttribute("data-is-playing", "true");
   });
 
@@ -144,8 +144,8 @@ test.describe("EP2-T2 — contrato observable de estado de playback", () => {
     await expect(dialog(page)).toHaveCount(0);
     await expect(page.locator("html")).not.toHaveAttribute("data-modal-open", "true");
     await returnToDeck(page);
-    await expect(deckTrack).toHaveText("DEMO TRACK 01");
-    await expect(deckArtist).toHaveText(INITIAL_ALBUM.artists[0].name);
+    await expect(deckTrack(page)).toHaveText("DEMO TRACK 01");
+    await expect(deckArtist(page)).toHaveText(INITIAL_ALBUM.artists[0].name);
     await expect(deckDisplay(page)).toHaveAttribute("data-is-playing", "true");
 
     // Start a genuinely new attempt. The route now responds successfully.
@@ -156,7 +156,7 @@ test.describe("EP2-T2 — contrato observable de estado de playback", () => {
     await expect(page.locator("html")).toHaveAttribute("data-chapter", "0", {
       timeout: 30_000,
     });
-    await expect(deckArtist).toHaveText(ALBUM_IN_COLLECTION.artists[0].name, {
+    await expect(deckArtist(page)).toHaveText(ALBUM_IN_COLLECTION.artists[0].name, {
       timeout: 10_000,
     });
     await expect(deckDisplay(page)).toHaveAttribute("data-is-playing", "true", {
