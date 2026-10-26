@@ -64,7 +64,27 @@ function albumUriFromSnapshot(snapshot: PlaybackSnapshot | null) {
 }
 
 function isValidSnapshot(snapshot: PlaybackSnapshot | null): snapshot is PlaybackSnapshot {
-  return Boolean(snapshot && typeof snapshot.isPlaying === "boolean");
+  if (!snapshot || typeof snapshot.isPlaying !== "boolean") return false;
+  if (snapshot.progressMs !== null && typeof snapshot.progressMs !== "number") return false;
+  if (snapshot.durationMs !== null && typeof snapshot.durationMs !== "number") return false;
+  if (snapshot.track === null) return true;
+
+  const track = snapshot.track;
+  return Boolean(
+    typeof track.id === "string" &&
+      track.id.length > 0 &&
+      typeof track.name === "string" &&
+      Array.isArray(track.artists) &&
+      track.artists.every((artist) => typeof artist?.name === "string") &&
+      typeof track.album?.name === "string" &&
+      Array.isArray(track.album.images) &&
+      track.album.images.every(
+        (image) =>
+          typeof image?.url === "string" &&
+          typeof image.width === "number" &&
+          typeof image.height === "number",
+      ),
+  );
 }
 
 export function createPlaybackSnapshotCoordinator({
