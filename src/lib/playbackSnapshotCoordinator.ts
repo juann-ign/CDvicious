@@ -28,6 +28,7 @@ export type PlaybackAttempt = {
   id: string;
   targetAlbumUri: string;
   startedAt: number;
+  requestSeqAtStart: number;
   status: PlaybackAttemptStatus;
   commandAcceptedAt: number | null;
   confirmedAt: number | null;
@@ -124,10 +125,12 @@ export function createPlaybackSnapshotCoordinator({
     attemptId,
     targetAlbumUri,
     startedAt = now(),
+    requestSeqAtStart = lastProcessedRequestSeq,
   }: {
     attemptId: string;
     targetAlbumUri: string;
     startedAt?: number;
+    requestSeqAtStart?: number;
   }) => {
     if (!attemptId || !targetAlbumUri) {
       throw new Error("attemptId y targetAlbumUri son obligatorios");
@@ -142,6 +145,7 @@ export function createPlaybackSnapshotCoordinator({
       id: attemptId,
       targetAlbumUri,
       startedAt,
+      requestSeqAtStart,
       status: "pending",
       commandAcceptedAt: null,
       confirmedAt: null,
@@ -163,6 +167,9 @@ export function createPlaybackSnapshotCoordinator({
       return getState();
     }
 
+    // A request already issued when Play began cannot confirm the new attempt,
+    // even when millisecond timestamps happen to be equal.
+    if (input.requestSeq <= current.requestSeqAtStart) return getState();
     if (input.requestStartedAt < current.startedAt) return getState();
     if (!markRequestAsProcessed(input.requestSeq)) return getState();
 
