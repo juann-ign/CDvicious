@@ -165,7 +165,18 @@ export function DeckPinnedLayer() {
           Date.now(),
         );
         setPlaybackState(expired);
-        setAwaitingPlaybackSnapshot(false);
+        if (
+          expired.attempt?.id === detail.attemptId &&
+          expired.attempt.status === "degraded"
+        ) {
+          clearPlaybackDelay();
+          delete document.documentElement.dataset.discFlightPlaybackReady;
+          delete document.documentElement.dataset.discFlightAttemptId;
+          setAwaitingPlaybackSnapshot(false);
+          flightStageRef.current = "idle";
+          setFlightStage("idle");
+          activeAttemptIdRef.current = null;
+        }
       }, timeoutDelay);
     };
 
@@ -204,6 +215,14 @@ export function DeckPinnedLayer() {
     const beginDockedDelay = (event: Event) => {
       const detail = (event as CustomEvent<{ attemptId?: string }>).detail;
       if (!isCurrentAttempt(detail?.attemptId)) return;
+      const attempt = coordinatorRef.current!.getState().attempt;
+      if (
+        !attempt ||
+        attempt.id !== detail?.attemptId ||
+        (attempt.status !== "pending" && attempt.status !== "confirmed")
+      ) {
+        return;
+      }
       if (flightStageRef.current !== "flying") return;
 
       clearPlaybackDelay();
@@ -255,16 +274,30 @@ export function DeckPinnedLayer() {
       }>).detail;
       if (!isCurrentAttempt(detail?.attemptId)) return;
 
+      const attempt = coordinatorRef.current!.getState().attempt;
+      if (
+        !attempt ||
+        attempt.id !== detail?.attemptId ||
+        (attempt.status !== "pending" && attempt.status !== "confirmed")
+      ) {
+        return;
+      }
+
       flightStageRef.current = "idle";
       setFlightStage("idle");
-      setAwaitingPlaybackSnapshot(true);
 
+      if (attempt.status === "confirmed") {
+        clearPlaybackSnapshotTimeout();
+        setAwaitingPlaybackSnapshot(false);
+        return;
+      }
+
+      setAwaitingPlaybackSnapshot(true);
       if (process.env.NEXT_PUBLIC_SPOTIFY_MOCK === "1") {
         const mockState = mockSpotifyStore.getSnapshot();
         if (
           mockState.data &&
-          mockState.requestStartedAt >=
-            (coordinatorRef.current!.getState().attempt?.startedAt ?? Number.POSITIVE_INFINITY)
+          mockState.requestStartedAt >= attempt.startedAt
         ) {
           coordinatorRef.current!.acceptSnapshot({
             attemptId: detail!.attemptId!,
@@ -273,7 +306,11 @@ export function DeckPinnedLayer() {
             receivedAt: mockState.receivedAt,
             snapshot: mockState.data,
           });
-          publishState();
+          const nextState = publishState();
+          if (nextState.attempt?.status !== "pending") {
+            clearPlaybackSnapshotTimeout();
+            setAwaitingPlaybackSnapshot(false);
+          }
         }
       } else {
         // This read starts after the playback-resumed signal. Any request that
