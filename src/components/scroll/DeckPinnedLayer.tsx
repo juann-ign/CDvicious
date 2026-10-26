@@ -165,9 +165,11 @@ export function DeckPinnedLayer() {
           Date.now(),
         );
         setPlaybackState(expired);
+        const expiredAttempt = expired.attempt;
         if (
-          expired.attempt?.id === detail.attemptId &&
-          expired.attempt.status === "degraded"
+          expiredAttempt &&
+          expiredAttempt.id === detail.attemptId &&
+          expiredAttempt.status === "degraded"
         ) {
           clearPlaybackDelay();
           delete document.documentElement.dataset.discFlightPlaybackReady;
