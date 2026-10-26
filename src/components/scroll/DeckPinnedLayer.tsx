@@ -143,10 +143,15 @@ export function DeckPinnedLayer() {
 
       activeAttemptIdRef.current = detail.attemptId;
       const startedAt = detail.startedAt ?? Date.now();
+      const requestSeqAtStart =
+        process.env.NEXT_PUBLIC_SPOTIFY_MOCK === "1"
+          ? mockSpotifyStore.getSnapshot().requestSeq
+          : nowPlayingStore.getLatestIssuedRequestSeq();
       const nextState = coordinatorRef.current!.beginAttempt({
         attemptId: detail.attemptId,
         targetAlbumUri: detail.targetAlbumUri,
         startedAt,
+        requestSeqAtStart,
       });
       setPlaybackState(nextState);
 
