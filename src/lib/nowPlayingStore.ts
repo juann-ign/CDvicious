@@ -9,15 +9,29 @@ const REFRESH_THROTTLE_MS = 1_000;
 type Snapshot = {
   data: NowPlayingResponse | null;
   error: boolean;
+  requestSeq: number;
+  requestStartedAt: number | null;
+  receivedAt: number | null;
 };
 
-type RefreshSource = "poll" | "event" | "visibility" | "modal-close";
+type SnapshotUpdate = Pick<Snapshot, "data" | "error"> &
+  Partial<Omit<Snapshot, "data" | "error">>;
+
+type RefreshSource =
+  | "poll"
+  | "event"
+  | "visibility"
+  | "modal-close"
+  | "playback-confirmation";
 
 const listeners = new Set<() => void>();
 
 let snapshot: Snapshot = {
   data: null,
   error: false,
+  requestSeq: 0,
+  requestStartedAt: null,
+  receivedAt: null,
 };
 
 let subscriberCount = 0;
@@ -28,6 +42,9 @@ let quotaExceeded = false;
 let lastRefreshAt = 0;
 let lastPollStartedAt = 0;
 let lastEventRefreshAt = 0;
+let nextRequestSeq = 0;
+let lastAppliedRequestSeq = 0;
+let confirmationRefreshPending = false;
 
 let timer: ReturnType<typeof setTimeout> | null = null;
 let eventDebounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -41,12 +58,20 @@ const notify = () => {
   }
 };
 
-const setSnapshot = (next: Snapshot) => {
-  if (snapshot.data === next.data && snapshot.error === next.error) {
+const setSnapshot = (next: SnapshotUpdate) => {
+  const updated: Snapshot = { ...snapshot, ...next };
+
+  if (
+    snapshot.data === updated.data &&
+    snapshot.error === updated.error &&
+    snapshot.requestSeq === updated.requestSeq &&
+    snapshot.requestStartedAt === updated.requestStartedAt &&
+    snapshot.receivedAt === updated.receivedAt
+  ) {
     return;
   }
 
-  snapshot = next;
+  snapshot = updated;
   notify();
 };
 
@@ -106,6 +131,7 @@ const fetchNowPlaying = async (source: RefreshSource) => {
   abortController = controller;
   inFlight = true;
 
+  const requestSeq = ++nextRequestSeq;
   const startedAt = Date.now();
   lastRefreshAt = startedAt;
 
@@ -128,6 +154,11 @@ const fetchNowPlaying = async (source: RefreshSource) => {
         reason?: string;
       } | null;
 
+      if (controller.signal.aborted || requestSeq < lastAppliedRequestSeq) {
+        return;
+      }
+      lastAppliedRequestSeq = requestSeq;
+
       if (body?.reason === "QUOTA_EXCEEDED") {
         quotaExceeded = true;
         clearTimer();
@@ -147,6 +178,10 @@ const fetchNowPlaying = async (source: RefreshSource) => {
     }
 
     if (!res.ok) {
+      if (controller.signal.aborted || requestSeq < lastAppliedRequestSeq) {
+        return;
+      }
+      lastAppliedRequestSeq = requestSeq;
       setSnapshot({
         data: snapshot.data,
         error: true,
@@ -156,27 +191,53 @@ const fetchNowPlaying = async (source: RefreshSource) => {
 
     const json: NowPlayingResponse = await res.json();
 
-    if (document.visibilityState !== "visible" || isModalOpen()) {
+    if (
+      controller.signal.aborted ||
+      requestSeq < lastAppliedRequestSeq ||
+      document.visibilityState !== "visible" ||
+      isModalOpen()
+    ) {
       return;
     }
 
+    lastAppliedRequestSeq = requestSeq;
     setSnapshot({
       data: json,
       error: false,
+      requestSeq,
+      requestStartedAt: startedAt,
+      receivedAt: Date.now(),
     });
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") {
       return;
     }
 
-    setSnapshot({
-      data: snapshot.data,
-      error: true,
-    });
+    if (!controller.signal.aborted && requestSeq >= lastAppliedRequestSeq) {
+      lastAppliedRequestSeq = requestSeq;
+      setSnapshot({
+        data: snapshot.data,
+        error: true,
+      });
+    }
   } finally {
     if (abortController === controller) {
       abortController = null;
       inFlight = false;
+    }
+
+    if (
+      confirmationRefreshPending &&
+      subscriberCount > 0 &&
+      !quotaExceeded &&
+      document.visibilityState === "visible" &&
+      !isModalOpen() &&
+      !inFlight
+    ) {
+      confirmationRefreshPending = false;
+      clearTimer();
+      void fetchNowPlaying("playback-confirmation");
+      return;
     }
 
     if (
@@ -192,6 +253,12 @@ const fetchNowPlaying = async (source: RefreshSource) => {
 
 const refresh = (source: RefreshSource) => {
   if (subscriberCount === 0 || quotaExceeded || inFlight) {
+    return;
+  }
+
+  if (source === "playback-confirmation") {
+    clearTimer();
+    void fetchNowPlaying(source);
     return;
   }
 
@@ -347,6 +414,28 @@ const subscribe = (listener: () => void) => {
 
 const getSnapshot = () => snapshot;
 
+const refreshForPlaybackConfirmation = () => {
+  if (
+    subscriberCount === 0 ||
+    quotaExceeded ||
+    document.visibilityState !== "visible" ||
+    isModalOpen()
+  ) {
+    return;
+  }
+
+  clearTimer();
+  if (inFlight) {
+    // Once the current request settles, issue a new request whose start time
+    // is guaranteed to be after the playback attempt's confirmation signal.
+    confirmationRefreshPending = true;
+    return;
+  }
+
+  confirmationRefreshPending = false;
+  void fetchNowPlaying("playback-confirmation");
+};
+
 const acquire = () => {
   subscriberCount += 1;
 
@@ -363,4 +452,11 @@ const release = () => {
   }
 };
 
-export { acquire, getSnapshot, refresh, release, subscribe };
+export {
+  acquire,
+  getSnapshot,
+  refresh,
+  refreshForPlaybackConfirmation,
+  release,
+  subscribe,
+};
