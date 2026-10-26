@@ -35,7 +35,7 @@ async function openRail(page) {
     ];
     window.__cdvFlightEvents = [];
     for (const name of eventNames) {
-      window.addEventListener(name, () => {
+      window.addEventListener(name, (event) => {
         window.__cdvFlightEvents.push({
           name,
           at: performance.now(),
@@ -43,6 +43,7 @@ async function openRail(page) {
           modalOpen: document.documentElement.dataset.modalOpen === "true",
           playbackReady:
             document.documentElement.dataset.discFlightPlaybackReady === "true",
+          detail: event instanceof CustomEvent ? event.detail : null,
         });
       });
     }
@@ -288,10 +289,9 @@ test("Batea y Colección seleccionan álbum; mouse y teclado cierran el modal y 
   await expect(chapterButton(page, "Mixtape Lab")).toHaveAttribute("aria-current", "location");
 });
 
-// Out of scope for STAB-01 rail smoothness: the mocked Now Playing snapshot
-// handoff is tracked separately. Keep the regression case available to re-enable
-// once that playback-state test is stabilized.
-test.skip("play confirmado desde Colección: vuelo, acople y Now Playing terminan sincronizados", async ({ page }) => {
+// Regression contract for the confirmed playback handoff from Collection.
+// Keep the assertions strict: retries are disabled in Playwright configuration.
+test("play confirmado desde Colección: vuelo, acople y Now Playing terminan sincronizados", async ({ page }) => {
   test.skip(!RAIL_ENABLED, "El flujo flying-disc requiere RAIL_FLAG=1.");
   await openRail(page);
 
@@ -319,19 +319,28 @@ test.skip("play confirmado desde Colección: vuelo, acople y Now Playing termina
   const beforeConfirmation = await page.evaluate(() => window.__cdvFlightEvents ?? []);
   expect(beforeConfirmation.some((event) => event.name === "cdvicious:disc-flight-started")).toBe(true);
   expect(beforeConfirmation.some((event) => event.name === "cdvicious:disc-flight-arrived")).toBe(false);
+  expect(
+    beforeConfirmation.some((event) => event.name === "cdvicious:disc-flight-playback-started"),
+    "No debe anunciarse playback-started mientras /api/play sigue pendiente",
+  ).toBe(false);
 
   gate.respond({ kind: "response", status: 200, body: { success: true } });
 
-  await expect(deckArtist(page)).toHaveText(ALBUM_IN_COLLECTION.artists[0].name, {
-    timeout: 15_000,
-  });
-  await expect(deckDisplay(page)).toHaveAttribute("data-is-playing", "true", {
-    timeout: 8_000,
-  });
-  await expect(flightDisc(page)).toHaveCount(0, { timeout: 8_000 });
-  await expect(page.locator("html")).toHaveAttribute("data-chapter", "0", {
-    timeout: 8_000,
-  });
+  // HTTP acceptance starts the playback handoff, but the VFD intentionally
+  // keeps the previous confirmed snapshot while the CD is still travelling.
+  // Wait for the actual playback-started event instead of asserting against
+  // the VFD during the in-flight phase.
+  await expect
+    .poll(
+      () =>
+        page.evaluate(() =>
+          (window.__cdvFlightEvents ?? []).some(
+            (event) => event.name === "cdvicious:disc-flight-playback-started",
+          ),
+        ),
+      { timeout: 60_000, intervals: [100, 250, 500] },
+    )
+    .toBe(true);
 
   const events = await page.evaluate(() => window.__cdvFlightEvents ?? []);
   const eventIndex = (name) => events.findIndex((event) => event.name === name);
@@ -347,6 +356,36 @@ test.skip("play confirmado desde Colección: vuelo, acople y Now Playing termina
   ).toBeGreaterThanOrEqual(4_400);
   expect(ready, JSON.stringify(events)).toBeGreaterThan(arrived);
   expect(playbackStarted, JSON.stringify(events)).toBeGreaterThan(ready);
+
+  const confirmedEvent = events[playbackStarted];
+  expect(confirmedEvent.detail).toMatchObject({
+    albumName: ALBUM_IN_COLLECTION.name,
+    artistNames: ALBUM_IN_COLLECTION.artists.map((artist) => artist.name),
+  });
+  expect(
+    confirmedEvent.detail?.snapshot?.track?.album?.name,
+    "La instantánea del evento debe pertenecer al álbum confirmado, no al anterior",
+  ).toBe(ALBUM_IN_COLLECTION.name);
+  expect(
+    confirmedEvent.detail?.snapshot?.track?.artists?.map((artist) => artist.name),
+  ).toEqual(ALBUM_IN_COLLECTION.artists.map((artist) => artist.name));
+  expect(
+    confirmedEvent.detail?.snapshot?.isPlaying,
+    "El evento de confirmación debe llevar evidencia de reproducción activa",
+  ).toBe(true);
+
+  // Wait until the animation has docked and the rail has returned to Deck.
+  // Only then is the VFD expected to replace its frozen previous snapshot.
+  await expect(flightDisc(page)).toHaveCount(0, { timeout: 30_000 });
+  await expect(page.locator("html")).toHaveAttribute("data-chapter", "0", {
+    timeout: 30_000,
+  });
+  await expect(deckArtist(page)).toHaveText(ALBUM_IN_COLLECTION.artists[0].name, {
+    timeout: 8_000,
+  });
+  await expect(deckDisplay(page)).toHaveAttribute("data-is-playing", "true", {
+    timeout: 8_000,
+  });
 });
 
 const failureScenarios = [
