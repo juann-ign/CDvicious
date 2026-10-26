@@ -313,6 +313,7 @@ test("play confirmado desde Colección: vuelo, acople y Now Playing terminan sin
   await expect(flightDisc(page)).toBeVisible();
   await expect(deckArtist(page)).toHaveText(INITIAL_ALBUM.artists[0].name);
   await expect(deckDisplay(page)).toHaveAttribute("data-is-playing", "false");
+  await expect(deckDisplay(page)).toHaveAttribute("data-playback-status", "pending");
 
   // The Deck must remain in its in-flight presentation until the mocked Spotify
   // endpoint explicitly confirms success.
@@ -386,6 +387,7 @@ test("play confirmado desde Colección: vuelo, acople y Now Playing terminan sin
   await expect(deckDisplay(page)).toHaveAttribute("data-is-playing", "true", {
     timeout: 8_000,
   });
+  await expect(deckDisplay(page)).toHaveAttribute("data-playback-status", "confirmed");
 });
 
 const failureScenarios = [
