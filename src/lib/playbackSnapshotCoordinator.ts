@@ -167,14 +167,14 @@ export function createPlaybackSnapshotCoordinator({
   const observeSnapshot = (input: Observation) => {
     if (!isValidSnapshot(input.snapshot)) return getState();
     if (input.receivedAt < input.requestStartedAt) return getState();
-    if (!markRequestAsProcessed(input.requestSeq)) return getState();
 
     if (attempt?.status === "pending") {
       // During a play attempt, only that attempt's own fresh target snapshot
-      // may replace the confirmed snapshot.
+      // may replace the confirmed snapshot. acceptSnapshot owns request ordering.
       return acceptSnapshot({ ...input, attemptId: attempt.id });
     }
 
+    if (!markRequestAsProcessed(input.requestSeq)) return getState();
     confirmedSnapshot = input.snapshot;
     return getState();
   };
