@@ -78,12 +78,7 @@ function isValidSnapshot(snapshot: PlaybackSnapshot | null): snapshot is Playbac
       track.artists.every((artist) => typeof artist?.name === "string") &&
       typeof track.album?.name === "string" &&
       Array.isArray(track.album.images) &&
-      track.album.images.every(
-        (image) =>
-          typeof image?.url === "string" &&
-          typeof image.width === "number" &&
-          typeof image.height === "number",
-      ),
+      track.album.images.every((image) => typeof image?.url === "string"),
   );
 }
 
