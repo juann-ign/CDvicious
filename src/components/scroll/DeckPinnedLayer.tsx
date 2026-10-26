@@ -348,8 +348,9 @@ export function DeckPinnedLayer() {
   }, []);
 
   const isPlaybackPending = playbackState.attempt?.status === "pending";
-  const visibleData =
-    playbackState.confirmedSnapshot ?? (isPlaybackPending ? null : data);
+  // Every rendered playback surface consumes only the coordinator's accepted
+  // snapshot. Never fall back to a raw store response before it is promoted.
+  const visibleData = playbackState.confirmedSnapshot;
   const trackCoverUrl = visibleData?.track?.album.images[0]?.url;
 
   useEffect(() => {
