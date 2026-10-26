@@ -91,8 +91,9 @@ function begin(coordinatorInstance, {
   attemptId = "attempt-1",
   targetAlbumUri = TARGET_ALBUM_URI,
   startedAt = 100,
+  requestSeqAtStart,
 } = {}) {
-  coordinatorInstance.beginAttempt({ attemptId, targetAlbumUri, startedAt });
+  coordinatorInstance.beginAttempt({ attemptId, targetAlbumUri, startedAt, requestSeqAtStart });
   return attemptId;
 }
 
@@ -213,6 +214,22 @@ test("una consulta iniciada antes de Play no confirma aunque llegue después y c
     requestSeq: 1,
     requestStartedAt: 90,
     receivedAt: 130,
+    snapshot: TARGET_SNAPSHOT,
+  });
+
+  assert.equal(state(subject).attempt.status, "pending");
+  assert.deepEqual(state(subject).confirmedSnapshot, OLD_SNAPSHOT);
+});
+
+test("una consulta ya emitida antes de Play no confirma aunque tenga el mismo timestamp", () => {
+  const subject = coordinator();
+  const attemptId = begin(subject, { requestSeqAtStart: 4 });
+
+  subject.acceptSnapshot({
+    attemptId,
+    requestSeq: 4,
+    requestStartedAt: 100,
+    receivedAt: 120,
     snapshot: TARGET_SNAPSHOT,
   });
 
