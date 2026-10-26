@@ -7,6 +7,9 @@ import * as mockSpotifyStore from "@/lib/mockSpotifyStore";
 const EMPTY_SNAPSHOT = {
   data: null,
   error: false,
+  requestSeq: -1,
+  requestStartedAt: null,
+  receivedAt: null,
 } as const;
 
 const noopSubscribe = () => () => undefined;
