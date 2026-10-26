@@ -1,56 +1,47 @@
-# EP2-T2 — Playback state contract tests
+# EP2-T2 / EP2-T4 — Contrato de estado del playback
 
-**Status:** test-first baseline. This change adds tests and contract documentation only; it does not change playback production code.
+**Estado:** coordinador y consumidores conectados; la aceptación final depende de Build y Browser QA sin retries.
 
-## Test layers
+## Fuente de verdad
 
-### Deterministic coordinator contract
+`src/lib/playbackSnapshotCoordinator.ts` centraliza la promoción de snapshots y el estado del intento. Mantiene `confirmedSnapshot` por separado de `attempt` y solo permite confirmar un intento pendiente cuando una observación:
+- tiene identidad de álbum coincidente (URI, con ID como fallback);
+- se solicitó después del inicio del intento vigente;
+- llega dentro del plazo de confirmación;
+- tiene una pista válida y `isPlaying: true`;
+- y lleva un `requestSeq` más nuevo que la última observación procesada.
 
-`tests/contracts/playback-snapshot-contract.test.mjs` describes the required semantics of a pure `createPlaybackSnapshotCoordinator` in `src/lib/playbackSnapshotCoordinator.ts`. This module does not exist yet, so these tests are intentionally red until the next implementation task adds the coordinator and connects it to Deck/Now Playing.
+La aceptación de `POST /api/play` es solo `commandAccepted`, no una confirmación. Los snapshots pausados o de otro álbum durante un intento pendiente no reemplazan el último snapshot confirmado. Cada nuevo intento invalida el anterior; los eventos de otra generación y los callbacks tardíos no pueden cambiarlo. Los errores preservan el snapshot confirmado y el timeout termina en `degraded` sin resucitar el intento.
 
-The coordinator seam is deliberately small and time-independent. Its state must expose:
+## Integración en la aplicación
 
-- `confirmedSnapshot`: the most recently accepted, current player observation.
-- `attempt`: the active playback attempt, its stable `id`, target album URI and terminal/pending status.
-- Monotonic request ordering so a late response cannot overwrite a newer accepted snapshot.
+- `nowPlayingStore` expone `requestSeq`, `requestStartedAt` y `receivedAt`. Ignora respuestas fuera de orden y permite solicitar una lectura de confirmación posterior al comando incluso si otra consulta estaba en curso.
+- `mockSpotifyStore` expone los mismos metadatos y conserva URI/ID del álbum, para que el contrato se pruebe con la misma identidad estable que en producción.
+- `JewelCaseDetailModal` crea un `attemptId` por Play. Los eventos de comando y vuelo llevan ese ID. El evento de acople de una animación solo habilita la coreografía de la UI; no confirma playback.
+- `DeckPinnedLayer` alimenta el CD persistente, el booklet y el VFD únicamente desde el snapshot promovido por el coordinador. Durante un intento pendiente conserva la pista confirmada previa y marca el estado de sincronización como `pending`; no usa el evento visual ni el HTTP 200 para promover la pista.
+- `NowPlayingCard` expone `data-playback-status`: `unavailable`, `confirmed`, `pending`, `failed` o `degraded`. `data-is-playing` no es una señal de confirmación del intento.
 
-Required methods are `getState()`, `beginAttempt({ attemptId, targetAlbumUri, startedAt })`, `markCommandAccepted(attemptId, at)`, `acceptSnapshot({ attemptId, requestSeq, requestStartedAt, receivedAt, snapshot })`, `observeSnapshot({ requestSeq, requestStartedAt, receivedAt, snapshot })`, `rejectAttempt(attemptId, reason, at)` and `expireAttempt(attemptId, at)`. The names define a test seam, not permission to bypass production validation at the API/store/Deck boundaries.
+## Cobertura
 
-The coordinator must be pure: no timers, browser globals, fetch, React, or Spotify SDK. The caller supplies logical times and request sequence values. A command response alone remains pending; only a fresh target snapshot with `isPlaying: true` confirms. Pause and track-change observations update current player state without fabricating a playback attempt.
+### Pruebas deterministas: `tests/contracts/playback-snapshot-contract.test.mjs`
 
-### Browser-level assertions
+14 casos cubren carga inicial, comando aceptado sin confirmación, snapshot objetivo fresco, objetivo pausado, pausa, cambio de pista, consulta iniciada antes de Play, respuestas fuera de orden, álbum equivocado, intentos superpuestos, error de autenticación, dispositivo no disponible, error de red con reintento y timeout con evento tardío.
 
-`tests/e2e/playback-state-contract.spec.cjs` checks initial load, pause/resume, Next/Previous, and recovery after a network failure. The existing STAB-03 suite continues to cover confirmation, authentication failure, unavailable device, failed Spotify response and request abort during the flying-disc flow.
+### Pruebas E2E: `tests/e2e/playback-state-contract.spec.cjs`
 
-These browser tests run only in the `RAIL_FLAG=1` matrix entry because the playback controls and flying-disc Deck layer belong to that desktop rail experience. `RAIL_FLAG=0` skips these specific UI tests intentionally; it does not turn off the deterministic coordinator contract suite.
+Cubre la carga inicial, pausa/reanudación, Next/Previous y recuperación luego de un fallo de red con un nuevo intento exitoso. Las aserciones verifican contenido del VFD, estado de reproducción y recuperación.
 
-## Required contract scenarios
+### Regresión existente: STAB-03 e issue #88
 
-| Scenario | Expected invariant |
-|---|---|
-| Initial load | Last valid observation appears; no invented pending attempt |
-| API returns 200 | Attempt stays pending; old confirmed snapshot remains |
-| Playback confirmation | Fresh, post-attempt snapshot matches target and has `isPlaying: true` |
-| Pause | Track identity remains; `isPlaying` becomes false |
-| Track change | New track is accepted without a fictitious album switch |
-| Snapshot initiated before Play | Cannot confirm the new attempt even if it arrives late |
-| Responses complete out of order | Older request sequence cannot overwrite a newer accepted snapshot |
-| Overlapping attempts A then B | An event/snapshot from A cannot affect B or confirm B |
-| Wrong target or target paused | Attempt remains pending |
-| Authentication/device error | Attempt fails; previous confirmed snapshot is preserved |
-| Network failure then retry | Failed attempt preserves previous state; a new attempt may confirm normally |
-| Confirmation timeout | Attempt becomes degraded; a late event cannot revive it |
+La prueba `play confirmado desde Colección: vuelo, acople y Now Playing terminan sincronizados` en `tests/e2e/stab-03-modal-play-flight.spec.cjs` permanece activa y exige que el VFD pase de `pending` a `confirmed` solo después de un snapshot objetivo con `isPlaying: true`. Se omite únicamente en el job de matriz `RAIL_FLAG=0`; corre con `RAIL_FLAG=1`. Playwright mantiene `retries: 0`.
 
-## Link to the prior regression
+Issue [#88 — desfasaje intermitente Deck/Now Playing](https://github.com/juann-ign/CDvicious/issues/88) se aborda con esta cobertura. No se relaja ni se reemplaza la aserción original.
 
-Issue [#88 — intermittent Deck/Now Playing mismatch](https://github.com/juann-ign/CDvicious/issues/88) is tracked by the active STAB-03 test `play confirmado desde Colección: vuelo, acople y Now Playing terminan sincronizados` in `tests/e2e/stab-03-modal-play-flight.spec.cjs`. That test was restored in merged PR [#94](https://github.com/juann-ign/CDvicious/pull/94) and is not permanently skipped: it is skipped only in the intentional `RAIL_FLAG=0` matrix run and executes in `RAIL_FLAG=1`. Keep `retries: 0`; do not weaken its assertion or let a retry hide a race.
+## Validación
 
-## Run commands
+- `npm run test:playback-contract`: ejecuta la suite determinista sin dependencias adicionales.
+- `npm run test`: TypeScript.
+- `npm run build`: build de producción.
+- STAB-01 Browser QA: ejecutar con `RAIL_FLAG=0` y `RAIL_FLAG=1`.
 
-- Pure contract tests: `npm run test:playback-contract`
-- Browser suite: `playwright test` with the installed CI runner and `RAIL_FLAG=1`
-- Build/TypeScript/lint: existing Build workflow.
-
-## Expected test-first result
-
-The browser tests exercise current observable mock-player behavior. The pure contract suite is expected to fail clearly while `src/lib/playbackSnapshotCoordinator.ts` is absent. Do not implement that module in this test-only change. The follow-on implementation task must satisfy the suite and connect the coordinator to the actual state source; a standalone implementation unused by Deck/Now Playing does not complete EP2-T2.
+El modo mock no sustituye una prueba de release con sesión Spotify real y dispositivo activo. Si una observación en live no confirma el álbum dentro de quince segundos, la UI debe quedar en `degraded`, conservar la última pista confirmada y permitir un intento nuevo.
