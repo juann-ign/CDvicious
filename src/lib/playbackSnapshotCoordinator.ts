@@ -31,6 +31,8 @@ export type PlaybackAttempt = {
   requestSeqAtStart: number;
   status: PlaybackAttemptStatus;
   commandAcceptedAt: number | null;
+  confirmationStartedAt: number | null;
+  confirmationDeferred: boolean;
   confirmedAt: number | null;
   reason: string | null;
 };
@@ -114,7 +116,12 @@ export function createPlaybackSnapshotCoordinator({
     if (!isValidSnapshot(observation.snapshot)) return false;
     if (observation.requestStartedAt < current.startedAt) return false;
     if (observation.receivedAt < observation.requestStartedAt) return false;
-    if (observation.receivedAt > current.startedAt + confirmationTimeoutMs) {
+    const confirmationDeadlineAnchor = current.confirmationStartedAt ??
+      (current.confirmationDeferred ? null : current.startedAt);
+    if (
+      confirmationDeadlineAnchor !== null &&
+      observation.receivedAt > confirmationDeadlineAnchor + confirmationTimeoutMs
+    ) {
       return false;
     }
     if (observation.snapshot.isPlaying !== true) return false;
@@ -126,11 +133,13 @@ export function createPlaybackSnapshotCoordinator({
     targetAlbumUri,
     startedAt = now(),
     requestSeqAtStart = lastProcessedRequestSeq,
+    deferConfirmation = false,
   }: {
     attemptId: string;
     targetAlbumUri: string;
     startedAt?: number;
     requestSeqAtStart?: number;
+    deferConfirmation?: boolean;
   }) => {
     if (!attemptId || !targetAlbumUri) {
       throw new Error("attemptId y targetAlbumUri son obligatorios");
@@ -148,6 +157,8 @@ export function createPlaybackSnapshotCoordinator({
       requestSeqAtStart,
       status: "pending",
       commandAcceptedAt: null,
+      confirmationStartedAt: deferConfirmation ? null : startedAt,
+      confirmationDeferred: deferConfirmation,
       confirmedAt: null,
       reason: null,
     };
@@ -158,6 +169,14 @@ export function createPlaybackSnapshotCoordinator({
   const markCommandAccepted = (attemptId: string, at = now()) => {
     if (!attempt || !isCurrentPendingAttempt(attemptId)) return getState();
     attempt = { ...attempt, commandAcceptedAt: at };
+    return getState();
+  };
+
+  // The snapshot confirmation deadline starts when the player has resumed,
+  // not when the visual flight begins. This event does not itself confirm playback.
+  const startConfirmation = (attemptId: string, at = now()) => {
+    if (!attempt || !isCurrentPendingAttempt(attemptId)) return getState();
+    attempt = { ...attempt, confirmationStartedAt: at };
     return getState();
   };
 
@@ -213,7 +232,11 @@ export function createPlaybackSnapshotCoordinator({
 
   const expireAttempt = (attemptId: string, at = now()) => {
     if (!attempt || !isCurrentPendingAttempt(attemptId)) return getState();
-    if (at < attempt.startedAt + confirmationTimeoutMs) return getState();
+    const anchor = attempt.confirmationStartedAt ??
+      (attempt.confirmationDeferred ? null : attempt.startedAt);
+    if (anchor === null || at < anchor + confirmationTimeoutMs) {
+      return getState();
+    }
     ignoreObservationsStartedBeforeAt = Math.max(ignoreObservationsStartedBeforeAt, at);
     attempt = { ...attempt, status: "degraded", reason: "CONFIRMATION_TIMEOUT" };
     return getState();
@@ -223,6 +246,7 @@ export function createPlaybackSnapshotCoordinator({
     getState,
     beginAttempt,
     markCommandAccepted,
+    startConfirmation,
     acceptSnapshot,
     observeSnapshot,
     rejectAttempt,
