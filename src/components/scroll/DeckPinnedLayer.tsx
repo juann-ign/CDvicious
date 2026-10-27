@@ -159,32 +159,8 @@ export function DeckPinnedLayer() {
       setFlightStage("flying");
       setAwaitingPlaybackSnapshot(false);
 
-      const timeoutDelay = Math.max(
-        0,
-        startedAt + PLAYBACK_SNAPSHOT_TIMEOUT_MS - Date.now(),
-      );
-      playbackSnapshotTimeoutRef.current = window.setTimeout(() => {
-        playbackSnapshotTimeoutRef.current = null;
-        const expired = coordinatorRef.current!.expireAttempt(
-          detail.attemptId!,
-          Date.now(),
-        );
-        setPlaybackState(expired);
-        const expiredAttempt = expired.attempt;
-        if (
-          expiredAttempt &&
-          expiredAttempt.id === detail.attemptId &&
-          expiredAttempt.status === "degraded"
-        ) {
-          clearPlaybackDelay();
-          delete document.documentElement.dataset.discFlightPlaybackReady;
-          delete document.documentElement.dataset.discFlightAttemptId;
-          setAwaitingPlaybackSnapshot(false);
-          flightStageRef.current = "idle";
-          setFlightStage("idle");
-          activeAttemptIdRef.current = null;
-        }
-      }, timeoutDelay);
+      // The flight is a visual transition, not the start of the snapshot
+      // confirmation window. That window opens after the player resumes.
     };
 
     const handlePlaybackCommandAccepted = (event: Event) => {
@@ -298,6 +274,23 @@ export function DeckPinnedLayer() {
         setAwaitingPlaybackSnapshot(false);
         return;
       }
+
+      const confirmationStartedAt = Date.now();
+      coordinatorRef.current!.startConfirmation(detail!.attemptId!, confirmationStartedAt);
+      clearPlaybackSnapshotTimeout();
+      playbackSnapshotTimeoutRef.current = window.setTimeout(() => {
+        playbackSnapshotTimeoutRef.current = null;
+        const expired = coordinatorRef.current!.expireAttempt(
+          detail!.attemptId!,
+          Date.now(),
+        );
+        setPlaybackState(expired);
+        if (expired.attempt?.id === detail?.attemptId &&
+            expired.attempt?.status === "degraded") {
+          setAwaitingPlaybackSnapshot(false);
+          activeAttemptIdRef.current = null;
+        }
+      }, PLAYBACK_SNAPSHOT_TIMEOUT_MS);
 
       setAwaitingPlaybackSnapshot(true);
       if (process.env.NEXT_PUBLIC_SPOTIFY_MOCK === "1") {
