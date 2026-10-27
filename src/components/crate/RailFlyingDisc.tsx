@@ -10,8 +10,9 @@ import styles from "./RailFlyingDisc.module.css";
 interface RailFlyingDiscProps {
   coverUrl: string;
   originRect: DOMRect;
-  onArrive: () => void;
-  onDone: () => void;
+  attemptId: string;
+  onArrive: (attemptId: string) => void;
+  onDone: (attemptId: string) => void;
 }
 
 const PARTICLES = Array.from({ length: 12 }, (_, index) => {
@@ -31,6 +32,7 @@ const FLIGHT_DURATION_SECONDS = 4.8;
 export function RailFlyingDisc({
   coverUrl,
   originRect,
+  attemptId,
   onArrive,
   onDone,
 }: RailFlyingDiscProps) {
@@ -76,7 +78,7 @@ export function RailFlyingDisc({
     const finish = () => {
       if (doneRef.current) return;
       doneRef.current = true;
-      onDone();
+      onDone(attemptId);
     };
 
     const maybeFinish = () => {
@@ -179,7 +181,7 @@ export function RailFlyingDisc({
         });
       }
 
-      onArrive();
+      onArrive(attemptId);
       finish();
       return cleanup;
     }
@@ -267,7 +269,7 @@ export function RailFlyingDisc({
               );
           }
 
-          onArrive();
+          onArrive(attemptId);
         }
       },
       onComplete: () => {
@@ -284,7 +286,7 @@ export function RailFlyingDisc({
     });
 
     return cleanup;
-  }, [isReady, onArrive, onDone, originRect, scrollToChapter]);
+  }, [attemptId, isReady, onArrive, onDone, originRect, scrollToChapter]);
 
   return (
     <>

@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "tsc --noEmit"
+    "test": "tsc --noEmit",
+    "test:playback-contract": "node --test tests/contracts/playback-snapshot-contract.test.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^10.0.0",

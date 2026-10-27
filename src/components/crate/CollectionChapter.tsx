@@ -61,6 +61,7 @@ export function CollectionChapter() {
   const [flight, setFlight] = useState<{
     album: AlbumItem;
     originRect: DOMRect;
+    attemptId: string;
   } | null>(null);
   const chapterRef = useRef<HTMLDivElement>(null);
   const requestStartedRef = useRef(false);
@@ -231,6 +232,7 @@ export function CollectionChapter() {
     album: AlbumItem,
     originEl: HTMLElement,
     executePlayback: StartPlayExecution,
+    attemptId: string,
   ) => {
     const sourceChapter = Number(document.documentElement.dataset.chapter ?? "0");
 
@@ -238,6 +240,7 @@ export function CollectionChapter() {
     setFlight({
       album,
       originRect: originEl.getBoundingClientRect(),
+      attemptId,
     });
     setSelected(null);
 
@@ -247,8 +250,12 @@ export function CollectionChapter() {
       .then((result) => {
         if (result.success) return;
 
-        window.dispatchEvent(new Event("cdvicious:disc-flight-cancelled"));
-        setFlight(null);
+        window.dispatchEvent(
+          new CustomEvent("cdvicious:disc-flight-cancelled", {
+            detail: { attemptId },
+          }),
+        );
+        setFlight((current) => current?.attemptId === attemptId ? null : current);
         setPlayErrorForAlbum({
           albumId: album.id,
           message: result.message ?? "Spotify no confirmó la reproducción. Podés intentarlo de nuevo.",
@@ -263,8 +270,12 @@ export function CollectionChapter() {
         });
       })
       .catch(() => {
-        window.dispatchEvent(new Event("cdvicious:disc-flight-cancelled"));
-        setFlight(null);
+        window.dispatchEvent(
+          new CustomEvent("cdvicious:disc-flight-cancelled", {
+            detail: { attemptId },
+          }),
+        );
+        setFlight((current) => current?.attemptId === attemptId ? null : current);
         setPlayErrorForAlbum({
           albumId: album.id,
           message: "No se pudo conectar con Spotify. Revisá tu conexión e intentá de nuevo.",
@@ -280,13 +291,17 @@ export function CollectionChapter() {
       });
   }, [scrollToChapter]);
 
-  const handleFlightArrive = useCallback(() => {
-    window.dispatchEvent(new Event("cdvicious:disc-flight-arrived"));
+  const handleFlightArrive = useCallback((attemptId: string) => {
+    window.dispatchEvent(
+      new CustomEvent("cdvicious:disc-flight-arrived", { detail: { attemptId } }),
+    );
   }, []);
 
-  const handleFlightDone = useCallback(() => {
-    window.dispatchEvent(new Event("cdvicious:disc-flight-done"));
-    setFlight(null);
+  const handleFlightDone = useCallback((attemptId: string) => {
+    window.dispatchEvent(
+      new CustomEvent("cdvicious:disc-flight-done", { detail: { attemptId } }),
+    );
+    setFlight((current) => current?.attemptId === attemptId ? null : current);
   }, []);
 
   const handleClose = useCallback(() => {
@@ -444,8 +459,8 @@ export function CollectionChapter() {
               ? playErrorForAlbum.message
               : null
           }
-          onPlay={(originEl, executePlayback) =>
-            handlePlay(selected, originEl, executePlayback)
+          onPlay={(originEl, executePlayback, attemptId) =>
+            handlePlay(selected, originEl, executePlayback, attemptId)
           }
         />
       )}
@@ -454,6 +469,7 @@ export function CollectionChapter() {
         <RailFlyingDisc
           coverUrl={flight.album.images[0]?.url ?? ""}
           originRect={flight.originRect}
+          attemptId={flight.attemptId}
           onArrive={handleFlightArrive}
           onDone={handleFlightDone}
         />

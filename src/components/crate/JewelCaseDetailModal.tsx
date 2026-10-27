@@ -26,6 +26,10 @@ const CASE_CLOSE_START_MS = 240;
 const CASE_CLOSE_MS = 620;
 const POST_CLOSE_HOLD_MS = 160;
 const EXIT_MS = 340;
+// A flight may take longer than its nominal GSAP duration under software WebGL.
+// Its visual readiness has a separate deadline from the 15s confirmation window
+// that begins after the player is resumed.
+const FLIGHT_READY_TIMEOUT_MS = 30_000;
 
 const FOCUSABLE_SELECTOR = [
   "a[href]",
@@ -169,25 +173,37 @@ export type PlayExecutionResult = {
 
 export type StartPlayExecution = () => Promise<PlayExecutionResult>;
 
-function waitForWindowEvent(eventName: string, timeoutMs: number): Promise<void> {
+function waitForWindowEvent(
+  eventName: string,
+  timeoutMs: number,
+  attemptId: string,
+): Promise<boolean> {
+  const isReadyForAttempt = () =>
+    document.documentElement.dataset.discFlightPlaybackReady === "true" &&
+    document.documentElement.dataset.discFlightAttemptId === attemptId;
+
   if (
     eventName === "cdvicious:disc-flight-playback-ready" &&
-    document.documentElement.dataset.discFlightPlaybackReady === "true"
+    isReadyForAttempt()
   ) {
-    return Promise.resolve();
+    return Promise.resolve(true);
   }
 
   return new Promise((resolve) => {
     let timeoutId: number | null = null;
-
-    const finish = () => {
-      window.removeEventListener(eventName, finish);
+    const handleEvent = (event: Event) => {
+      const detail = (event as CustomEvent<{ attemptId?: string }>).detail;
+      if (detail?.attemptId !== attemptId) return;
+      finish(true);
+    };
+    const finish = (ready: boolean) => {
+      window.removeEventListener(eventName, handleEvent);
       if (timeoutId !== null) window.clearTimeout(timeoutId);
-      resolve();
+      resolve(ready);
     };
 
-    window.addEventListener(eventName, finish);
-    timeoutId = window.setTimeout(finish, timeoutMs);
+    window.addEventListener(eventName, handleEvent);
+    timeoutId = window.setTimeout(() => finish(false), timeoutMs);
   });
 }
 
@@ -200,7 +216,11 @@ interface JewelCaseDetailModalProps {
   album: AlbumItem;
   onClose: () => void;
   onLoad: (originEl: HTMLElement) => void;
-  onPlay?: (originEl: HTMLElement, executePlayback: StartPlayExecution) => void;
+  onPlay?: (
+    originEl: HTMLElement,
+    executePlayback: StartPlayExecution,
+    attemptId: string,
+  ) => void;
   initialPlayError?: string | null;
 }
 
@@ -443,6 +463,12 @@ export function JewelCaseDetailModal({
     playStartedRef.current = true;
 
     if (onPlay) {
+      const attemptId =
+        typeof window.crypto?.randomUUID === "function"
+          ? window.crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const attemptStartedAt = Date.now();
+
       // The parent starts the flight immediately. The execution task mutes the
       // Spotify SDK, starts the play request in parallel with travel, then
       // restores volume only after docking + the one-second settle period.
@@ -479,6 +505,15 @@ export function JewelCaseDetailModal({
             | null;
 
           if (!response.ok || result?.success !== true) {
+            window.dispatchEvent(
+              new CustomEvent("cdvicious:playback-command-failed", {
+                detail: {
+                  attemptId,
+                  reason: result?.error ?? (response.status === 401 ? "AUTH_REQUIRED" : "PLAY_COMMAND_REJECTED"),
+                  at: Date.now(),
+                },
+              }),
+            );
             await restoreVolume();
             return {
               success: false,
@@ -486,36 +521,75 @@ export function JewelCaseDetailModal({
             };
           }
 
+          window.dispatchEvent(
+            new CustomEvent("cdvicious:playback-command-accepted", {
+              detail: { attemptId, targetAlbumUri: album.uri, at: Date.now() },
+            }),
+          );
+
+          // Keep the device muted during the flight. A failed or late attempt
+          // must not mutate the mock player's authoritative snapshot.
+
+          // A missing/mismatched ready signal is not a successful playback.
+          const remainingReadyWaitMs = Math.max(
+            0,
+            attemptStartedAt + FLIGHT_READY_TIMEOUT_MS - Date.now(),
+          );
+          const playbackReady = await waitForWindowEvent(
+            "cdvicious:disc-flight-playback-ready",
+            remainingReadyWaitMs,
+            attemptId,
+          );
+          if (!playbackReady) {
+            window.dispatchEvent(
+              new CustomEvent("cdvicious:playback-command-failed", {
+                detail: { attemptId, reason: "FLIGHT_READY_TIMEOUT", at: Date.now() },
+              }),
+            );
+            await restoreVolume();
+            return {
+              success: false,
+              message: "No se pudo sincronizar el acople del disco. Volvé a intentar la reproducción.",
+            };
+          }
+
           if (process.env.NEXT_PUBLIC_SPOTIFY_MOCK === "1") {
             mockSpotifyStore.loadMockAlbum(album);
           }
-
-          // Spotify starts preparing playback while the CD is in transit.
-          // Pause it while muted, then restart from 0 after docking + 1 second
-          // so the listener doesn't miss the opening seconds during the flight.
           await player.pause().catch(() => undefined);
-
-          // Timeout is a safety valve for a destroyed rail. The Deck signals
-          // readiness one second after the disc reaches its destination.
-          await waitForWindowEvent("cdvicious:disc-flight-playback-ready", 15_000);
           await player.seek(0).catch(() => undefined);
           await player.resume();
           await restoreVolume();
+          const mockState =
+            process.env.NEXT_PUBLIC_SPOTIFY_MOCK === "1"
+              ? mockSpotifyStore.getSnapshot()
+              : null;
           window.dispatchEvent(
             new CustomEvent("cdvicious:disc-flight-playback-started", {
               detail: {
+                attemptId,
+                targetAlbumUri: album.uri,
                 albumName: album.name,
                 artistNames: album.artists.map((artist) => artist.name),
-                snapshot:
-                  process.env.NEXT_PUBLIC_SPOTIFY_MOCK === "1"
-                    ? mockSpotifyStore.getSnapshot().data
-                    : null,
+                snapshot: mockState?.data ?? null,
+                snapshotMeta: mockState
+                  ? {
+                      requestSeq: mockState.requestSeq,
+                      requestStartedAt: mockState.requestStartedAt,
+                      receivedAt: mockState.receivedAt,
+                    }
+                  : null,
               },
             }),
           );
           window.dispatchEvent(new Event("cdvicious:player_state_changed"));
           return { success: true };
         } catch {
+          window.dispatchEvent(
+            new CustomEvent("cdvicious:playback-command-failed", {
+              detail: { attemptId, reason: "NETWORK_OR_PLAYER_ERROR", at: Date.now() },
+            }),
+          );
           await restoreVolume();
           return {
             success: false,
@@ -524,8 +598,18 @@ export function JewelCaseDetailModal({
         }
       };
 
-      window.dispatchEvent(new Event("cdvicious:disc-flight-started"));
-      onPlay(disc, executePlayback);
+      window.dispatchEvent(
+        new CustomEvent("cdvicious:disc-flight-started", {
+          detail: {
+            attemptId,
+            targetAlbumUri: album.uri,
+            albumName: album.name,
+            artistNames: album.artists.map((artist) => artist.name),
+            startedAt: attemptStartedAt,
+          },
+        }),
+      );
+      onPlay(disc, executePlayback, attemptId);
       onClose();
       return;
     }

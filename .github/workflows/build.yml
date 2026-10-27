@@ -42,6 +42,9 @@ jobs:
       - name: Typecheck
         run: npm run test
 
+      - name: Playback state contract tests
+        run: npm run test:playback-contract
+
       - name: Production build
         env:
           NEXT_TELEMETRY_DISABLED: "1"

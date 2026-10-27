@@ -18,6 +18,9 @@ export interface MockSpotifyPlayer {
 type Snapshot = {
   data: NowPlayingResponse | null;
   error: boolean;
+  requestSeq: number;
+  requestStartedAt: number;
+  receivedAt: number;
 };
 
 const TRACKS_PER_ALBUM = 10;
@@ -37,6 +40,8 @@ function createTrack(album: AlbumItem, index: number): SpotifyTrack {
     artists: album.artists.map((artist) => ({ name: artist.name })),
     duration_ms: 150_000 + index * 9_000,
     album: {
+      id: album.id,
+      uri: album.uri,
       name: album.name,
       images: album.images.map((image) => ({
         url: image.url,
@@ -55,6 +60,7 @@ function createSnapshot(
 ): Snapshot {
   const track = createTrack(album, nextTrackIndex);
 
+  const timestamp = Date.now();
   return {
     error: false,
     data: {
@@ -63,10 +69,14 @@ function createSnapshot(
       durationMs: track.duration_ms,
       track,
     },
+    requestSeq: 0,
+    requestStartedAt: timestamp,
+    receivedAt: timestamp,
   };
 }
 
 const firstAlbum = MOCK_ALBUMS[0];
+let revision = 0;
 let snapshot: Snapshot = createSnapshot(firstAlbum, 0, true, 42_000);
 
 function notify() {
@@ -74,7 +84,14 @@ function notify() {
 }
 
 function publish(next: Snapshot) {
-  snapshot = next;
+  revision += 1;
+  const timestamp = Date.now();
+  snapshot = {
+    ...next,
+    requestSeq: revision,
+    requestStartedAt: timestamp,
+    receivedAt: timestamp,
+  };
   notify();
 }
 

@@ -2,13 +2,14 @@
 
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useTexture } from "@react-three/drei";
-import type { NowPlayingResponse } from "@/types/spotify";
 import { UserProfileChip } from "@/components/UserProfileChip";
 import { Disc } from "@/components/Disc";
 import { NowPlayingCard } from "@/components/NowPlayingCard";
 import { LyricsBooklet } from "@/components/LyricsBooklet";
 import { useNowPlaying } from "@/hooks/useNowPlaying";
 import * as mockSpotifyStore from "@/lib/mockSpotifyStore";
+import * as nowPlayingStore from "@/lib/nowPlayingStore";
+import { createPlaybackSnapshotCoordinator } from "@/lib/playbackSnapshotCoordinator";
 import { useDominantColor } from "@/hooks/useDominantColor";
 import { useSpotifyPlayer } from "@/components/SpotifyPlayerProvider";
 import pageStyles from "@/app/page.module.css";
@@ -19,39 +20,33 @@ const PLAYBACK_SNAPSHOT_TIMEOUT_MS = 15_000;
 
 type DiscFlightStage = "idle" | "flying" | "docked";
 
-type ExpectedPlaybackAlbum = {
-  albumName: string;
-  artistNames: string[];
-  snapshot?: NowPlayingResponse | null;
-};
-
-function trackMatchesAlbum(
-  track: NonNullable<NowPlayingResponse["track"]>,
-  expected: ExpectedPlaybackAlbum,
-) {
-  return (
-    track.album.name === expected.albumName &&
-    expected.artistNames.every((name) =>
-      track.artists.some((artist) => artist.name === name),
-    )
-  );
-}
-
 export function DeckPinnedLayer() {
   const { authenticated } = useSpotifyPlayer();
   const layerRef = useRef<HTMLDivElement>(null);
   const [deckHidden, setDeckHidden] = useState(false);
   const [awaitingPlaybackSnapshot, setAwaitingPlaybackSnapshot] = useState(false);
   const [flightStage, setFlightStage] = useState<DiscFlightStage>("idle");
-  const [frozenData, setFrozenData] = useState<NowPlayingResponse | null>(null);
-  const [visualPlaybackReady, setVisualPlaybackReady] = useState(true);
-  const [flightPlaybackStarted, setFlightPlaybackStarted] = useState(false);
-  const [playbackSnapshotOverride, setPlaybackSnapshotOverride] =
-    useState<NowPlayingResponse | null>(null);
   const flightStageRef = useRef<DiscFlightStage>("idle");
-  const expectedPlaybackAlbumRef = useRef<ExpectedPlaybackAlbum | null>(null);
+  const activeAttemptIdRef = useRef<string | null>(null);
   const playbackDelayRef = useRef<number | null>(null);
   const playbackSnapshotTimeoutRef = useRef<number | null>(null);
+  const coordinatorRef = useRef<ReturnType<typeof createPlaybackSnapshotCoordinator> | null>(null);
+
+  if (!coordinatorRef.current) {
+    coordinatorRef.current = createPlaybackSnapshotCoordinator({
+      initialSnapshot: null,
+      confirmationTimeoutMs: PLAYBACK_SNAPSHOT_TIMEOUT_MS,
+    });
+  }
+
+  const [playbackState, setPlaybackState] = useState(
+    () => coordinatorRef.current!.getState(),
+  );
+  const useNowPlayingEnabled =
+    authenticated === true &&
+    (!deckHidden || awaitingPlaybackSnapshot || flightStage !== "idle");
+  const nowPlaying = useNowPlaying(useNowPlayingEnabled);
+  const { data, error, requestSeq, requestStartedAt, receivedAt } = nowPlaying;
 
   useEffect(() => {
     const overlay = document.querySelector<HTMLElement>("[data-rail-overlay]");
@@ -80,34 +75,37 @@ export function DeckPinnedLayer() {
     return () => observer.disconnect();
   }, []);
 
-  const { data, error } = useNowPlaying(
-    authenticated === true &&
-      (!deckHidden || awaitingPlaybackSnapshot || flightStage !== "idle"),
-  );
-  const latestDataRef = useRef(data);
-  const playbackSnapshotAtStartRef = useRef(data);
-
-  // Keep the last real track snapshot while the Deck is off-chapter. The hook
-  // intentionally returns an empty snapshot when the Deck is not interactive,
-  // but a flight launched from Batea/Colección still needs a stable visual
-  // snapshot to bridge the disc animation.
-  if (data?.track && !playbackSnapshotOverride) {
-    latestDataRef.current = data;
-  }
-
-  const trackCoverUrl = data?.track?.album.images[0]?.url;
-
+  // The coordinator is the only authority that promotes observations to the
+  // confirmed snapshot consumed by the VFD and the persistent 3D disc.
   useEffect(() => {
-    if (!trackCoverUrl) return;
+    if (!data || requestStartedAt === null || receivedAt === null) return;
 
-    // Load the next artwork while the temporary disc is travelling so the
-    // persistent Three.js disc is less likely to suspend at the handoff.
-    try {
-      useTexture.preload(trackCoverUrl);
-    } catch {
-      // DiscMesh still loads the same texture through its normal Suspense path.
+    const coordinator = coordinatorRef.current!;
+    const currentAttempt = coordinator.getState().attempt;
+    const observation = {
+      requestSeq,
+      requestStartedAt,
+      receivedAt,
+      snapshot: data,
+    };
+    const nextState =
+      currentAttempt?.status === "pending"
+        ? coordinator.acceptSnapshot({
+            ...observation,
+            attemptId: currentAttempt.id,
+          })
+        : coordinator.observeSnapshot(observation);
+
+    setPlaybackState(nextState);
+
+    if (nextState.attempt?.status !== "pending") {
+      if (playbackSnapshotTimeoutRef.current !== null) {
+        window.clearTimeout(playbackSnapshotTimeoutRef.current);
+        playbackSnapshotTimeoutRef.current = null;
+      }
+      setAwaitingPlaybackSnapshot(false);
     }
-  }, [trackCoverUrl]);
+  }, [data, error, requestSeq, requestStartedAt, receivedAt]);
 
   useEffect(() => {
     const clearPlaybackDelay = () => {
@@ -122,100 +120,208 @@ export function DeckPinnedLayer() {
         playbackSnapshotTimeoutRef.current = null;
       }
     };
-     const handleFlightStarted = () => {
+    const publishState = () => {
+      const nextState = coordinatorRef.current!.getState();
+      setPlaybackState(nextState);
+      return nextState;
+    };
+    const isCurrentAttempt = (attemptId?: string) =>
+      Boolean(attemptId && activeAttemptIdRef.current === attemptId);
+
+    const handleFlightStarted = (event: Event) => {
+      const detail = (event as CustomEvent<{
+        attemptId?: string;
+        targetAlbumUri?: string;
+        startedAt?: number;
+      }>).detail;
+      if (!detail?.attemptId || !detail.targetAlbumUri) return;
+
       clearPlaybackDelay();
       clearPlaybackSnapshotTimeout();
-      setAwaitingPlaybackSnapshot(false);
-      setPlaybackSnapshotOverride(null);
-      expectedPlaybackAlbumRef.current = null;
       delete document.documentElement.dataset.discFlightPlaybackReady;
+      delete document.documentElement.dataset.discFlightAttemptId;
+
+      activeAttemptIdRef.current = detail.attemptId;
+      const startedAt = detail.startedAt ?? Date.now();
+      const requestSeqAtStart =
+        process.env.NEXT_PUBLIC_SPOTIFY_MOCK === "1"
+          ? mockSpotifyStore.getSnapshot().requestSeq
+          : nowPlayingStore.getLatestIssuedRequestSeq();
+      const nextState = coordinatorRef.current!.beginAttempt({
+        attemptId: detail.attemptId,
+        targetAlbumUri: detail.targetAlbumUri,
+        startedAt,
+        requestSeqAtStart,
+      });
+      setPlaybackState(nextState);
+
       flightStageRef.current = "flying";
       setFlightStage("flying");
-      setFrozenData(latestDataRef.current);
-      setVisualPlaybackReady(false);
-      setFlightPlaybackStarted(false);
+      setAwaitingPlaybackSnapshot(false);
+
+      // The flight is a visual transition, not the start of the snapshot
+      // confirmation window. That window opens after the player resumes.
     };
 
-    const beginDockedDelay = () => {
-      // "done" is also sent when the Deck target is missing, so the display
-      // cannot remain frozen if a flight has to be discarded early.
+    const handlePlaybackCommandAccepted = (event: Event) => {
+      const detail = (event as CustomEvent<{
+        attemptId?: string;
+        at?: number;
+      }>).detail;
+      if (!isCurrentAttempt(detail?.attemptId)) return;
+
+      const nextState = coordinatorRef.current!.markCommandAccepted(
+        detail.attemptId!,
+        detail.at ?? Date.now(),
+      );
+      setPlaybackState(nextState);
+    };
+
+    const handlePlaybackCommandFailed = (event: Event) => {
+      const detail = (event as CustomEvent<{
+        attemptId?: string;
+        reason?: string;
+        at?: number;
+      }>).detail;
+      if (!isCurrentAttempt(detail?.attemptId)) return;
+
+      const nextState = coordinatorRef.current!.rejectAttempt(
+        detail.attemptId!,
+        detail.reason ?? "PLAY_COMMAND_FAILED",
+        detail.at ?? Date.now(),
+      );
+      setPlaybackState(nextState);
+      clearPlaybackSnapshotTimeout();
+      setAwaitingPlaybackSnapshot(false);
+    };
+
+    const beginDockedDelay = (event: Event) => {
+      const detail = (event as CustomEvent<{ attemptId?: string }>).detail;
+      if (!isCurrentAttempt(detail?.attemptId)) return;
+      const attempt = coordinatorRef.current!.getState().attempt;
+      if (
+        !attempt ||
+        attempt.id !== detail?.attemptId ||
+        (attempt.status !== "pending" && attempt.status !== "confirmed")
+      ) {
+        return;
+      }
       if (flightStageRef.current !== "flying") return;
 
       clearPlaybackDelay();
       flightStageRef.current = "docked";
       setFlightStage("docked");
-      setFrozenData(null);
-      setVisualPlaybackReady(false);
 
       playbackDelayRef.current = window.setTimeout(() => {
         playbackDelayRef.current = null;
-        // Keep the Deck in the docked phase until the muted player has resumed.
-        // This prevents stale Now Playing data from showing playback too early.
-        setFrozenData(null);
-        setVisualPlaybackReady(true);
+        if (!isCurrentAttempt(detail?.attemptId)) return;
         document.documentElement.dataset.discFlightPlaybackReady = "true";
-        window.dispatchEvent(new Event("cdvicious:disc-flight-playback-ready"));
+        document.documentElement.dataset.discFlightAttemptId = detail!.attemptId!;
+        window.dispatchEvent(
+          new CustomEvent("cdvicious:disc-flight-playback-ready", {
+            detail: { attemptId: detail!.attemptId },
+          }),
+        );
       }, DISC_PLAYBACK_START_DELAY_MS);
     };
 
-    const cancelFlight = () => {
+    const cancelFlight = (event: Event) => {
+      const detail = (event as CustomEvent<{ attemptId?: string }>).detail;
+      if (!isCurrentAttempt(detail?.attemptId)) return;
+
       clearPlaybackDelay();
       clearPlaybackSnapshotTimeout();
-      setAwaitingPlaybackSnapshot(false);
-      setPlaybackSnapshotOverride(null);
-      expectedPlaybackAlbumRef.current = null;
       delete document.documentElement.dataset.discFlightPlaybackReady;
+      delete document.documentElement.dataset.discFlightAttemptId;
+
+      const currentState = coordinatorRef.current!.getState();
+      if (currentState.attempt?.status === "pending") {
+        coordinatorRef.current!.rejectAttempt(
+          detail!.attemptId!,
+          "PLAYBACK_CANCELLED",
+          Date.now(),
+        );
+      }
+      publishState();
+
       flightStageRef.current = "idle";
       setFlightStage("idle");
-      setFrozenData(null);
-      setVisualPlaybackReady(true);
-      setFlightPlaybackStarted(false);
+      setAwaitingPlaybackSnapshot(false);
+      activeAttemptIdRef.current = null;
     };
 
     const handlePlaybackStarted = (event: Event) => {
-      const detail = (event as CustomEvent<ExpectedPlaybackAlbum>).detail;
-      expectedPlaybackAlbumRef.current = detail ?? null;
+      const detail = (event as CustomEvent<{
+        attemptId?: string;
+        targetAlbumUri?: string;
+      }>).detail;
+      if (!isCurrentAttempt(detail?.attemptId)) return;
 
-      // In mock mode the play endpoint publishes the confirmed album before
-      // this event. Read the store synchronously so a missed/late subscription
-      // cannot leave the VFD on the previous album for an entire poll cycle.
-      const mockSnapshot =
-        process.env.NEXT_PUBLIC_SPOTIFY_MOCK === "1"
-          ? detail?.snapshot ?? mockSpotifyStore.getSnapshot().data
-          : null;
+      const attempt = coordinatorRef.current!.getState().attempt;
       if (
-        mockSnapshot?.track &&
-        (!detail || trackMatchesAlbum(mockSnapshot.track, detail))
+        !attempt ||
+        attempt.id !== detail?.attemptId ||
+        (attempt.status !== "pending" && attempt.status !== "confirmed")
       ) {
-        latestDataRef.current = mockSnapshot;
-        setPlaybackSnapshotOverride(mockSnapshot);
-        playbackSnapshotAtStartRef.current = mockSnapshot;
-        // A snapshot included in the successful mock-play event is authoritative:
-        // stop waiting for the next subscription notification but keep the
-        // snapshot override visible until the store has caught up.
-        if (detail?.snapshot?.track && detail.snapshot.isPlaying) {
-          setFlightPlaybackStarted(false);
-          setAwaitingPlaybackSnapshot(false);
-          clearPlaybackSnapshotTimeout();
-        }
-      } else {
-        playbackSnapshotAtStartRef.current = latestDataRef.current;
+        return;
       }
 
       flightStageRef.current = "idle";
       setFlightStage("idle");
-      setFlightPlaybackStarted(true);
-      // Keep polling active until Now Playing confirms the album that was asked
-      // to play, not merely until any progress/isPlaying object refresh arrives.
-      setAwaitingPlaybackSnapshot(true);
+
+      if (attempt.status === "confirmed") {
+        clearPlaybackSnapshotTimeout();
+        setAwaitingPlaybackSnapshot(false);
+        return;
+      }
+
+      const confirmationStartedAt = Date.now();
+      coordinatorRef.current!.startConfirmation(detail!.attemptId!, confirmationStartedAt);
       clearPlaybackSnapshotTimeout();
       playbackSnapshotTimeoutRef.current = window.setTimeout(() => {
         playbackSnapshotTimeoutRef.current = null;
-        setAwaitingPlaybackSnapshot(false);
+        const expired = coordinatorRef.current!.expireAttempt(
+          detail!.attemptId!,
+          Date.now(),
+        );
+        setPlaybackState(expired);
+        if (expired.attempt?.id === detail?.attemptId &&
+            expired.attempt?.status === "degraded") {
+          setAwaitingPlaybackSnapshot(false);
+          activeAttemptIdRef.current = null;
+        }
       }, PLAYBACK_SNAPSHOT_TIMEOUT_MS);
+
+      setAwaitingPlaybackSnapshot(true);
+      if (process.env.NEXT_PUBLIC_SPOTIFY_MOCK === "1") {
+        const mockState = mockSpotifyStore.getSnapshot();
+        if (
+          mockState.data &&
+          mockState.requestStartedAt >= attempt.startedAt
+        ) {
+          coordinatorRef.current!.acceptSnapshot({
+            attemptId: detail!.attemptId!,
+            requestSeq: mockState.requestSeq,
+            requestStartedAt: mockState.requestStartedAt,
+            receivedAt: mockState.receivedAt,
+            snapshot: mockState.data,
+          });
+          const nextState = publishState();
+          if (nextState.attempt?.status !== "pending") {
+            clearPlaybackSnapshotTimeout();
+            setAwaitingPlaybackSnapshot(false);
+          }
+        }
+      } else {
+        // This read starts after the playback-resumed signal. Any request that
+        // was already in flight is followed by a queued, strictly newer read.
+        nowPlayingStore.refreshForPlaybackConfirmation();
+      }
     };
 
     window.addEventListener("cdvicious:disc-flight-started", handleFlightStarted);
+    window.addEventListener("cdvicious:playback-command-accepted", handlePlaybackCommandAccepted);
+    window.addEventListener("cdvicious:playback-command-failed", handlePlaybackCommandFailed);
     window.addEventListener("cdvicious:disc-flight-arrived", beginDockedDelay);
     window.addEventListener("cdvicious:disc-flight-done", beginDockedDelay);
     window.addEventListener("cdvicious:disc-flight-cancelled", cancelFlight);
@@ -223,6 +329,8 @@ export function DeckPinnedLayer() {
 
     return () => {
       window.removeEventListener("cdvicious:disc-flight-started", handleFlightStarted);
+      window.removeEventListener("cdvicious:playback-command-accepted", handlePlaybackCommandAccepted);
+      window.removeEventListener("cdvicious:playback-command-failed", handlePlaybackCommandFailed);
       window.removeEventListener("cdvicious:disc-flight-arrived", beginDockedDelay);
       window.removeEventListener("cdvicious:disc-flight-done", beginDockedDelay);
       window.removeEventListener("cdvicious:disc-flight-cancelled", cancelFlight);
@@ -232,48 +340,38 @@ export function DeckPinnedLayer() {
     };
   }, []);
 
+  const isPlaybackPending = playbackState.attempt?.status === "pending";
+  // Every rendered playback surface consumes only the coordinator's accepted
+  // snapshot. Never fall back to a raw store response before it is promoted.
+  const visibleData = playbackState.confirmedSnapshot;
+  const trackCoverUrl = visibleData?.track?.album.images[0]?.url;
+
   useEffect(() => {
-    if (!data?.track) return;
+    if (!trackCoverUrl) return;
 
-    const expectedAlbum = expectedPlaybackAlbumRef.current;
-    const isConfirmedPlayback = expectedAlbum
-      ? trackMatchesAlbum(data.track, expectedAlbum) && data.isPlaying
-      : data !== playbackSnapshotAtStartRef.current;
-
-    if (flightPlaybackStarted && isConfirmedPlayback) {
-      setFlightPlaybackStarted(false);
-      setAwaitingPlaybackSnapshot(false);
-      setPlaybackSnapshotOverride(null);
-      if (playbackSnapshotTimeoutRef.current !== null) {
-        window.clearTimeout(playbackSnapshotTimeoutRef.current);
-        playbackSnapshotTimeoutRef.current = null;
-      }
-    } else if (
-      playbackSnapshotOverride?.track &&
-      data.track.id === playbackSnapshotOverride.track.id &&
-      data.isPlaying
-    ) {
-      // Live store has caught up to the synchronous mock snapshot; resume
-      // rendering from the subscribed value and discard the temporary override.
-      setPlaybackSnapshotOverride(null);
+    // Preload only the confirmed artwork; provisional target albums do not
+    // become visual truth before their snapshot has been accepted.
+    try {
+      useTexture.preload(trackCoverUrl);
+    } catch {
+      // DiscMesh still loads the same texture through its normal Suspense path.
     }
-  }, [data, flightPlaybackStarted, playbackSnapshotOverride]);
+  }, [trackCoverUrl]);
 
-  // Keep the last real track mounted while DeckPinnedLayer fades out.
-  // The polling hook intentionally returns an empty snapshot off-chapter;
-  // using that empty value here would swap the CD/booklet midway through the fade.
-  const visibleData = flightStage === "flying"
-    ? frozenData
-    : playbackSnapshotOverride ??
-      (deckHidden ? latestDataRef.current : data);
-  const isDockedBeforePlayback =
-    flightStage === "docked" && !flightPlaybackStarted;
   const visibleIsPlaying =
-    visualPlaybackReady &&
-    !isDockedBeforePlayback &&
-    (flightPlaybackStarted || (visibleData?.isPlaying ?? false));
-  const visibleProgressMs = isDockedBeforePlayback
-    ? 0
+    !isPlaybackPending && (visibleData?.isPlaying ?? false);
+  const playbackStatus =
+    playbackState.attempt?.status === "pending"
+      ? "pending"
+      : playbackState.attempt?.status === "failed"
+        ? "failed"
+        : playbackState.attempt?.status === "degraded"
+          ? "degraded"
+          : visibleData
+            ? "confirmed"
+            : "unavailable";
+  const visibleProgressMs = isPlaybackPending
+    ? null
     : (visibleData?.progressMs ?? null);
   const coverUrl = visibleData?.track?.album.images[0]?.url;
   const accentColor = useDominantColor(coverUrl) ?? "#1DB954";
@@ -317,6 +415,7 @@ export function DeckPinnedLayer() {
               track={visibleData?.track ?? null}
               isPlaying={visibleIsPlaying}
               error={error}
+              playbackStatus={playbackStatus}
               progressMs={visibleProgressMs}
               durationMs={visibleData?.durationMs ?? null}
             />
