@@ -355,6 +355,64 @@ test("error de red no fabrica éxito y permite un nuevo intento que sí confirma
   assert.equal(state(subject).confirmedSnapshot.isPlaying, true);
 });
 
+test("flight delayed beyond 15s does not time out snapshot confirmation before playback resumes", () => {
+  const subject = coordinator();
+  const attemptId = "slow-flight";
+  subject.beginAttempt({
+    attemptId,
+    targetAlbumUri: TARGET_ALBUM_URI,
+    startedAt: 100,
+    deferConfirmation: true,
+  });
+  subject.markCommandAccepted(attemptId, 120);
+
+  // Software WebGL may take longer than the nominal flight duration.
+  // Until the player resumes, no snapshot confirmation timeout has started.
+  subject.expireAttempt(attemptId, 20_000);
+  assert.equal(state(subject).attempt.status, "pending");
+  assert.deepEqual(state(subject).confirmedSnapshot, OLD_SNAPSHOT);
+
+  subject.startConfirmation(attemptId, 20_000);
+  subject.expireAttempt(attemptId, 25_000);
+  assert.equal(state(subject).attempt.status, "pending");
+
+  acceptTarget(subject, {
+    attemptId,
+    requestSeq: 3,
+    requestStartedAt: 20_005,
+    receivedAt: 20_100,
+    data: TARGET_SNAPSHOT,
+  });
+  assert.equal(state(subject).attempt.status, "confirmed");
+  assert.deepEqual(state(subject).confirmedSnapshot, TARGET_SNAPSHOT);
+});
+
+test("snapshot confirmation still expires 15s after resume, and late confirmation is discarded", () => {
+  const subject = coordinator();
+  const attemptId = "slow-confirmation";
+  subject.beginAttempt({
+    attemptId,
+    targetAlbumUri: TARGET_ALBUM_URI,
+    startedAt: 100,
+    deferConfirmation: true,
+  });
+  subject.startConfirmation(attemptId, 20_000);
+  subject.expireAttempt(attemptId, 34_999);
+  assert.equal(state(subject).attempt.status, "pending");
+  subject.expireAttempt(attemptId, 35_000);
+  assert.equal(state(subject).attempt.status, "degraded");
+
+  acceptTarget(subject, {
+    attemptId,
+    requestSeq: 4,
+    requestStartedAt: 20_001,
+    receivedAt: 35_100,
+    data: TARGET_SNAPSHOT,
+  });
+  assert.equal(state(subject).attempt.status, "degraded");
+  assert.deepEqual(state(subject).confirmedSnapshot, OLD_SNAPSHOT);
+});
+
 test("timeout pasa a degraded, conserva el snapshot y un evento tardío no revive el intento", () => {
   const subject = coordinator();
   const attemptId = begin(subject);
