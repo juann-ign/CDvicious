@@ -16,6 +16,8 @@ interface CrateShelfProps {
   chapterIndex?: number;
   className?: string;
   label?: string;
+  /** Automatic drift in pixels per second; manual movement uses its own model. */
+  autoSpeed?: number;
 }
 
 const COPIES = 3;
@@ -31,6 +33,7 @@ export function CrateShelf({
   chapterIndex = 2,
   className,
   label = "Páginas de la batea",
+  autoSpeed = 60,
 }: CrateShelfProps) {
   const [hovering, setHovering] = useState(false);
   const [focused, setFocused] = useState(false);
@@ -82,7 +85,7 @@ export function CrateShelf({
 
   const { containerRef, trackRef, isDragging, page, goTo, stepPage } =
     useMarqueeBelt({
-      speed: 60,
+      speed: autoSpeed,
       enabled: active && albums.length > 0,
       paused: !driftEnabled || hovering || focused || albums.length === 0,
       length,

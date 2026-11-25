@@ -1,4 +1,5 @@
 .case {
+  --jewel-front-spine: var(--jewel-case-hinge-extent, 8%);
   position: relative;
   display: block;
   width: 100%;
@@ -10,15 +11,42 @@
   transition: transform var(--transition-fast);
 }
 
-.caseFace { position: absolute; inset: 0; display: block; }
+/* Geometry belongs here; finish, acrylic and moulding come from the shared material. */
+.caseFace {
+  position: absolute;
+  inset: 0;
+  display: block;
+  box-sizing: border-box;
+  isolation: isolate;
+}
 
-/* The Collection uses the same cover, acrylic edge and reflections face on.
-   The default presentation used by Batea keeps its existing footprint. */
+/* Collection metadata keeps its fixed height; the default overlay stays face-only. */
 .collectionCase { display: flex; flex-direction: column; align-self: start; height: var(--collection-card-height, auto); aspect-ratio: auto; box-sizing: border-box; color: #27362b; text-align: left; }
-.collectionCase .caseFace { position: relative; inset: auto; flex: none; width: 100%; aspect-ratio: 1.08; box-sizing: border-box; background: linear-gradient(135deg, #e4efea99, #7b8d8566 52%, #f1f7efbb); border: 2px ridge #d2ddd6; box-shadow: 2px 4px 5px #27382f4d; }
-.collectionCase .caseFace::before { content: ""; position: absolute; top: 2px; bottom: 2px; left: 2px; width: 9px; background: repeating-linear-gradient(90deg, #25382c 0 1px, #b5c1b999 1px 2px); border-right: 1px solid #eef4e5aa; }
-.collectionCase .cover { position: absolute; top: 3px; bottom: 3px; left: 13px; right: 3px; width: auto; height: auto; }
-.collectionCase .edge { border: 1px solid #33443b; box-shadow: inset 0 0 0 2px #f2fff13b, inset -3px 0 6px #ffffff3b, inset 3px 0 7px #18291f54; }
+.collectionCase .caseFace { position: relative; inset: auto; flex: none; width: 100%; aspect-ratio: 1.08; }
+
+.cover {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  bottom: 2px;
+  left: calc(var(--jewel-front-spine) + 2px);
+  display: block;
+  overflow: hidden;
+}
+
+.hinge {
+  position: absolute;
+  top: 1px;
+  bottom: 1px;
+  left: 1px;
+  width: calc(var(--jewel-front-spine) - 1px);
+  z-index: 2;
+  pointer-events: none;
+}
+
+.art { object-fit: cover; }
+.edge { z-index: 3; }
+
 /* Keep all rows aligned while artist and genre metadata load independently. */
 .details { display: grid; flex: none; grid-template-rows: 18px 16px 15px; width: 100%; min-width: 0; height: 52px; box-sizing: border-box; padding-top: 3px; font-family: var(--font-ui); }
 .details strong, .ellipsis { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
@@ -37,68 +65,35 @@
   outline: none;
 }
 
-.case:hover .edge,
-.case:focus-visible .edge {
-  box-shadow: 0 0 0 1px var(--color-phosphor), 0 0 14px -4px var(--color-phosphor-glow);
+.case:hover .caseFace,
+.case:focus-visible .caseFace {
+  outline: 1px solid var(--color-phosphor);
+  outline-offset: 1px;
 }
 
-.cover {
-  position: relative;
-  display: block;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  background: var(--color-surface-dark);
+.case:focus-visible .caseFace {
+  outline-width: 2px;
+  outline-offset: 2px;
 }
 
-.art {
-  object-fit: cover;
-}
-
-.edge {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  pointer-events: none;
-  border: 1px solid rgba(0, 0, 0, 0.8);
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.18),
-    inset -4px 0 8px rgba(255, 255, 255, 0.12),
-    inset 4px 0 10px rgba(0, 0, 0, 0.42),
-    inset 0 -10px 14px rgba(0, 0, 0, 0.4);
-  transition: box-shadow var(--transition-fast);
-}
-
-.gloss {
-  position: absolute;
-  inset: 0;
-  z-index: 3;
-  pointer-events: none;
-  mix-blend-mode: screen;
-  background: linear-gradient(
-    104deg,
-    transparent 26%,
-    rgba(255, 255, 255, 0.22) 42%,
-    rgba(255, 255, 255, 0.04) 54%,
-    transparent 66%
-  );
-}
-
-
-/* Animate card details only when Collection is the settled active chapter. */
+/* Animate cards only when Collection is the settled active chapter. */
 :global([data-collection-transition-lite="true"]) .case,
 :global([data-rail-moving="true"]) .case {
   transform: none;
   transition: none;
 }
 
-:global([data-collection-transition-lite="true"]) .case .edge,
-:global([data-rail-moving="true"]) .case .edge {
+:global([data-collection-transition-lite="true"]) .caseFace,
+:global([data-rail-moving="true"]) .caseFace {
   box-shadow: none;
-  transition: none;
 }
 
-:global([data-collection-transition-lite="true"]) .case .gloss,
-:global([data-rail-moving="true"]) .case .gloss {
-  display: none;
+:global([data-collection-transition-lite="true"]) .edge,
+:global([data-rail-moving="true"]) .edge {
+  background: none;
+  box-shadow: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .case { transition: none; }
 }

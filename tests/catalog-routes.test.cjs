@@ -98,3 +98,30 @@ test("la lista de álbum recorre todas las páginas y ordena discos sin perder o
   ]);
   assert.ok(calls.every(({ signal }) => signal === request.signal));
 });
+
+test("una cuota agotada en mitad del álbum conserva Retry-After y nunca confirma una lista parcial", async () => {
+  const calls = [];
+  const server = load("src/lib/catalogServer.ts", {
+    "next/server": next,
+    "./session": { getValidAccessToken: async () => "private-token" },
+    "./spotify": { fetchSpotifyWebApi: async (_token, _endpoint, url) => {
+      calls.push(url);
+      if (calls.length === 1) return Response.json({ offset: 0, limit: 50, next: "next", items: [
+        { id: "track", uri: "spotify:track:track", name: "Pista", duration_ms: 180000 },
+      ] });
+      return Response.json({ error: { reason: "QUOTA_EXCEEDED", message: "upstream-body" } }, {
+        status: 429, headers: { "Retry-After": "7218" },
+      });
+    } },
+  });
+  const api = load("src/app/api/album/[id]/tracks/route.ts", {
+    "next/server": next,
+    "@/lib/catalogServer": server,
+    "@/mocks/demoCatalog": {},
+  }, { process: { env: { NEXT_PUBLIC_SPOTIFY_MOCK: "0" } } });
+  const result = await api.GET(new Request("http://local/api/album/album123/tracks"), { params: Promise.resolve({ id: "album123" }) });
+  assert.equal(result.status, 429);
+  assert.equal(result.headers.get("Retry-After"), "7218");
+  assert.deepEqual(await result.json(), { error: "RATE_LIMITED", reason: "QUOTA_EXCEEDED" });
+  assert.equal(calls.length, 2);
+});

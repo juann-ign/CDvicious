@@ -106,6 +106,7 @@ export function CrateChapter() {
         ) : (
           <CrateShelf
             albums={bateaAlbums(albums)}
+            autoSpeed={84}
             onSelect={openAlbum}
             onGrabStart={handleGrabStart}
             onGrabEnd={handleGrabEnd}

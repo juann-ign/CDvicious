@@ -40,7 +40,7 @@ async function expectAligned(page) {
   const g = await geometry(page);
   expect(Math.abs(g.left - g.shelfLeft)).toBeLessThan(2);
   expect(Math.abs(g.right - g.shelfRight)).toBeLessThan(2);
-  expect(g.shelfTop - g.bottom).toBeGreaterThan(14);
+  expect(g.shelfTop - g.bottom).toBeGreaterThan(35);
   expect(g.shelfBottom).toBeLessThanOrEqual(g.footerTop + 1);
   return g;
 }

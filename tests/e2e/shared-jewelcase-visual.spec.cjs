@@ -1,7 +1,6 @@
 const { test, expect } = require("./support/qa-evidence.cjs");
 const { openRail, go } = require("./support/b2-harness.cjs");
-const collection = (page) => page.getByRole("region", { name: "La Colección", exact: true });
-const scene = (page) => page.getByTestId("artist-disc-scene");
+const scene = (page) => page.getByTestId("artist-discography");
 const detail = (page) => page.getByTestId("album-detail-page");
 const presentation = (page) => page.getByTestId("jewel-case-presentation");
 // Explicit visual profile. All pre-existing regression options remain intact.
@@ -9,9 +8,8 @@ test.use({ launchOptions: { args: ["--enable-webgl", "--ignore-gpu-blocklist", "
 async function openArtist(page) {
   await openRail(page);
   await go(page, "Colección", 3);
-  await collection(page).getByRole("button", { name: "Buscar artista", exact: true }).click();
-  await page.getByRole("searchbox", { name: "Buscar artistas", exact: true }).fill("Vertice");
-  await collection(page).locator('[aria-label="Resultados de artistas"]').getByRole("button").first().click();
+  await page.getByRole("combobox", { name: "Buscar discos o artistas", exact: true }).fill("Vertice");
+  await page.getByRole("option", { name: "Explorar artista Vértice Magnético", exact: true }).click();
   await expect(scene(page)).toBeVisible();
 }
 
@@ -50,14 +48,15 @@ test.describe("shared-case: interior visible en GPU normal", () => {
 
   test("la tapa abierta deja visibles los nombres de pistas, además de su DOM", async ({ page }, testInfo) => {
     await openArtist(page);
-    await scene(page).hover({ position: { x: 8, y: 28 } });
-    await scene(page).getByRole("button", { name: "Seleccionar Campo magnético", exact: true }).click();
+    const tray = scene(page).locator("[data-batea-tray]");
+    await tray.hover({ position: { x: 8, y: 28 } });
+    await tray.getByRole("button", { name: /Campo magnético/ }).click();
     await expect(presentation(page)).toHaveAttribute("data-presentation", "closed");
     await detail(page).getByRole("button", { name: "Abrir caja", exact: true }).click();
     await expect(presentation(page)).toHaveAttribute("data-presentation", "open");
 
     await visibleTrackInk(page, testInfo);
-    const border = presentation(page).getByRole("button", { name: "Cerrar caja de CD", exact: true });
+    const border = presentation(page).getByTestId("jewel-case-close-left");
     // The left strip extends past the paper's clipped bounds. Target the
     // visible right-hand frame, as a pointer does on the actual acrylic edge.
     await border.locator("span").nth(3).hover();

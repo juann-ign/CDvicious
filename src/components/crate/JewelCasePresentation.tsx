@@ -10,19 +10,11 @@ import styles from "./JewelCasePresentation.case.module.css";
 import densityStyles from "./JewelCasePresentation.density.module.css";
 import motionStyles from "./JewelCasePresentation.motion.module.css";
 import presentation from "./JewelCasePresentation.module.css";
+import material from "./JewelCaseMaterial.module.css";
 
 // One hinge, shared by modal and inline consumers. These are the modal's
 // existing transform duration and angles, not a second approximation.
 export const JEWEL_CASE_HINGE_MS = 1000;
-
-interface ReleaseMeta {
-  year?: string;
-  label?: string;
-  catalogNumber?: string;
-  format?: string;
-  country?: string;
-  tags?: string[];
-}
 
 export interface JewelCasePresentationProps {
   album: AlbumItem;
@@ -45,8 +37,7 @@ function fmt(ms: number) {
 }
 
 export function JewelCasePresentation({ album, open, onOpen, onClose, onClosed, onOpened, disabled = false, active = true, hideDisc = false, discRef, variant = "modal", artwork = "cover" }: JewelCasePresentationProps) {
-  const { tracks, loading, error: tracksError, retry: retryTracks } = useAlbumTracks(album.id);
-  const [releaseMeta, setReleaseMeta] = useState<ReleaseMeta>({});
+  const { tracks, loading, error: tracksError, errorMessage, canRetry, retry: retryTracks } = useAlbumTracks(album.id, open);
   const [isCaseOpen, setCaseOpen] = useState(false);
   const [reverse, setReverse] = useState(false);
   const [inspecting, setInspecting] = useState(false);
@@ -73,18 +64,8 @@ export function JewelCasePresentation({ album, open, onOpen, onClose, onClosed, 
   }, [cancel, startRail]);
 
   useEffect(() => {
-    const controller = new AbortController();
     setReverse(false); setInspecting(false);
-    setReleaseMeta({ year: album.release_date?.slice(0, 4), label: album.label, format: "COMPACT DISC", tags: album.genres ?? [] });
-    if (process.env.NEXT_PUBLIC_SPOTIFY_MOCK !== "1") {
-      const query = new URLSearchParams({ artist: album.artists.map((artist) => artist.name).join(", "), album: album.name });
-      void fetch(`/api/album/${encodeURIComponent(album.id)}/release-meta?${query}`, { signal: controller.signal })
-        .then((response) => response.ok ? response.json() : null)
-        .then((data: ReleaseMeta | null) => { if (!controller.signal.aborted && data) setReleaseMeta((current) => ({ ...current, ...data, tags: data.tags?.length ? data.tags : current.tags })); })
-        .catch(() => undefined);
-    }
-    return () => controller.abort();
-  }, [album.id, album.name, album.artists, album.release_date, album.label, album.genres]);
+  }, [album.id]);
 
   useLayoutEffect(() => {
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -164,70 +145,21 @@ export function JewelCasePresentation({ album, open, onOpen, onClose, onClosed, 
   const handleOpenCase = () => { if (active && !disabled) onOpen(); };
   const handleCloseCase = () => { if (active && !disabled) onClose(); };
 
-  return <div className={`${presentation.root} ${variant === "inline" ? presentation.inline : ""}`} data-jewel-case="shared" data-testid="jewel-case-presentation" data-case-open={isCaseOpen} data-presentation={phase} data-variant={variant} data-state={phase} data-open={isCaseOpen} data-album-id={album.id} data-gesture-owner="detail" inert={!active} onClick={(event) => event.stopPropagation()}>
+  return <div className={`${presentation.root} ${material.finish} ${variant === "inline" ? presentation.inline : ""}`} data-jewel-case="shared" data-jewel-material="shared" data-testid="jewel-case-presentation" data-case-open={isCaseOpen} data-presentation={phase} data-variant={variant} data-state={phase} data-open={isCaseOpen} data-album-id={album.id} data-gesture-owner="detail" inert={!active} onClick={(event) => event.stopPropagation()}>
 <div className={`${styles.casePerspective} ${presentation.perspective}`}>
           <div className={`${styles.caseShell} ${presentation.shell}`}>
-            <div className={motionStyles.closedStage}>
+            <div className={`${motionStyles.closedStage} ${isCaseOpen ? motionStyles.closedStageOpen : ""}`}>
               {!isCaseOpen && (
                 <button
                   type="button"
                   className={`${motionStyles.closedHitArea} ${presentation.caseHitTarget}`}
                   data-testid="jewel-case-open-target"
+                  data-case-edge="open"
                   onClick={handleOpenCase}
                   aria-label={`Abrir caja de ${album.name}`}
                   disabled={disabled}
                 />
               )}
-
-              <aside
-                className={`${motionStyles.closedMeta} ${isCaseOpen ? motionStyles.closedMetaOpen : ""}`}
-                aria-hidden={isCaseOpen}
-              >
-                <div className={motionStyles.closedMetaPanel}>
-                  <div className={motionStyles.closedMetaHeader}>
-                    <span>RELEASE DATA</span>
-                    <span>{releaseMeta?.format ?? "COMPACT DISC"}</span>
-                  </div>
-                  <div className={motionStyles.closedMetaGrid}>
-                    <div>
-                      <small>YEAR</small>
-                      <strong>
-                        {releaseMeta?.year ??
-                          album.release_date?.slice(0, 4) ??
-                          "—"}
-                      </strong>
-                    </div>
-                    <div>
-                      <small>COUNTRY</small>
-                      <strong>{releaseMeta?.country ?? "—"}</strong>
-                    </div>
-                    <div>
-                      <small>LABEL</small>
-                      <strong>{releaseMeta?.label ?? "—"}</strong>
-                    </div>
-                    <div>
-                      <small>GENRE</small>
-                      <strong>
-                        {releaseMeta.tags?.slice(0, 2).join(" · ") || "—"}
-                      </strong>
-                    </div>
-                  </div>
-                  <div className={motionStyles.closedMetaTags}>
-                    {(releaseMeta?.tags?.length
-                      ? releaseMeta.tags
-                      : (album.genres ?? [])
-                    )
-                      .slice(0, 3)
-                      .map((tag) => (
-                        <span key={tag}>{tag}</span>
-                      ))}
-                  </div>
-                  <div
-                    className={motionStyles.closedMetaCode}
-                    aria-hidden="true"
-                  />
-                </div>
-              </aside>
 
               <section
                 className={`${motionStyles.closedFace} ${isCaseOpen ? motionStyles.closedFaceOpen : ""}`}
@@ -235,7 +167,7 @@ export function JewelCasePresentation({ album, open, onOpen, onClose, onClosed, 
                 ref={hingeRef}
                 aria-hidden="true"
               >
-                <div className={motionStyles.closedFacePanel}>
+                <div className={`${motionStyles.closedFacePanel} ${material.face}`}>
                   <div className={motionStyles.closedArtwork}>
                     {!coverUrl && <div className={presentation.neutralArtwork}><strong>{album.name}</strong><span>{album.artists.map((artist) => artist.name).join(", ")}</span><small>PORTADA ORIGINAL EN SPOTIFY</small></div>}
                     {coverUrl && (
@@ -247,29 +179,10 @@ export function JewelCasePresentation({ album, open, onOpen, onClose, onClosed, 
                         className={motionStyles.closedArtworkImage}
                       />
                     )}
+                    <span className={material.bookletMold} data-jewel-detail="booklet-mold" aria-hidden="true" />
                   </div>
-                  <div
-                    className={motionStyles.closedAcrylic}
-                    aria-hidden="true"
-                  >
-                    <span
-                      className={`${motionStyles.closedClip} ${motionStyles.closedClipTopLeft}`}
-                    />
-                    <span
-                      className={`${motionStyles.closedClip} ${motionStyles.closedClipTopRight}`}
-                    />
-                    <span
-                      className={`${motionStyles.closedClip} ${motionStyles.closedClipBottomLeft}`}
-                    />
-                    <span
-                      className={`${motionStyles.closedClip} ${motionStyles.closedClipBottomRight}`}
-                    />
-                  </div>
-                </div>
-                <div className={motionStyles.closedSpine} aria-hidden="true">
-                  <span />
-                  <span />
-                  <span />
+                  <div className={`${motionStyles.closedSpine} ${material.hinge}`} aria-hidden="true" />
+                  <span className={`${material.lid} ${motionStyles.closedLid}`} aria-hidden="true" />
                 </div>
               </section>
             </div>
@@ -280,7 +193,7 @@ export function JewelCasePresentation({ album, open, onOpen, onClose, onClosed, 
               inert={!isCaseOpen || disabled}
             >
               <section
-                className={`${styles.leftLeaf} ${motionStyles.motionLeaf}`}
+                className={`${styles.leftLeaf} ${motionStyles.motionLeaf} ${material.face}`}
                 style={{ transform: leftTransform }}
                 aria-label="Portada y lista de canciones"
                 data-testid="jewel-case-tracklist"
@@ -299,7 +212,6 @@ export function JewelCasePresentation({ album, open, onOpen, onClose, onClosed, 
                         className={styles.cover}
                       />
                     )}
-                    <span className={styles.coverGlare} aria-hidden="true" />
                   </div>
 
                   <div className={`${styles.trackPanel} ${densityStyles.trackPanel} ${presentation.trackContent}`}>
@@ -308,6 +220,8 @@ export function JewelCasePresentation({ album, open, onOpen, onClose, onClosed, 
                       className={`${styles.tracklist} ${presentation.trackScroll} ${denseTracklist ? densityStyles.trackGridDense : ""}`}
                       tabIndex={isCaseOpen ? 0 : -1}
                       aria-label="Lista de pistas"
+                      data-track-layout={denseTracklist ? "columns" : "single"}
+                      data-track-count={tracks?.length ?? 0}
                       data-lenis-prevent=""
                       style={
                         denseTracklist
@@ -319,11 +233,12 @@ export function JewelCasePresentation({ album, open, onOpen, onClose, onClosed, 
                         <li className={`${styles.trackRow} ${densityStyles.loadingRow}`}>LEYENDO TOC...</li>
                       )}
                       {!loading && !tracksError && tracks?.length === 0 && <li role="status">LISTA DE PISTAS NO DISPONIBLE</li>}
-                      {tracksError && <li className={presentation.trackError} role="status">No se pudo cargar la lista de pistas.<button type="button" onClick={retryTracks}>Reintentar pistas</button></li>}
+                      {tracksError && <li className={presentation.trackError} role="status">{errorMessage ?? "No se pudo cargar la lista de pistas."}<button type="button" onClick={retryTracks} disabled={!canRetry}>Reintentar pistas</button></li>}
                       {!loading &&
                         tracks?.map((t, i) => (
                           <li
                               key={t.position}
+                            aria-label={`${String(i + 1).padStart(2, "0")}. ${t.name}, ${fmt(t.duration_ms)}`}
                             className={
                               denseTracklist
                                 ? densityStyles.trackRowDense
@@ -342,28 +257,30 @@ export function JewelCasePresentation({ album, open, onOpen, onClose, onClosed, 
                             <span className={`${denseTracklist ? densityStyles.trackNameDense : styles.trackName} ${presentation.trackTitle}`} title={t.name}>
                               {t.name}
                             </span>
-                            {!denseTracklist && (
-                              <span className={styles.trackDuration}>
+                              <span className={denseTracklist ? densityStyles.trackDurationDense : styles.trackDuration}>
                                 {fmt(t.duration_ms)}
                               </span>
-                            )}
                           </li>
                         ))}
                     </ul>
                   </div>
+                </div>
+                <span className={`${material.bookletMold} ${styles.leftBookletMold}`} data-jewel-detail="booklet-mold" aria-hidden="true" />
+                <span className={`${material.lid} ${styles.leafLid}`} aria-hidden="true" />
                   <button
                     type="button"
                     className={`${motionStyles.leftLeafCloseHitArea} ${presentation.caseHitTarget}`}
                     onClick={handleCloseCase}
                     aria-label="Cerrar caja de CD"
+                    data-case-edge="close-left"
+                    data-testid="jewel-case-close-left"
                     tabIndex={isCaseOpen ? 0 : -1}
                     disabled={disabled}
                   ><span /><span /><span /><span /></button>
-                </div>
               </section>
 
               <section
-                className={`${styles.rightLeaf} ${motionStyles.motionLeaf}`}
+                className={`${styles.rightLeaf} ${motionStyles.motionLeaf} ${material.face}`}
                 style={{ transform: rightTransform }}
                 aria-label="Disco"
                 data-testid="jewel-case-tray"
@@ -442,22 +359,22 @@ export function JewelCasePresentation({ album, open, onOpen, onClose, onClosed, 
                     <span className={styles.discRing} aria-hidden="true" />
                     <span className={styles.discHub} aria-hidden="true" />
                   </div>
-                  <div className={presentation.discTools}><span>ARRASTRÁ · ← →</span><button type="button" disabled={!active || disabled || !isCaseOpen} onClick={() => setReverse((value) => !value)} aria-pressed={reverse}>GIRAR CD</button></div>
+                  <div className={presentation.discTools}><button type="button" disabled={!active || disabled || !isCaseOpen} onClick={() => setReverse((value) => !value)} aria-pressed={reverse}>GIRAR CD</button></div>
                 </div>
+                <span className={`${material.lid} ${styles.leafLid}`} aria-hidden="true" />
+                <button type="button" className={`${presentation.rightEdgeClose} ${presentation.caseHitTarget}`}
+                  data-case-edge="close-right" data-testid="jewel-case-close-right"
+                  onClick={handleCloseCase} aria-label="Cerrar caja desde el borde derecho"
+                  tabIndex={isCaseOpen ? 0 : -1} disabled={disabled} />
               </section>
             </div>
 
             <div
-              className={`${styles.hinge} ${
+              className={`${styles.hinge} ${material.hinge} ${
                 isCaseOpen ? styles.hingeOpen : styles.hingeClosed
               }`}
               aria-hidden="true"
-            >
-              <span />
-              <span />
-              <span />
-            </div>
-            <div className={styles.acrylicReflection} aria-hidden="true" />
+            />
           </div>
         </div>
   </div>;

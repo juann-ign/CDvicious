@@ -3,6 +3,7 @@
 import Image from "next/image";
 import type { AlbumItem } from "@/types/crate";
 import styles from "./JewelCaseFront.module.css";
+import material from "./JewelCaseMaterial.module.css";
 import { collectionYear } from "@/lib/collectionFilters";
 
 interface JewelCaseFrontProps {
@@ -24,20 +25,21 @@ export function JewelCaseFront({
   return (
     <button
       type="button"
-      className={presentation === "collection" ? `${styles.case} ${styles.collectionCase}` : styles.case}
+      className={`${styles.case} ${material.finish}${presentation === "collection" ? ` ${styles.collectionCase}` : ""}`}
       onClick={(e) => onSelect(e.currentTarget)}
       aria-label={`${artist} — ${album.name}`}
       aria-description={presentation === "collection" ? [edition, genres].filter(Boolean).join(". ") : undefined}
       data-collection-album-id={presentation === "collection" ? album.id : undefined}
     >
-      <span className={styles.caseFace}>
+      <span className={`${styles.caseFace} ${material.face}`} data-jewel-material="shared">
         <span className={styles.cover}>
           {album.images[0]?.url && (
             <Image src={album.images[0].url} alt="" fill sizes="140px" unoptimized className={styles.art} />
           )}
+          <span className={material.bookletMold} data-jewel-detail="booklet-mold" aria-hidden="true" />
         </span>
-        <span className={styles.edge} />
-        <span className={styles.gloss} />
+        <span className={`${styles.hinge} ${material.hinge}`} aria-hidden="true" />
+        <span className={`${styles.edge} ${material.lid}`} aria-hidden="true" />
       </span>
       {presentation === "collection" && <span className={styles.details}>
         <strong title={album.name}>{album.name}</strong>

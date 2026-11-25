@@ -41,8 +41,9 @@ test("Next listen aligns its shelf to the visible equipment and fits both in the
     close(visible.right - visible.left, listen.shelfWidth);
     close((visible.right + visible.left) / 2, width / 2);
     assert.ok(visible.top >= 62);
-    assert.ok(listen.shelfTop - visible.bottom >= 16);
-    assert.ok(listen.shelfTop + listen.caseSize + 116 <= height + 1e-7);
+    assert.ok(listen.shelfTop - visible.bottom >= 36);
+    assert.ok(listen.caseSize >= 100);
+    assert.ok(listen.shelfTop + listen.caseSize + 104 <= height + 1e-7);
   }
 });
 

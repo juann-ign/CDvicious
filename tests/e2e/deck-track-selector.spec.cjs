@@ -172,3 +172,30 @@ test("Track listing acomoda títulos largos, permite reintentar y muestra el nue
   await expect(track(page, /Ventana de neón/)).toHaveCount(0);
   await expect(page.getByTestId("rail-flying-disc")).toHaveCount(0);
 });
+
+test("Track listing conserva la pista confirmada durante la cuota de Spotify y recupera la lista completa", async ({ page }) => {
+  let requests = 0;
+  await page.route("**/api/album/mock-album-01/tracks", (route) => {
+    if (++requests > 1) return route.continue();
+    return route.fulfill({
+      status: 429,
+      headers: { "Retry-After": "4" },
+      json: { error: "RATE_LIMITED", reason: "QUOTA_EXCEEDED" },
+    });
+  });
+  await openRail(page);
+  await go(page, "Deck", 0);
+  await trigger(page).click();
+  const retry = panel(page).getByRole("button", { name: "Reintentar", exact: true });
+  await expect(panel(page).getByRole("alert")).toContainText("Spotify agotó la cuota de pistas.");
+  const partial = panel(page).locator("[data-track-listing-partial]");
+  await expect(partial).toContainText("Ventana de neón");
+  await expect(partial.getByRole("button")).toHaveCount(0);
+  await expect(retry).toBeDisabled();
+  expect(requests).toBe(1);
+  await expect(retry).toBeEnabled();
+  await retry.click();
+  await expect(track(page, /Ventana de neón/)).toHaveAttribute("aria-current", "true");
+  await expect(partial).toHaveCount(0);
+  expect(requests).toBe(2);
+});

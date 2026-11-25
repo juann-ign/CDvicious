@@ -20,7 +20,7 @@ export function DeckTrackSelector({ enabled, track, controls }: Props) {
   const id = useId();
   const albumId = track?.album.id;
   const visible = enabled && open && Boolean(albumId);
-  const { tracks, loading, error, retry } = useAlbumTracks(albumId, visible);
+  const { tracks, loading, error, errorMessage, canRetry, rateLimited, retry } = useAlbumTracks(albumId, visible);
   const active = track ? tracks?.find((entry) => entry.id === track.id || entry.linkedFromId === track.id) : undefined;
   const multiDisc = tracks?.some((entry) => entry.disc_number !== tracks[0].disc_number);
 
@@ -63,9 +63,16 @@ export function DeckTrackSelector({ enabled, track, controls }: Props) {
     {visible && <section className={styles.panel} id={id} aria-label="Pistas del álbum" aria-busy={loading}>
       <header className={styles.album} title={track.album.name}>{track.album.name}</header>
       {loading ? <p role="status" className={styles.message}>Cargando pistas…</p>
-        : error ? <div role="alert" className={styles.message}>No se pudieron cargar las pistas.
-          <button type="button" onClick={retry}>Reintentar</button>
-        </div>
+        : error ? <>
+          <div role="alert" className={styles.message}>
+            {errorMessage ?? "No se pudieron cargar las pistas."}
+            <button type="button" disabled={!canRetry} onClick={retry}>Reintentar</button>
+          </div>
+          {rateLimited && <p className={styles.notice} data-track-listing-partial>
+            <strong>Pista actual</strong><br />{track.name}{" "}
+            <span className={styles.time}>{formatTime(track.duration_ms)}</span>
+          </p>}
+        </>
         : !tracks?.length ? <p role="status" className={styles.message}>El álbum no informa pistas.</p>
         : <>
           {!controls.canControl && <p className={styles.notice}>Activá este reproductor en Spotify para elegir una pista.</p>}

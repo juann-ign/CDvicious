@@ -1,5 +1,5 @@
 .spine {
-  --case-depth: clamp(14px, 1.4vw, 21px);
+  --case-depth: calc(var(--case-size) * .075);
   --tilt: 0deg;
   position: relative;
   flex: 0 0 auto;
@@ -40,32 +40,21 @@
 .rear {
   position: absolute;
   inset: 0;
-  border: 2px solid var(--jewel-case-edge, #cbd9d1b3);
-  border-radius: 3px;
 }
 
 .rear {
   transform: translateZ(calc(-1 * var(--case-depth)));
-  background: var(--jewel-case-rear-fill, linear-gradient(145deg, #7d948c, #24332e 72%));
+  background: var(--jewel-case-rear-fill);
+  border: 1px solid #cad4cdb3;
+  border-radius: 2px;
 }
 
-.front {
-  overflow: hidden;
-  background: var(--jewel-case-front-fill, linear-gradient(130deg, #bdcdc5, #17231e 55%));
-  box-shadow: 3px 5px 8px #04080680;
-}
-
-.front::after {
-  content: "";
-  position: absolute;
-  inset: 1px;
-  border: 1px solid var(--jewel-case-inner-edge, #eaf5ed55);
-  background: linear-gradient(119deg, #edf8f047, transparent 23% 56%, #ecf7ed27 67%, transparent 74%);
-}
+.front { overflow: hidden; }
 
 .cover {
   position: absolute;
-  inset: 4px 4px 4px 9%;
+  inset: var(--jewel-case-cover-margin) var(--jewel-case-cover-margin)
+    var(--jewel-case-cover-margin) var(--jewel-case-hinge-extent);
   background-color: #45574e;
   background-image: var(--demo-ink, none), var(--cover);
   background-size: cover;
@@ -75,9 +64,7 @@
 .hinge {
   position: absolute;
   inset: 3px auto 3px 2px;
-  width: calc(9% - 3px);
-  border-right: 1px solid #ebf2ed77;
-  background: var(--jewel-case-hinge-fill, repeating-linear-gradient(90deg, #20352fbb 0 1px, #9db5a98c 1px 2px));
+  width: calc(var(--jewel-case-hinge-extent) - 3px);
 }
 
 .spineFace {
@@ -85,42 +72,46 @@
   inset: 0 100% 0 auto;
   width: var(--case-depth);
   overflow: hidden;
-  border: 1px solid var(--jewel-case-spine-edge, #d5e4dbb8);
-  border-inline-color: var(--jewel-case-spine-sides, #f0f8f4c9 #71897f);
+  border: 1px solid #d6e2d2c9;
+  border-inline-color: #edf5e0c7 #9aada0a8;
   border-radius: 2px;
   transform: rotateY(-90deg);
   transform-origin: right center;
   background-color: #384b40;
-  background-image: var(--jewel-case-spine-glass, linear-gradient(90deg, #0c171b48, #111d208f 53%, #101a1a50)), var(--demo-ink, none), var(--cover);
+  background-image: var(--jewel-case-spine-glass), var(--demo-ink, none), var(--cover);
   background-position: center, center, 36% center;
   background-size: 100% 100%, 100% 100%, var(--case-size) var(--case-size);
-  box-shadow: inset 2px 0 #effbef35, inset -2px 0 #182724a1;
+  box-shadow: var(--jewel-case-spine-highlight);
 }
 
 .topRim {
   position: absolute;
   inset: 0 0 auto;
   height: var(--case-depth);
-  border: 1px solid var(--jewel-case-top-edge, #d4e0d5ad);
   transform-origin: top center;
   transform: rotateX(-90deg);
-  background: var(--jewel-case-top-fill, linear-gradient(#bdccc1, #4c6658 60%, #a3b8ac));
+  --jewel-case-rim-surface: var(--jewel-case-top-fill);
 }
 
-/* Close the same prism rather than leaving two bright, disconnected rear
-   outlines. These two planes stay inside the existing front/rear silhouette. */
-.outerRim, .bottomRim {
+.outerRim {
   position: absolute;
-  border: 1px solid #bdcbc1a6;
-  background: linear-gradient(90deg, #c4d1c5b3, #82978a9c 52%, #dce5d7c2);
+  top: 0;
+  left: 100%;
+  width: var(--case-depth);
+  height: 100%;
+  transform-origin: 0 50%;
+  transform: rotateY(90deg);
 }
-.outerRim { top: 0; left: 100%; width: var(--case-depth); height: 100%; transform-origin: 0 50%; transform: rotateY(90deg); }
-.bottomRim { top: 100%; left: 0; width: 100%; height: var(--case-depth); transform-origin: 50% 0; transform: rotateX(-90deg); }
-.refined .rear { border-width: 1px; border-color: #becbc2b3; border-radius: 2px; box-shadow: inset 0 0 0 1px #f0f6e82e; }
-.refined .front { border-width: 1px; border-color: #e4ece2d4; box-shadow: 1px 3px 5px #22372b45; }
-.refined .front::after { border-color: #f5f9ee66; background: linear-gradient(119deg, #eff8ed2b, transparent 23% 56%, #edf6e81c 67%, transparent 74%); }
-.refined .topRim { border-color: #d9e4d3b8; }
-.refined .spineFace { border-color: #d6e2d2c9; border-inline-color: #edf5e0c7 #9aada0a8; box-shadow: inset 1px 0 #f5ffed2e, inset -1px 0 #334e3a66; }
+
+.bottomRim {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  height: var(--case-depth);
+  transform-origin: 50% 0;
+  transform: rotateX(-90deg);
+}
 
 :global([data-rail-moving="true"]) .spine .case,
 :global([data-belt-animation-enabled="false"]) .spine .case {

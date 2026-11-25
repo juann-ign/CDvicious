@@ -14,6 +14,7 @@ import { useSpotifyPlayer } from "@/components/SpotifyPlayerProvider";
 import { createDiscPlaybackExecution, type StartPlayExecution } from "@/lib/discPlayback";
 import { captureDiscOrigin } from "@/lib/discFlightGeometry";
 import { prepareMechanicalDockClick } from "@/lib/mechanicalDockClick";
+import { collectionYear } from "@/lib/collectionFilters";
 export type { PlayExecutionResult, StartPlayExecution } from "@/lib/discPlayback";
 import styles from "./AlbumDetailPage.module.css";
 
@@ -216,7 +217,9 @@ export function AlbumDetailPage({ album, onClose, onLoad, onPlay, initialPlayErr
   };
 
   const artists = album.artists.map((artist) => artist.name).join(", ");
-  const year = album.release_date?.slice(0, 4);
+  const year = collectionYear(album.release_date);
+  const edition = [year !== "unknown" ? `Edición ${year}` : null, album.label?.trim()].filter(Boolean).join(" · ");
+  const genres = album.genres?.filter((genre) => genre.trim()).slice(0, 3).join(", ");
   return (
     <section className={styles.page} aria-label={`${album.name} — ${artists}`} data-testid="album-detail-page"
       data-album-id={album.id} data-lenis-prevent>
@@ -228,7 +231,13 @@ export function AlbumDetailPage({ album, onClose, onLoad, onPlay, initialPlayErr
           </button>
           <div className={styles.heading}>
             <h2 className={styles.title}>{album.name}</h2>
-            <p className={styles.artist}>{artists}{year ? ` · ${year}` : ""}</p>
+            <p className={styles.artist}>
+              <span>{artists}</span>
+              {edition && <span className={styles.edition}>{edition}</span>}
+              {genres && <span className={styles.edition}>
+                {album.genreMetadata?.source === "spotify-artist" && "Géneros del artista · "}{genres}
+              </span>}
+            </p>
           </div>
         </header>
         <div className={styles.caseStage}>
@@ -236,17 +245,19 @@ export function AlbumDetailPage({ album, onClose, onLoad, onPlay, initialPlayErr
             onClose={closeCase} onOpened={handleOpened} onClosed={() => { hingeOpenRef.current = false; }}
             disabled={busy} discRef={discRef} />
         </div>
-        <div className={styles.actions}>
-          <button type="button" className={styles.hardwareButton}
-            onClick={() => !busyRef.current && (isCaseOpen ? closeCase() : setIsCaseOpen(true))}
-            disabled={busy} aria-expanded={isCaseOpen}>{isCaseOpen ? "Cerrar caja" : "Abrir caja"}</button>
-          <button type="button" ref={playButtonRef} className={styles.playButton} onClick={handlePlay}
-            disabled={busy} aria-busy={busy} aria-label={`Reproducir ${album.name}`}>
-            <span aria-hidden="true">▶</span>
-            {isOpeningForPlay ? "Abriendo caja…" : isPlayPending ? "Esperando a Spotify…" : "Reproducir álbum"}
-          </button>
-        </div>
-        {playError && <p className={styles.playError} role="alert" aria-live="polite">{playError}</p>}
+        <footer className={styles.actionPanel}>
+          <div className={styles.actions}>
+            <button type="button" className={styles.hardwareButton}
+              onClick={() => !busyRef.current && (isCaseOpen ? closeCase() : setIsCaseOpen(true))}
+              disabled={busy} aria-expanded={isCaseOpen}>{isCaseOpen ? "Cerrar caja" : "Abrir caja"}</button>
+            <button type="button" ref={playButtonRef} className={styles.playButton} onClick={handlePlay}
+              disabled={busy} aria-busy={busy} aria-label={`Reproducir ${album.name}`}>
+              <span aria-hidden="true">▶</span>
+              {isOpeningForPlay ? "Abriendo caja…" : isPlayPending ? "Esperando a Spotify…" : "Reproducir álbum"}
+            </button>
+          </div>
+          {playError && <p className={styles.playError} role="alert" aria-live="polite">{playError}</p>}
+        </footer>
       </div>
     </section>
   );

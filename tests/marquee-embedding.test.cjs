@@ -128,3 +128,21 @@ test("activación posterior a una lista vacía instala el arrastre y cancela un 
   run.window.dispatch("pointermove", { clientX: 225 });
   assert.equal(grabs, 1);
 });
+
+test("84px/s aumenta el avance un 40% y conserva pausa, reanudación y la posición al volver de ficha", () => {
+  const baseline = harness(2), faster = harness(2);
+  baseline.render({ speed: 60 }); faster.render({ speed: 84 });
+  baseline.frame(1020); faster.frame(1020);
+  const position = (run) => -Number(/^translate3d\((.*?)px/.exec(run.position())[1]);
+  assert.ok(Math.abs(position(faster) - 1.68) < 1e-9);
+  assert.ok(Math.abs(position(faster) / position(baseline) - 1.4) < 1e-9);
+  faster.render({ speed: 84, paused: true }); faster.frame(1040);
+  assert.ok(Math.abs(position(faster) - 1.68) < 1e-9);
+  faster.render({ speed: 84, paused: false }); faster.frame(1060);
+  assert.ok(Math.abs(position(faster) - 3.36) < 1e-9);
+  faster.root.dataset.albumDetailOpen = "true"; faster.notify();
+  faster.frame(5000);
+  assert.ok(Math.abs(position(faster) - 3.36) < 1e-9);
+  delete faster.root.dataset.albumDetailOpen; faster.notify(); faster.frame(5020);
+  assert.ok(Math.abs(position(faster) - 5.04) < 1e-9);
+});

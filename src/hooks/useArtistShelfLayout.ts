@@ -2,7 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { isMarqueeChapterActive } from "./useMarqueeBelt";
-import { ARTIST_SHELF_INITIAL_HOLD_MS, ARTIST_SHELF_SPEED, artistShelfEntryComplete, artistShelfInitialOffset, artistShelfLayout, artistShelfOffsetFor, artistShelfPosition, rebaseArtistShelf, wrapArtistShelf, type ArtistShelfLayout } from "@/lib/artistShelfLayout";
+import { ARTIST_SHELF_INITIAL_HOLD_MS, ARTIST_SHELF_SPEED, LISTENING_SHELF_SPEED, artistShelfEntryComplete, artistShelfInitialOffset, artistShelfLayout, artistShelfOffsetFor, artistShelfPosition, rebaseArtistShelf, wrapArtistShelf, type ArtistShelfLayout } from "@/lib/artistShelfLayout";
 
 interface Options {
   ids: string[];
@@ -96,7 +96,9 @@ export function useArtistShelfLayout(options: Options) {
       const buttonLeft = first.getBoundingClientRect().left;
       const faces = [...(first.firstElementChild?.children ?? [])];
       const visualLeft = faces.length ? Math.min(...faces.map((face) => face.getBoundingClientRect().left)) - buttonLeft : 0;
-      const next = artistShelfLayout(ids.length, viewport.clientWidth, width, size, ARTIST_SHELF_SPEED, visualLeft, optionsRef.current.startAt);
+      const startAt = optionsRef.current.startAt;
+      const speed = startAt === "leading" ? LISTENING_SHELF_SPEED : ARTIST_SHELF_SPEED;
+      const next = artistShelfLayout(ids.length, viewport.clientWidth, width, size, speed, visualLeft, startAt);
       if (!layoutRef.current) {
         anchorId.current = ids[0] ?? null;
         // A short catalog never needs an introductory animation. Later page
@@ -169,7 +171,7 @@ export function useArtistShelfLayout(options: Options) {
       } else if (autoEligible()) {
         if (initialHoldRemaining.current > 0) initialHoldRemaining.current = Math.max(0, initialHoldRemaining.current - elapsed);
         else {
-          offset.current += ARTIST_SHELF_SPEED * dt;
+          offset.current += current.speed * dt;
           if (entry.current && artistShelfEntryComplete(offset.current, current)) entry.current = false;
           if (!entry.current) offset.current = wrapArtistShelf(offset.current, current.length);
         }

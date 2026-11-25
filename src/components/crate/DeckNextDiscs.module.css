@@ -6,9 +6,9 @@
   left: 50%;
   width: var(--listen-width, 70%);
   --jewel-shelf-case-size: var(--listen-case-size, 142px);
-  --jewel-shelf-headroom: 54px;
-  --jewel-shelf-track-bottom: 32px;
-  --jewel-shelf-ground-opacity: .56;
+  --jewel-shelf-headroom: 48px;
+  --jewel-shelf-track-bottom: 25px;
+  --jewel-shelf-ground-opacity: .48;
   z-index: 5;
   opacity: 0;
   visibility: hidden;
@@ -17,7 +17,11 @@
   transition: opacity 200ms ease, transform 360ms cubic-bezier(.24, .7, .23, 1), visibility 0s linear 360ms;
 }
 
-.shelf [data-artist-shelf] { gap: 10px; }
+.shelf [data-artist-shelf] { gap: 9px; }
+
+.shelf [data-shelf-toolbar] {
+  padding-inline: 6px;
+}
 
 .shelf[data-open="true"] {
   opacity: 1;

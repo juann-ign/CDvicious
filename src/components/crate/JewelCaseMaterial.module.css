@@ -1,0 +1,116 @@
+/* The same clear jewel case finish for the shelf, collection and album detail.
+   Hosts control only the dimensions and pose of the physical parts. */
+.finish {
+  --jewel-case-cover-margin: 3px;
+  --jewel-case-hinge-extent: 8%;
+  --jewel-case-polished-edge: #b4c3baa6;
+  --jewel-case-polished-inner-edge: #f4fbf280;
+  --jewel-case-rim-edge: #cbd8cea1;
+  --jewel-case-lid-joint: #33443b;
+  --jewel-case-lid-joint-highlight: inset 0 1px #f4fbf2a6, inset -1px 0 #f4fbf2a6, inset 0 -1px #f4fbf2a6;
+  --jewel-case-front-fill: linear-gradient(135deg, #e0e9e1a6, #899d9270 52%, #d8e4dbb3);
+  --jewel-case-rear-fill: linear-gradient(150deg, #acbfb6a6, #495e54b3 72%, #b8c9c0b3);
+  --jewel-case-hinge-fill:
+    linear-gradient(180deg, #ffffff6e, transparent 17% 82%, #f4fbf44d),
+    repeating-linear-gradient(90deg, #1d2b25 0 1.8px, #edf2ed 2.1px 4.2px);
+  --jewel-case-spine-glass: linear-gradient(90deg, #edf9f050, #e0eee527 15%, transparent 42% 72%, #c8d8ce38 90%, #f4fbf480);
+  --jewel-case-spine-highlight: inset 1px 0 #f7fff380, inset -1px 0 #60746855;
+  --jewel-case-top-fill: linear-gradient(180deg, #eff8f0a6, #96aca064 43%, #546f6266 66%, #e4f0e7a6);
+  --jewel-case-rim-fill: linear-gradient(135deg, #f2faf0a6, #91a99a66 48%, #dde9de9c);
+  --jewel-case-front-glare: linear-gradient(104deg, transparent 27%, #ffffff36 41%, #edf6ed09 54%, transparent 67%);
+}
+
+.face {
+  background: var(--jewel-case-front-fill);
+  border: 1px solid var(--jewel-case-polished-edge);
+  border-radius: 3px;
+  box-shadow: 1px 3px 5px #22372b45;
+}
+
+.hinge {
+  background: var(--jewel-case-hinge-fill);
+  border-right: 1px solid #ebf2ed77;
+}
+
+.lid {
+  position: absolute;
+  inset: 1px;
+  border: 1px solid var(--jewel-case-polished-inner-edge);
+  border-block-color: var(--jewel-case-lid-joint);
+  border-right-color: var(--jewel-case-lid-joint);
+  box-shadow: var(--jewel-case-lid-joint-highlight);
+  background: var(--jewel-case-front-glare);
+  pointer-events: none;
+}
+
+/* Six clear booklet-retaining clips, with smaller clips at the center.
+   The three tiny rings on the right are the molded latch points. */
+.bookletMold {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  --clip-relief: #f2faf20b 0 72%, #1b2c244d 78% 85%, #f5fbf0cc 89% 96%, transparent 100%;
+  --clip-top: radial-gradient(ellipse 49% 98% at 50% 0%, var(--clip-relief));
+  --clip-bottom: radial-gradient(ellipse 49% 98% at 50% 100%, var(--clip-relief));
+  --latch-ring: radial-gradient(circle closest-side, #f2fbef19 0 36%, #1b2c2466 42% 55%, #e8f4e7b3 64% 83%, transparent 100%);
+  background:
+    var(--clip-top) 11% 0 / 9.5% 4.5% no-repeat,
+    var(--clip-top) 50% 0 / 5.5% 2.7% no-repeat,
+    var(--clip-top) 89% 0 / 9.5% 4.5% no-repeat,
+    var(--clip-bottom) 11% 100% / 9.5% 4.5% no-repeat,
+    var(--clip-bottom) 50% 100% / 5.5% 2.7% no-repeat,
+    var(--clip-bottom) 89% 100% / 9.5% 4.5% no-repeat,
+    var(--latch-ring) 99% 22% / max(3px, 2.3%) max(3px, 2.3%) no-repeat,
+    var(--latch-ring) 99% 50% / max(2.5px, 2%) max(2.5px, 2%) no-repeat,
+    var(--latch-ring) 99% 78% / max(3px, 2.3%) max(3px, 2.3%) no-repeat;
+}
+
+.rimHorizontal,
+.rimVertical {
+  border: 1px solid var(--jewel-case-rim-edge);
+  background: var(--jewel-case-rim-surface, var(--jewel-case-rim-fill));
+}
+
+/* Fine injection-molded ridges and recessed retaining slots on the depth faces. */
+.rimHorizontal::before,
+.rimVertical::before {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  pointer-events: none;
+  --rim-ribs: repeating-linear-gradient(var(--rim-rib-angle, 90deg), #f1f8ee40 0 .65px, #2b413326 .65px 1.3px, transparent 1.3px 3px);
+  --latch-slot: linear-gradient(180deg, #152b2366, #374b3f99);
+  background:
+    var(--latch-slot) 13% 50% / 8% 28% no-repeat,
+    var(--latch-slot) 50% 50% / 5% 28% no-repeat,
+    var(--latch-slot) 87% 50% / 8% 28% no-repeat,
+    var(--rim-ribs);
+}
+
+.rimVertical::before {
+  --rim-rib-angle: 180deg;
+  background:
+    var(--latch-slot) 50% 22% / 28% 5% no-repeat,
+    var(--latch-slot) 50% 50% / 28% 4% no-repeat,
+    var(--latch-slot) 50% 78% / 28% 5% no-repeat,
+    var(--rim-ribs);
+}
+
+/* The lid and tray meet halfway through the acrylic wall on each outer rim. */
+.rimHorizontal::after,
+.rimVertical::after {
+  content: "";
+  position: absolute;
+  inset: calc(50% - .5px) 0 auto;
+  height: 1px;
+  background: var(--jewel-case-lid-joint);
+  box-shadow: 0 -1px #f1f7ed66, 0 1px #f1f7ed35;
+  pointer-events: none;
+}
+
+.rimVertical::after {
+  inset: 0 auto 0 calc(50% - .5px);
+  width: 1px;
+  height: auto;
+  box-shadow: -1px 0 #f1f7ed66, 1px 0 #f1f7ed35;
+}

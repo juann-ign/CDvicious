@@ -174,22 +174,21 @@ test("el componente real renderiza un solo JewelSpine por ID, también si la fue
   }
 });
 
-test("el acabado refinado es optativo y la Batea clásica conserva sus casos y controles", () => {
+test("Batea, Artista y Next listen comparten todas las caras y el molde de la caja", () => {
   const { CrateShelf } = load("src/components/crate/CrateShelf.tsx");
   const { ArtistCrateShelf } = load("src/components/crate/ArtistCrateShelf.tsx");
   const albums = Array.from({ length: 3 }, (_, index) => ({ id: `edition-${index}`, name: `Disco ${index}`, artists: [{ id: "artist", name: "Artista" }], images: [], uri: `spotify:album:edition-${index}` }));
   const props = { albums, onSelect() {} };
-  const classic = renderToStaticMarkup(React.createElement(CrateShelf, props));
-  assert.equal(classic, renderToStaticMarkup(React.createElement(CrateShelf, { ...props, presentation: "classic" })));
-  assert.equal((classic.match(/data-case-presentation="classic"/g) ?? []).length, 9);
-  assert.equal(classic.includes('class="outerRim"'), false);
-  assert.equal(classic.includes('class="bottomRim"'), false);
+  const main = renderToStaticMarkup(React.createElement(CrateShelf, props));
   const artist = renderToStaticMarkup(React.createElement(ArtistCrateShelf, props));
   const listening = renderToStaticMarkup(React.createElement(ArtistCrateShelf, { ...props, startAt: "leading", chapterIndex: 0 }));
-  assert.equal((listening.match(/data-case-presentation="refined"/g) ?? []).length, albums.length);
-  assert.equal((listening.match(/class="outerRim"/g) ?? []).length, albums.length);
-  assert.equal((listening.match(/class="bottomRim"/g) ?? []).length, albums.length);
-  assert.equal((artist.match(/data-batea-album-id=/g) ?? []).length, albums.length);
+  for (const [html, count] of [[main, 9], [artist, albums.length], [listening, albums.length]]) {
+    assert.equal((html.match(/data-batea-album-id=/g) ?? []).length, count);
+    assert.equal((html.match(/data-jewel-material="shared"/g) ?? []).length, count);
+    assert.equal((html.match(/data-jewel-detail="booklet-mold"/g) ?? []).length, count);
+    assert.equal((html.match(/class="outerRim rimVertical"/g) ?? []).length, count);
+    assert.equal((html.match(/class="bottomRim rimHorizontal"/g) ?? []).length, count);
+  }
 });
 
 test("Next listen fills the opening shelf from its leading edge without wrapping any editions into view", () => {

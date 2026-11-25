@@ -46,7 +46,7 @@ export function ArtistCrateShelf({ albums, onSelect, active = true, chapterIndex
       <div ref={motion.containerRef} className={`${skin.viewport} ${styles.artistViewport} ${motion.isDragging ? skin.dragging : ""}`}>
         <div ref={motion.trackRef} className={`${skin.track} ${styles.artistTrack}`}>
           {unique.map((album, index) => <div key={album.id} className={styles.slot} data-artist-slot={album.id}>
-            <JewelSpine albumId={album.id} title={album.name} artist={album.artists.map((artist) => artist.name).join(", ")} coverUrl={album.images[0]?.url ?? ""} presentation="refined"
+            <JewelSpine albumId={album.id} title={album.name} artist={album.artists.map((artist) => artist.name).join(", ")} coverUrl={album.images[0]?.url ?? ""}
               tilt={(index % 5 - 2) * .8} onSelect={(origin) => { motion.remember(album.id); setHover(null); onSelect(album, origin); }}
               onHover={(rect, anchor) => { motion.emphasize(rect && anchor ? album.id : null); setHover(rect && anchor ? { album, anchor } : null); }} />
           </div>)}

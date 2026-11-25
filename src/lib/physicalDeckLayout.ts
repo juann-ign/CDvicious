@@ -7,10 +7,13 @@ export function fitDeck(bounds: DeckBounds, width: number, height: number, cente
 /** Fit both parts of the listening view to the measured metal silhouette. */
 export function fitListeningDeck(bounds: DeckBounds, width: number, height: number) {
   const top = Math.min(72, Math.max(62, height * .095));
-  const fit = fitDeck(bounds, Math.min(1000, width * .78), Math.max(100, height * .42 - 8), width / 2, 0);
+  const gap = Math.min(66, Math.max(36, height * .078));
+  const shelfChrome = 104;
+  const equipmentHeight = Math.min(height * .42 - 8, height - top - gap - shelfChrome - 100);
+  const fit = fitDeck(bounds, Math.min(1000, width * .78), Math.max(100, equipmentHeight), width / 2, 0);
   const shelfWidth = (bounds.right - bounds.left) * fit.scale;
-  const shelfTop = top + (bounds.bottom - bounds.top) * fit.scale + Math.min(28, Math.max(16, height * .038));
-  const caseSize = Math.max(82, Math.min(198, shelfWidth * .215, height - shelfTop - 116));
+  const shelfTop = top + (bounds.bottom - bounds.top) * fit.scale + gap;
+  const caseSize = Math.max(82, Math.min(198, shelfWidth * .215, height - shelfTop - shelfChrome));
   return { ...fit, y: top - bounds.top * fit.scale, shelfWidth, shelfTop, caseSize };
 }
 

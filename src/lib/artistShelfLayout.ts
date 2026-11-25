@@ -5,6 +5,7 @@ export interface ArtistShelfLayout {
   visualOverflow: number;
   visualLeft: number;
   startAt: "center" | "leading";
+  speed: number;
   overscan: number;
   pitch: number;
   inset: number;
@@ -12,7 +13,8 @@ export interface ArtistShelfLayout {
   fit: boolean;
 }
 
-export const ARTIST_SHELF_SPEED = 72;
+export const ARTIST_SHELF_SPEED = 90;
+export const LISTENING_SHELF_SPEED = 72;
 export const ARTIST_SHELF_GAP = 8;
 export const ARTIST_SHELF_REENTRY_SECONDS = 2;
 export const ARTIST_SHELF_INITIAL_HOLD_MS = 1000;
@@ -25,7 +27,7 @@ export function artistShelfLayout(count: number, width: number, slotWidth: numbe
   const fit = count <= 1 || naturalWidth + overscan * 2 <= width;
   const pitch = fit ? slotWidth + ARTIST_SHELF_GAP : Math.max(slotWidth + ARTIST_SHELF_GAP, (width - overscan * 2) / 6.5);
   return {
-    count, width, slotWidth, visualOverflow, visualLeft, startAt, overscan, pitch, fit,
+    count, width, slotWidth, visualOverflow, visualLeft, startAt, speed, overscan, pitch, fit,
     inset: fit ? Math.max(0, (width - naturalWidth) / 2) : overscan,
     // A recycled node is already fully out at both ends. Near capacity, the
     // first edition waits off the right edge for two seconds after it exits.

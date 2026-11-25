@@ -2,6 +2,7 @@
 
 import type { CSSProperties } from "react";
 import styles from "./JewelSpine.module.css";
+import material from "./JewelCaseMaterial.module.css";
 
 interface JewelSpineProps {
   albumId: string;
@@ -9,7 +10,6 @@ interface JewelSpineProps {
   artist: string;
   coverUrl: string;
   tilt: number;
-  presentation?: "classic" | "refined";
   onSelect: (origin: HTMLButtonElement) => void;
   onHover?: (rect: DOMRect | null, anchor?: HTMLButtonElement) => void;
 }
@@ -26,7 +26,6 @@ export function JewelSpine({
   artist,
   coverUrl,
   tilt,
-  presentation = "classic",
   onSelect,
   onHover,
 }: JewelSpineProps) {
@@ -37,8 +36,8 @@ export function JewelSpine({
   return (
     <button
       type="button"
-      className={presentation === "refined" ? `${styles.spine} ${styles.refined}` : styles.spine}
-      data-case-presentation={presentation}
+      className={`${styles.spine} ${material.finish}`}
+      data-jewel-material="shared"
       style={{
         "--tilt": `${tilt}deg`,
         "--cover": coverUrl ? `url(${JSON.stringify(coverUrl)})` : "none",
@@ -55,13 +54,17 @@ export function JewelSpine({
     >
       <span className={styles.case} aria-hidden="true">
         <span className={styles.rear} />
-        <span className={styles.front}>
-          <span className={styles.cover} />
-          <span className={styles.hinge} />
+        <span className={`${styles.front} ${material.face}`}>
+          <span className={styles.cover}>
+            <span className={material.bookletMold} data-jewel-detail="booklet-mold" />
+          </span>
+          <span className={`${styles.hinge} ${material.hinge}`} />
+          <span className={material.lid} />
         </span>
         <span className={styles.spineFace} />
-        <span className={styles.topRim} />
-        {presentation === "refined" && <><span className={styles.outerRim} /><span className={styles.bottomRim} /></>}
+        <span className={`${styles.topRim} ${material.rimHorizontal}`} />
+        <span className={`${styles.outerRim} ${material.rimVertical}`} />
+        <span className={`${styles.bottomRim} ${material.rimHorizontal}`} />
       </span>
     </button>
   );

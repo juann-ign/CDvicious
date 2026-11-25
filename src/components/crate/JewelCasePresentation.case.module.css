@@ -20,24 +20,14 @@
   transform-style: preserve-3d;
 }
 
+
 .leftLeaf {
   position: relative;
   min-width: 0;
   min-height: 0;
   z-index: 2;
-  padding: 8px 3px 2px 9px;
-  background:
-    linear-gradient(160deg, rgba(245, 248, 250, 0.075), transparent 14%),
-    linear-gradient(180deg, rgba(31, 34, 39, 0.96), rgba(9, 11, 14, 0.99));
-  border: 2px solid rgba(232, 240, 245, 0.45);
-  border-right: 3px solid rgba(196, 208, 216, 0.25);
-  border-radius: 3px 0 0 3px;
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.13),
-    inset 2px 0 0 rgba(255, 255, 255, 0.2),
-    inset 9px 0 22px rgba(255, 255, 255, 0.04),
-    inset -16px 0 28px rgba(0, 0, 0, 0.34),
-    0 0 18px rgba(226, 238, 245, 0.075);
+  /* Compensate for the shared 1px border to preserve the TOC position. */
+  padding: 9px 5px 3px 10px;
   transform-origin: 100% 50%; /* antes: right center */
   transform: perspective(1500px) rotateY(9deg); /* antes: transform: none; */
   transform-style: preserve-3d;
@@ -48,104 +38,31 @@
   min-width: 0;
   min-height: 0;
   z-index: 2;
-  padding: 8px 9px 9px 10px;
-  background:
-    linear-gradient(
-      132deg,
-      rgba(255, 255, 255, 0.16) 0%,
-      rgba(255, 255, 255, 0.055) 15%,
-      transparent 31%
-    ),
-    linear-gradient(180deg, #3b4146 0%, #242a2f 22%, #15191d 56%, #0e1215 100%);
-  border: 2px solid rgba(232, 240, 245, 0.56);
-  border-left: 3px solid rgba(214, 223, 230, 0.4);
-  border-radius: 0 3px 3px 0;
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.15),
-    inset 0 1px 0 rgba(255, 255, 255, 0.22),
-    inset -2px 0 0 rgba(255, 255, 255, 0.15),
-    inset 14px 0 30px rgba(0, 0, 0, 0.34),
-    inset 0 -14px 24px rgba(0, 0, 0, 0.28),
-    0 0 18px rgba(226, 238, 245, 0.1),
-    0 14px 24px rgba(0, 0, 0, 0.32);
+  /* Keep the original tray bounds and captured disc flight geometry. */
+  padding: 9px 10px 10px 12px;
   transform-origin: 0% 50%;
   transform: perspective(1500px) rotateY(-9deg);
   transform-style: preserve-3d;
   overflow: visible;
 }
 
-.leftLeaf::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-
-  border: 2px solid rgba(232, 240, 245, 0.55);
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.16),
-    inset 0 0 12px rgba(255, 255, 255, 0.05),
-    0 0 10px rgba(226, 238, 245, 0.08);
-
-  pointer-events: none;
+.leafLid {
   z-index: 10;
+  /* Once open, both interiors have an exposed frame rather than a glass
+     cover stretching across the printed booklet or the removable disc. */
+  --jewel-case-front-glare: none;
 }
-
-.rightLeaf::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-
-  border: 2px solid rgba(232, 240, 245, 0.55);
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.16),
-    inset 0 0 12px rgba(255, 255, 255, 0.05),
-    0 0 10px rgba(226, 238, 245, 0.08);
-
-  pointer-events: none;
-  z-index: 10;
-
-  transform-origin: 100% 50%; /* antes: right center */
-  transform: perspective(1400px) rotateY(-10deg); /* antes: transform: none; */
-  transform-style: preserve-3d;
-}
-
-.leftLeaf::after {
-  inset: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  transform-origin: right center;
-  transform: none;
-}
-
-.rightLeaf::after {
-  pointer-events: none;
-  inset: 5px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: linear-gradient(
-    116deg,
-    rgba(255, 255, 255, 0.055),
-    transparent 18%,
-    transparent 70%,
-    rgba(255, 255, 255, 0.025)
-  );
-  box-shadow:
-    inset 0 0 14px rgba(255, 255, 255, 0.025),
-    inset 0 -10px 18px rgba(0, 0, 0, 0.18);
-  transform-origin: left center;
-  transform: none;
-}
-
-.leftLeaf::after,
-.rightLeaf::after {
-  transform: none;
-}
+.leftBookletMold { z-index: 3; }
 
 .paperbackPanel {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 0.76fr) minmax(0, 1.14fr);
+  grid-template-columns: minmax(0, 1fr);
   width: 100%;
   height: 100%;
   min-height: 0;
   overflow: hidden;
+  background: linear-gradient(115deg, #d5decf, #c2cdbb 72%, #b9c8b2);
 }
 .coverPanel,
 .trackPanel {
@@ -178,33 +95,11 @@
   transform: scale(0.94);
   transform-origin: center;
 }
-.coverGlare {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background:
-    linear-gradient(
-      112deg,
-      rgba(255, 255, 255, 0.3),
-      transparent 16%,
-      transparent 62%,
-      rgba(255, 255, 255, 0.075)
-    ),
-    linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.04),
-      transparent 30%,
-      rgba(0, 0, 0, 0.17)
-    );
-  mix-blend-mode: screen;
-  z-index: 3;
-}
-
 .trackPanel {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 6px 0px 12px 6px;
+  padding: 12px 18px;
 }
 .trackPanel::before {
   content: "";
@@ -234,20 +129,24 @@
 
 .trackRow {
   display: grid;
-  grid-template-columns: 24px minmax(0, 1fr) 38px;
+  grid-template-columns: 24px minmax(0, 1fr) 40px;
   align-items: center;
-  padding: 3px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.055);
-  color: var(--color-text-secondary);
+  min-height: 27px;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid #50644920;
+  color: #263e2d;
   font-family: var(--font-ui);
-  font-size: 9px;
-  line-height: 1.15;
+  font-size: 15px;
+  line-height: 1.25;
   margin: 0;
 }
 .trackIndex,
 .trackDuration {
-  color: var(--color-text-muted);
-  font-size: 12px;
+  color: #526a47;
+  font-size: 13px;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
 }
 .trackName {
   min-width: 0;
@@ -255,7 +154,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: clamp(10px, 1vw, 12px);
-  letter-spacing: 1.5px;
+  letter-spacing: 0;
 }
 
 .tray {
@@ -634,40 +533,9 @@
   bottom: 4px;
   width: 16px;
   transform: translateX(-50%);
-  border-left: 2px solid rgba(255, 255, 255, 0.28);
-  border-right: 2px solid rgba(0, 0, 0, 0.72);
-  background: linear-gradient(
-    90deg,
-    rgba(0, 0, 0, 0.8),
-    rgba(78, 84, 90, 0.48) 42%,
-    rgba(7, 8, 10, 0.88)
-  );
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.05),
-    0 0 15px rgba(0, 0, 0, 0.7);
   pointer-events: none;
   transition: opacity 220ms ease;
 }
-.hinge span {
-  position: absolute;
-  left: 50%;
-  width: 4px;
-  height: 28px;
-  transform: translateX(-50%);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: linear-gradient(90deg, #0a0c0f, #5a6066 50%, #0a0c0f);
-  box-shadow: 0 0 6px rgba(255, 255, 255, 0.05);
-}
-.hinge span:nth-child(1) {
-  top: 12%;
-}
-.hinge span:nth-child(2) {
-  top: 46%;
-}
-.hinge span:nth-child(3) {
-  top: 80%;
-}
-
 .hingeClosed {
   opacity: 0;
   left: 50%;
