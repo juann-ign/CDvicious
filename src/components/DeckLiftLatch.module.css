@@ -14,8 +14,10 @@
   --u: 1.2px;
   left: auto;
   top: auto;
-  right: 24px;
-  bottom: 14px;
+  /* Follow the same rail clock as the free CD. Split reserves a measured
+     return-control lane beside the disc, before the booklet starts. */
+  right: calc(24px + (var(--split-lift-right, calc(47vw + 16px)) - 24px) * var(--pSplit, 0));
+  bottom: calc(14px + (var(--split-lift-bottom, 14px) - 14px) * var(--pSplit, 0));
   z-index: 20;
   transform: none;
 }

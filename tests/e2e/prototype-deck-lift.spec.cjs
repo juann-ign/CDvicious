@@ -13,18 +13,59 @@ const lift = (page) => page.getByRole("button", { name: "Elevar CD del equipo", 
 const dock = (page) => page.getByRole("button", { name: "Acoplar CD al equipo", exact: true });
 const footer = (page) => page.locator("[data-global-player]");
 
-test("Deck exposes the lift in normal navigation without opening the archived lateral tray", async ({ page }) => {
+test("Deck and Split expose the same lift in normal navigation without opening the archived lateral tray", async ({ page }, testInfo) => {
+  const requests = observeRequests(page);
+  await page.setViewportSize({ width: 1920, height: 1080 });
   await openRail(page);
   await go(page, "Deck", 0);
   await expect(lift(page)).toBeEnabled();
   await expect(page.locator('[data-prototype-disc="true"]')).toHaveCount(0);
   await go(page, "Split", 1);
-  await expect(lift(page)).toHaveCount(0);
+  await expect(lift(page)).toBeEnabled();
+  await rememberDisc(page);
+  const before = await canonicalState(page);
+  await liftDisc(page);
+  await expectSplitLiftGeometry(page);
+  await page.screenshot({ path: testInfo.outputPath("split-cd-elevado-1920x1080.png") });
+  await dock(page).click();
+  await expectDocked(page);
+  await expect(lift(page)).toBeFocused();
+  const after = await canonicalState(page);
+  expect(after.title).toBe(before.title);
+  expect(after.playing).toBe(before.playing);
+  expect(after.elapsed).toBeGreaterThanOrEqual(before.elapsed);
+  expect(requests.play).toHaveLength(0);
+  await finishProbe(page, testInfo, "split-direct-lift", { before, after });
   await go(page, "Colección", 3);
   await expect(grid(page)).toBeVisible();
   await expect(collection(page).locator("[data-batea-overlay]")).toHaveCount(0);
   await expect(collection(page).getByRole("button", { name: "Mostrar Batea en Colección", exact: true })).toHaveCount(0);
 });
+
+async function expectSplitLiftGeometry(page) {
+  await expect(page.getByTestId("lyrics-booklet")).toBeVisible();
+  const geometry = () => page.evaluate(() => {
+    const measure = (selector) => [...document.querySelectorAll(selector)].map((node) => node.getBoundingClientRect())
+      .filter((rect) => rect.width > 0 && rect.height > 0);
+    const union = (rects) => ({ left: Math.min(...rects.map((rect) => rect.left)), right: Math.max(...rects.map((rect) => rect.right)),
+      top: Math.min(...rects.map((rect) => rect.top)), bottom: Math.max(...rects.map((rect) => rect.bottom)) });
+    const deck = union(measure("[data-deck-surface]"));
+    const disc = union(measure('[data-prototype-disc="true"]'));
+    const booklet = union(measure('[data-rail-booklet] [data-testid="lyrics-booklet"], [data-rail-booklet] [data-testid="lyrics-paper"], [data-rail-booklet] [data-booklet-page-half]'));
+    const latch = union(measure('[data-deck-dock-latch] button'));
+    return { deck, disc, booklet, latch, top: document.querySelector("[data-shell-header]").getBoundingClientRect().bottom,
+      bottom: document.querySelector("[data-global-player]").getBoundingClientRect().top };
+  });
+  await expect.poll(async () => {
+    const { deck, disc, booklet, latch, top, bottom } = await geometry();
+    const separate = (a, b) => a.right <= b.left || a.left >= b.right || a.bottom <= b.top || a.top >= b.bottom;
+    return deck.left >= 0 && disc.left >= 0 && deck.top >= top - 1
+      && deck.bottom + 8 < disc.top && disc.bottom <= bottom + 1
+      && Math.max(deck.right, disc.right, latch.right) + 8 < booklet.left
+      && latch.left >= 0 && latch.bottom <= bottom + 1 && separate(latch, disc) && separate(latch, deck);
+  }).toBe(true);
+  return geometry();
+}
 
 async function rememberDisc(page) {
   await expect(disc(page)).toHaveCount(1);
@@ -140,7 +181,7 @@ test("P1 normal: paused track stays paused through keyboard inspection and Escap
   await finishProbe(page, testInfo, "paused-keyboard-escape", { before, after: await canonicalState(page), neutral, rotated });
 });
 
-test("P1 normal: pointer loss releases gestures, resize and same-album transport preserve the free disc, and navigation restores its dock", async ({ page }, testInfo) => {
+test("P1 normal: pointer loss releases gestures; resize, transport and Deck/Split preserve the free disc", async ({ page }, testInfo) => {
   const requests = observeRequests(page);
   await bootPrototype(page, "deck-lift");
   await rememberDisc(page);
@@ -186,8 +227,8 @@ test("P1 normal: pointer loss releases gestures, resize and same-album transport
     };
     sample();
   });
-  // Navigate immediately after pointerup; do not wait for the orientation's
-  // historical 900ms return. Real chapter motion cancels the free pose first.
+  // Navigate immediately after pointerup without waiting for the historical
+  // orientation return. Both listening chapters retain the elevated disc.
   await page.mouse.up();
   await go(page, "Split", 1);
   const immediateNavigation = await page.evaluate(() => {
@@ -196,11 +237,13 @@ test("P1 normal: pointer loss releases gestures, resize and same-album transport
   });
   await saveRecord(testInfo, "immediate-real-navigation", immediateNavigation);
   expect(immediateNavigation.some((sample) => sample.left < -2)).toBe(true);
-  expect(immediateNavigation.filter((sample) => sample.left < -2 && sample.state !== "docked")).toEqual([]);
-  await expectDocked(page);
+  expect(immediateNavigation.filter((sample) => sample.left < -2 && sample.state !== "free")).toEqual([]);
+  await expect(page.locator("[data-physical-deck]")).toHaveAttribute("data-disc-state", "free");
+  await expectSameDisc(page);
+  expect((await meshPose(page)).groupUuid).toBe(resizedGroupUuid);
+  const splitGeometry = await expectSplitLiftGeometry(page);
+  await page.screenshot({ path: testInfo.outputPath("split-cd-elevado-1440x900.png") });
   await expect(title(page)).toHaveText(originalTitle);
-  await go(page, "Deck", 0);
-  await liftDisc(page);
   const transportGroupUuid = (await meshPose(page)).groupUuid;
   await footer(page).getByRole("button", { name: "Next", exact: true }).click();
   await expect(title(page)).toHaveText("Ascensor azul");
@@ -211,13 +254,15 @@ test("P1 normal: pointer loss releases gestures, resize and same-album transport
   await expect(title(page)).toHaveText(originalTitle);
   await expect(page.locator("[data-physical-deck]")).toHaveAttribute("data-disc-state", "free");
   expect((await meshPose(page)).groupUuid).toBe(transportGroupUuid);
-  await elevated(page).focus();
-  await page.keyboard.press("Escape");
-  await expectDocked(page);
+  await go(page, "Deck", 0);
+  await expect(page.locator("[data-physical-deck]")).toHaveAttribute("data-disc-state", "free");
+  await expectSameDisc(page);
+  expect((await meshPose(page)).groupUuid).toBe(transportGroupUuid);
   await go(page, "Colección", 3);
+  await expectDocked(page);
   await expect(grid(page)).toBeVisible();
   expect(requests.play).toHaveLength(0);
-  await finishProbe(page, testInfo, "gesture-and-context-cleanup", { originalTitle, finalTitle: await title(page).textContent(), originalFreeBox, resized });
+  await finishProbe(page, testInfo, "gesture-and-context-cleanup", { originalTitle, finalTitle: await title(page).textContent(), originalFreeBox, resized, splitGeometry });
 });
 
 test("P1 reduced-motion fixture: lift, orientation reset and docking complete immediately with the same canonical playback", async ({ page }, testInfo) => {

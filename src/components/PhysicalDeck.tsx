@@ -39,6 +39,7 @@ export interface PhysicalDeckProps {
   albumId?: string;
   liftEnabled?: boolean;
   liftActive?: boolean;
+  liftChapter?: "deck" | "split";
   liftBusy?: boolean;
   onLiftPhaseChange?: (phase: DeckLiftPhase) => void;
   track?: SpotifyTrack | null;
@@ -79,7 +80,7 @@ function DiscFace({ albumName, artwork }: { albumName: string; artwork?: string 
  * 0 closes the halves; 135 exposes the mechanism. The destination plane stays
  * dimensioned when its visual disc is hidden, for a later geometric handoff.
  */
-export function PhysicalDeck({ pose, albumName = "COMPACT DISC", artwork, statusText, displayTitle, artistText, progressMs = null, durationMs = null, showDisc = true, lidOffset, isPlaying = false, staticMode = false, discVisual, className, discTargetRef, controls, controlsActive = true, albumId, liftEnabled = false, liftActive = false, liftBusy = false, onLiftPhaseChange, track, accentColor = "#1DB954", loading = false }: PhysicalDeckProps) {
+export function PhysicalDeck({ pose, albumName = "COMPACT DISC", artwork, statusText, displayTitle, artistText, progressMs = null, durationMs = null, showDisc = true, lidOffset, isPlaying = false, staticMode = false, discVisual, className, discTargetRef, controls, controlsActive = true, albumId, liftEnabled = false, liftActive = false, liftChapter = "deck", liftBusy = false, onLiftPhaseChange, track, accentColor = "#1DB954", loading = false }: PhysicalDeckProps) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const placementRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<HTMLDivElement>(null);
@@ -122,7 +123,7 @@ export function PhysicalDeck({ pose, albumName = "COMPACT DISC", artwork, status
   const style = { "--deck-lid-offset": lidOffset ?? (pose === "open" ? 135 : 0) } as CSSProperties;
   const showAcceptedVisual = pose === "docked" && showDisc && Boolean(discVisual);
   const rotorStyle = { animation: staticMode ? "none" : undefined, animationPlayState: isPlaying && !lift.dragging && lift.phase === "docked" && pose === "docked" && !staticMode ? "running" : "paused" } as CSSProperties;
-  return <div ref={viewportRef} className={[styles.viewport, className].filter(Boolean).join(" ")} data-physical-deck data-deck-render-density="2" data-deck-pose={pose} role={controls ? "group" : "img"} aria-label={`Reproductor de CD ${poseLabels[pose]}${pose === "wait" ? "" : `: ${albumName}`}`}>
+  return <div ref={viewportRef} className={[styles.viewport, className].filter(Boolean).join(" ")} data-physical-deck data-deck-render-density="2" data-deck-pose={pose} data-lift-chapter={liftChapter} role={controls ? "group" : "img"} aria-label={`Reproductor de CD ${poseLabels[pose]}${pose === "wait" ? "" : `: ${albumName}`}`}>
     <div ref={placementRef} className={styles.placement} style={style} data-deck-mechanism data-disc-spinning={isPlaying && !lift.dragging && pose === "docked" && !staticMode} data-deck-static={staticMode}>
     <div ref={sceneRef} className={styles.scene} data-deck-design-frame>
       <div className={styles.floorShadow} aria-hidden="true" />
@@ -197,7 +198,7 @@ export function PhysicalDeck({ pose, albumName = "COMPACT DISC", artwork, status
     {liftEnabled && liftActive && historicalStatus === "loading" && showDisc && !liftBusy && <span className={styles.prototypeGestureHint} role="status">Preparando CD 3D…</span>}
     {liftEnabled && lift.phase !== "docked" && <DeckLiftLatch mode="dock" onActivate={lift.recouple}
       raised={lift.phase === "aligning" || lift.phase === "lowering" || lift.phase === "closing"}
-      disabled={lift.phase !== "free" || liftBusy || lift.dragging} />}
+      disabled={!liftActive || lift.phase !== "free" || liftBusy || lift.dragging} />}
     {liftEnabled && lift.error && <span role="status" className={styles.prototypeLiftError}>{lift.error}</span>}
   </div>;
 }

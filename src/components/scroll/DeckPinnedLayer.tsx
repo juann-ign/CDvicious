@@ -146,7 +146,9 @@ export function DeckPinnedLayer() {
     const layer = layerRef.current;
     const listing = listingRef.current;
     const trigger = listing?.querySelector("button");
-    if (liftPhase !== "free" || !listingAvailable || !layer || !listing || !trigger) return;
+    // Split has its own fixed listing inset and width. Measure the free Deck
+    // only when its rail camera is settled, including the return from Split.
+    if (activeChapterIndex !== 0 || railMoving || liftPhase !== "free" || !listingAvailable || !layer || !listing || !trigger) return;
 
     const place = () => {
       const disc = layer.querySelector("[data-prototype-disc=true]")?.getBoundingClientRect();
@@ -193,7 +195,7 @@ export function DeckPinnedLayer() {
         listing.style.removeProperty(property);
       }
     };
-  }, [liftPhase, listingAvailable]);
+  }, [activeChapterIndex, railMoving, liftPhase, listingAvailable]);
 
   useEffect(() => {
     const railRoot = document.querySelector<HTMLElement>("[data-rail-wrapper]")?.parentElement;
@@ -258,7 +260,7 @@ export function DeckPinnedLayer() {
       <DeckNextListenButton open={listenOpen} disabled={railMoving && !listenOpen} buttonRef={listenButton} panelId={listenPanelId} onToggle={toggleListen} />
     </div>}
     <div ref={layerRef} className={styles.layer} style={{ "--accent-color": accentColor } as CSSProperties}
-      data-rail-overlay data-deck-interactive="true" data-deck-hidden={deckHidden}
+      data-rail-overlay data-deck-interactive="true" data-deck-hidden={deckHidden} data-lift-chapter={placement}
       data-next-listen-open={listenOpen} data-next-listen-motion={listenMotion && !railMoving && !playback.busy}
       data-playback-attempt={playback.attempt?.attemptId ?? ""}
       data-confirmed-attempt={playback.phase === "confirmed" ? playback.attempt?.attemptId ?? "" : ""}
@@ -274,7 +276,7 @@ export function DeckPinnedLayer() {
             progressMs={loading ? null : visibleData?.progressMs ?? null}
             durationMs={loading ? null : visibleData?.durationMs ?? null}
             staticMode={staticMode} discTargetRef={registerTarget} controls={controls} controlsActive={!deckHidden && activeChapterIndex <= 1}
-            albumId={discAlbumId} liftEnabled liftActive={!deckHidden && activeChapterIndex === 0}
+            albumId={discAlbumId} liftEnabled liftActive={!deckHidden && activeChapterIndex <= 1} liftChapter={placement}
             track={visibleData?.track ?? null} accentColor={accentColor}
             liftBusy={playback.busy || listenOpen || listenMotion} onLiftPhaseChange={setLiftPhase}
             discVisual={dockVisual?.albumId === discAlbumId ? dockVisual : null} />

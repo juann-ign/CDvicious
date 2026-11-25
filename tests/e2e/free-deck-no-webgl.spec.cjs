@@ -1,5 +1,5 @@
 const {
-  test, expect, bootPrototype, title, canonicalState, observeRequests, saveRecord,
+  test, expect, bootPrototype, go, title, canonicalState, observeRequests, saveRecord,
   threeCanvas, startRepresentationProbe, finishRepresentationProbe,
 } = require("./support/historical-disc-harness.cjs");
 
@@ -32,6 +32,15 @@ test("without real WebGL the free CD is a static honest fallback and docking pre
   await page.mouse.up();
   await expect(elevated).not.toHaveAttribute("data-disc-dragging", "true");
   expect(await elevated.evaluate((node) => getComputedStyle(node).transform)).toBe(beforeTransform);
+  await elevated.evaluate((node) => { window.__fallbackOriginalDisc = node; });
+  await go(page, "Split", 1);
+  await expect(page.locator("[data-physical-deck]")).toHaveAttribute("data-disc-state", "free");
+  await expect(page.getByTestId("lyrics-booklet")).toBeVisible();
+  expect(await elevated.evaluate((node) => node === window.__fallbackOriginalDisc)).toBe(true);
+  await expect(threeCanvas(page)).toHaveCount(0);
+  const splitBox = await elevated.boundingBox();
+  const booklet = await page.getByTestId("lyrics-booklet").boundingBox();
+  expect(splitBox.x + splitBox.width).toBeLessThan(booklet.x);
   await page.getByRole("button", { name: "Acoplar CD al equipo", exact: true }).click();
   await expect(page.locator("[data-physical-deck]")).toHaveAttribute("data-disc-state", "docked");
   await expect(title(page)).toHaveText(before.title);

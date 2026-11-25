@@ -12,7 +12,7 @@ function load(file, dependencies = {}) {
 }
 const geometry = load("src/lib/discFlightGeometry.ts");
 const lift = load("src/lib/deckLiftPrototype.ts", { "./discFlightGeometry": geometry });
-const { createDeckLiftTimeline, sampleDeckLift, DECK_LIFT_OUT_MS, DECK_LIFT_IN_MS, foregroundDiscQuad, sampleLiftedDisc, airAboveDock, draggedDiscOrientation, returnedDiscOrientation, hasDeckChapterMovement, retreatedDeckTransform } = lift;
+const { createDeckLiftTimeline, sampleDeckLift, DECK_LIFT_OUT_MS, DECK_LIFT_IN_MS, foregroundDiscQuad, splitDeckLiftLayout, sampleLiftedDisc, airAboveDock, draggedDiscOrientation, returnedDiscOrientation, hasDeckChapterMovement, retreatedDeckTransform } = lift;
 const rectangle = (x, y, width, height) => ({ tl: { x, y }, tr: { x: x + width, y }, bl: { x, y: y + height }, br: { x: x + width, y: y + height } });
 const closeQuad = (actual, expected) => {
   for (const key of ["tl", "tr", "bl", "br"]) {
@@ -140,5 +140,94 @@ test("retreated equipment fits the actual open-surface bounds with space below t
     const bottom = design.top + result.y * ratio + (surfaces.bottom - design.top) * result.scale;
     assert.ok(top >= frame.top + Math.min(24, height * .04) - 1e-7);
     assert.ok(bottom <= frame.top + Math.min(24, height * .04) + height * .25 + 1e-7);
+  }
+});
+
+const splitFixtures = [
+  { frame: { left: 0, top: 72, width: 1920, height: 880 }, slot: { left: 40, top: 140, right: 984, bottom: 938 }, bookletLeft: 1008, minimumDisc: 480 },
+  { frame: { left: 0, top: 72, width: 1440, height: 700 }, slot: { left: 32, top: 136, right: 700, bottom: 758 }, bookletLeft: 724, minimumDisc: 360 },
+  { frame: { left: 11, top: 72, width: 1280, height: 520 }, slot: { left: 39, top: 128, right: 611, bottom: 578 }, bookletLeft: 635, minimumDisc: 240 },
+];
+const close = (actual, expected) => assert.ok(Math.abs(actual - expected) < 1e-7, `${actual} != ${expected}`);
+const boundsOf = (points) => ({ left: Math.min(...points.map(p=>p.x)), right: Math.max(...points.map(p=>p.x)), top: Math.min(...points.map(p=>p.y)), bottom: Math.max(...points.map(p=>p.y)) });
+const inside = (inner, outer) => {
+  assert.ok(inner.left >= outer.left - 1e-7);
+  assert.ok(inner.right <= outer.right + 1e-7);
+  assert.ok(inner.top >= outer.top - 1e-7);
+  assert.ok(inner.bottom <= outer.bottom + 1e-7);
+};
+
+test("Split free CD fits below the equipment, before the entire booklet, with its return latch in a separate lane", () => {
+  for (const { frame, slot, bookletLeft, minimumDisc } of splitFixtures) {
+    const layout = splitDeckLiftLayout(frame, slot);
+    const disc = foregroundDiscQuad(frame, { progress: 1, slot });
+    closeQuad(disc, layout.disc);
+    const bounds = boundsOf(Object.values(disc));
+    inside(bounds, slot);
+    inside(layout.equipment, slot);
+    inside(layout.dock, slot);
+    assert.ok(bounds.top - layout.equipment.bottom >= 18);
+    assert.ok(layout.dock.left - bounds.right >= 12);
+    assert.ok(bookletLeft - bounds.right >= 24);
+    assert.ok(bounds.top >= slot.top); // toolbar is reserved above the slot.
+    assert.ok(frame.top + frame.height - bounds.bottom >= 14);
+    close(bounds.right - bounds.left, bounds.bottom - bounds.top);
+    assert.ok(bounds.right - bounds.left >= minimumDisc);
+    close(layout.dock.right - layout.dock.left, 108);
+    close(layout.dock.bottom - layout.dock.top, 138);
+    close(layout.dockInsetRight, frame.left + frame.width - slot.right + 12);
+    close(layout.dockInsetBottom, 14);
+  }
+});
+
+test("Split retreat inverts the actual rotated, anisotropic placement instead of its AABB width", () => {
+  for (const { frame, slot } of splitFixtures) {
+    const radians = -1.8 * Math.PI / 180, sx = .43, sy = sx * 1.16;
+    const basis = { origin: { x: frame.left + 37, y: frame.top - 35 },
+      xx: Math.cos(radians) * sx, xy: Math.sin(radians) * sx,
+      yx: -Math.sin(radians) * sy, yy: Math.cos(radians) * sy };
+    const original = [160, 1120].flatMap(x=>[0,556].map(y=>({
+      x: basis.origin.x + basis.xx * x + basis.yx * y,
+      y: basis.origin.y + basis.xy * x + basis.yy * y,
+    })));
+    const surfaces = boundsOf(original);
+    const split = { progress: 1, slot, basis };
+    const result = retreatedDeckTransform(frame, { left: -350, top: -160, width: 2900 }, surfaces, 2, split);
+    const differentAABB = retreatedDeckTransform(frame, { left: -50, top: 40, width: 1700 }, surfaces, 2, split);
+    close(result.x, differentAABB.x); close(result.y, differentAABB.y); close(result.scale, differentAABB.scale);
+    const projected = original.map(point=>({
+      x: basis.origin.x + basis.xx * result.x + basis.yx * result.y + (point.x - basis.origin.x) * result.scale,
+      y: basis.origin.y + basis.xy * result.x + basis.yy * result.y + (point.y - basis.origin.y) * result.scale,
+    }));
+    const fitted = boundsOf(projected), region = splitDeckLiftLayout(frame, slot).equipment;
+    inside(fitted, region);
+    close((fitted.left + fitted.right) / 2, (region.left + region.right) / 2);
+    close(fitted.bottom, region.bottom);
+  }
+});
+
+test("Deck geometry stays exact and the measured Split endpoint interpolates continuously through viewport changes", () => {
+  const frame = { left: 0, top: 72, width: 1440, height: 700 };
+  const slot = splitFixtures[1].slot;
+  closeQuad(foregroundDiscQuad(frame), rectangle(503, 289, 434, 434));
+  closeQuad(foregroundDiscQuad(frame, { progress: 0, slot }), foregroundDiscQuad(frame));
+  const design = { left: -20, top: -40, width: 2160 }, surfaces = { left: 10, top: -20, right: 1430, bottom: 650 };
+  const deck = retreatedDeckTransform(frame, design, surfaces, 2);
+  const zero = retreatedDeckTransform(frame, design, surfaces, 2, { progress: 0, slot });
+  close(deck.x, zero.x); close(deck.y, zero.y); close(deck.scale, zero.scale);
+  const target = foregroundDiscQuad(frame, { progress: 1, slot });
+  for (let step = 0; step <= 100; step++) {
+    const progress = step / 100;
+    closeQuad(foregroundDiscQuad(frame, { progress, slot }), geometry.interpolateDiscQuad(foregroundDiscQuad(frame), target, progress));
+  }
+  let previous = null;
+  for (let step = 0; step <= 100; step++) {
+    const progress = step / 100;
+    const resizingFrame = { ...frame, width: 1440 + 480 * progress, height: 700 + 180 * progress };
+    const resizingSlot = { left: 32 + 8 * progress, top: 136 + 4 * progress, right: 700 + 284 * progress, bottom: 758 + 180 * progress };
+    const next = foregroundDiscQuad(resizingFrame, { progress, slot: resizingSlot });
+    assert.ok(geometry.discQuadArea(next) > 0);
+    if (previous) for (const key of ["tl", "tr", "bl", "br"]) assert.ok(Math.hypot(next[key].x - previous[key].x, next[key].y - previous[key].y) < 15);
+    previous = next;
   }
 });
