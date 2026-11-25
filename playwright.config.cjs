@@ -15,14 +15,15 @@ module.exports = defineConfig({
   expect: {
     timeout: 8_000,
   },
-  reporter: "list",
+  reporter: process.env.QA_EVIDENCE === "1" ? [["list"], ["./tests/e2e/support/qa-reporter.cjs"]] : "list",
   outputDir: "test-results",
   use: {
-    trace: "retain-on-failure",
+    trace: process.env.QA_EVIDENCE === "1" ? "on" : "retain-on-failure",
     screenshot: "only-on-failure",
-    video: "retain-on-failure",
+    video: process.env.QA_EVIDENCE === "1" ? "on" : "retain-on-failure",
     baseURL: "http://127.0.0.1:3002",
     browserName: "chromium",
+    channel: process.env.PLAYWRIGHT_CHANNEL || undefined,
     headless: true,
     viewport: { width: 1280, height: 800 },
     launchOptions: {

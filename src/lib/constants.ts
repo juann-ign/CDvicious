@@ -1,6 +1,7 @@
 export const SPOTIFY_SCOPES = [
   "user-read-currently-playing",
   "user-read-playback-state",
+  "user-modify-playback-state",
   "streaming",
   "user-read-email",
   "user-read-private",
@@ -10,7 +11,7 @@ export const SPOTIFY_SCOPES = [
 export const SPOTIFY_AUTH_URL = "https://accounts.spotify.com/authorize";
 export const SPOTIFY_TOKEN_URL = "https://accounts.spotify.com/api/token";
 export const SPOTIFY_NOW_PLAYING_URL =
-  "https://api.spotify.com/v1/me/player/currently-playing";
+  "https://api.spotify.com/v1/me/player";
 export const SPOTIFY_ME_URL = "https://api.spotify.com/v1/me";
 export const SPOTIFY_ARTISTS_URL = "https://api.spotify.com/v1/artists";
 export const SPOTIFY_ARTISTS_BATCH = 50;

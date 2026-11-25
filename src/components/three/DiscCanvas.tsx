@@ -7,6 +7,9 @@ import { DiscMesh } from "./DiscMesh";
 import { Environment } from "@react-three/drei";
 
 const FULL_DPR: [number, number] = [1, 2];
+// Fractional rail translations can move transformed bounds across an integer.
+// Measure layout size so a translation cannot resize the WebGL drawing buffer.
+const CANVAS_RESIZE = { offsetSize: true };
 
 interface DiscCanvasProps {
   track: SpotifyTrack | null;
@@ -84,6 +87,7 @@ export function DiscCanvas({
     <Canvas
       shadows
       dpr={FULL_DPR}
+      resize={CANVAS_RESIZE}
       frameloop={frameloop}
       data-disc-frameloop={frameloop}
       data-disc-quality={isRailMoving ? "transition" : "full"}

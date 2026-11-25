@@ -1,4 +1,4 @@
-const { test, expect } = require("@playwright/test");
+const { test, expect } = require("./support/qa-evidence.cjs");
 
 const RAIL_ENABLED = process.env.RAIL_FLAG === "1";
 const NAV_LABEL = "Navegación por capítulos";
@@ -521,6 +521,27 @@ test("resizing and reloading at desktop resolutions keeps rail navigation usable
       "location",
     );
 
+    await page.evaluate(() => {
+      const sizes = new WeakMap();
+      window.__railCanvasBufferChanges = [];
+      const observer = new MutationObserver((records) => {
+        for (const record of records) {
+          const canvas = record.target;
+          if (canvas.tagName !== "CANVAS" || !canvas.closest("[data-disc-frameloop]")) continue;
+          let initial = sizes.get(canvas);
+          if (!initial) { initial = {}; sizes.set(canvas, initial); }
+          const key = record.attributeName;
+          const old = record.oldValue === null ? null : Number(record.oldValue);
+          const current = Number(canvas.getAttribute(key));
+          if (initial[key] === undefined) initial[key] = old ?? current;
+          if ((old !== null && old !== initial[key]) || current !== initial[key]) {
+            window.__railCanvasBufferChanges.push({ key, initial: initial[key], old, current });
+          }
+        }
+      });
+      observer.observe(document.documentElement, { subtree: true, attributes: true, attributeFilter: ["width", "height"], attributeOldValue: true });
+      window.__stopRailCanvasBufferObserver = () => observer.disconnect();
+    });
     await chapterButton(page, "Colección").click();
     await expect(chapterButton(page, "Colección")).toHaveAttribute(
       "aria-current",
@@ -530,6 +551,11 @@ test("resizing and reloading at desktop resolutions keeps rail navigation usable
       "data-chapter-active",
       "true",
     );
+    const bufferChanges = await page.evaluate(() => {
+      window.__stopRailCanvasBufferObserver();
+      return window.__railCanvasBufferChanges;
+    });
+    expect(bufferChanges).toEqual([]);
   }
 });
 

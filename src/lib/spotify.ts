@@ -249,6 +249,8 @@ export async function fetchNowPlaying(accessToken: string) {
 
   return {
     isPlaying: Boolean(data.is_playing),
+    sampledAt: Date.now(),
+    deviceId: data.device?.id,
     progressMs: typeof data.progress_ms === "number" ? data.progress_ms : null,
     durationMs: data.item?.duration_ms ?? null,
     track: data.item

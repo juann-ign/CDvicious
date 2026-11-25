@@ -23,7 +23,9 @@ export function useDominantColor(imageUrl: string | undefined) {
         const canvas = document.createElement("canvas");
         canvas.width = size;
         canvas.height = size;
-        const ctx = canvas.getContext("2d");
+        // This canvas exists only for pixel readback. A GPU-backed 2D canvas
+        // can synchronously stall the UI behind the Deck's WebGL work.
+        const ctx = canvas.getContext("2d", { willReadFrequently: true });
         if (!ctx) return;
         ctx.drawImage(img, 0, 0, size, size);
         const { data } = ctx.getImageData(0, 0, size, size);

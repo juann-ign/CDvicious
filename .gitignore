@@ -6,3 +6,7 @@ node_modules
 *.log
 tsconfig.tsbuildinfo
 *.tsbuildinfo
+.qa/
+.npm-cache/
+test-results/
+playwright-report/

@@ -61,3 +61,12 @@
     filter: brightness(1);
   }
 }
+.staticDisc {
+  position: absolute; inset: 12%; border-radius: 50%;
+  border: 2px solid #d4dcd6;
+  background: repeating-radial-gradient(circle, #d1d8d466 0 1px, transparent 1px 3px), conic-gradient(#a0afad, #d1d4c7, #a8bbc0, #c6bbc9, #9faeaa, #d3ddca, #a0afad);
+  mask-image: radial-gradient(circle, transparent 0 6.2%, black 6.5%);
+  display: grid; place-items: center;
+}
+.staticDisc span { position: absolute; top: 22%; width: 70%; text-align: center; font: 14px var(--font-ui); color: #263a2d; }
+.staticDisc i { position: absolute; inset: 36%; border-radius: 50%; border: 2px solid #d7e3d9; box-shadow: 0 0 0 4px #80968c; }

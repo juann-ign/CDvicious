@@ -6,13 +6,14 @@ import { discRegistry } from "@/lib/discRegistry";
 import discStyles from "../Disc/Disc.module.css";
 import { useRail } from "@/components/scroll/RailContext";
 import styles from "./RailFlyingDisc.module.css";
+import { CatalogDiscFace, type CatalogDiscPresentation } from "./CatalogDiscSurface";
 
 interface RailFlyingDiscProps {
+  catalogDisc?: CatalogDiscPresentation;
   coverUrl: string;
   originRect: DOMRect;
-  attemptId: string;
-  onArrive: (attemptId: string) => void;
-  onDone: (attemptId: string) => void;
+  onArrive: () => void;
+  onDone: () => void;
 }
 
 const PARTICLES = Array.from({ length: 12 }, (_, index) => {
@@ -30,9 +31,9 @@ const DOCK_PULSE_DURATION_MS = 900;
 const FLIGHT_DURATION_SECONDS = 4.8;
 
 export function RailFlyingDisc({
+  catalogDisc,
   coverUrl,
   originRect,
-  attemptId,
   onArrive,
   onDone,
 }: RailFlyingDiscProps) {
@@ -78,7 +79,7 @@ export function RailFlyingDisc({
     const finish = () => {
       if (doneRef.current) return;
       doneRef.current = true;
-      onDone(attemptId);
+      onDone();
     };
 
     const maybeFinish = () => {
@@ -124,7 +125,7 @@ export function RailFlyingDisc({
     // Never animate to an arbitrary point if the Deck has not registered its
     // target. Keep the chapter reset, then discard the temporary flight element.
     if (!initialTarget) {
-      scrollToChapter(0, duration);
+      scrollToChapter(0, duration, "flight");
       finish();
       return cleanup;
     }
@@ -153,7 +154,7 @@ export function RailFlyingDisc({
     const setScaleX = gsap.quickSetter(el, "scaleX");
     const setScaleY = gsap.quickSetter(el, "scaleY");
     const setSpinnerRotate = gsap.quickSetter(spinner, "rotate", "deg");
-    scrollToChapter(0, duration);
+    scrollToChapter(0, duration, "flight");
 
     if (reduceMotion) {
       const target = readTarget() ?? initialTarget;
@@ -181,7 +182,7 @@ export function RailFlyingDisc({
         });
       }
 
-      onArrive(attemptId);
+      onArrive();
       finish();
       return cleanup;
     }
@@ -269,7 +270,7 @@ export function RailFlyingDisc({
               );
           }
 
-          onArrive(attemptId);
+          onArrive();
         }
       },
       onComplete: () => {
@@ -286,12 +287,13 @@ export function RailFlyingDisc({
     });
 
     return cleanup;
-  }, [attemptId, isReady, onArrive, onDone, originRect, scrollToChapter]);
+  }, [isReady, onArrive, onDone, originRect, scrollToChapter]);
 
   return (
     <>
       <div ref={wrapRef} className={styles.disc} aria-hidden="true" data-testid="rail-flying-disc">
         <div ref={spinnerRef} className={styles.spinner}>
+          {catalogDisc ? <CatalogDiscFace {...catalogDisc} /> : <>
           <div
             className={styles.discInner}
             style={{ backgroundImage: "url(" + coverUrl + ")" }}
@@ -299,6 +301,7 @@ export function RailFlyingDisc({
           <div className={styles.sheen} />
           <div className={styles.grooves} />
           <div className={styles.hub} />
+          </>}
         </div>
       </div>
 

@@ -18,8 +18,6 @@ export async function GET() {
           duration_ms: 150_000,
           artists: album.artists.map((artist) => ({ name: artist.name })),
           album: {
-            id: album.id,
-            uri: album.uri,
             name: album.name,
             images: album.images.map((image) => ({
               url: image.url,
@@ -41,7 +39,7 @@ export async function GET() {
 
   try {
     const nowPlaying = await fetchNowPlaying(accessToken);
-    return NextResponse.json(nowPlaying);
+    return NextResponse.json(nowPlaying, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     if (error instanceof SpotifyApiError) {
       const responseHeaders =

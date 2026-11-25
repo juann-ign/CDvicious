@@ -5,13 +5,14 @@ export interface SpotifyTrack {
   duration_ms: number;
   album: {
     id?: string;
-    uri?: string;
     name: string;
     images: { url: string; width: number; height: number }[];
   };
 }
 
 export interface NowPlayingResponse {
+  sampledAt?: number;
+  deviceId?: string;
   isPlaying: boolean;
   progressMs: number | null;
   durationMs: number | null;
