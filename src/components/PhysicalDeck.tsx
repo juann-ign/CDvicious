@@ -4,6 +4,10 @@ import Image from "next/image";
 import { useLayoutEffect, useRef, type CSSProperties, type Ref } from "react";
 import type { DiscFlightOrigin } from "@/lib/discFlightGeometry";
 import styles from "./PhysicalDeck.module.css";
+import { usePhysicalDeckLayout } from "@/hooks/usePhysicalDeckLayout";
+import { PhysicalVolumeKnob } from "./PhysicalVolumeKnob";
+import { ProgressBar } from "./ProgressBar";
+import type { useCanonicalPlayerControls } from "@/hooks/useCanonicalPlayerControls";
 
 export type PhysicalDeckPose = "wait" | "open" | "docked";
 
@@ -13,6 +17,9 @@ export interface PhysicalDeckProps {
   artwork?: string;
   statusText?: string;
   displayTitle?: string;
+  artistText?: string;
+  progressMs?: number | null;
+  durationMs?: number | null;
   showDisc?: boolean;
   lidOffset?: number;
   isPlaying?: boolean;
@@ -20,6 +27,8 @@ export interface PhysicalDeckProps {
   discVisual?: DiscFlightOrigin | null;
   className?: string;
   discTargetRef?: Ref<HTMLDivElement>;
+  controls?: ReturnType<typeof useCanonicalPlayerControls>;
+  controlsActive?: boolean;
 }
 
 const poseLabels: Record<PhysicalDeckPose, string> = {
@@ -55,7 +64,11 @@ function DiscFace({ albumName, artwork }: { albumName: string; artwork?: string 
  * 0 closes the halves; 135 exposes the mechanism. The destination plane stays
  * dimensioned when its visual disc is hidden, for a later geometric handoff.
  */
-export function PhysicalDeck({ pose, albumName = "COMPACT DISC", artwork, statusText, displayTitle, showDisc = true, lidOffset, isPlaying = false, staticMode = false, discVisual, className, discTargetRef }: PhysicalDeckProps) {
+export function PhysicalDeck({ pose, albumName = "COMPACT DISC", artwork, statusText, displayTitle, artistText, progressMs = null, durationMs = null, showDisc = true, lidOffset, isPlaying = false, staticMode = false, discVisual, className, discTargetRef, controls, controlsActive = true }: PhysicalDeckProps) {
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const placementRef = useRef<HTMLDivElement>(null);
+  const sceneRef = useRef<HTMLDivElement>(null);
+  usePhysicalDeckLayout(viewportRef, placementRef, sceneRef, albumName);
   const acceptedRef = useRef<HTMLDivElement>(null);
   const priorVisual = useRef(discVisual);
   const visualGeneration = useRef(0);
@@ -76,11 +89,12 @@ export function PhysicalDeck({ pose, albumName = "COMPACT DISC", artwork, status
   }, [discVisual]);
   const style = { "--deck-lid-offset": lidOffset ?? (pose === "open" ? 135 : 0) } as CSSProperties;
   const rotorStyle = { animation: staticMode ? "none" : undefined, animationPlayState: isPlaying && pose === "docked" && !staticMode ? "running" : "paused" } as CSSProperties;
-  return <div className={[styles.viewport, className].filter(Boolean).join(" ")} data-physical-deck data-deck-pose={pose} role="img" aria-label={`Reproductor de CD ${poseLabels[pose]}${pose === "wait" ? "" : `: ${albumName}`}`}>
-    <div className={styles.scene} style={style} data-deck-mechanism data-disc-spinning={isPlaying && pose === "docked" && !staticMode} data-deck-static={staticMode}>
+  return <div ref={viewportRef} className={[styles.viewport, className].filter(Boolean).join(" ")} data-physical-deck data-deck-render-density="2" data-deck-pose={pose} role={controls ? "group" : "img"} aria-label={`Reproductor de CD ${poseLabels[pose]}${pose === "wait" ? "" : `: ${albumName}`}`}>
+    <div ref={placementRef} className={styles.placement} style={style} data-deck-mechanism data-disc-spinning={isPlaying && pose === "docked" && !staticMode} data-deck-static={staticMode}>
+    <div ref={sceneRef} className={styles.scene} data-deck-design-frame>
       <div className={styles.floorShadow} aria-hidden="true" />
-      <div className={styles.machine} aria-hidden="true">
-        <div className={styles.baseSurface} />
+      <div className={styles.machine}>
+        <div className={styles.baseSurface} data-deck-surface />
         <div className={styles.loadingWell} />
         <div className={`${styles.guideRails} ${styles.guidesLeft}`}><i /><i /><b /><b /></div>
         <div className={`${styles.guideRails} ${styles.guidesRight}`}><i /><i /><b /><b /></div>
@@ -92,7 +106,7 @@ export function PhysicalDeck({ pose, albumName = "COMPACT DISC", artwork, status
           <span className={`${styles.retainer} ${styles.retainerC}`} />
         </div>
 
-        <div className={styles.discTarget} ref={discTargetRef} data-deck-disc-target data-disc-diameter-ratio="120" data-disc-hole-ratio="15">
+        <div className={styles.discTarget} ref={discTargetRef} data-deck-disc-target data-disc-diameter-ratio="120" data-disc-hole-ratio="15" aria-hidden="true">
           <div className={styles.dockedDisc} style={{ visibility: pose === "docked" && showDisc && !discVisual ? "visible" : "hidden" }} data-deck-docked-disc>
             <div key={albumName} className={styles.spinRotor} style={rotorStyle}><DiscFace albumName={albumName} artwork={artwork} /></div>
           </div>
@@ -101,37 +115,43 @@ export function PhysicalDeck({ pose, albumName = "COMPACT DISC", artwork, status
         </div>
 
         <div className={`${styles.lid} ${styles.lidLeft}`} data-deck-lid="left">
-          <div className={`${styles.lidSurface} ${styles.leftSurface}`}><span className={styles.topRailSlot} /><span className={styles.lidRim} /><span className={styles.topBrand}>CDV / LINEAR COMPACT DISC</span></div>
+          <div className={`${styles.lidSurface} ${styles.leftSurface}`} data-deck-surface aria-hidden="true"><span className={styles.topRailSlot} /><span className={styles.lidRim} /></div>
           <span className={styles.lidFrontEdge} /><span className={styles.lidOuterEdge} />
         </div>
         <div className={`${styles.lid} ${styles.lidRight}`} data-deck-lid="right">
-          <div className={`${styles.lidSurface} ${styles.rightSurface}`}><span className={styles.topRailSlot} /><span className={styles.lidRim} /><span className={styles.topBrand}>PRECISION / DUAL SLIDE</span></div>
+          <div className={`${styles.lidSurface} ${styles.rightSurface}`} data-deck-surface aria-hidden="true"><span className={styles.topRailSlot} /><span className={styles.lidRim} /></div>
           <span className={styles.lidFrontEdge} /><span className={styles.lidOuterEdge} />
         </div>
 
-        <div className={styles.sideLeft} /><div className={styles.sideRight} />
-        <div className={styles.frontFace} data-deck-front>
+        <div className={styles.sideLeft} data-deck-surface /><div className={styles.sideRight} data-deck-surface />
+        <div className={styles.frontFace} data-deck-front data-deck-surface>
           <span className={`${styles.screw} ${styles.screwA}`} /><span className={`${styles.screw} ${styles.screwB}`} />
           <span className={`${styles.screw} ${styles.screwC}`} /><span className={`${styles.screw} ${styles.screwD}`} />
-          <span className={styles.rotary}><i /></span>
-          <span className={styles.volumeMark}>LEVEL</span>
-          <div className={styles.physicalDisplay} data-deck-display-mirror>
-            <div className={styles.displayGlass} />
+          {controls ? <PhysicalVolumeKnob value={controls.volume} disabled={!controlsActive || !controls.volumeAvailable || controls.volumeLoading || controls.blocked} pending={controls.volumePending} error={controls.volumeError} onChange={controls.setVolume} /> : <span className={styles.rotary}><i /></span>}
+          <div className={styles.physicalDisplay} data-deck-display-mirror role={controls ? "group" : undefined} aria-label={controls ? "Pantalla del equipo" : undefined}>
+            <div className={styles.displayGlass} aria-hidden="true" />
             <strong>{displayTitle ?? (pose === "wait" ? "CDVICIOUS" : albumName)}</strong>
-            <span>{statusText ?? (pose === "wait" ? "INSERT DISC" : pose === "open" ? "CARGA ABIERTA" : "CD EN POSICIÓN")}</span>
-            <i className={styles.displaySegments} />
+            <div className={styles.displayDetails}>
+              {artistText && <span className={styles.displayArtist}>{artistText}</span>}
+              <span className={styles.displayStatus}>{statusText ?? (pose === "wait" ? "INSERT DISC" : pose === "open" ? "CARGA ABIERTA" : "CD EN POSICIÓN")}</span>
+            </div>
+            <div className={styles.displayProgress}><ProgressBar progressMs={progressMs} durationMs={durationMs} isPlaying={isPlaying} /></div>
           </div>
-          <div className={styles.fixedTransport}><i /><i /><b /><b /><i /></div>
-          <span className={styles.frontBrand}>cdvicious <small>CDV–01 / COMPACT DISC</small></span>
+          {controls ? <div className={styles.fixedTransport} inert={!controlsActive}>
+            <button type="button" disabled={!controls.canControl || controls.transportPending || controls.blocked} aria-label="Pista anterior del equipo" onClick={controls.previous}>|◄◄</button>
+            <button type="button" disabled={!controls.canControl || controls.transportPending || controls.blocked} aria-label="Pausar/reanudar equipo" aria-pressed={isPlaying} onClick={controls.toggle}>{isPlaying ? "❚❚" : "►"}</button>
+            <button type="button" disabled={!controls.canControl || controls.transportPending || controls.blocked} aria-label="Pista siguiente del equipo" onClick={controls.next}>►►|</button>
+          </div> : <div className={styles.fixedTransport}><i /><i /><b /><b /><i /></div>}
           <span className={styles.statusLamp} />
         </div>
-        <span className={`${styles.foot} ${styles.footLeft}`} /><span className={`${styles.foot} ${styles.footRight}`} />
+        <span className={`${styles.foot} ${styles.footLeft}`} data-deck-surface /><span className={`${styles.foot} ${styles.footRight}`} data-deck-surface />
       </div>
 
       <div className={styles.airDisc} data-deck-air-disc style={{ visibility: pose === "open" && showDisc ? "visible" : "hidden" }} aria-hidden="true">
         <DiscFace albumName={albumName} artwork={artwork} />
         <DiscCorners />
       </div>
+    </div>
     </div>
   </div>;
 }

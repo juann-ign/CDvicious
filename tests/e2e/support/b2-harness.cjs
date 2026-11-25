@@ -21,7 +21,9 @@ async function functionalFixture(page) {
 async function openRail(page) {
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await expect(page.locator('[data-rail-ready="true"]')).toBeVisible({ timeout: 90000 });
-  await expect(page.getByTestId("deck-now-playing-track")).toBeVisible();
+  const chapter = Number(await page.locator("html").getAttribute("data-chapter"));
+  if (chapter <= 1) await expect(page.locator("[data-physical-deck]")).toBeVisible();
+  else await expect(page.getByTestId("deck-now-playing-track")).toBeVisible();
 }
 async function go(page, name, index) {
   await page.getByRole("button", { name: `Ir al capítulo ${name}`, exact: true }).click();

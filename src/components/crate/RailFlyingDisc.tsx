@@ -109,13 +109,18 @@ export function RailFlyingDisc({ origin, execution, onArrive, onDone }: RailFlyi
         finish("cancelled");
         return false;
       }
+      // Mechanical pose and the fitted player transform share this frame.
+      // Apply the pose before measuring the actual spindle/air planes.
+      mechanism = discRegistry.discTarget?.closest<HTMLElement>("[data-physical-deck]")?.querySelector<HTMLElement>("[data-deck-mechanism]") ?? null;
+      const elapsed = now - startedAt;
+      setLids(sampleDiscFlight(origin.quad, lastTarget ?? origin.quad, lastAir ?? origin.quad, elapsed).lidOffset);
       const measured = readTarget();
       if (!measured) {
         execution.cancel();
         finish("cancelled");
         return false;
       }
-      const state = sampleDiscFlight(origin.quad, measured.target, measured.air, now - startedAt);
+      const state = sampleDiscFlight(origin.quad, measured.target, measured.air, elapsed);
       const matrix = quadToCssMatrix(state.quad, origin.width, origin.height);
       if (!matrix) {
         execution.cancel();
@@ -126,7 +131,6 @@ export function RailFlyingDisc({ origin, execution, onArrive, onDone }: RailFlyi
       surface.dataset.flightProgress = state.progress.toFixed(5);
       surface.dataset.flightRoll = String(Math.atan2(state.quad.tr.y - state.quad.tl.y, state.quad.tr.x - state.quad.tl.x) * 180 / Math.PI);
       publishPhase(state.phase);
-      setLids(state.lidOffset);
       if (state.docked && !dock(state.quad)) {
         finish("cancelled");
         return false;
@@ -144,6 +148,8 @@ export function RailFlyingDisc({ origin, execution, onArrive, onDone }: RailFlyi
       if (stopped) return;
       cancelAnimationFrame(frame);
       scrollToChapter(0, 0, "flight");
+      mechanism = discRegistry.discTarget?.closest<HTMLElement>("[data-physical-deck]")?.querySelector<HTMLElement>("[data-deck-mechanism]") ?? null;
+      setLids(0);
       const measured = readTarget();
       const matrix = measured && quadToCssMatrix(measured.target, origin.width, origin.height);
       if (!matrix) {
@@ -153,7 +159,6 @@ export function RailFlyingDisc({ origin, execution, onArrive, onDone }: RailFlyi
       }
       surface.style.transform = matrix;
       surface.dataset.flightProgress = "1";
-      setLids(0);
       if (!dock(measured!.target)) { finish("cancelled"); return; }
       finish();
     };

@@ -44,6 +44,14 @@ async function expectContainedFront(page) {
   for (const button of buttons) { expect(button.fontSize).toBe(14); expect(button.radius).toBe("0px"); }
 }
 
+async function expectPhysicalFrontOnly(page) {
+  const dock = page.locator("[data-global-player]");
+  await expect(dock).toHaveAttribute("aria-hidden", "true");
+  await expect(dock).not.toBeVisible();
+  expect(await dock.evaluate((node) => Boolean(node.closest("[inert]")))).toBe(true);
+  await expect(page.locator("[data-physical-deck]")).toBeVisible();
+}
+
 async function setMetadataState(page, state) {
   await page.evaluate((state) => {
     const next = structuredClone(window.__b2Original);
@@ -80,6 +88,8 @@ for (const [width, height] of [[1280, 800], [1440, 900]]) {
     test.use({ viewport: { width, height } });
     test("frentes comunes, controles de 14 px y VFD reservado en todos los capítulos y estados", async ({ page }) => {
       await openRail(page);
+      await expectPhysicalFrontOnly(page);
+      await go(page, "Colección", 3);
       await expectContainedFront(page);
       await expect(navFront(page)).toBeVisible();
       await expect(navFront(page).getByRole("button")).toHaveCount(5);
@@ -104,7 +114,11 @@ for (const [width, height] of [[1280, 800], [1440, 900]]) {
       const initial = await playerGeometry(page);
       for (const [chapter, index] of [["Deck", 0], ["Split", 1], ["Batea", 2], ["Colección", 3], ["Mixtape Lab", 4]]) {
         await go(page, chapter, index);
-        await expectContainedFront(page);
+        if (index <= 1) await expectPhysicalFrontOnly(page);
+        else {
+          await expectContainedFront(page);
+          expect(await page.locator("[data-global-player]").evaluate((node) => Boolean(node.closest("[inert]")))).toBe(false);
+        }
         const bounds = await page.evaluate(() => {
           const rail = document.querySelector("[data-rail-wrapper]").getBoundingClientRect();
           const header = document.querySelector("[data-shell-header]").getBoundingClientRect();
@@ -115,7 +129,7 @@ for (const [width, height] of [[1280, 800], [1440, 900]]) {
         expect(bounds.bottom).toBe(bounds.dockTop);
         expect(bounds.dockHeight).toBe(128);
         expect(bounds.dockBottom).toBe(height);
-        expect(await playerGeometry(page)).toEqual(initial);
+        if (index > 1) expect(await playerGeometry(page)).toEqual(initial);
       }
       await installMock(page);
       for (const state of ["short", "long", "empty", "error", "recovered"]) {

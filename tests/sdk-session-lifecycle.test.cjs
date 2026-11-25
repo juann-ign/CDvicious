@@ -69,6 +69,7 @@ function providerHarness() {
     react,
     "react/jsx-runtime": { jsx: (type, props) => { context = props.value; return { type, props }; } },
     "@/lib/clientSession": client,
+    "@/lib/serializedPlayerVolume": load("src/lib/serializedPlayerVolume.ts"),
     "@/lib/mockSpotifyStore": { mockSpotifyPlayer: {} },
   }, { window: browser, document, Event: class { constructor(type) { this.type = type; } } });
   function render() {

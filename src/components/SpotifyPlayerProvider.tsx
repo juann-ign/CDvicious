@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { getClientAuthSession } from "@/lib/clientSession";
+import { serializedPlayerVolume } from "@/lib/serializedPlayerVolume";
 import {
   mockSpotifyPlayer,
   type MockSpotifyPlayer,
@@ -69,7 +70,7 @@ export function SpotifyPlayerProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (mockMode) {
-      setPlayer(mockSpotifyPlayer);
+      setPlayer(serializedPlayerVolume(mockSpotifyPlayer));
       setDeviceId("cdvicious-mock-device");
       setIsReady(true);
 
@@ -148,7 +149,7 @@ export function SpotifyPlayerProvider({ children }: { children: ReactNode }) {
       );
 
       spotifyPlayer.connect();
-      setPlayer(spotifyPlayer);
+      setPlayer(serializedPlayerVolume(spotifyPlayer));
     };
 
     const script = document.createElement("script");

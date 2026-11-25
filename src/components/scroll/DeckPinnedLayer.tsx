@@ -14,9 +14,11 @@ import { useDominantColor } from "@/hooks/useDominantColor";
 import { useSpotifyPlayer } from "@/components/SpotifyPlayerProvider";
 import { useRailNavigation } from "./RailContext";
 import styles from "./DeckPinnedLayer.module.css";
+import { useCanonicalPlayerControls } from "@/hooks/useCanonicalPlayerControls";
 
 export function DeckPinnedLayer() {
   const { authenticated } = useSpotifyPlayer();
+  const controls = useCanonicalPlayerControls();
   const { activeChapterIndex } = useRailNavigation();
   const layerRef = useRef<HTMLDivElement>(null);
   const [deckHidden, setDeckHidden] = useState(false);
@@ -123,20 +125,25 @@ export function DeckPinnedLayer() {
             albumName={albumName} artwork={artwork} displayTitle={loading ? "CARGANDO" : visibleData?.track?.name}
             statusText={loading ? albumName : visibleData?.track ? isPlaying ? "REPRODUCIENDO" : "PAUSA" : error ? "SIN SEÑAL" : "INSERT DISC"}
             showDisc={showDisc} isPlaying={isPlaying && documentVisible && !deckHidden}
-            staticMode={staticMode} discTargetRef={registerTarget}
+            artistText={visibleData?.track?.artists.map((artist) => artist.name).join(", ")}
+            progressMs={loading ? null : visibleData?.progressMs ?? null}
+            durationMs={loading ? null : visibleData?.durationMs ?? null}
+            staticMode={staticMode} discTargetRef={registerTarget} controls={controls} controlsActive={!deckHidden && activeChapterIndex <= 1}
             discVisual={dockVisual?.albumId === discAlbumId ? dockVisual : null} />
         </div>
       </div>
       <div className={`${styles.deckActions} ${styles.interactive}`} inert={deckHidden || activeChapterIndex > 1}>
         <button type="button" aria-pressed={clickEnabled} onClick={() => setDockClickEnabled(!clickEnabled)}>CLIC MECÁNICO {clickEnabled ? "ON" : "OFF"}</button>
         {playback.busy && <button type="button" onClick={cancel}>CANCELAR CARGA</button>}
+        {(controls.volumeError || controls.transportError) && <span role="status">{controls.volumeError ?? controls.transportError}<button type="button" onClick={() => void controls.refreshVolume()} disabled={controls.blocked || controls.volumeLoading}>Consultar dispositivo</button></span>}
       </div>
       {visibleData?.track && <div className={`${styles.bookletLayer} ${styles.interactive}`} data-rail-booklet>
         <LyricsBooklet track={visibleData.track} isOpen active={activeChapterIndex === 1 && !deckHidden}
           onToggle={() => undefined} accentColor={accentColor} showTab={false} />
       </div>}
     </div>
-    <footer className={styles.globalPlayer} aria-label="Reproductor global" data-global-player data-dock-click={playback.dockClick}>
+    <footer className={styles.globalPlayer} aria-label="Reproductor global" data-global-player data-dock-click={playback.dockClick}
+      data-footer-visible={activeChapterIndex > 1} aria-hidden={activeChapterIndex <= 1} inert={activeChapterIndex <= 1}>
       <NowPlayingCard global track={visibleData?.track ?? null} isPlaying={isPlaying} error={error}
         loading={loading} loadingAlbum={playback.attempt?.albumName}
         progressMs={loading ? null : visibleData?.progressMs ?? null} durationMs={loading ? null : visibleData?.durationMs ?? null} />

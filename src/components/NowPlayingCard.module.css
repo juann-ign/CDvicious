@@ -1,9 +1,9 @@
-/* The display and transport are one recessed front inside the shared silver plate. */
+/* One machined metal front: a recessed glass display and aligned control banks. */
 .chassis {
   box-sizing: border-box;
   width: 100%;
   height: var(--shell-player-height);
-  padding: 14px 24px;
+  padding: 12px 20px;
   border-top: 1px solid #687b6b45;
   border-radius: 0;
   background: var(--material-silver);
@@ -12,16 +12,16 @@
 .globalChassis { height: 100%; }
 .front {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
+  grid-template-columns: minmax(0, 1fr) 336px;
   align-items: center;
-  gap: 20px;
+  gap: 0;
   width: 100%;
   height: 100%;
   min-width: 0;
-  padding: 8px 16px;
+  padding: 10px 12px;
   background: transparent;
-  border: 0;
-  box-shadow: none;
+  border: 1px solid #718371;
+  box-shadow: inset 0 1px #e7eee14d, inset 0 -1px #40574426;
 }
 .vfdDisplay {
   display: grid;
@@ -67,15 +67,20 @@
   text-overflow: ellipsis;
 }
 .transportGroup {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
+  gap: 16px;
   width: 100%;
   height: 76px;
   min-width: 0;
+  padding-left: 16px;
 }
-.buttonsWrapper { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.transportNotice { position: absolute; left: 16px; right: 26px; bottom: -8px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--metal-ink); font: 14px/1.2 var(--font-ui); }
+.volumeRetry { position: absolute; right: 0; bottom: -10px; border: 1px solid var(--metal-edge); border-radius: 0; width: 22px; height: 20px; background: var(--metal-control); color: var(--metal-ink); cursor: pointer; }
+.buttonsWrapper { display: grid; grid-template-columns: 44px 50px 44px; align-items: center; gap: 4px 6px; flex-shrink: 0; }
+.controlLegend { grid-column: 1 / -1; min-height: 14px; color: var(--metal-secondary); font: var(--text-control)/1 var(--font-ui); letter-spacing: 1.1px; white-space: nowrap; }
 .hwBtn, .muteLabel {
   display: inline-flex;
   align-items: center;
@@ -84,12 +89,12 @@
   height: 38px;
   width: 44px;
   padding: 0;
-  border: 1px solid #090d09;
-  border-top-color: #59654d;
+  border: 1px solid var(--metal-edge);
+  border-top-color: #718568;
   border-radius: 0;
   background: var(--metal-control);
   color: var(--metal-ink);
-  box-shadow: inset 0 1px #ffffff0c, 0 3px 0 #050805;
+  box-shadow: inset 0 1px #e5eddf55, 0 2px 0 #4e624a;
   font-family: var(--font-ui);
   font-size: var(--text-control);
   line-height: 1.2;
@@ -128,31 +133,40 @@
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-.faderWrapper { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.faderWrapper { display: grid; grid-template-columns: 40px 90px; align-items: center; gap: 4px 8px; flex-shrink: 0; }
 .muteLabel { width: 40px; font-size: var(--text-control); letter-spacing: .5px; }
 .muteLabelActive { color: var(--color-danger); text-shadow: 0 0 5px var(--color-danger-glow); }
-.faderTrack { position: relative; display: flex; align-items: center; width: 90px; height: 24px; padding: 3px 5px; border: 1px solid #050805; background: #101510; box-shadow: var(--hardware-inset); }
+.faderTrack { position: relative; display: flex; align-items: center; width: 90px; height: 32px; padding: 3px 5px; border: 2px inset var(--metal-edge); background: #101510; box-shadow: var(--hardware-inset); }
 .faderTrackInner { display: flex; align-items: center; gap: 3px; width: 100%; height: 12px; pointer-events: none; }
 .faderBlock { flex: 1; height: 100%; background: var(--color-surface-raised); }
 .faderBlockActive { background: var(--color-phosphor); box-shadow: 0 0 4px var(--color-phosphor-glow); }
 .faderInput { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
 @media (max-width: 1100px) {
   .chassis { padding-inline: 16px; }
-  .front { grid-template-columns: minmax(0, 1fr) 290px; gap: 12px; padding-inline: 12px; }
+  .front { grid-template-columns: minmax(0, 1fr) 306px; padding-inline: 10px; }
   .vfdDisplay { grid-template-columns: minmax(0, 1fr) 140px; column-gap: 16px; padding-right: 12px; }
-  .transportGroup { gap: 10px; }
+  .transportGroup { gap: 12px; padding-left: 12px; }
+  .transportNotice { left: 12px; }
+  .faderWrapper { grid-template-columns: 40px 72px; }
   .faderTrack { width: 72px; }
 }
 @media (max-width: 700px) {
   .chassis { padding: 12px 8px; }
-  .front { grid-template-columns: minmax(0, 1fr) 154px; gap: 10px; padding-inline: 10px; }
-  .vfdDisplay { grid-template-columns: minmax(0, 1fr); grid-template-rows: 28px 22px 24px; column-gap: 0; padding-right: 10px; }
-  .vfdTrackName { font-size: 22px; line-height: 28px; }
-  .vfdArtist { font-size: var(--text-control); line-height: 22px; }
+  .front { grid-template-columns: minmax(0, 1fr) 146px; padding: 8px; }
+  .vfdDisplay { height: 84px; grid-template-columns: minmax(0, 1fr); grid-template-rows: 26px 20px 18px; column-gap: 0; padding: 6px 10px; }
+  .vfdTrackName { font-size: 22px; line-height: 26px; }
+  .vfdArtist { font-size: var(--text-control); line-height: 20px; }
   .progressContainer { grid-column: 1; grid-row: 3; gap: 0; }
   .progressBlocks { display: none; }
-  .transportGroup { flex-direction: column; justify-content: center; gap: 6px; }
-  .hwBtn { height: 32px; }
-  .muteLabel { height: 24px; }
-  .faderTrack { width: 90px; }
+  .progressTimes { line-height: 18px; }
+  .transportGroup { height: 84px; flex-direction: column; justify-content: center; gap: 8px; padding-left: 10px; }
+  .transportNotice { left: 10px; bottom: -4px; font-size: 12px; }
+  .volumeRetry { bottom: -6px; }
+  .controlLegend { display: none; }
+  .buttonsWrapper { grid-template-columns: 40px 44px 40px; column-gap: 4px; }
+  .hwBtn { width: 40px; height: 32px; }
+  .hwBtnPlay { width: 44px; }
+  .faderWrapper { grid-template-columns: 40px 82px; gap: 6px; }
+  .muteLabel { height: 26px; }
+  .faderTrack { width: 82px; height: 26px; }
 }

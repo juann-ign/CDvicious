@@ -8,8 +8,8 @@ const paper = (page) => page.getByTestId("lyrics-paper");
 const toolbar = (page) => page.getByTestId("lyrics-pagination-controls");
 const next = (page) => toolbar(page).getByRole("button", { name: "Páginas siguientes", exact: true });
 const previous = (page) => toolbar(page).getByRole("button", { name: "Páginas anteriores", exact: true });
-const nextTrack = (page) => page.locator("[data-global-player]").getByRole("button", { name: "Next", exact: true });
-const previousTrack = (page) => page.locator("[data-global-player]").getByRole("button", { name: "Previous", exact: true });
+const nextTrack = (page) => page.locator("[data-physical-deck]").getByRole("button", { name: "Pista siguiente del equipo", exact: true });
+const previousTrack = (page) => page.locator("[data-physical-deck]").getByRole("button", { name: "Pista anterior del equipo", exact: true });
 
 test.beforeEach(async ({ page }) => { await functionalFixture(page); fs.mkdirSync(output, { recursive: true }); });
 
@@ -100,7 +100,7 @@ test("Split normal: redimensionar conserva el verso y Deck no recibe foco del bo
   await expect(root(page)).toHaveAttribute("data-reading-anchor", anchor);
   await assertFits(page);
   await expect(toolbar(page)).toBeInViewport({ ratio: 1 });
-  const equipment = page.getByRole("img", { name: /Reproductor de CD.*Neon Rooms/ });
+  const equipment = page.getByRole("group", { name: /Reproductor de CD.*Neon Rooms/ });
   await expect(equipment).toBeVisible();
   await expect(equipment.locator("[data-deck-docked-disc]")).toBeVisible();
   await expect(equipment.locator("[data-deck-mechanism]")).toHaveAttribute("data-deck-static", "true");

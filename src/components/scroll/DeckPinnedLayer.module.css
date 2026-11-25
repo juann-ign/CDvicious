@@ -95,7 +95,13 @@
   z-index: 30;
   width: 100%;
   height: var(--shell-player-height);
+  /* Keep the reserved shell geometry and the approved Split anchors fixed.
+     The existing rail progress reveals the front as the physical Deck leaves. */
+  opacity: var(--pHideDeck, 1);
+  visibility: visible;
+  pointer-events: auto;
 }
+.globalPlayer[data-footer-visible="false"] { visibility: hidden; pointer-events: none; }
 
 /* Preserve the disc body inside the useful Deck height, including short windows. */
 .discHitArea {
@@ -130,11 +136,12 @@
 .physicalStage {
   position: absolute;
   inset: 0 auto 0 0;
-  width: calc(100% - (50% * var(--pSplit)));
+  width: 100%;
   min-width: 0;
   height: 100%;
   pointer-events: none;
 }
+.layer[data-deck-interactive="false"] :global([data-physical-deck]) :is(button,[role=slider]) { pointer-events: none; }
 
 .deckActions {
   position: absolute;

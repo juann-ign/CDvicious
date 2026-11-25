@@ -477,7 +477,7 @@ test("WebGL no disponible conserva el Deck estático y las cajas operables", asy
   });
   await page.reload({ waitUntil: "domcontentloaded" });
   await expect(page.locator('[data-rail-ready="true"]')).toBeVisible();
-  const equipment = page.getByRole("img", { name: /Reproductor de CD.*Neon Rooms/ });
+  const equipment = page.getByRole("group", { name: /Reproductor de CD.*Neon Rooms/ });
   await expect(equipment).toBeVisible();
   await expect(equipment.locator("[data-deck-docked-disc]")).toBeVisible();
   await expect(equipment.locator("[data-deck-mechanism]")).toHaveAttribute("data-deck-static", "true");

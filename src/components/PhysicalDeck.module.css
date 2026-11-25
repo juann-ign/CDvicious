@@ -1,4 +1,9 @@
 .viewport {
+  /* Paint at twice the design resolution, then compose down. In particular,
+     the faceplate, masked rim and rotary edges never upscale a small layer. */
+  --u: 2px;
+  --deck-density: 2;
+  --deck-silver: repeating-linear-gradient(0deg, #ffffff06 0 calc(1 * var(--u)), #374b4203 calc(1 * var(--u)) calc(3 * var(--u))), linear-gradient(115deg, #bcc4c2, #9eaaa8 45%, #c4ccca 72%, #adb7b9);
   position: relative;
   width: 100%;
   height: 100%;
@@ -10,13 +15,31 @@
 }
 
 .scene {
-  --u: min(1px, calc(100cqw / 1280), calc(100cqh / 660));
   position: absolute;
   inset: 0;
+  width: calc(1280 * var(--u));
+  height: calc(660 * var(--u));
   perspective: calc(1800 * var(--u));
   perspective-origin: 50% 43%;
   transform-style: preserve-3d;
   color: #27342e;
+}
+
+/* A stable camera/model is composed as one flat layer. Only this outer
+   transform follows the existing rail clock; no dimensions change per tick. */
+.placement {
+  position: absolute; inset: 0 auto auto 0; width: calc(1280 * var(--u)); height: calc(660 * var(--u));
+  transform-origin: 0 0; isolation: isolate; transform-style: flat; pointer-events: none;
+  --open-weight: clamp(0, calc(var(--deck-lid-offset, 0) / 135), 1);
+  --closed-x: calc(var(--deck-closed-x, 0px) + (var(--split-closed-x, 0px) - var(--deck-closed-x, 0px)) * var(--pSplit, 0));
+  --closed-y: calc(var(--deck-closed-y, 0px) + (var(--split-closed-y, 0px) - var(--deck-closed-y, 0px)) * var(--pSplit, 0));
+  --closed-s: calc(var(--deck-closed-s, 1) + (var(--split-closed-s, 1) - var(--deck-closed-s, 1)) * var(--pSplit, 0));
+  --open-x: calc(var(--deck-open-x, 0px) + (var(--split-open-x, 0px) - var(--deck-open-x, 0px)) * var(--pSplit, 0));
+  --open-y: calc(var(--deck-open-y, 0px) + (var(--split-open-y, 0px) - var(--deck-open-y, 0px)) * var(--pSplit, 0));
+  --open-s: calc(var(--deck-open-s, 1) + (var(--split-open-s, 1) - var(--deck-open-s, 1)) * var(--pSplit, 0));
+  transform: translate3d(calc(var(--closed-x) + (var(--open-x) - var(--closed-x)) * var(--open-weight)), calc(var(--closed-y) + (var(--open-y) - var(--closed-y)) * var(--open-weight)), 0)
+    scale(calc((var(--closed-s) + (var(--open-s) - var(--closed-s)) * var(--open-weight)) / var(--deck-density)));
+  will-change: transform;
 }
 
 .floorShadow {
@@ -96,18 +119,17 @@
 .lid { position: absolute; width: 50%; height: 100%; top: 0; transform-style: preserve-3d; }
 .lidLeft { left: 0; transform: translateX(calc(-1 * var(--deck-lid-offset) * var(--u))) translateZ(calc(16 * var(--u))); }
 .lidRight { right: 0; transform: translateX(calc(var(--deck-lid-offset) * var(--u))) translateZ(calc(16 * var(--u))); }
-.lidSurface { position: absolute; inset: 0; overflow: hidden; border: calc(1 * var(--u)) solid #e7ebe0; background: linear-gradient(125deg, #ffffff35, transparent 45%, #0000000c), var(--material-silver); box-shadow: inset 0 0 0 calc(2 * var(--u)) #6a786f, inset 0 calc(3 * var(--u)) calc(4 * var(--u)) #fff7; }
+.lidSurface { position: absolute; inset: 0; overflow: hidden; border: calc(1 * var(--u)) solid #e7ebe0; background: linear-gradient(125deg, #ffffff35, transparent 45%, #0000000c), var(--deck-silver); box-shadow: inset 0 0 0 calc(2 * var(--u)) #6a786f, inset 0 calc(3 * var(--u)) calc(4 * var(--u)) #fff7; }
 .leftSurface { mask-image: radial-gradient(circle at 100% 50%, transparent 0 calc(145 * var(--u)), #000 calc(146 * var(--u))); }
 .rightSurface { mask-image: radial-gradient(circle at 0 50%, transparent 0 calc(145 * var(--u)), #000 calc(146 * var(--u))); }
 .lidRim { position: absolute; width: calc(298 * var(--u)); height: calc(298 * var(--u)); top: 50%; border: calc(4 * var(--u)) ridge #d5ddd2; border-radius: 50%; transform: translateY(-50%); box-shadow: 0 0 0 calc(2 * var(--u)) #58695d; }
 .leftSurface .lidRim { right: calc(-149 * var(--u)); }.rightSurface .lidRim { left: calc(-149 * var(--u)); }
 .topRailSlot { position: absolute; left: 12%; right: 14%; top: calc(24 * var(--u)); height: calc(18 * var(--u)); border: calc(1 * var(--u)) solid #596c5f; background: linear-gradient(#68786b55, #d5dcd14d); box-shadow: inset 0 calc(2 * var(--u)) calc(2 * var(--u)) #283c2e55; }
-.topBrand { position: absolute; bottom: calc(21 * var(--u)); left: 10%; font: calc(9 * var(--u))/1 var(--font-ui); letter-spacing: calc(.7 * var(--u)); color: #3e5043; }
 .lidFrontEdge { position: absolute; left: 0; right: 0; top: 100%; height: calc(16 * var(--u)); transform-origin: 50% 0; transform: rotateX(-90deg); background: linear-gradient(#cbd4c9, #aab7a8 48%, #4a6050); border: calc(1 * var(--u)) solid #8b9d8e; }
 .lidOuterEdge { position: absolute; width: calc(16 * var(--u)); height: 100%; top: 0; background: linear-gradient(90deg, #677b6b, #c4cfc0); }
 .lidLeft .lidOuterEdge { left: 0; transform-origin: 0 50%; transform: rotateY(90deg); }.lidRight .lidOuterEdge { right: 0; transform-origin: 100% 50%; transform: rotateY(-90deg); }
 
-.frontFace { position: absolute; left: 0; top: 100%; width: 100%; height: calc(134 * var(--u)); transform-origin: 50% 0; transform: rotateX(-90deg); transform-style: preserve-3d; background: linear-gradient(#f0f3e433, #798a7b11 45%, #1e362a22), var(--material-silver); border: calc(1 * var(--u)) solid #d8e1d1; box-shadow: inset 0 calc(3 * var(--u)) 0 #ebf0e3, inset 0 calc(-4 * var(--u)) calc(8 * var(--u)) #4b63514d; }
+.frontFace { position: absolute; left: 0; top: 100%; width: 100%; height: calc(134 * var(--u)); transform-origin: 50% 0; transform: rotateX(-90deg); transform-style: preserve-3d; background: linear-gradient(#f0f3e433, #798a7b11 45%, #1e362a22), var(--deck-silver); border: calc(1 * var(--u)) solid #d8e1d1; box-shadow: inset 0 calc(3 * var(--u)) 0 #ebf0e3, inset 0 calc(-4 * var(--u)) calc(8 * var(--u)) #4b63514d; }
 .sideLeft, .sideRight { position: absolute; width: calc(134 * var(--u)); height: 100%; top: 0; border: calc(1 * var(--u)) solid #738875; background: repeating-linear-gradient(90deg, #a3b3a5 0 calc(2 * var(--u)), #798e7e calc(2 * var(--u)) calc(3 * var(--u))); }
 .sideLeft { left: 0; transform-origin: 0 50%; transform: rotateY(90deg); }.sideRight { right: 0; transform-origin: 100% 50%; transform: rotateY(-90deg); }
 .screw { position: absolute; width: calc(7 * var(--u)); height: calc(7 * var(--u)); border-radius: 50%; border: calc(1 * var(--u)) solid #526451; background: linear-gradient(45deg, #d5ded0 42%, #4e614c 43% 52%, #bcc9b7 53%); box-shadow: calc(1 * var(--u)) calc(1 * var(--u)) calc(2 * var(--u)) #243e2c55; }
@@ -115,17 +137,31 @@
 .rotary { position: absolute; left: calc(39 * var(--u)); top: calc(20 * var(--u)); width: calc(78 * var(--u)); height: calc(78 * var(--u)); border-radius: 50%; background: #354a39; border: calc(2 * var(--u)) solid #677d65; box-shadow: calc(5 * var(--u)) calc(5 * var(--u)) calc(6 * var(--u)) #1c30259c; }
 .rotary i { position: absolute; inset: 4%; border-radius: 50%; border: calc(1 * var(--u)) solid #e1e8d7; background: conic-gradient(from -45deg, #9fac98, #e6ecdd, #82947b 24%, #d9e3ce 43%, #778d70 56%, #d5dfca 78%, #9fac98); }
 .rotary i::after { content: ""; position: absolute; width: calc(1 * var(--u)); height: 25%; left: 50%; top: 8%; background: #40583e; }
-.volumeMark { position: absolute; left: calc(59 * var(--u)); top: calc(106 * var(--u)); font: calc(8 * var(--u))/1 var(--font-ui); letter-spacing: calc(1 * var(--u)); }
 .physicalDisplay { position: absolute; left: calc(161 * var(--u)); top: calc(18 * var(--u)); width: calc(499 * var(--u)); height: calc(74 * var(--u)); box-sizing: border-box; padding: calc(4 * var(--u)) calc(14 * var(--u)); border: calc(4 * var(--u)) ridge #536150; background: var(--hardware-front); box-shadow: inset 0 calc(3 * var(--u)) calc(7 * var(--u)) #000d, 0 calc(2 * var(--u)) calc(2 * var(--u)) #e4ead66b; overflow: hidden; font-family: var(--font-ui); color: var(--color-phosphor); }
-.physicalDisplay strong { display: block; max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font: max(16px, calc(22 * var(--u)))/.95 var(--font-ui); text-shadow: 0 0 calc(7 * var(--u)) var(--color-phosphor-glow); }
-.physicalDisplay > span { display: block; margin-top: calc(5 * var(--u)); font: max(12px, calc(10 * var(--u)))/.85 var(--font-ui); letter-spacing: calc(.6 * var(--u)); }
+.physicalDisplay strong { display: block; max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font: calc(26 * var(--u))/1 var(--font-ui); text-shadow: 0 0 calc(4 * var(--u)) var(--color-phosphor-glow); }
+.displayDetails { width: 64%; margin-top: calc(4 * var(--u)); overflow: hidden; }
+.displayArtist { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font: calc(17 * var(--u))/1 var(--font-ui); }
+.displayStatus { display: block; margin-top: calc(3 * var(--u)); font: calc(12 * var(--u))/1 var(--font-ui); color: var(--color-phosphor-dim); }
+.displayProgress { position: absolute; right: calc(13 * var(--u)); bottom: calc(9 * var(--u)); width: calc(140 * var(--u)); }
+.displayProgress > div { margin: 0; width: 100%; }
+.displayProgress > div > div:first-child { height: calc(5 * var(--u)); gap: calc(1 * var(--u)); }
+.displayProgress > div > div:last-child { margin-top: calc(5 * var(--u)); font: calc(12 * var(--u))/1 var(--font-ui); }
 .displayGlass { position: absolute; inset: 0; background: linear-gradient(125deg, #ffffff0e, transparent 35%, #0000000f 75%, #ffffff05); pointer-events: none; }
 .displaySegments { position: absolute; right: calc(14 * var(--u)); bottom: calc(12 * var(--u)); width: calc(89 * var(--u)); height: calc(6 * var(--u)); background: repeating-linear-gradient(90deg, #70964c 0 calc(4 * var(--u)), #182316 calc(4 * var(--u)) calc(7 * var(--u))); }
 .fixedTransport { position: absolute; left: calc(241 * var(--u)); right: calc(159 * var(--u)); bottom: calc(11 * var(--u)); display: flex; justify-content: space-between; align-items: center; gap: calc(12 * var(--u)); height: calc(19 * var(--u)); }
 .fixedTransport i { display: block; width: calc(24 * var(--u)); height: calc(19 * var(--u)); border-radius: 50%; border: calc(1 * var(--u)) solid #334e35; background: radial-gradient(ellipse at 35% 24%, #e0e7d7, #85977d 60%, #405b40); box-shadow: 0 calc(2 * var(--u)) calc(3 * var(--u)) #263c2a; }
 .fixedTransport b { display: block; width: calc(70 * var(--u)); height: calc(18 * var(--u)); border: calc(1 * var(--u)) solid #496147; border-radius: 0; background: linear-gradient(#9eaf94, #dce5d2 47%, #819578 51%, #a5b79b); box-shadow: 0 calc(2 * var(--u)) calc(3 * var(--u)) #263c2a88; }
-.frontBrand { position: absolute; left: calc(686 * var(--u)); top: calc(32 * var(--u)); color: #334d32; font: calc(12 * var(--u))/1.3 var(--font-ui); }
-.frontBrand small { display: block; margin-top: calc(14 * var(--u)); max-width: calc(88 * var(--u)); font: calc(7 * var(--u))/1.5 var(--font-ui); letter-spacing: calc(.7 * var(--u)); }
+.fixedTransport button { position: relative; width: calc(70 * var(--u)); height: calc(25 * var(--u)); padding: 0; border: calc(1 * var(--u)) solid #496147; border-radius: 0; background: linear-gradient(#9eaf94, #dce5d2 47%, #819578 51%, #a5b79b); color: #20342a; font: calc(18 * var(--u))/1 var(--font-ui); cursor: pointer; box-shadow: 0 calc(2 * var(--u)) calc(3 * var(--u)) #263c2a88; pointer-events: auto; }
+.fixedTransport button::before { content: ""; position: absolute; inset: calc(-8 * var(--u)) calc(-4 * var(--u)); }
+.fixedTransport button[aria-pressed=true] { background: #20342a; color: var(--color-phosphor); }
+.fixedTransport button:disabled { opacity: .45; cursor: default; }
+.fixedTransport button:focus-visible, .rotary:focus-visible { outline: 3px solid #20342a; outline-offset: 4px; }
+.rotary[role=slider] { pointer-events: auto; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
+.rotary[role=slider][data-volume-dragging=true] { cursor: grabbing; }
+.rotary[role=slider] > * { pointer-events: none; }
+.rotary[role=slider][aria-disabled=true] { cursor: default; opacity: .6; }
+.volumeScale { position: absolute; top: calc(100% + 4 * var(--u)); left: calc(-5 * var(--u)); right: calc(-5 * var(--u)); display: flex; justify-content: space-between; color: #20342a; font: calc(12 * var(--u))/1.1 var(--font-ui); letter-spacing: 0; }
+.volumeValue { position: absolute; inset: 0; display: grid; place-items: center; z-index: 1; color: #20342a; font: calc(14 * var(--u))/1 var(--font-ui); letter-spacing: 0; }
 .statusLamp { position: absolute; right: calc(67 * var(--u)); bottom: calc(23 * var(--u)); width: calc(5 * var(--u)); height: calc(5 * var(--u)); border: calc(1 * var(--u)) solid #254821; background: var(--color-phosphor); box-shadow: 0 0 calc(6 * var(--u)) var(--color-phosphor-glow); }
 .foot { position: absolute; bottom: calc(-28 * var(--u)); width: calc(95 * var(--u)); height: calc(22 * var(--u)); transform: rotateX(-90deg) translateZ(calc(-128 * var(--u))); transform-origin: 50% 0; background: linear-gradient(#4b5e4c, #18291d); border: calc(2 * var(--u)) solid #78906f; box-shadow: 0 calc(4 * var(--u)) calc(6 * var(--u)) #112017a6; }
 .footLeft { left: 10%; }.footRight { right: 10%; }
