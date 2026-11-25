@@ -5,10 +5,24 @@
   width: 100%;
   height: 100%;
   min-height: 0;
-  padding: 44px 5vw 26px;
+  padding: 16px 5vw;
   overflow: hidden;
   color: var(--color-text);
 }
+
+.collectionContent { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.collectionContent[hidden] { display: none; }
+.chapter[data-artist-exploring=true] {
+  padding: 20px 3vw 16px; width: 100%;
+  background: repeating-linear-gradient(0deg, #ffffff09 0 1px, #374b4205 1px 3px), linear-gradient(151deg, transparent 48%, #e4e7de16 48.1%, transparent 74%), radial-gradient(ellipse at 85% 18%, #b7b6ca75, transparent 55%), radial-gradient(ellipse at 10% 70%, #bbcab35c, transparent 60%), linear-gradient(115deg, #c0c5c3, #a6afad 45%, #c8cecb 72%, #b1b9bb);
+}
+.exploreArtist {
+  align-self: flex-start; margin-bottom: 12px; padding: 10px 16px;
+  background: var(--color-vfd-bg); border: 1px solid var(--color-phosphor-dim);
+  border-radius: 0; color: var(--color-phosphor); font-family: var(--font-ui);
+  font-size: 11px; letter-spacing: 1px; cursor: pointer;
+}
+.exploreArtist:focus-visible { outline: 2px solid var(--color-phosphor); outline-offset: 3px; }
 
 .header {
   display: flex;
@@ -106,6 +120,7 @@
 }
 
 .gridFrame {
+  container-type: size;
   flex: 1 1 auto;
   min-height: 0;
   overflow: hidden;
@@ -134,9 +149,18 @@
 }
 
 .grid > * {
-  width: 100%;
+  width: min(100%, calc((100cqh - 46px) * 0.27));
   max-width: 170px;
   min-width: 0;
+}
+
+@media (max-height: 700px) {
+  .chapter { padding-block: 10px; }
+  .chapter[data-artist-exploring=true] { padding-block: 12px; }
+  .header { margin-bottom: 8px; }
+  .header h2 { font-size: 34px; }
+  .exploreArtist { padding-block: 8px; margin-bottom: 8px; }
+  .toolbar { margin-bottom: 8px; }
 }
 
 .emptyState {

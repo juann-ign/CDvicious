@@ -179,7 +179,8 @@ test("long navigation visibly crosses every chapter and keeps the VFD unobstruct
   const vfdBox = await vfd.boundingBox();
   expect(navBox).not.toBeNull();
   expect(vfdBox).not.toBeNull();
-  expect(navBox.x).toBeGreaterThan(vfdBox.x + vfdBox.width + 8);
+  // The common shell now separates navigation and VFD vertically.
+  expect(navBox.y + navBox.height + 8).toBeLessThan(vfdBox.y);
 
   // data-chapter is a discrete active-state signal; sample visual panel geometry instead.
   await page.evaluate(() => {

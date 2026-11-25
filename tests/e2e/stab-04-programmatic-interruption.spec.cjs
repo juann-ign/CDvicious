@@ -22,17 +22,20 @@ for (const input of ['middle', 'touch']) {
         await expect(root).toHaveAttribute('data-rail-moving', 'true');
         await expect.poll(() => wrapper.evaluate(node => node.scrollLeft)).toBeGreaterThan(2);
         await sample('before-interruption');
+        // Keep native gestures over the rail after reserving the footer height.
+        const railBounds = await wrapper.boundingBox();
+        const gestureY = railBounds.y + railBounds.height - 12;
 
         if (input === 'middle') {
-          await page.mouse.click(60, 700, { button: 'middle' });
+          await page.mouse.click(60, gestureY, { button: 'middle' });
           // End the browser's native auto-scroll mode before testing later input.
           await page.keyboard.press('Escape');
         } else {
           const cdp = await page.context().newCDPSession(page);
           try {
-            await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: 300, y: 700 }] });
-            await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: 180, y: 700 }] });
-            await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: 80, y: 700 }] });
+            await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: 300, y: gestureY }] });
+            await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: 180, y: gestureY }] });
+            await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: 80, y: gestureY }] });
             await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
           } finally { await cdp.detach(); }
         }

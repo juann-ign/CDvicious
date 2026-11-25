@@ -4,46 +4,39 @@ import { ProgressBar } from "./ProgressBar";
 import styles from "./NowPlayingCard.module.css";
 
 interface NowPlayingCardProps {
+  global?: boolean;
   track: SpotifyTrack | null;
   isPlaying: boolean;
   error: boolean;
   progressMs: number | null;
   durationMs: number | null;
-  playbackStatus?: "unavailable" | "confirmed" | "pending" | "failed" | "degraded";
 }
 
 export function NowPlayingCard({
+  global = false,
   track,
   isPlaying,
   error,
   progressMs,
   durationMs,
-  playbackStatus,
 }: NowPlayingCardProps) {
-  const displayPlaybackStatus = playbackStatus ?? (track ? "confirmed" : "unavailable");
-
   return (
     // EL CHASIS DEL EQUIPO (Faceplate de metal oscuro/plástico mate)
-    <div className={styles.chassis}>
+    <div className={`${styles.chassis} ${global ? styles.globalChassis : ""}`}>
       {/* DISPLAY VFD INCRUSTADO */}
-      <div
-        className={styles.vfdDisplay}
-        data-testid="deck-now-playing"
-        data-is-playing={isPlaying ? "true" : "false"}
-        data-playback-status={displayPlaybackStatus}
-      >
-        <div className={styles.vfdTrackName} data-testid="deck-now-playing-track">
+      <div className={styles.vfdDisplay} data-testid="deck-now-playing" data-is-playing={isPlaying ? "true" : "false"}>
+        <div className={styles.vfdTrackName} data-testid="deck-now-playing-track" title={track?.name}>
           {track ? track.name : error ? "ERR: SIN SEÑAL" : "INSERT DISC"}
         </div>
 
-        <div className={styles.vfdArtist} data-testid="deck-now-playing-artist">
+        <div className={styles.vfdArtist} data-testid="deck-now-playing-artist" title={track?.artists.map((a) => a.name).join(" // ")}>
           {track ? track.artists.map((a) => a.name).join(" // ") : "---"}
         </div>
 
-        {track && (
+        {(track || global) && (
           <ProgressBar
             progressMs={progressMs}
-            durationMs={durationMs}
+            durationMs={global ? durationMs ?? 0 : durationMs}
             isPlaying={isPlaying}
           />
         )}

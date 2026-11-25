@@ -338,3 +338,10 @@
     display: none;
   }
 }
+
+@media (max-height: 700px) {
+  .chapter { padding-block: 12px; }
+  .header h2 { font-size: 38px; }
+  .albumCard { grid-template-columns: 32px minmax(0, 1fr) 28px; }
+  .cover { width: 32px; }
+}

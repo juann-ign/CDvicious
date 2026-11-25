@@ -37,7 +37,7 @@ export function ProgressBar({
 
   if (durationMs == null) return null;
 
-  const pct = Math.min(1, display / durationMs);
+  const pct = durationMs > 0 ? Math.min(1, display / durationMs) : 0;
   const totalBlocks = 40; // Cantidad de segmentos VFD
   const filledCount = Math.floor(pct * totalBlocks);
 

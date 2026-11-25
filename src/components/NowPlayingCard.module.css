@@ -300,3 +300,43 @@
 .faderInput:active {
   cursor: grabbing !important;
 }
+
+/* Fixed faceplate geometry; metadata can only consume its own grid tracks. */
+.globalChassis {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  align-items: center;
+  gap: 28px;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  padding: 18px 28px;
+  border-top: 2px solid #d4dfd254;
+  border-radius: 0;
+  background: repeating-linear-gradient(0deg, #ffffff08 0 1px, #374b4205 1px 3px), radial-gradient(ellipse at 85% 18%, #b8bdc8b0, transparent 55%), linear-gradient(115deg, #bcc4c2, #9eaaa8 45%, #c4ccca 72%, #adb7b9);
+  box-shadow: inset 0 2px #f1f4ed8a, inset 0 -3px #767e80;
+}
+.globalChassis .vfdDisplay {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(200px, .75fr);
+  grid-template-rows: 32px 24px;
+  column-gap: 28px;
+  align-content: center;
+  height: 90px;
+  min-width: 0;
+  padding: 12px 18px;
+}
+.globalChassis .vfdTrackName { grid-column: 1; grid-row: 1; min-width: 0; font-size: clamp(24px, 1.8vw, 30px); line-height: 32px; }
+.globalChassis .vfdArtist { grid-column: 1; grid-row: 2; min-width: 0; font-size: 15px; line-height: 24px; }
+.globalChassis .progressContainer { grid-column: 2; grid-row: 1 / 3; align-self: center; min-width: 0; margin: 0; gap: 12px; }
+.globalChassis .progressTimes { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.globalChassis .transportGroup { gap: 22px; padding: 0; min-width: 0; }
+.globalChassis .buttonsWrapper, .globalChassis .faderWrapper { flex-shrink: 0; }
+.hwBtn:focus-visible, .faderTrack:focus-within { outline: 2px solid var(--color-phosphor); outline-offset: 3px; }
+@media (max-width: 1100px) {
+  .globalChassis { grid-template-columns: minmax(0, 1fr) 310px; gap: 16px; padding-inline: 16px; }
+  .globalChassis .vfdDisplay { grid-template-columns: minmax(0, 1fr) 160px; column-gap: 16px; padding-inline: 12px; }
+  .globalChassis .transportGroup { gap: 12px; }
+  .globalChassis .buttonsWrapper { gap: 6px; }
+  .globalChassis .faderTrack { width: 80px; }
+}

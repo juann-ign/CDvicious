@@ -7,6 +7,15 @@
   padding: 16px;
 }
 
+:global(body:has([data-rail-ready])) .overlay {
+  top: var(--shell-nav-height);
+  bottom: var(--shell-player-height);
+}
+:global(body:has([data-rail-ready])) .sheet {
+  max-height: calc(var(--shell-content-height) - 32px);
+  overflow-y: auto;
+}
+
 .scrim {
   position: absolute;
   inset: 0;

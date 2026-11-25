@@ -14,6 +14,7 @@ import {
   type StartPlayExecution,
 } from "./JewelCaseDetailModal";
 import { JewelCaseFront } from "./JewelCaseFront";
+import { ArtistExplorer } from "./ArtistExplorer";
 import { RailFlyingDisc } from "./RailFlyingDisc";
 import type { AlbumItem } from "@/types/crate";
 import styles from "./CollectionChapter.module.css";
@@ -40,6 +41,8 @@ function decadeOf(album: AlbumItem): DecadeFilter {
 }
 
 export function CollectionChapter() {
+  const [exploringArtist, setExploringArtist] = useState(false);
+  const [artistExplorerVisited, setArtistExplorerVisited] = useState(false);
   const { authenticated } = useSpotifyPlayer();
   const { scrollToChapter } = useRailActions();
   const { albums: cachedAlbums, genresLoaded } = useCollectionCache();
@@ -61,7 +64,6 @@ export function CollectionChapter() {
   const [flight, setFlight] = useState<{
     album: AlbumItem;
     originRect: DOMRect;
-    attemptId: string;
   } | null>(null);
   const chapterRef = useRef<HTMLDivElement>(null);
   const requestStartedRef = useRef(false);
@@ -232,7 +234,6 @@ export function CollectionChapter() {
     album: AlbumItem,
     originEl: HTMLElement,
     executePlayback: StartPlayExecution,
-    attemptId: string,
   ) => {
     const sourceChapter = Number(document.documentElement.dataset.chapter ?? "0");
 
@@ -240,7 +241,6 @@ export function CollectionChapter() {
     setFlight({
       album,
       originRect: originEl.getBoundingClientRect(),
-      attemptId,
     });
     setSelected(null);
 
@@ -250,12 +250,8 @@ export function CollectionChapter() {
       .then((result) => {
         if (result.success) return;
 
-        window.dispatchEvent(
-          new CustomEvent("cdvicious:disc-flight-cancelled", {
-            detail: { attemptId },
-          }),
-        );
-        setFlight((current) => current?.attemptId === attemptId ? null : current);
+        window.dispatchEvent(new Event("cdvicious:disc-flight-cancelled"));
+        setFlight(null);
         setPlayErrorForAlbum({
           albumId: album.id,
           message: result.message ?? "Spotify no confirmó la reproducción. Podés intentarlo de nuevo.",
@@ -270,12 +266,8 @@ export function CollectionChapter() {
         });
       })
       .catch(() => {
-        window.dispatchEvent(
-          new CustomEvent("cdvicious:disc-flight-cancelled", {
-            detail: { attemptId },
-          }),
-        );
-        setFlight((current) => current?.attemptId === attemptId ? null : current);
+        window.dispatchEvent(new Event("cdvicious:disc-flight-cancelled"));
+        setFlight(null);
         setPlayErrorForAlbum({
           albumId: album.id,
           message: "No se pudo conectar con Spotify. Revisá tu conexión e intentá de nuevo.",
@@ -291,17 +283,13 @@ export function CollectionChapter() {
       });
   }, [scrollToChapter]);
 
-  const handleFlightArrive = useCallback((attemptId: string) => {
-    window.dispatchEvent(
-      new CustomEvent("cdvicious:disc-flight-arrived", { detail: { attemptId } }),
-    );
+  const handleFlightArrive = useCallback(() => {
+    window.dispatchEvent(new Event("cdvicious:disc-flight-arrived"));
   }, []);
 
-  const handleFlightDone = useCallback((attemptId: string) => {
-    window.dispatchEvent(
-      new CustomEvent("cdvicious:disc-flight-done", { detail: { attemptId } }),
-    );
-    setFlight((current) => current?.attemptId === attemptId ? null : current);
+  const handleFlightDone = useCallback(() => {
+    window.dispatchEvent(new Event("cdvicious:disc-flight-done"));
+    setFlight(null);
   }, []);
 
   const handleClose = useCallback(() => {
@@ -319,7 +307,9 @@ export function CollectionChapter() {
       ref={chapterRef}
       className={styles.chapter}
       data-collection-transition-lite="true"
+      data-artist-exploring={exploringArtist}
     >
+      <div className={styles.collectionContent} hidden={exploringArtist}>
       <header className={styles.header}>
         <div>
           <h2>LA COLECCIÓN</h2>
@@ -335,6 +325,7 @@ export function CollectionChapter() {
         </span>
       </header>
 
+      <button className={styles.exploreArtist} onClick={() => { setArtistExplorerVisited(true); setExploringArtist(true); }}>EXPLORAR ARTISTA ↗</button>
       <div className={styles.toolbar}>
         <input
           type="search"
@@ -448,6 +439,8 @@ export function CollectionChapter() {
           </button>
         </div>
       </footer>
+      </div>
+      {artistExplorerVisited && <ArtistExplorer open={exploringArtist} active={isActiveChapter} onCollection={() => setExploringArtist(false)} />}
 
       {selected && (
         <JewelCaseDetailModal
@@ -459,8 +452,8 @@ export function CollectionChapter() {
               ? playErrorForAlbum.message
               : null
           }
-          onPlay={(originEl, executePlayback, attemptId) =>
-            handlePlay(selected, originEl, executePlayback, attemptId)
+          onPlay={(originEl, executePlayback) =>
+            handlePlay(selected, originEl, executePlayback)
           }
         />
       )}
@@ -469,7 +462,6 @@ export function CollectionChapter() {
         <RailFlyingDisc
           coverUrl={flight.album.images[0]?.url ?? ""}
           originRect={flight.originRect}
-          attemptId={flight.attemptId}
           onArrive={handleFlightArrive}
           onDone={handleFlightDone}
         />

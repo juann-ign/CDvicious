@@ -101,6 +101,9 @@
   --z-modal: 100;
 
   /* LAYOUT */
+  --shell-nav-height: 72px;
+  --shell-player-height: 128px;
+  --shell-content-height: calc(100dvh - var(--shell-nav-height) - var(--shell-player-height));
   --header-height: 72px;
   --content-max-width: 1500px;
   --vfd-max-width: 620px;

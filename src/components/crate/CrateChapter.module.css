@@ -62,3 +62,9 @@
     width: 100%;
   }
 }
+
+@media (max-height: 700px) {
+  .chapter { padding-block: 16px; }
+  .header { margin-bottom: 12px; }
+  .header h2 { font-size: 34px; }
+}

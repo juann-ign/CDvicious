@@ -8,6 +8,9 @@
   padding: var(--space-4);
 }
 
+:global(body:has([data-rail-ready])) .overlay { top: var(--shell-nav-height); bottom: var(--shell-player-height); }
+:global(body:has([data-rail-ready])) .panel { height: 100%; }
+
 .scrim {
   position: absolute;
   inset: 0;

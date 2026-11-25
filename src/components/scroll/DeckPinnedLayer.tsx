@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
 import { useTexture } from "@react-three/drei";
 import type { NowPlayingResponse } from "@/types/spotify";
-import { UserProfileChip } from "@/components/UserProfileChip";
 import { Disc } from "@/components/Disc";
 import { NowPlayingCard } from "@/components/NowPlayingCard";
 import { LyricsBooklet } from "@/components/LyricsBooklet";
@@ -61,17 +60,13 @@ export function DeckPinnedLayer() {
     return () => observer.disconnect();
   }, []);
 
-  const { data, error } = useNowPlaying(
-    authenticated === true &&
-      (!deckHidden || flightStage !== "idle"),
-  );
+  // One subscription owns both the Deck visuals and the persistent player.
+  const { data, error } = useNowPlaying(authenticated === true);
   const latestDataRef = useRef(data);
 
-  // Keep the last real track snapshot while the Deck is off-chapter. The hook
-  // intentionally returns an empty snapshot when the Deck is not interactive,
-  // but a flight launched from Batea/Colección still needs a stable visual
-  // snapshot to bridge the disc animation.
-  if (flightStage === "idle" && data?.track && !playbackSnapshotOverride) {
+  // Freeze the current display for the flight handoff, including a real empty
+  // snapshot. The global subscription stays active off-chapter.
+  if (flightStage === "idle" && !playbackSnapshotOverride) {
     latestDataRef.current = data;
   }
 
@@ -184,14 +179,10 @@ export function DeckPinnedLayer() {
     }
   }, [data, flightStage, playbackSnapshotOverride]);
 
-  // Keep the last real track mounted while DeckPinnedLayer fades out.
-  // The polling hook intentionally returns an empty snapshot off-chapter;
-  // using that empty value here would swap the CD/booklet midway through the fade.
   const activeConfirmation = confirmedPlayback?.attemptId === activeAttemptRef.current ? confirmedPlayback : null;
   const visibleData = activeConfirmation?.snapshot ?? (flightStage !== "idle"
     ? frozenData
-    : playbackSnapshotOverride ??
-      (deckHidden ? latestDataRef.current : data));
+    : playbackSnapshotOverride ?? data);
   const isDockedBeforePlayback =
     flightStage === "docked";
   const visibleIsPlaying =
@@ -208,65 +199,56 @@ export function DeckPinnedLayer() {
   } as CSSProperties;
 
   return (
-    <div
-      className={styles.layer}
-      style={stageStyle}
-      ref={layerRef}
-      data-rail-overlay
-      data-deck-interactive="true"
-      data-deck-hidden={deckHidden ? "true" : "false"}
-      data-playback-attempt={activeAttemptRef.current ?? ""}
-      data-confirmed-attempt={confirmedPlayback?.attemptId ?? ""}
-      data-flight-stage={flightStage}
-    >
-      <header className={pageStyles.topControlBar}>
-        <div className={pageStyles.brandCorner}>
-          CD<span>vicious</span>
+    <>
+      <div
+        className={styles.layer}
+        style={stageStyle}
+        ref={layerRef}
+        data-rail-overlay
+        data-deck-interactive="true"
+        data-deck-hidden={deckHidden ? "true" : "false"}
+        data-playback-attempt={activeAttemptRef.current ?? ""}
+        data-confirmed-attempt={confirmedPlayback?.attemptId ?? ""}
+        data-flight-stage={flightStage}
+      >
+        <div className={styles.deckCluster}>
+          <div className={pageStyles.centerStage}>
+            <div className={styles.discHitArea} style={{ visibility: flightDiscVisible || flightStage !== "idle" ? "hidden" : undefined }}>
+              <Disc
+                track={visibleData?.track ?? null}
+                isPlaying={visibleIsPlaying}
+                accentColor={accentColor}
+                renderEnabled={!deckHidden && !flightDiscVisible && flightStage === "idle"}
+              />
+            </div>
+          </div>
         </div>
-        <div className={"top-nav-actions " + styles.interactive}>
-          <UserProfileChip />
-        </div>
-      </header>
 
-      <div className={styles.deckCluster}>
-        <div className={pageStyles.centerStage}>
-          <div className={styles.discHitArea} style={{ visibility: flightDiscVisible || flightStage !== "idle" ? "hidden" : undefined }}>
-            <Disc
-              track={visibleData?.track ?? null}
-              isPlaying={visibleIsPlaying}
+        {visibleData?.track && (
+          <div
+            className={styles.bookletLayer + " " + styles.interactive}
+            data-rail-booklet
+          >
+            <LyricsBooklet
+              track={visibleData.track}
+              isOpen
+              onToggle={() => undefined}
               accentColor={accentColor}
-              renderEnabled={!deckHidden && !flightDiscVisible && flightStage === "idle"}
+              showTab={false}
             />
           </div>
-        </div>
-
-        <div className={pageStyles.nowPlayingDock}>
-          <div className={styles.interactive}>
-            <NowPlayingCard
-              track={visibleData?.track ?? null}
-              isPlaying={visibleIsPlaying}
-              error={error}
-              progressMs={visibleProgressMs}
-              durationMs={visibleData?.durationMs ?? null}
-            />
-          </div>
-        </div>
+        )}
       </div>
-
-      {visibleData?.track && (
-        <div
-          className={styles.bookletLayer + " " + styles.interactive}
-          data-rail-booklet
-        >
-          <LyricsBooklet
-            track={visibleData.track}
-            isOpen
-            onToggle={() => undefined}
-            accentColor={accentColor}
-            showTab={false}
-          />
-        </div>
-      )}
-    </div>
+      <footer className={styles.globalPlayer} aria-label="Reproductor global" data-global-player>
+        <NowPlayingCard
+          global
+          track={visibleData?.track ?? null}
+          isPlaying={visibleIsPlaying}
+          error={error}
+          progressMs={visibleProgressMs}
+          durationMs={visibleData?.durationMs ?? null}
+        />
+      </footer>
+    </>
   );
 }
