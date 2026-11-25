@@ -2,30 +2,19 @@ import { NextResponse } from "next/server";
 import { getValidAccessToken } from "@/lib/session";
 import { fetchNowPlaying, SpotifyApiError } from "@/lib/spotify";
 import mockCollection from "@/mocks/collection.json";
+import { getMockTracks } from "@/mocks/demoCatalog";
 
 export async function GET() {
   if (process.env.NEXT_PUBLIC_SPOTIFY_MOCK === "1") {
     const album = mockCollection[0];
+    const track = getMockTracks(album)[0];
 
     return NextResponse.json(
       {
         isPlaying: true,
         progressMs: 42_000,
-        durationMs: 150_000,
-        track: {
-          id: `mock-track-${album.id}-1`,
-          name: "DEMO TRACK 01",
-          duration_ms: 150_000,
-          artists: album.artists.map((artist) => ({ name: artist.name })),
-          album: {
-            name: album.name,
-            images: album.images.map((image) => ({
-              url: image.url,
-              width: image.width,
-              height: image.height,
-            })),
-          },
-        },
+        durationMs: track.duration_ms,
+        track,
       },
       { headers: { "Cache-Control": "no-store" } },
     );

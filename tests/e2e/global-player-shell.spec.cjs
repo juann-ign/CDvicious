@@ -110,9 +110,9 @@ for (const [width, height] of sizes) {
       await toggle.click();
       await expect(display(page)).toHaveAttribute("data-is-playing", "true");
       await player(page).getByRole("button", { name: "Next", exact: true }).click();
-      await expect(page.getByTestId("deck-now-playing-track")).toHaveText("DEMO TRACK 02");
+      await expect(page.getByTestId("deck-now-playing-track")).toHaveText("Ascensor azul");
       await player(page).getByRole("button", { name: "Previous", exact: true }).click();
-      await expect(page.getByTestId("deck-now-playing-track")).toHaveText("DEMO TRACK 01");
+      await expect(page.getByTestId("deck-now-playing-track")).toHaveText("Ventana de neón");
 
       await installMockFixture(page);
       for (const state of ["short", "long", "empty", "error", "recovered"]) {
@@ -133,7 +133,7 @@ for (const [width, height] of sizes) {
         else if (state === "error") await expect(title).toHaveText("ERR: SIN SEÑAL");
         else if (state === "short") await expect(title).toHaveText("A");
         else if (state === "long") await expect(title).toContainText("extraordinariamente largo");
-        else await expect(title).toHaveText("DEMO TRACK 01");
+        else await expect(title).toHaveText("Ventana de neón");
         await assertShell(page, width, height);
         expect(await geometry(page)).toEqual(initial);
         await page.screenshot({ path: path.join(evidence, `${prefix}-state-${state}.png`) });

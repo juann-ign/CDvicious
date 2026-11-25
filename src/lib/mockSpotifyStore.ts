@@ -1,8 +1,8 @@
 "use client";
 
-import mockCollection from "@/mocks/collection.json";
+import { getMockPlaybackAlbums, getMockTracks } from "@/mocks/demoCatalog";
 import type { AlbumItem } from "@/types/crate";
-import type { NowPlayingResponse, SpotifyTrack } from "@/types/spotify";
+import type { NowPlayingResponse } from "@/types/spotify";
 
 export interface MockSpotifyPlayer {
   togglePlay(): Promise<void>;
@@ -20,8 +20,7 @@ type Snapshot = {
   error: boolean;
 };
 
-const TRACKS_PER_ALBUM = 10;
-const MOCK_ALBUMS = mockCollection as AlbumItem[];
+const MOCK_ALBUMS = getMockPlaybackAlbums();
 const listeners = new Set<() => void>();
 
 let albumIndex = 0;
@@ -30,31 +29,13 @@ let volume = 0.5;
 let subscriberCount = 0;
 let progressTimer: ReturnType<typeof setInterval> | null = null;
 
-function createTrack(album: AlbumItem, index: number): SpotifyTrack {
-  return {
-    id: `mock-track-${album.id}-${index + 1}`,
-    name: `DEMO TRACK ${String(index + 1).padStart(2, "0")}`,
-    artists: album.artists.map((artist) => ({ name: artist.name })),
-    duration_ms: 150_000 + index * 9_000,
-    album: {
-      id: album.id,
-      name: album.name,
-      images: album.images.map((image) => ({
-        url: image.url,
-        width: image.width ?? 600,
-        height: image.height ?? 600,
-      })),
-    },
-  };
-}
-
 function createSnapshot(
   album: AlbumItem,
   nextTrackIndex: number,
   isPlaying: boolean,
   progressMs: number,
 ): Snapshot {
-  const track = createTrack(album, nextTrackIndex);
+  const track = getMockTracks(album)[nextTrackIndex];
 
   return {
     error: false,
@@ -99,21 +80,22 @@ function selectTrack(nextAlbumIndex: number, nextTrackIndex: number, isPlaying: 
   albumIndex =
     (nextAlbumIndex % MOCK_ALBUMS.length + MOCK_ALBUMS.length) %
     MOCK_ALBUMS.length;
-  trackIndex =
-    (nextTrackIndex % TRACKS_PER_ALBUM + TRACKS_PER_ALBUM) %
-    TRACKS_PER_ALBUM;
-
   const album = currentAlbum();
+  const totalTracks = getMockTracks(album).length;
+  trackIndex = (nextTrackIndex % totalTracks + totalTracks) % totalTracks;
   publish(createSnapshot(album, trackIndex, isPlaying, 0));
 }
 
 function moveTrack(direction: -1 | 1) {
-  let absoluteIndex = albumIndex * TRACKS_PER_ALBUM + trackIndex + direction;
-  const totalTracks = MOCK_ALBUMS.length * TRACKS_PER_ALBUM;
-  absoluteIndex = (absoluteIndex % totalTracks + totalTracks) % totalTracks;
-
-  const nextAlbumIndex = Math.floor(absoluteIndex / TRACKS_PER_ALBUM);
-  const nextTrackIndex = absoluteIndex % TRACKS_PER_ALBUM;
+  let nextAlbumIndex = albumIndex;
+  let nextTrackIndex = trackIndex + direction;
+  if (nextTrackIndex < 0) {
+    nextAlbumIndex = (albumIndex - 1 + MOCK_ALBUMS.length) % MOCK_ALBUMS.length;
+    nextTrackIndex = getMockTracks(MOCK_ALBUMS[nextAlbumIndex]).length - 1;
+  } else if (nextTrackIndex >= getMockTracks(currentAlbum()).length) {
+    nextAlbumIndex = (albumIndex + 1) % MOCK_ALBUMS.length;
+    nextTrackIndex = 0;
+  }
   const isPlaying = snapshot.data?.isPlaying ?? true;
 
   selectTrack(nextAlbumIndex, nextTrackIndex, isPlaying);
@@ -171,7 +153,9 @@ export function release() {
 /** Selects a mock album while the CD is in flight; resume() starts it at zero. */
 export function loadMockAlbum(album: AlbumItem) {
   const matchedIndex = MOCK_ALBUMS.findIndex((item) => item.id === album.id);
-  if (matchedIndex >= 0) albumIndex = matchedIndex;
+  // Artist releases and saved albums share the same queue. A caller-supplied
+  // demo edition must also remain selected when transport advances.
+  albumIndex = matchedIndex >= 0 ? matchedIndex : MOCK_ALBUMS.push(album) - 1;
   trackIndex = 0;
 
   publish(createSnapshot(album, trackIndex, false, 0));

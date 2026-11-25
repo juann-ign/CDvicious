@@ -17,9 +17,10 @@ function routeHarness(respond) {
   const load = (file) => {
     file = path.resolve(file);
     if (cache.has(file)) return cache.get(file);
+    if (path.extname(file) === ".json") return JSON.parse(fs.readFileSync(file, "utf8"));
     const module = { exports: {} };
     cache.set(file, module.exports);
-    const js = ts.transpileModule(fs.readFileSync(file, "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
+    const js = ts.transpileModule(fs.readFileSync(file, "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true } }).outputText;
     const requireLocal = (name) => {
       if (name === "next/server") return { NextResponse: { json: (value, options) => Response.json(value, options) } };
       const resolved = name.startsWith("@/") ? path.join(process.cwd(), "src", name.slice(2)) : name.startsWith(".") ? path.resolve(path.dirname(file), name) : null;

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getValidAccessToken } from "@/lib/session";
-import mockCollection from "@/mocks/collection.json";
+import { getMockAlbum } from "@/mocks/demoCatalog";
 
 interface SpotifyAlbumDetails { name: string; artists?: { name: string }[]; release_date?: string; label?: string; genres?: string[]; }
 interface MusicBrainzRelease { id: string; score?: number; date?: string; country?: string; }
@@ -90,10 +90,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   const { id } = await params;
 
   if (process.env.NEXT_PUBLIC_SPOTIFY_MOCK === "1") {
-    const album = mockCollection.find((item) => item.id === id);
+    const album = getMockAlbum(id);
 
     return NextResponse.json({
-      year: album?.release_date?.slice(0, 4) ?? "2024",
+      year: album?.release_date?.slice(0, 4),
       label: album?.label ?? "CDvicious Demo Label",
       format: "COMPACT DISC",
       country: "AR",

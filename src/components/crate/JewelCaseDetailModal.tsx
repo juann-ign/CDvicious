@@ -271,19 +271,6 @@ export function JewelCaseDetailModal({
   useEffect(() => {
     let cancelled = false;
 
-    if (process.env.NEXT_PUBLIC_SPOTIFY_MOCK === "1") {
-      setTracks(
-        Array.from({ length: 10 }, (_, index) => ({
-          name: "DEMO TRACK " + String(index + 1).padStart(2, "0"),
-          duration_ms: 150000 + index * 9000,
-        })),
-      );
-      setLoading(false);
-      return () => {
-        cancelled = true;
-      };
-    }
-
     setLoading(true);
     fetch(`/api/album/${album.id}/tracks`)
       .then((res) => res.json())

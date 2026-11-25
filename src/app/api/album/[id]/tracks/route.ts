@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getValidAccessToken } from "@/lib/session";
+import { getMockTracks } from "@/mocks/demoCatalog";
 
 interface SpotifyTrackItem {
   name: string;
@@ -14,10 +15,7 @@ export async function GET(
 
   if (process.env.NEXT_PUBLIC_SPOTIFY_MOCK === "1") {
     return NextResponse.json({
-      tracks: Array.from({ length: 10 }, (_, index) => ({
-        name: "DEMO TRACK " + String(index + 1).padStart(2, "0"),
-        duration_ms: 150_000 + index * 9_000,
-      })),
+      tracks: getMockTracks(id),
     });
   }
 

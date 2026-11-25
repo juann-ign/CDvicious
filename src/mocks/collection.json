@@ -430,5 +430,35 @@
       "indie",
       "dream-pop"
     ]
+  },
+  {
+    "id": "demo-vertice-album-0",
+    "name": "Campo magnético",
+    "uri": "spotify:album:demo-vertice-album-0",
+    "release_date": "1994-04-12",
+    "label": "CDvicious · catálogo ficticio de prueba",
+    "images": [{ "url": "/images/discography/demo-0.png", "width": 800, "height": 800 }],
+    "artists": [{ "id": "demo-vertice", "name": "Vértice Magnético" }],
+    "genres": ["indie", "electronic"]
+  },
+  {
+    "id": "demo-satelite-album-1",
+    "name": "Frecuencia cero",
+    "uri": "spotify:album:demo-satelite-album-1",
+    "release_date": "1995-04-12",
+    "label": "CDvicious · catálogo ficticio de prueba",
+    "images": [{ "url": "/images/discography/demo-1.png", "width": 800, "height": 800 }],
+    "artists": [{ "id": "demo-satelite", "name": "Satélite Sur" }],
+    "genres": ["electronic", "ambient"]
+  },
+  {
+    "id": "demo-inerciales-album-0",
+    "name": "Andenes",
+    "uri": "spotify:album:demo-inerciales-album-0",
+    "release_date": "1994-04-12",
+    "label": "CDvicious · catálogo ficticio de prueba",
+    "images": [{ "url": "/images/discography/demo-0.png", "width": 800, "height": 800 }],
+    "artists": [{ "id": "demo-inerciales", "name": "Los Inerciales" }],
+    "genres": ["post-punk", "rock"]
   }
 ]
