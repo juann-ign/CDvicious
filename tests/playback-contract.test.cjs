@@ -52,7 +52,7 @@ function executionHarness(observation, { dockReady = true } = {}) {
   const listeners = new Map();
   let calls = 0;
   const player = { getVolume: async () => .6, setVolume: async (value) => { volumes.push(value); }, pause: async () => {}, seek: async () => {}, resume: async () => {} };
-  const runtime = load("src/lib/discPlayback.ts", { "./playbackSnapshotCoordinator": api, "./mockSpotifyStore": {}, "./mechanicalDockClick": { armMechanicalDockClick: () => ({ play: async () => "disabled", dispose() {} }) } }, {
+  const runtime = load("src/lib/discPlayback.ts", { "./playbackSnapshotCoordinator": api, "./mockPlayback": { mockPlayback: null }, "./mechanicalDockClick": { armMechanicalDockClick: () => ({ play: async () => "disabled", dispose() {} }) } }, {
     process: { env: { NEXT_PUBLIC_SPOTIFY_MOCK: "0" } },
     document: { documentElement: { dataset: { discFlightPlaybackReady: dockReady ? "true" : "false" } } },
     window: {

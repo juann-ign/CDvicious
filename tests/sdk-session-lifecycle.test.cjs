@@ -70,7 +70,7 @@ function providerHarness() {
     "react/jsx-runtime": { jsx: (type, props) => { context = props.value; return { type, props }; } },
     "@/lib/clientSession": client,
     "@/lib/serializedPlayerVolume": load("src/lib/serializedPlayerVolume.ts"),
-    "@/lib/mockSpotifyStore": { mockSpotifyPlayer: {} },
+    "@/lib/mockPlayback": { mockPlayback: null },
   }, { window: browser, document, Event: class { constructor(type) { this.type = type; } } });
   function render() {
     dirty = false;

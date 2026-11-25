@@ -20,7 +20,8 @@ const PANELS = [
 ];
 
 function useIsDesktop() {
-  const [isDesktop, setIsDesktop] = useState(false);
+  // This rail is client-only. Select the correct scene before mounting its canvas.
+  const [isDesktop, setIsDesktop] = useState(() => window.matchMedia(DESKTOP_QUERY).matches);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia(DESKTOP_QUERY);

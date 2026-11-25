@@ -13,7 +13,17 @@ interface Options {
   onGrabStart?: () => void;
   onGrabEnd?: () => void;
 }
-interface Slot { id: string; node: HTMLElement; button: HTMLButtonElement }
+interface Slot {
+  id: string;
+  node: HTMLElement;
+  button: HTMLButtonElement;
+  paintedLeft?: number;
+  visible?: boolean;
+}
+
+function publishState(root: HTMLElement, key: string, value: string) {
+  if (root.dataset[key] !== value) root.dataset[key] = value;
+}
 
 export function useArtistShelfLayout(options: Options) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -29,6 +39,7 @@ export function useArtistShelfLayout(options: Options) {
   const anchorId = useRef<string | null>(null);
   const keyboardId = useRef<string | null>(null);
   const emphasisId = useRef<string | null>(null);
+  const shiftedSlots = useRef(new Set<HTMLElement>());
   const focused = useRef(false);
   const reduced = useRef(false);
   const target = useRef<number | null>(null);
@@ -70,30 +81,46 @@ export function useArtistShelfLayout(options: Options) {
     const positions: { slot: Slot; left: number }[] = [];
     slots.current.forEach((slot, index) => {
       const left = artistShelfPosition(index, offset.current, current, entry.current);
-      positions.push({ slot, left });
-      slot.node.style.transform = `translate3d(${left}px,0,0)`;
-      slot.node.style.setProperty("--case-shift", "0px");
-      slot.node.style.visibility = left + current.slotWidth + current.overscan < 0 || left - current.overscan > current.width ? "hidden" : "visible";
+      const visible = left + current.slotWidth + current.overscan >= 0 && left - current.overscan <= current.width;
+      // Park an offscreen case outside the clip until it reaches the overscan
+      // again. Its catalog position continues to advance with the same clock.
+      if ((visible || visible !== slot.visible) && left !== slot.paintedLeft) {
+        slot.node.style.transform = `translate3d(${left}px,0,0)`;
+        slot.paintedLeft = left;
+      }
+      if (visible !== slot.visible) {
+        slot.node.style.visibility = visible ? "visible" : "hidden";
+        slot.visible = visible;
+      }
+      if (emphasisId.current) positions.push({ slot, left });
       const distance = Math.abs(left + current.slotWidth / 2 - current.width / 2);
       if (distance < nearestDistance) { nearest = index; nearestDistance = distance; }
     });
+    for (const node of shiftedSlots.current) node.style.removeProperty("--case-shift");
+    shiftedSlots.current.clear();
     const emphasized = positions.find(({ slot }) => slot.id === emphasisId.current);
     if (emphasized) for (const direction of [-1, 1]) {
       positions.filter(({ left }) => direction < 0 ? left < emphasized.left : left > emphasized.left)
         .sort((a, b) => Math.abs(a.left - emphasized.left) - Math.abs(b.left - emphasized.left)).slice(0, 2)
-        .forEach(({ slot }, index) => slot.node.style.setProperty("--case-shift", `${direction * current.visualOverflow / .23 * (index === 0 ? .15 : .07)}px`));
+        .forEach(({ slot }, index) => {
+          slot.node.style.setProperty("--case-shift", `${direction * current.visualOverflow / .23 * (index === 0 ? .15 : .07)}px`);
+          shiftedSlots.current.add(slot.node);
+        });
     }
     if (!focused.current) keyboardId.current = current.fit ? slots.current[0]?.id ?? null : slots.current[nearest]?.id ?? null;
-    slots.current.forEach((slot) => { slot.button.tabIndex = slot.id === keyboardId.current ? 0 : -1; });
+    slots.current.forEach((slot) => {
+      const tabIndex = slot.id === keyboardId.current ? 0 : -1;
+      if (slot.button.tabIndex !== tabIndex) slot.button.tabIndex = tabIndex;
+    });
     const displacement = offset.current - artistShelfInitialOffset(current);
     const travelled = entry.current ? Math.max(0, displacement) : wrapArtistShelf(displacement, current.length);
     const nextPage = current.fit ? 0 : Math.min(pagesRef.current - 1, Math.floor(travelled / current.length * pagesRef.current));
     if (nextPage !== pageRef.current) { pageRef.current = nextPage; setPage(nextPage); }
     const root = viewport.closest<HTMLElement>("[data-artist-shelf]");
     if (root) {
-      root.dataset.artistCycleOffset = offset.current.toFixed(4);
-      root.dataset.artistCycleLength = String(current.length);
-      root.dataset.artistSequence = entry.current && !current.fit ? "entry" : "cycle";
+      publishState(root, "artistCycleOffset", offset.current.toFixed(4));
+      publishState(root, "artistCycleLength", String(current.length));
+      publishState(root, "artistSequence", entry.current && !current.fit ? "entry" : "cycle");
     }
   };
   paintRef.current = paint;
@@ -188,11 +215,11 @@ export function useArtistShelfLayout(options: Options) {
       const holding = initialHoldRemaining.current > 0 && !layoutRef.current?.fit;
       const drifting = eligible && !holding;
       if (root) {
-        root.dataset.beltAnimationEnabled = canUse ? "true" : "false";
-        root.dataset.artistDrifting = drifting ? "true" : "false";
-        root.dataset.artistReducedMotion = reduced.current ? "true" : "false";
-        root.dataset.artistInitialHold = holding ? "true" : "false";
-        root.dataset.artistInitialHoldRemaining = String(Math.ceil(initialHoldRemaining.current));
+        publishState(root, "beltAnimationEnabled", String(canUse));
+        publishState(root, "artistDrifting", String(drifting));
+        publishState(root, "artistReducedMotion", String(reduced.current));
+        publishState(root, "artistInitialHold", String(holding));
+        publishState(root, "artistInitialHoldRemaining", String(Math.ceil(initialHoldRemaining.current)));
       }
       if (canUse && !layoutRef.current?.fit && (eligible || target.current !== null) && !reduced.current) {
         if (frame === null) { priorTime = performance.now(); frame = requestAnimationFrame(tick); }

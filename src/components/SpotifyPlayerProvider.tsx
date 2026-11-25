@@ -9,10 +9,8 @@ import {
 } from "react";
 import { getClientAuthSession } from "@/lib/clientSession";
 import { serializedPlayerVolume } from "@/lib/serializedPlayerVolume";
-import {
-  mockSpotifyPlayer,
-  type MockSpotifyPlayer,
-} from "@/lib/mockSpotifyStore";
+import type { MockSpotifyPlayer } from "@/lib/mockSpotifyStore";
+import { mockPlayback } from "@/lib/mockPlayback";
 
 type PlaybackPlayer = Spotify.Player | MockSpotifyPlayer;
 
@@ -33,7 +31,6 @@ const SpotifyPlayerContext = createContext<SpotifyPlayerContextType>({
 export const useSpotifyPlayer = () => useContext(SpotifyPlayerContext);
 
 export function SpotifyPlayerProvider({ children }: { children: ReactNode }) {
-  const mockMode = process.env.NEXT_PUBLIC_SPOTIFY_MOCK === "1";
   const [player, setPlayer] = useState<PlaybackPlayer | null>(null);
   const [isReady, setIsReady] = useState(false);
   const [deviceId, setDeviceId] = useState<string | null>(null);
@@ -41,7 +38,7 @@ export function SpotifyPlayerProvider({ children }: { children: ReactNode }) {
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
 
   useEffect(() => {
-    if (mockMode) {
+    if (mockPlayback) {
       setAuthenticated(true);
       setToken(null);
       return;
@@ -66,11 +63,11 @@ export function SpotifyPlayerProvider({ children }: { children: ReactNode }) {
     return () => {
       active = false;
     };
-  }, [mockMode]);
+  }, []);
 
   useEffect(() => {
-    if (mockMode) {
-      setPlayer(serializedPlayerVolume(mockSpotifyPlayer));
+    if (mockPlayback) {
+      setPlayer(serializedPlayerVolume(mockPlayback.mockSpotifyPlayer));
       setDeviceId("cdvicious-mock-device");
       setIsReady(true);
 
@@ -177,7 +174,7 @@ export function SpotifyPlayerProvider({ children }: { children: ReactNode }) {
         document.body.removeChild(script);
       }
     };
-  }, [token, mockMode]);
+  }, [token]);
 
   return (
     <SpotifyPlayerContext.Provider

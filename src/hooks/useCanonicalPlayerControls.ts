@@ -5,25 +5,24 @@ import { useSpotifyPlayer } from "@/components/SpotifyPlayerProvider";
 import { createCanonicalPlayerControls, EMPTY_CONTROL_STATE, type PlayerCapabilities } from "@/lib/canonicalPlayerControls";
 import { createDirectTrackPlayback, createTrackSelectionBaseline } from "@/lib/directTrackPlayback";
 import { getPlaybackState, subscribePlaybackState } from "@/lib/playbackSnapshotCoordinator";
-import * as mockStore from "@/lib/mockSpotifyStore";
+import { mockPlayback } from "@/lib/mockPlayback";
 import * as liveStore from "@/lib/nowPlayingStore";
 
-const mock = process.env.NEXT_PUBLIC_SPOTIFY_MOCK === "1";
-const nowPlaying = mock ? mockStore : liveStore;
+const nowPlaying = mockPlayback ?? liveStore;
 let retryAt = 0;
 const readLiveTrackBaseline = createTrackSelectionBaseline(() => liveStore.getSnapshot().data, getPlaybackState);
 const playTrack = createDirectTrackPlayback({
-  readBaseline: mock ? undefined : readLiveTrackBaseline,
+  readBaseline: mockPlayback ? undefined : readLiveTrackBaseline,
   read: () => {
-    if (!mock) return liveStore.getSnapshot();
-    const { data } = mockStore.getSnapshot();
+    if (!mockPlayback) return liveStore.getSnapshot();
+    const { data } = mockPlayback.getSnapshot();
     return { data, requestStartedAt: data?.sampledAt };
   },
   subscribe: nowPlaying.subscribe,
   refresh: () => window.dispatchEvent(new Event("cdvicious:player_state_changed")),
   async request(target, selection, signal) {
-    if (mock) {
-      if (!mockStore.playMockTrack(selection)) throw new Error("La pista no está disponible en este disco. Elegí otra.");
+    if (mockPlayback) {
+      if (!mockPlayback.playMockTrack(selection)) throw new Error("La pista no está disponible en este disco. Elegí otra.");
       return;
     }
     let response: Response;
@@ -43,7 +42,7 @@ const playTrack = createDirectTrackPlayback({
   },
 });
 const controller = createCanonicalPlayerControls(async (target, signal) => {
-  if (mock) return { volumeSupported: true, transportSupported: true, volume: await target.player.getVolume() };
+  if (mockPlayback) return { volumeSupported: true, transportSupported: true, volume: await target.player.getVolume() };
   if (Date.now() < retryAt) throw new Error("Device rate limit active");
   const response = await fetch(`/api/player-capabilities?deviceId=${encodeURIComponent(target.deviceId)}`, {
     cache: "no-store", signal: AbortSignal.any([signal, AbortSignal.timeout(6000)]),
@@ -81,11 +80,11 @@ export function useCanonicalPlayerControls() {
     leases++;
     if (!disconnectPlayback) {
       const sync = () => {
-        if (!mock) readLiveTrackBaseline();
+        if (!mockPlayback) readLiveTrackBaseline();
         controller.setBlocked(getPlaybackState().busy);
       };
       const stopHandoff = subscribePlaybackState(sync);
-      const stopObservation = mock ? null : liveStore.subscribe(readLiveTrackBaseline);
+      const stopObservation = mockPlayback ? null : liveStore.subscribe(readLiveTrackBaseline);
       disconnectPlayback = () => { stopHandoff(); stopObservation?.(); };
       sync();
       let refreshTimer: number | null = null;

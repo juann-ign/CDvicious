@@ -3,7 +3,7 @@
 import type { AlbumItem } from "@/types/crate";
 import type { NowPlayingResponse } from "@/types/spotify";
 import type { MockSpotifyPlayer } from "./mockSpotifyStore";
-import * as mockStore from "./mockSpotifyStore";
+import { mockPlayback } from "./mockPlayback";
 import { beginPlaybackAttempt, cancelPlaybackAttempt, confirmPlaybackSnapshot, failPlaybackAttempt, finishPlaybackAttempt, getPlaybackState, isActivePlaybackAttempt, markPlaybackDocked, matchesPlaybackSnapshot, playbackEventAttemptId, registerPlaybackCancellation, setPlaybackDockClick, type PlaybackAttempt } from "./playbackSnapshotCoordinator";
 import { armMechanicalDockClick } from "./mechanicalDockClick";
 
@@ -33,7 +33,6 @@ export function createDiscPlaybackExecution(album: AlbumItem, deviceId: string, 
   const controller = new AbortController();
   // Audio activation belongs to this trusted gesture, before any SDK awaits.
   const click = armMechanicalDockClick();
-  const mock = process.env.NEXT_PUBLIC_SPOTIFY_MOCK === "1";
   let task: Promise<PlayExecutionResult> | null = null;
   let timeout: number | null = null;
   let timedOut = false;
@@ -95,7 +94,7 @@ export function createDiscPlaybackExecution(album: AlbumItem, deviceId: string, 
     let pauseConfirmed = false;
     let requestedPlayback = false;
     let result: PlayExecutionResult = { success: false, message: TIMEOUT_MESSAGE };
-    const priorMockSnapshot = mock ? mockStore.getSnapshot() : null;
+    const priorMockSnapshot = mockPlayback?.getSnapshot();
     const restoreVolume = () => restoreTask ??= (async () => {
       if (!restoreNeeded || previousVolume === null) return true;
       try {
@@ -133,13 +132,13 @@ export function createDiscPlaybackExecution(album: AlbumItem, deviceId: string, 
         ? "Tu sesión de Spotify expiró. Volvé a iniciar sesión." : response.status === 429
         ? "Spotify está limitando las solicitudes. Esperá antes de reintentar." : "Spotify no confirmó la reproducción."));
       requestedPlayback = true;
-      if (mock) mockStore.loadMockAlbum(album);
+      mockPlayback?.loadMockAlbum(album);
       assertActive();
       pauseConfirmed = await untilAborted(player.pause().then(() => true, () => false), controller.signal);
       await untilAborted(dock, controller.signal);
       assertActive();
-      let safeToPlay = mock || (muteConfirmed && pauseConfirmed && requestedPlayback);
-      if (!mock && safeToPlay) safeToPlay = await untilAborted(player.getVolume().then((value) => value === 0, () => false), controller.signal);
+      let safeToPlay = Boolean(mockPlayback) || (muteConfirmed && pauseConfirmed && requestedPlayback);
+      if (!mockPlayback && safeToPlay) safeToPlay = await untilAborted(player.getVolume().then((value) => value === 0, () => false), controller.signal);
       assertActive();
       const clicking = click.play({ safeToPlay, signal: controller.signal, volume: previousVolume }).then((outcome) => {
         setPlaybackDockClick(attempt.attemptId, outcome); return outcome;
@@ -155,8 +154,8 @@ export function createDiscPlaybackExecution(album: AlbumItem, deviceId: string, 
       while (!controller.signal.aborted && isActivePlaybackAttempt(attempt.attemptId)) {
         const requestedAt = Date.now();
         let snapshot: NowPlayingResponse | null;
-        if (mock) {
-          const data = mockStore.getSnapshot().data;
+        if (mockPlayback) {
+          const data = mockPlayback.getSnapshot().data;
           snapshot = data ? { ...data, sampledAt: Date.now(), deviceId } : null;
         } else {
           const observation = await untilAborted(fetch("/api/now-playing", { cache: "no-store", signal: controller.signal }), controller.signal);
@@ -177,7 +176,7 @@ export function createDiscPlaybackExecution(album: AlbumItem, deviceId: string, 
       throw new Error("Spotify no confirmó la reproducción a tiempo. Podés reintentar.");
     } catch (error) {
       if (requestedPlayback) await untilAborted(player.pause(), AbortSignal.timeout(2000)).catch(() => undefined);
-      if (priorMockSnapshot && requestedPlayback) mockStore.restoreMockSnapshot(priorMockSnapshot);
+      if (priorMockSnapshot && requestedPlayback) mockPlayback?.restoreMockSnapshot(priorMockSnapshot);
       const cancelled = getPlaybackState().attempt?.attemptId === attempt.attemptId && getPlaybackState().phase === "cancelled";
       result = { success: false, message: failureMessage(error), ...(cancelled ? { cancelled: true } : {}) };
       return result;

@@ -33,7 +33,7 @@ function harness({ getVolume, setVolume, pause, resume, observation, click, play
     resume: async () => { operations.push(["resume"]); return resume?.(); },
   };
   const mechanical = { armMechanicalDockClick: () => ({ play: async (options) => { operations.push(["click", options.safeToPlay]); return click ? click(options) : options.safeToPlay ? "disabled" : "unsafe"; }, dispose() { operations.push(["dispose"]); } }) };
-  const runtime = load("src/lib/discPlayback.ts", { "./playbackSnapshotCoordinator": coordinator, "./mockSpotifyStore": {}, "./mechanicalDockClick": mechanical }, {
+  const runtime = load("src/lib/discPlayback.ts", { "./playbackSnapshotCoordinator": coordinator, "./mockPlayback": { mockPlayback: null }, "./mechanicalDockClick": mechanical }, {
     process: { env: { NEXT_PUBLIC_SPOTIFY_MOCK: "0" } }, window,
     document: { documentElement: { dataset: {} }, visibilityState: "visible" },
     Event, CustomEvent,

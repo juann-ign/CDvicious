@@ -438,11 +438,6 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
         activeChapterIndex -= 1;
       }
 
-      activeChapterIndexRef.current = activeChapterIndex;
-      setActiveChapterIndex((current) =>
-        current === activeChapterIndex ? current : activeChapterIndex,
-      );
-
       root.style.setProperty("--pSplit", String(splitProgress));
       root.style.setProperty("--pHideDeck", String(hideDeckProgress));
 
@@ -470,12 +465,16 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
         document.documentElement.dataset.chapter = chapter;
       }
 
+      if (activeChapterIndexRef.current === activeChapterIndex) return;
+      activeChapterIndexRef.current = activeChapterIndex;
+      setActiveChapterIndex(activeChapterIndex);
+
       Array.from(content.children).forEach((child, index) => {
         const panel = child as HTMLElement;
         const active = index === activeChapterIndex;
-
+        if (panel.dataset.chapterActive === String(active)) return;
         panel.toggleAttribute("inert", !active);
-        panel.dataset.chapterActive = active ? "true" : "false";
+        panel.dataset.chapterActive = String(active);
       });
 
       const overlay = root.querySelector<HTMLElement>("[data-rail-overlay]");
