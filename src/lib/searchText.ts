@@ -81,3 +81,21 @@ export function rankArtistMatches<T extends { id: string; name: string }>(items:
   }
   return ranked.sort((a, b) => b.weight - a.weight).map(({ item }) => item);
 }
+
+/** Focus a shortlist only when the query supplies a clear name or ordered prefix. */
+export function strongestArtistMatches<T extends { name: string }>(items: readonly T[], query: string): T[] | null {
+  const words = searchWords(normalizeSearchText(query));
+  const term = words.join(" ");
+  if (term.length < 4) return null;
+
+  const candidates = items.map((item) => ({ item, name: searchWords(normalizeSearchText(item.name)) }));
+  const exact = candidates.filter(({ name }) => name.join(" ") === term);
+  if (exact.length) return exact.map(({ item }) => item);
+
+  // A short token or a single unfinished word can describe many artists.
+  if (words.length < 2 || words[words.length - 1].length < 3) return null;
+  const prefixes = candidates.filter(({ name }) => words.every((word, index) => name[index]?.startsWith(word)));
+  if (!prefixes.length) return null;
+  const noExtraWords = prefixes.filter(({ name }) => name.length === words.length);
+  return (noExtraWords.length ? noExtraWords : prefixes).map(({ item }) => item);
+}

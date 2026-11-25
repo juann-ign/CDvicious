@@ -38,20 +38,27 @@ export function DeckTrackSelector({ enabled, track, controls }: Props) {
   if (!enabled || !albumId || !track) return null;
 
   const selectable = controls.canControl && !controls.blocked && !controls.transportPending;
-  return <div className={styles.deck} data-deck-track-selector data-lenis-prevent onKeyDown={(event) => {
+  const close = () => {
+    setOpen(false);
+    toggle.current?.focus({ preventScroll: true });
+  };
+  return <div className={styles.deck} data-deck-track-selector data-track-listing-open={visible} data-lenis-prevent onKeyDown={(event) => {
     if (event.key !== "Escape" || !visible) return;
     event.preventDefault();
     event.stopPropagation();
-    setOpen(false);
-    toggle.current?.focus({ preventScroll: true });
+    close();
   }}>
     <button ref={toggle} type="button" className={styles.toggle} aria-expanded={visible}
       aria-controls={visible ? id : undefined} onClick={() => setOpen((value) => !value)}>
-      <svg aria-hidden="true" width="16" height="14" viewBox="0 0 16 14" fill="none">
-        <path d="M1 2.5h2m-2 4.5h2m-2 4.5h2m3-9h9m-9 4.5h9m-9 4.5h9" stroke="currentColor" strokeWidth="1.5" />
+      <span className={styles.toggleIcon} aria-hidden="true">
+        <svg width="16" height="14" viewBox="0 0 16 14" fill="none">
+          <path d="M1 2.5h2m-2 4.5h2m-2 4.5h2m3-9h9m-9 4.5h9m-9 4.5h9" stroke="currentColor" strokeWidth="1.5" />
+        </svg>
+      </span>
+      <span>Track listing</span>
+      <svg className={styles.chevron} aria-hidden="true" width="10" height="12" viewBox="0 0 10 12" fill="none">
+        <path d="M3 2.5 6.5 6 3 9.5" stroke="currentColor" strokeWidth="1.5" />
       </svg>
-      Pistas
-      <span className={styles.chevron} aria-hidden="true">{visible ? "◂" : "▸"}</span>
     </button>
     {visible && <section className={styles.panel} id={id} aria-label="Pistas del álbum" aria-busy={loading}>
       <header className={styles.album} title={track.album.name}>{track.album.name}</header>
@@ -71,17 +78,18 @@ export function DeckTrackSelector({ enabled, track, controls }: Props) {
               return <Fragment key={entry.position}>
                 {multiDisc && tracks[index - 1]?.disc_number !== entry.disc_number &&
                   <li className={styles.disc} aria-label={`Disco ${entry.disc_number}`}>CD {entry.disc_number}</li>}
-                <li className={styles.item}>
+                <li className={styles.item} data-alternate={index % 2 === 1 || undefined}>
                   <button type="button" className={styles.row} aria-current={current || undefined}
                     aria-disabled={disabled || undefined} data-pending={pending}
                     data-track-position={entry.position}
                     onClick={() => {
-                      if (!disabled && entry.id) void controls.selectTrack({
+                      if (disabled || !entry.id) return;
+                      void controls.selectTrack({
                         albumId, trackId: entry.id, position: entry.position, linkedFromId: entry.linkedFromId,
                       });
+                      close();
                     }}>
-                    <span className={styles.number} aria-hidden="true">{String(entry.track_number).padStart(2, "0")}</span>
-                    <span>{entry.name}</span>
+                    <span className={styles.title}>{entry.name}</span>{" "}
                     <span className={styles.time}>{!available ? "No disponible" : pending ? "En espera" : formatTime(entry.duration_ms)}</span>
                   </button>
                 </li>

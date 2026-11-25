@@ -223,7 +223,11 @@ export function useDeckLiftPrototype(refs: LiftRefs, options: LiftOptions) {
     };
     const keyup = (event: KeyboardEvent) => { if (!optionsRef.current.externalGesture && drag?.pointer === null && event.key.startsWith("Arrow")) { event.preventDefault(); event.stopPropagation(); easeOrientation(); } };
     const wheel = (event: WheelEvent) => { if (clock.phase === "free") { event.preventDefault(); event.stopPropagation(); } };
-    const escape = (event: KeyboardEvent) => { if (event.key === "Escape" && clock.phase !== "docked") { event.preventDefault(); event.stopImmediatePropagation(); cancel(true, "escape"); } };
+    const escape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || clock.phase === "docked") return;
+      if (event.target instanceof Element && event.target.closest('[data-track-listing-open="true"]')) return;
+      event.preventDefault(); event.stopImmediatePropagation(); cancel(true, "escape");
+    };
     const started = () => { if (clock.phase !== "docked") cancel(false, "handoff"); };
     const blur = () => { if (drag) { if (optionsRef.current.externalGesture) releaseDrag(); else easeOrientation(); } };
     const hidden = () => { if (document.visibilityState === "hidden" && clock.phase !== "docked") cancel(false, "hidden"); };

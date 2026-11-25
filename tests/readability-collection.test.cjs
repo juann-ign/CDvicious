@@ -41,6 +41,7 @@ const album = (id, date, name = "Órbita del sur", genres = ["rock"]) => ({ id, 
 const providerPage = (items, offset = 0, next = null) => ({ artists: { items, offset, limit: 10, total: items.length, next } });
 const searchRequest = (query, offset = 0) => new Request(`http://local/api/search?${new URLSearchParams({ type: "artist", q: query, offset: String(offset) })}`);
 const releaseRequest = (query, offset = 0) => new Request(`http://local/api/search?${new URLSearchParams({ type: "artist", scope: "releases", q: query, offset: String(offset) })}`);
+const catalogSearchRequest = (query, offset = 0) => new Request(`http://local/api/search?${new URLSearchParams({ scope: "catalog", q: query, offset: String(offset) })}`);
 
 test("búsqueda sin tildes conserva textos originales y ediciones distintas por ID", () => {
   const run = runtime();
@@ -133,6 +134,169 @@ test("Spotify usa créditos reales en sugerencias por álbum y acota la alternat
     assert.deepEqual(calls.at(-1), [`artist:"${redondos.name}" album:"Gulp"`, "album", "10"]);
   }
   assert.equal((await route.GET(releaseRequest("Gulp!", 10))).status, 400);
+});
+
+test("el buscador del nav demo encuentra álbum, artista y consulta mixta dentro de su catálogo ficticio", async () => {
+  const run = runtime({ mock: true });
+  const { GET } = run.load("src/app/api/search/route.ts");
+  const library = run.load("src/mocks/collection.json");
+  const byAlbum = await (await GET(catalogSearchRequest("Neon Rooms"))).json();
+  assert.equal(byAlbum.kind, "album");
+  assert.deepEqual(byAlbum.albums[0], library.find(({ id }) => id === "mock-album-01"));
+  for (const name of ["Vértice Magnético", "Vertice", "Vert Mag"]) {
+    const byArtist = await (await GET(catalogSearchRequest(name))).json();
+    assert.equal(byArtist.kind, "artist");
+    assert.equal(byArtist.artists[0].id, "demo-vertice");
+  }
+  const both = await (await GET(catalogSearchRequest("vertice campo"))).json();
+  assert.equal(both.kind, "mixed");
+  assert.equal(both.artists[0].id, "demo-vertice");
+  assert.equal(both.albums[0].id, "demo-vertice-album-0");
+  assert.deepEqual(await (await GET(catalogSearchRequest("The Beatles"))).json(), { kind: "empty", artists: [], albums: [] });
+  assert.equal((await GET(catalogSearchRequest("Neon Rooms", 10))).status, 400);
+  assert.equal(run.calls.length, 0);
+});
+
+const artistProfile = (id, name) => ({ id, name, images: [] });
+
+test("el nav mantiene consultas amplias y reduce prefijos distintivos sin confundir homenajes ni ediciones", () => {
+  const { catalogSearchMatches } = runtime().load("src/lib/catalogSearch.ts");
+  const beatles = artistProfile("beatles", "The Beatles");
+  const beatlesTribute = artistProfile("beatles-tribute", "The Beatles Tribute Band");
+  const beatBrothers = artistProfile("beat-brothers", "The Beat Brothers");
+  const struts = artistProfile("struts", "The Struts");
+  const redondos = artistProfile("redondos", "Patricio Rey y sus Redonditos de Ricota");
+  const homenaje = artistProfile("homenaje", "Homenaje a Patricio Rey");
+  const profiles = [beatlesTribute, beatBrothers, struts, beatles, homenaje, redondos];
+  const wrongAlbum = { ...album("tribute-release", "2018", "En vivo"), artists: [beatlesTribute] };
+  const rightAlbum = { ...album("abbey-road", "1969", "Abbey Road"), artists: [beatles] };
+
+  const broad = catalogSearchMatches("The", profiles, [], 10);
+  assert.equal(broad.kind, "artist");
+  assert.deepEqual(plain(broad.artists.map(({ id }) => id)), ["beatles-tribute", "beat-brothers", "struts", "beatles"]);
+  const focused = catalogSearchMatches("The beat", profiles, [wrongAlbum, rightAlbum], 10);
+  assert.deepEqual(plain(focused), { kind: "artist", artists: [beatles], albums: [rightAlbum] });
+  assert.deepEqual(plain(catalogSearchMatches("Patrício Rey", profiles, [], 10).artists), [redondos]);
+});
+
+test("un nombre exacto tiene prioridad y se conservan IDs distintos con igual evidencia", () => {
+  const { catalogSearchMatches } = runtime().load("src/lib/catalogSearch.ts");
+  const beatles = artistProfile("beatles", "The Beatles");
+  const exact = artistProfile("beat", "The Beat");
+  const exactOther = artistProfile("another-beat", "The Beat");
+  const samePrefix = artistProfile("another-beatles", "The Beatles");
+  const ids = (query, profiles) => plain(catalogSearchMatches(query, profiles, [], 10).artists.map(({ id }) => id));
+  assert.deepEqual(ids("The Beat", [beatles, exact]), ["beat"]);
+  assert.deepEqual(ids("The BÉAT", [beatles, exact, exactOther]), ["beat", "another-beat"]);
+  assert.deepEqual(ids("The beat", [beatles, samePrefix]), ["beatles", "another-beatles"]);
+});
+
+test("The Beatles gana frente a The Beat cuando Spotify lo ubica primero y sus ediciones corroboran el mismo ID", async () => {
+  const beatles = artistProfile("beatles", "The Beatles");
+  const beat = artistProfile("beat", "The Beat");
+  const abbey = { ...album("abbey", "1969", "Abbey Road"), artists: [beatles], album_type: "album" };
+  const revolver = { ...album("revolver", "1966", "Revolver"), artists: [beatles], album_type: "album" };
+  const beatAlbum = { ...album("beat-album", "1980", "I Just Can't Stop It"), artists: [beat], album_type: "album" };
+  const beatSingle = { ...beatAlbum, id: "single", album_type: "single" };
+  let profiles = [beatles, beat];
+  let items = [beatSingle, abbey, abbey, beatAlbum, revolver];
+  const run = runtime({ respond: async () => ({ ...providerPage(profiles), albums: { items } }) });
+  const { GET } = run.load("src/app/api/search/route.ts");
+  const search = async () => (await GET(catalogSearchRequest("The beat"))).json();
+  assert.deepEqual(await search(), { kind: "artist", artists: [beatles], albums: [abbey, revolver] });
+  profiles = [beat, beatles];
+  assert.deepEqual(await search(), { kind: "artist", artists: [beat], albums: [beatAlbum] });
+  profiles = [beatles, beat];
+  items = [abbey, abbey, beatAlbum];
+  assert.deepEqual(await search(), { kind: "artist", artists: [beat], albums: [beatAlbum] });
+  assert.equal(run.calls.length, 3, "Ranking uses only Search results and their matching album credits");
+});
+
+test("la corroboración elige el ID acreditado de Patricio Rey y conserva ambos ante un empate real", () => {
+  const { catalogSearchMatches } = runtime().load("src/lib/catalogSearch.ts");
+  const profile = artistProfile("canonical", "Patricio Rey y sus Redonditos de Ricota");
+  const alias = { ...profile, id: "same-name" };
+  const releases = [album("gulp", "1985", "Gulp!"), album("oktubre", "1986", "Oktubre")];
+  const search = (artists) => plain(catalogSearchMatches("Patricio Rey", [profile, alias], releases.map((release) => ({ ...release, artists })), 10, true).artists);
+  assert.deepEqual(search([profile]), [profile]);
+  assert.deepEqual(search([profile, alias]), [profile, alias]);
+  assert.deepEqual(search([alias]), [profile, alias], "The first provider result must itself be corroborated");
+});
+
+test("el nav reintenta una vez por palabra distintiva si Spotify omite el prefijo, y revalida antes de mostrar", async () => {
+  const beatles = artistProfile("beatles", "The Beatles");
+  const candidates = [artistProfile("beat-brothers", "The Beat Brothers"), artistProfile("gospel", "The Struts"), beatles];
+  const observed = [];
+  const run = runtime({ respond: async (url) => {
+    const tokens = url.searchParams;
+    observed.push([tokens.get("q"), tokens.get("type")]);
+    return providerPage(tokens.get("q") === "beat" ? candidates : []);
+  } });
+  const request = catalogSearchRequest("The beat");
+  const response = await run.load("src/app/api/search/route.ts").GET(request);
+  assert.equal(response.headers.get("X-CDV-Search-Requests"), "2");
+  assert.deepEqual(await response.json(), { kind: "artist", artists: [beatles], albums: [] });
+  assert.deepEqual(observed, [["The beat", "artist,album"], ["beat", "artist,album"]]);
+  assert.ok(run.calls.every(({ signal }) => signal === request.signal));
+});
+
+test("el nav preserva la ficha completa y clasifica Gulp, Patricio Rey y la consulta mixta por crédito", async () => {
+  const profile = { id: "redondos", name: "Patricio Rey y sus Redonditos de Ricota", images: [{ url: "https://covers.example/artist" }], external_urls: { spotify: "https://open.spotify.com/artist/redondos" } };
+  const credit = { id: profile.id, name: profile.name };
+  const gulp = { ...album("original", "1985", "Gulp!"), artists: [credit], images: [{ url: "https://covers.example/gulp", height: 640, width: 640 }] };
+  const redition = { ...gulp, id: "reedition", uri: "spotify:album:reedition", name: "Gulp! Remaster", release_date: "2001" };
+  const unrelated = album("homonym", "1995", "Gulp!");
+  const run = runtime({ respond: async (url) => {
+    const q = url.searchParams.get("q");
+    if (q?.startsWith("artist:")) return { albums: { items: [redition, unrelated, gulp, gulp, null, { name: "Gulp!", id: "broken" }] } };
+    if (q === "Gulp") return { ...providerPage([{ id: "different", name: "Gulp", images: [] }]), albums: { items: [redition, gulp] } };
+    if (q === "Patricio Rey") return { ...providerPage([profile]), albums: { items: [gulp, unrelated] } };
+    return { ...providerPage([profile]), albums: { items: [] } };
+  } });
+  const { GET } = run.load("src/app/api/search/route.ts");
+  const title = await GET(catalogSearchRequest("Gulp"));
+  assert.equal(title.headers.get("X-CDV-Search-Requests"), "1");
+  assert.deepEqual(await title.json().then(({ kind, albums }) => ({ kind, albums })), { kind: "album", albums: [gulp, redition] });
+  const artist = await GET(catalogSearchRequest("Patricio Rey"));
+  assert.equal(artist.headers.get("X-CDV-Search-Requests"), "1");
+  assert.deepEqual(await artist.json(), { kind: "artist", artists: [profile], albums: [gulp] });
+  const request = catalogSearchRequest("Patricio Rey Gulp");
+  const mixed = await GET(request);
+  assert.equal(mixed.headers.get("X-CDV-Search-Requests"), "2");
+  const result = await mixed.json();
+  assert.equal(result.kind, "mixed");
+  assert.deepEqual(result.albums, [gulp, redition]);
+  assert.deepEqual(result.artists, [{ ...profile, matchedAlbum: { id: "original", name: "Gulp!" } }]);
+  assert.deepEqual(run.calls.slice(-2).map(({ url }) => {
+    const params = new URL(url, "https://api.spotify.com/v1/").searchParams;
+    return [params.get("q"), params.get("type")];
+  }), [
+    ["Patricio Rey Gulp", "artist,album"], ['artist:"Patricio Rey" album:"Gulp"', "album"],
+  ]);
+  assert.ok(run.calls.slice(-2).every(({ signal, endpoint }) => signal === request.signal && endpoint === "GET /v1/search"));
+});
+
+test("el buscador del nav conserva Retry-After y sólo prueba una variante sin tildes ante ausencia", async () => {
+  const rate = runtime({ respond: async () => Response.json({ error: "RATE_LIMITED" }, { status: 429, headers: { "Retry-After": "8" } }) });
+  const limited = await rate.load("src/app/api/search/route.ts").GET(catalogSearchRequest("Vertíce"));
+  assert.equal(limited.status, 429);
+  assert.equal(limited.headers.get("Retry-After"), "8");
+  assert.equal(rate.calls.length, 1);
+  const profile = { id: "vertice-id", name: "Vértice Magnético", images: [] };
+  const run = runtime({ respond: async (url) => providerPage(url.searchParams.get("q") === "Vertice" ? [profile] : []) });
+  const { GET } = run.load("src/app/api/search/route.ts");
+  const response = await GET(catalogSearchRequest("Vértice"));
+  assert.deepEqual(await response.json(), { kind: "artist", artists: [profile], albums: [] });
+  assert.deepEqual(run.calls.map(({ url }) => new URL(url, "https://api.spotify.com/v1/").searchParams.get("q")), ["Vértice", "Vertice"]);
+});
+
+test("la vista previa da hasta tres ediciones por ID y fecha, sin añadir créditos ajenos", () => {
+  const { catalogArtistPreview } = runtime().load("src/lib/catalogSearch.ts");
+  const items = [album("d", "2024"), album("c", "1997"), album("fecha-inválida", "1991-13"),
+    album("b", "1994-04"), album("a", "1994"), album("a", "2001"),
+    { ...album("invitado", "1960"), artists: [{ id: "otro", name: "Otro" }] }];
+  assert.deepEqual(plain(catalogArtistPreview(items, "vertice-id").map(({ id }) => id)), ["a", "b", "c"]);
+  assert.deepEqual(plain(catalogArtistPreview(items, "sin-albumes")), []);
 });
 
 test("búsqueda demo de artistas admite prefijos breves y acentos manteniendo nombre e identidad", async () => {

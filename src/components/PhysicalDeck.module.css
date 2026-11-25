@@ -170,6 +170,16 @@
 .lidRim { position: absolute; width: calc(298 * var(--u)); height: calc(298 * var(--u)); top: 50%; border: calc(4 * var(--u)) ridge #d5ddd2; border-radius: 50%; transform: translateY(-50%); box-shadow: 0 0 0 calc(2 * var(--u)) #58695d; }
 .leftSurface .lidRim { right: calc(-149 * var(--u)); }.rightSurface .lidRim { left: calc(-149 * var(--u)); }
 .topRailSlot { position: absolute; left: 12%; right: 14%; top: calc(24 * var(--u)); height: calc(18 * var(--u)); border: calc(1 * var(--u)) solid #596c5f; background: linear-gradient(#68786b55, #d5dcd14d); box-shadow: inset 0 calc(2 * var(--u)) calc(2 * var(--u)) #283c2e55; }
+/* Split's smaller, tilted top projects adjacent light/dark one-unit strokes
+   below a screen pixel. A single wider bevel keeps the edges continuous. */
+:global(html[data-chapter="1"]) .lidSurface {
+  border: calc(3 * var(--u)) solid #8f9f93;
+  box-shadow: inset 0 calc(3 * var(--u)) calc(4 * var(--u)) #fff7;
+}
+:global(html[data-chapter="1"]) .topRailSlot {
+  border-width: calc(3 * var(--u));
+  border-color: #65776a99;
+}
 .lidFrontEdge { position: absolute; left: 0; right: 0; top: 100%; height: calc(16 * var(--u)); transform-origin: 50% 0; transform: rotateX(-90deg); background: linear-gradient(#cbd4c9, #aab7a8 48%, #4a6050); border: calc(1 * var(--u)) solid #8b9d8e; }
 .lidOuterEdge { position: absolute; width: calc(16 * var(--u)); height: 100%; top: 0; background: linear-gradient(90deg, #677b6b, #c4cfc0); }
 .lidLeft .lidOuterEdge { left: 0; transform-origin: 0 50%; transform: rotateY(90deg); }.lidRight .lidOuterEdge { right: 0; transform-origin: 100% 50%; transform: rotateY(-90deg); }

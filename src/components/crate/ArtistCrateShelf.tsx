@@ -50,7 +50,6 @@ export function ArtistCrateShelf({ albums, onSelect, active = true, chapterIndex
           </div>)}
         </div>
       </div>
-      <div className={skin.fadeLeft} /><div className={skin.fadeRight} />
     </div>
     {motion.pages > 1 && <div className={skin.dots} role="tablist" aria-label={label}>{Array.from({ length: motion.pages }, (_, page) =>
       <button key={page} type="button" role="tab" aria-selected={page === motion.page} className={`${skin.dot} ${page === motion.page ? skin.dotActive : ""}`} onClick={() => motion.goTo(page)} aria-label={`Página ${page + 1}`} />)}</div>}

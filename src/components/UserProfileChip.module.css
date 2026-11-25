@@ -46,6 +46,8 @@
   border-color: var(--color-phosphor);
 }
 
+.profileConnect [data-user-profile-connect-icon] { display: none; }
+
 /* =========================================================
    PROFILE CONTAINER
    ========================================================= */
@@ -99,6 +101,7 @@
    ========================================================= */
 
 .avatar {
+  flex: none;
   width: 26px;
   height: 26px;
 
@@ -108,7 +111,12 @@
 }
 
 .avatarPlaceholder {
-  background: #2a2f38;
+  display: grid;
+  place-items: center;
+  background: #1c2a20;
+  color: #d5e7cb;
+  font: 12px/1 var(--font-ui);
+  letter-spacing: 0;
 }
 
 /* =========================================================
@@ -116,6 +124,10 @@
    ========================================================= */
 
 .username {
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-family: var(--font-ui);
   font-size: var(--text-xl);
   font-weight: var(--weight-regular);

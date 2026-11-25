@@ -29,9 +29,9 @@ function load(file) {
   return loaded.exports;
 }
 
-const { artistShelfLayout, artistShelfPosition, artistShelfInitialOffset, rebaseArtistShelf, ARTIST_SHELF_SPEED, ARTIST_SHELF_REENTRY_SECONDS, ARTIST_SHELF_INITIAL_HOLD_MS } = load("src/lib/artistShelfLayout.ts");
+const { artistShelfLayout, artistShelfPosition, artistShelfInitialOffset, artistShelfEntryComplete, rebaseArtistShelf, ARTIST_SHELF_SPEED, ARTIST_SHELF_REENTRY_SECONDS, ARTIST_SHELF_INITIAL_HOLD_MS } = load("src/lib/artistShelfLayout.ts");
 const almost = (a, b) => assert.ok(Math.abs(a - b) < 1e-7, `${a} != ${b}`);
-const realistic = (count) => artistShelfLayout(count, 1032, 114.4, 208);
+const realistic = (count) => artistShelfLayout(count, 1160, 127.6, 232, ARTIST_SHELF_SPEED, -7);
 
 test("uno, pocos y siete discos caben estáticos y quedan centrados; ocho activan el ciclo", () => {
   for (const count of [1, 2, 3, 7]) {
@@ -45,25 +45,64 @@ test("uno, pocos y siete discos caben estáticos y quedan centrados; ocho activa
   assert.equal(realistic(8).fit, false);
 });
 
-test("el ciclo inicial centra únicamente el primer disco; paginar y redimensionar conservan el ancla", () => {
+test("el borde visible del primer disco arranca en el medio; paginar y redimensionar conservan el ancla", () => {
   assert.equal(ARTIST_SHELF_INITIAL_HOLD_MS, 1000);
   const ids = Array.from({ length: 20 }, (_, index) => `edition-${index}`);
   const before = realistic(ids.length);
   const initial = artistShelfInitialOffset(before);
-  almost(artistShelfPosition(0, initial, before) + before.slotWidth / 2, before.width / 2);
+  almost(artistShelfPosition(0, initial, before, true) + before.visualLeft, before.width / 2);
   almost(rebaseArtistShelf([], ids, 0, null, before), initial);
   const advanced = initial + 175;
-  const left = artistShelfPosition(0, advanced, before);
+  const left = artistShelfPosition(0, advanced, before, true);
   const appendedIds = Array.from({ length: 40 }, (_, index) => `edition-${index}`);
   const appended = realistic(appendedIds.length);
-  const offset = rebaseArtistShelf(ids, appendedIds, advanced, before, appended, ids[0]);
-  almost(artistShelfPosition(0, offset, appended), left);
+  const offset = rebaseArtistShelf(ids, appendedIds, advanced, before, appended, ids[0], true);
+  almost(artistShelfPosition(0, offset, appended, true), left);
   assert.notEqual(offset, artistShelfInitialOffset(appended));
   const resized = artistShelfLayout(40, 860, 94.6, 172);
-  const resizedOffset = rebaseArtistShelf(appendedIds, appendedIds, offset, appended, resized, ids[0]);
-  almost(artistShelfPosition(0, resizedOffset, resized) / resized.width, left / appended.width);
+  const resizedOffset = rebaseArtistShelf(appendedIds, appendedIds, offset, appended, resized, ids[0], true);
+  almost(artistShelfPosition(0, resizedOffset, resized, true) / resized.width, left / appended.width);
   assert.notEqual(resizedOffset, artistShelfInitialOffset(resized));
   assert.equal(artistShelfInitialOffset(realistic(3)), 0);
+});
+
+test("la primera secuencia deja la mitad izquierda vacía y no anticipa ninguna edición final", () => {
+  for (const count of [8, 40, 250]) {
+    const layout = realistic(count), initial = artistShelfInitialOffset(layout);
+    assert.ok(initial < 0);
+    const positions = Array.from({ length: count }, (_, index) => artistShelfPosition(index, initial, layout, true));
+    almost(positions[0] + layout.visualLeft, layout.width / 2);
+    assert.ok(positions.every((left) => left + layout.visualLeft >= layout.width / 2));
+    for (let index = 1; index < positions.length; index++) almost(positions[index] - positions[index - 1], layout.pitch);
+    assert.ok(positions.at(-1) > layout.width);
+  }
+});
+
+test("el paso de entrada a ciclo es continuo para las vecinas y la primera vuelve después del orden completo", () => {
+  for (const count of [8, 40]) {
+    const layout = realistic(count), initial = artistShelfInitialOffset(layout);
+    const boundary = layout.inset + layout.slotWidth + layout.overscan;
+    assert.equal(artistShelfEntryComplete(boundary - .1, layout), false);
+    assert.equal(artistShelfEntryComplete(boundary, layout), true);
+    for (let index = 1; index < count; index++) almost(artistShelfPosition(index, boundary, layout, true), artistShelfPosition(index, boundary, layout));
+    const seen = new Set();
+    let firstLeft = false, firstReturned = false;
+    for (let offset = initial; offset < initial + layout.length * 2; offset += 4) {
+      const entry = !artistShelfEntryComplete(offset, layout);
+      for (let index = 0; index < count; index++) {
+        const left = artistShelfPosition(index, offset, layout, entry);
+        const visible = left + layout.slotWidth > 0 && left < layout.width;
+        if (index === 0 && left + layout.slotWidth <= 0) firstLeft = true;
+        if (visible) {
+          if (index === 0 && firstLeft) { assert.equal(seen.size, count); firstReturned = true; }
+          seen.add(index);
+        }
+      }
+      if (firstReturned) break;
+    }
+    assert.equal(firstReturned, true);
+    assert.deepEqual([...seen], Array.from({ length: count }, (_, index) => index));
+  }
 });
 
 test("cada edición conserva una posición única con ocho y cuarenta discos", () => {

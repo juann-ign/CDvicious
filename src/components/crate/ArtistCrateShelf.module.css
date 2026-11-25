@@ -1,13 +1,30 @@
 .artistWrap {
-  width: 100%; max-width: 1040px; margin-inline: auto; container-type: inline-size;
-  --jewel-case-edge: #e3e7e5d4;
-  --jewel-case-inner-edge: #f2f4f28a;
-  --jewel-case-spine-edge: #e7ebe7d9;
-  --jewel-case-spine-sides: #ffffffdf #a7b1ac;
-  --jewel-case-top-edge: #e2e7e2cf;
+  width: 100%; max-width: 1160px; margin-inline: auto; container-type: inline-size;
+  --jewel-case-edge: #f1f4f0e3;
+  --jewel-case-inner-edge: #fcfdfab3;
+  --jewel-case-spine-edge: #f0f3f0e6;
+  --jewel-case-spine-sides: #ffffffec #a9b4ae;
+  --jewel-case-top-edge: #edf2eddc;
+  --jewel-case-front-fill: linear-gradient(130deg, #d4dbd7, #66756f 55%);
+  --jewel-case-rear-fill: linear-gradient(145deg, #afbbb5, #47584f 72%);
+  --jewel-case-top-fill: linear-gradient(#e2e8e3, #8d9e93 60%, #c6d1c9);
+  --jewel-case-hinge-fill: linear-gradient(90deg, #7e978b88, #edf5e9ec 28%, #acbcb3b3 52%, #d7e4daca 83%, #eff6ed);
+  --jewel-case-spine-glass: linear-gradient(90deg, #edfff031, #152a2257 57%, #c4dfcd2d);
 }
-.artistWrap .artistStage { --case-size: clamp(150px, 20cqw, 208px); height: calc(var(--case-size) + 68px); }
+.artistWrap .artistStage {
+  --case-size: clamp(160px, 20cqw, 232px);
+  height: calc(var(--case-size) + 92px); border: 0; background: transparent; box-shadow: none;
+}
+.artistWrap .artistStage::before {
+  bottom: 4px; height: 11px; border-top: 1px solid #e5ece477;
+  background: linear-gradient(180deg, #dbe5da57, #82968557);
+  box-shadow: 0 5px 10px #334b3727;
+}
+.artistWrap .artistStage::after {
+  bottom: 4px; height: 4px; border-top: 1px solid #f4f7ee9e;
+  background: linear-gradient(#cdd7cebd, #7e928482);
+}
 .artistWrap .artistViewport { overflow: clip; }
-.artistWrap .artistTrack { display: block; width: 100%; height: var(--case-size); transform: none; will-change: auto; }
+.artistWrap .artistTrack { display: block; bottom: 51px; width: 100%; height: var(--case-size); transform: none; will-change: auto; }
 .slot { position: absolute; left: 0; bottom: 0; visibility: hidden; }
 .artistWrap button:disabled { opacity: .45; cursor: default; }

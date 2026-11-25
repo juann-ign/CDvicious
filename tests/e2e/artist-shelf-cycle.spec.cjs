@@ -38,9 +38,8 @@ async function openFixtureArtist(page, count, verifyFirstPage) {
     await route.fulfill({ json: { items: records.slice(offset, end), total: records.length, nextOffset: end < records.length ? end : null } });
   });
   await openRail(page); await go(page, "Colección", 3);
-  await collection(page).getByRole("button", { name: "Buscar artista", exact: true }).click();
-  await collection(page).getByRole("combobox", { name: "Buscar artistas", exact: true }).fill("Vertice");
-  await collection(page).getByRole("listbox", { name: "Resultados de artistas", exact: true }).getByRole("option").first().click();
+  await page.getByRole("combobox", { name: "Buscar discos o artistas", exact: true }).fill("Vertice");
+  await page.getByRole("option", { name: "Explorar artista Vértice Magnético", exact: true }).click();
   if (verifyFirstPage) {
     try { await appendStarted; await verifyFirstPage(); }
     finally { releaseAppend(); }
@@ -66,9 +65,11 @@ async function observeIntroduction(page) {
       const first = root.querySelector('[data-artist-slot="artist-cycle-0"]');
       if (!first) return;
       const viewport = first.closest('[class*="artistViewport"]');
-      const caseBox = first.getBoundingClientRect();
+      const boxes = [...first.firstElementChild.firstElementChild.children].map((node) => node.getBoundingClientRect());
       const frame = viewport.getBoundingClientRect();
-      const sample = { at: performance.now(), offset: root.dataset.artistCycleOffset, center: caseBox.left + first.firstElementChild.offsetWidth / 2, viewportCenter: frame.left + frame.width / 2, hold: root.dataset.artistInitialHold };
+      const leadingEmpty = [...root.querySelectorAll('[data-artist-slot]')].every((slot) =>
+        [...slot.firstElementChild.firstElementChild.children].every((node) => node.getBoundingClientRect().left >= frame.left + frame.width / 2 - 1));
+      const sample = { at: performance.now(), offset: root.dataset.artistCycleOffset, visibleLeft: Math.min(...boxes.map((box) => box.left)), viewportCenter: frame.left + frame.width / 2, leadingEmpty, hold: root.dataset.artistInitialHold };
       if (!state.first && sample.hold === "true") state.first = sample;
       if (state.first && sample.offset !== state.first.offset) { state.changes.push(sample); state.complete = true; }
       else if (state.first && sample.hold === "true") state.lastQuiet = sample;
@@ -86,7 +87,8 @@ test("artist shelf: eight editions use one DOM node each and re-enter only outsi
   const introduction = await page.evaluate(() => window.__artistIntroduction);
   await testInfo.attach("artist-initial-centered-hold", { body: JSON.stringify(introduction, null, 2), contentType: "application/json" });
   expect(introduction.first).not.toBeNull();
-  expect(Math.abs(introduction.first.center - introduction.first.viewportCenter)).toBeLessThan(1);
+  expect(Math.abs(introduction.first.visibleLeft - introduction.first.viewportCenter)).toBeLessThan(1);
+  expect(introduction.first.leadingEmpty).toBe(true);
   expect(introduction.complete).toBe(true);
   expect(introduction.changes[0].at - introduction.first.at).toBeGreaterThanOrEqual(950);
   expect(introduction.changes[0].hold).toBe("false");
@@ -107,7 +109,8 @@ test("artist shelf: eight editions use one DOM node each and re-enter only outsi
       const visible = positions.filter(({ box }) => box.right > frame.left && box.left < frame.right);
       visible.forEach(({ id }) => seen.add(id));
       const full = positions.filter(({ box }) => box.left >= frame.left && box.right <= frame.right).length;
-      minFull = Math.min(minFull, full); maxFull = Math.max(maxFull, full);
+      if (root.dataset.artistSequence === 'cycle') minFull = Math.min(minFull, full);
+      maxFull = Math.max(maxFull, full);
       const box = visual.getBoundingClientRect();
       const at = performance.now();
       if (exitAt === null && box.right <= frame.left) exitAt = at;
@@ -130,6 +133,7 @@ test("artist shelf: eight editions use one DOM node each and re-enter only outsi
   expect(result.nodeCount).toBe(8);
   expect(result.sameNodes).toBe(true);
   expect(new Set(result.seen).size).toBe(8);
+  expect(result.seen).toEqual(Array.from({length:8},(_,index)=>`artist-cycle-${index}`));
   expect(result.seam.before.right).toBeLessThanOrEqual(result.seam.frame.left);
   expect(result.seam.after.left).toBeGreaterThanOrEqual(result.seam.frame.right);
   expect(result.gap).toBeGreaterThanOrEqual(1_500);
@@ -173,7 +177,8 @@ test("artist shelf: paginated catalog starts on the oldest edition and preserves
   await expect.poll(() => page.evaluate(() => window.__artistIntroduction.complete)).toBe(true);
   const first = await page.evaluate(() => window.__artistIntroduction.first);
   expect(first).not.toBeNull();
-  expect(Math.abs(first.center - first.viewportCenter)).toBeLessThan(2);
+  expect(Math.abs(first.visibleLeft - first.viewportCenter)).toBeLessThan(2);
+  expect(first.leadingEmpty).toBe(true);
   await expect(shelf(page)).toHaveAttribute("data-artist-initial-hold", "false");
   await expect(shelf(page)).toHaveAttribute("data-artist-initial-hold-remaining", "0");
   await shelf(page).getByRole("button", { name: "Desplazamiento automático", exact: true }).click();
@@ -211,6 +216,7 @@ test("artist shelf: forty paginated editions stay unique with reduced motion and
   await openFixtureArtist(page, 40);
   await expect(shelf(page)).toHaveAttribute("data-artist-reduced-motion", "true");
   await expect(shelf(page)).toHaveAttribute("data-artist-drifting", "false");
+  await expect(shelf(page).getByRole("tab", { name: "Página 1", exact: true })).toHaveAttribute("aria-selected", "true");
   const offset = await shelf(page).getAttribute("data-artist-cycle-offset");
   await page.waitForTimeout(220);
   expect(await shelf(page).getAttribute("data-artist-cycle-offset")).toBe(offset);

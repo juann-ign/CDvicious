@@ -2,7 +2,7 @@ const {test,expect,collection,cards,openRail,go}=require('./support/b2-harness.c
 const {makeAlbum,coverage}=require('../fixtures/collection-filters.cjs');
 const genre=p=>collection(p).getByRole('combobox',{name:'Filtrar por género',exact:true});
 const frame=p=>collection(p).locator('[data-page-size]');
-const query=p=>collection(p).getByRole('searchbox',{name:'Buscar artista o álbum',exact:true});
+const query=p=>p.getByRole('combobox',{name:'Buscar discos o artistas',exact:true});
 const capacity=async p=>Number(await frame(p).getAttribute('data-page-size'));
 async function open(p){await openRail(p);await go(p,'Colección',3);await expect(cards(p).first()).toBeVisible();}
 async function fits(p){
@@ -161,7 +161,7 @@ test('metal: slow enrichment renders albums, preserves active filters and ignore
  await open(page);await started;await expect(cards(page)).toHaveCount(2);
  const genreOptions=()=>collection(page).getByRole("button",{name:"Buscar género en Spotify",exact:true});
  await genreOptions().click();await expect(collection(page)).toContainText('Consultando géneros');
- await query(page).fill('album a');await collection(page).getByRole('combobox',{name:'Filtrar por década',exact:true}).selectOption('1990s');release();
+ await query(page).fill('album a');await query(page).press('Escape');await collection(page).getByRole('combobox',{name:'Filtrar por década',exact:true}).selectOption('1990s');release();
  await expect(genre(page).locator('option[value="rock"]')).toHaveCount(1);await expect(cards(page)).toHaveCount(1);await expect(cards(page)).toHaveAttribute('data-collection-album-id','a');await expect(cards(page)).toContainText('1994');await expect(query(page)).toHaveValue('album a');
  await genreOptions().click();await expect(collection(page)).toContainText('Géneros parciales');
  await expect(genre(page).locator('option[value="ambient"]')).toHaveCount(0);

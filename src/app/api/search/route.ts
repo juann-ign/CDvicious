@@ -1,5 +1,6 @@
 ﻿import { NextResponse } from "next/server";
 import { CATALOG_PAGE_SIZE, catalogOffset, catalogRequest, nextCatalogOffset } from "@/lib/catalogServer";
+import { catalogSearchMatches } from "@/lib/catalogSearch";
 import { mockArtists, mockArtistReleases } from "@/mocks/artistCatalog";
 import mockCollection from "@/mocks/collection.json";
 import { findAlbumArtistMatches, matchesSearchText, rankArtistMatches, searchWords, unaccentedSearchQuery } from "@/lib/searchText";
@@ -14,10 +15,15 @@ function releaseSuggestions(query: string, artists: readonly (ArtistItem | null)
   return rankArtistMatches([...nameMatches, ...findAlbumArtistMatches(albums, query)], query).slice(0, CATALOG_PAGE_SIZE);
 }
 
-function providerSuggestions(query: string, data: { artists?: { items?: unknown }; albums?: { items?: unknown } } | null) {
+function searchPages(data: { artists?: { items?: unknown }; albums?: { items?: unknown } } | null) {
   const artists = Array.isArray(data?.artists?.items) ? data.artists.items : null;
   const albums = Array.isArray(data?.albums?.items) ? data.albums.items : null;
-  return artists || albums ? releaseSuggestions(query, artists ?? [], albums ?? []) : null;
+  return artists || albums ? { artists: artists ?? [], albums: albums ?? [] } : null;
+}
+
+function providerSuggestions(query: string, data: Parameters<typeof searchPages>[0]) {
+  const pages = searchPages(data);
+  return pages ? releaseSuggestions(query, pages.artists, pages.albums) : null;
 }
 
 function releaseFallback(query: string, providerArtists: unknown) {
@@ -41,18 +47,36 @@ function releaseFallback(query: string, providerArtists: unknown) {
   return albumQuery(words.slice(0, split).join(" "), words[words.length - 1]);
 }
 
+function catalogFallback(query: string, providerArtists: unknown) {
+  const words = searchWords(query.normalize("NFC"));
+  if (words.length !== 2 || unaccentedSearchQuery(query) !== query) return releaseFallback(query, providerArtists);
+  // A two-word query can be an unfinished artist name. Search its more
+  // distinctive word once and validate every match against the original text.
+  const anchor = words[0].length >= words[1].length ? words[0] : words[1];
+  return anchor.length >= 3 ? { query: anchor, types: "artist,album" } : null;
+}
+
 export async function GET(request: Request) {
   const params = new URL(request.url).searchParams;
   const q = params.get("q")?.trim();
   const type = params.get("type") ?? "album";
   const scope = params.get("scope");
   const includeReleases = scope === "releases";
+  const unified = scope === "catalog";
   const offset = catalogOffset(params.get("offset"), MAX_SEARCH_OFFSET);
+  const validScope = scope === null || (offset === 0 && (unified ? !params.has("type") : includeReleases && type === "artist"));
   if (!q || q.length > MAX_QUERY_LENGTH || !["album", "artist"].includes(type) || offset === null
-    || (scope !== null && (!includeReleases || type !== "artist" || offset !== 0))) {
+    || !validScope) {
     return NextResponse.json({ error: "INVALID_SEARCH" }, { status: 400 });
   }
   if (process.env.NEXT_PUBLIC_SPOTIFY_MOCK === "1") {
+    if (unified) {
+      // The prior artist chapter keeps its compatibility fixture. The global
+      // demo searches only the project's own fictional artist catalog.
+      const fictional = mockArtists.filter(({ id }) => id !== "demo-beatles");
+      const editions = fictional.flatMap(({ id }) => RELEASE_GROUPS.flatMap((group) => mockArtistReleases(id, group)));
+      return NextResponse.json(catalogSearchMatches(q, fictional, [...mockCollection, ...editions], CATALOG_PAGE_SIZE));
+    }
     if (type === "album") return NextResponse.json(mockCollection.filter((album) => matchesSearchText(q, album.name, ...album.artists.map((artist) => artist.name))).slice(0, CATALOG_PAGE_SIZE));
     if (includeReleases) {
       const mockReleases = mockArtists.flatMap(({ id }) => RELEASE_GROUPS.flatMap((group) => mockArtistReleases(id, group)));
@@ -65,8 +89,24 @@ export async function GET(request: Request) {
   }
   try {
     const search = (query: string, types = type) => catalogRequest(`search?${new URLSearchParams({ q: query, type: types, limit: String(CATALOG_PAGE_SIZE), offset: String(offset) })}`, "GET /v1/search", request.signal);
-    let data = await search(q, includeReleases ? "artist,album" : type);
+    let data = await search(q, unified || includeReleases ? "artist,album" : type);
     if (data instanceof Response) return data;
+    if (unified) {
+      const pages = searchPages(data);
+      if (!pages) return NextResponse.json({ error: "INVALID_SEARCH_PAGE" }, { status: 502 });
+      let result = catalogSearchMatches(q, pages.artists, pages.albums, CATALOG_PAGE_SIZE, true);
+      let requests = 1;
+      const alternate = result.kind === "empty" && !request.signal.aborted ? catalogFallback(q, pages.artists) : null;
+      if (alternate) {
+        const alternateData = await search(alternate.query, alternate.types);
+        requests++;
+        if (alternateData instanceof Response) return alternateData;
+        const fallback = searchPages(alternateData);
+        if (!fallback) return NextResponse.json({ error: "INVALID_SEARCH_PAGE" }, { status: 502 });
+        result = catalogSearchMatches(q, [...fallback.artists, ...pages.artists], [...pages.albums, ...fallback.albums], CATALOG_PAGE_SIZE);
+      }
+      return NextResponse.json(result, { headers: { "X-CDV-Search-Requests": String(requests) } });
+    }
     // Preserve the existing unwrapped album array response.
     if (type === "album") return NextResponse.json(data.albums?.items ?? []);
     if (includeReleases) {

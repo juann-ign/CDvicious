@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
 import type { NowPlayingResponse } from "@/types/spotify";
 import { PhysicalDeck } from "@/components/PhysicalDeck";
 import { NowPlayingCard } from "@/components/NowPlayingCard";
@@ -24,6 +24,7 @@ export function DeckPinnedLayer() {
   const { activeChapterIndex } = useRailNavigation();
   const [liftPhase, setLiftPhase] = useState<DeckLiftPhase>("docked");
   const layerRef = useRef<HTMLDivElement>(null);
+  const listingRef = useRef<HTMLDivElement>(null);
   const [deckHidden, setDeckHidden] = useState(false);
   const [staticMode, setStaticMode] = useState(true);
   const [documentVisible, setDocumentVisible] = useState(true);
@@ -62,6 +63,61 @@ export function DeckPinnedLayer() {
   const registerTarget = useCallback((node: HTMLDivElement | null) => { discRegistry.discTarget = node; }, []);
   const prototypePlayerActive = liftPhase !== "docked";
   const footerVisible = activeChapterIndex > 1 || prototypePlayerActive;
+  const listingAvailable = activeChapterIndex <= 1 && !deckHidden && !playback.busy
+    && (liftPhase === "docked" || liftPhase === "free");
+
+  useLayoutEffect(() => {
+    const layer = layerRef.current;
+    const listing = listingRef.current;
+    const trigger = listing?.querySelector("button");
+    if (liftPhase !== "free" || !listingAvailable || !layer || !listing || !trigger) return;
+
+    const place = () => {
+      const disc = layer.querySelector("[data-prototype-disc=true]")?.getBoundingClientRect();
+      const surfaces = [...layer.querySelectorAll("[data-deck-surface]")].map((surface) => surface.getBoundingClientRect());
+      if (!disc?.width || !surfaces.length) return;
+      const viewport = layer.getBoundingClientRect();
+      const button = trigger.getBoundingClientRect();
+      const margin = 24;
+      const gap = 16;
+      const preferredLeft = Math.max(margin, Math.min(192, viewport.width * .10));
+      const readableWidth = Math.max(216, button.width);
+      const equipmentLeft = Math.min(...surfaces.map(({ left }) => left));
+      let right = Math.min(equipmentLeft, disc.left) - gap;
+
+      // Keep the button near its docked position. On narrow, tall layouts the
+      // player can fill the upper band, so use the space beside the CD below it.
+      const belowEquipment = right - margin < readableWidth;
+      if (belowEquipment) right = disc.left - gap;
+      const left = Math.max(margin, Math.min(preferredLeft, right - readableWidth));
+      listing.style.left = `${left}px`;
+      listing.style.setProperty("--track-listing-width", `${Math.max(1, right - left)}px`);
+      if (belowEquipment) {
+        const top = Math.max(...surfaces.map(({ bottom }) => bottom)) + gap;
+        listing.style.top = `${top}px`;
+        listing.style.setProperty("--track-listing-height", `${Math.min(350, Math.max(0, viewport.bottom - top - button.height - 8 - gap))}px`);
+      } else {
+        listing.style.removeProperty("top");
+        listing.style.removeProperty("--track-listing-height");
+      }
+    };
+
+    let frame = 0;
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(place);
+    });
+    place();
+    observer.observe(layer);
+    observer.observe(trigger);
+    return () => {
+      observer.disconnect();
+      cancelAnimationFrame(frame);
+      for (const property of ["left", "top", "--track-listing-width", "--track-listing-height"]) {
+        listing.style.removeProperty(property);
+      }
+    };
+  }, [liftPhase, listingAvailable]);
 
   useEffect(() => {
     const railRoot = document.querySelector<HTMLElement>("[data-rail-wrapper]")?.parentElement;
@@ -117,6 +173,10 @@ export function DeckPinnedLayer() {
   }, [playback.busy, cancel]);
 
   return <>
+    <div ref={listingRef} className={styles.trackListing} data-track-listing-placement={activeChapterIndex === 1 ? "split" : "deck"}>
+      <DeckTrackSelector enabled={listingAvailable}
+        track={visibleData?.track ?? null} controls={controls} />
+    </div>
     <div ref={layerRef} className={styles.layer} style={{ "--accent-color": accentColor } as CSSProperties}
       data-rail-overlay data-deck-interactive="true" data-deck-hidden={deckHidden}
       data-playback-attempt={playback.attempt?.attemptId ?? ""}
@@ -148,8 +208,6 @@ export function DeckPinnedLayer() {
           onToggle={() => undefined} accentColor={accentColor} showTab={false} />
       </div>}
     </div>
-    <DeckTrackSelector enabled={activeChapterIndex <= 1 && !deckHidden && !footerVisible && !playback.busy}
-      track={visibleData?.track ?? null} controls={controls} />
     <DeckNextDiscs enabled={activeChapterIndex === 0 && !deckHidden && !footerVisible && !playback.busy}
       authenticated={authenticated} currentAlbumId={discAlbumId} />
     <footer className={styles.globalPlayer} aria-label="Reproductor global" data-global-player data-dock-click={playback.dockClick}

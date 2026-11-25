@@ -1,11 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { useSpotifyPlayer } from "@/components/SpotifyPlayerProvider";
 import { useRailActions } from "@/components/scroll/RailContext";
 import { useArtistCatalog } from "@/hooks/useArtistCatalog";
 import { useArtistGenres } from "@/hooks/useArtistGenres";
-import { useArtistSearch } from "@/hooks/useArtistSearch";
 import {
   loadCollection,
   loadCollectionGenres,
@@ -14,7 +12,7 @@ import {
 } from "@/lib/collectionClient";
 import { useAlbumDetailActions } from "./AlbumDetailNavigation";
 import { JewelCaseFront } from "./JewelCaseFront";
-import { CollectionSearch } from "./CollectionSearch";
+import { useCatalogNavigation } from "./CatalogNavigation";
 import { ArtistCrateShelf } from "./ArtistCrateShelf";
 import { GenreVerification, type VerifiedGenre } from "./GenreVerification";
 import type { AlbumItem } from "@/types/crate";
@@ -26,26 +24,21 @@ import { collectionLayout, pageForAnchor } from "@/lib/collectionLayout";
 import { exactAlbumSearch } from "@/lib/searchText";
 
 export function CollectionChapter() {
-  const [exploringArtist, setExploringArtist] = useState(false);
-  const [artist, setArtist] = useState<ArtistItem | null>(null);
-  const [pickedAlbumId, setPickedAlbumId] = useState<string>();
-  const [suggestionsOpen, setSuggestionsOpen] = useState(false);
+  const { authenticated, query, view, search, changeQuery, finishOpeningAlbum } = useCatalogNavigation();
+  const artist = view.kind === "artist" ? view.artist : null;
+  const pickedAlbum = view.kind === "album" ? view.album : null;
+  const exploringArtist = Boolean(artist);
+  const searchingCatalog = view.kind === "grid" && Boolean(query.trim());
   const [genrePanelOpen, setGenrePanelOpen] = useState(false);
   const genreSelect = useRef<HTMLSelectElement>(null);
-  const modeQueries = useRef({ collection: "", artist: "" });
   const { openAlbum } = useAlbumDetailActions();
   const { stop, start } = useRailActions();
   const dragLock = useRef(Symbol("artist-shelf-drag"));
-  const { authenticated } = useSpotifyPlayer();
   const { albums: cachedAlbums, collectionState, collectionError, collectionRetryAt, genresState, genresError, genresRetryAt, genresResolvedArtists, genresTotalArtists } = useCollectionCache();
   const albums = useMemo(() => cachedAlbums ?? [], [cachedAlbums]);
   const loading = collectionState === "loading" || (collectionState === "idle" && !cachedAlbums && authenticated !== false);
   const loadingGenres = genresState === "loading";
   const [isActiveChapter, setIsActiveChapter] = useState(false);
-  const selectedArtist = exploringArtist ? artist : null;
-  const search = useArtistSearch(isActiveChapter && suggestionsOpen && authenticated === true, true);
-  const query = search.query;
-  const collectionQuery = exploringArtist ? modeQueries.current.collection : query;
   const artistActive = isActiveChapter && exploringArtist && authenticated === true;
   const artistCatalog = useArtistCatalog(artist?.id, "album", artistActive);
   const artistGenres = useArtistGenres(artist?.id, artistActive);
@@ -61,7 +54,6 @@ export function CollectionChapter() {
   const gridRef = useRef<HTMLDivElement>(null);
   const paginationRef = useRef({ page: 0, pageSize: 16, count: 0, anchorIndex: 0 });
   const anchorIdRef = useRef<string | null>(null);
-  const searchRef = useRef<HTMLInputElement>(null);
   const chapterRef = useRef<HTMLDivElement>(null);
   const [now, setNow] = useState(Date.now);
   const collectionWait = Math.max(0, Math.ceil((collectionRetryAt - now) / 1000));
@@ -102,19 +94,12 @@ export function CollectionChapter() {
 
   useEffect(() => {
     syncCollectionAuth(authenticated);
-    if (authenticated === false) {
-      setArtist(null);
-      setVerification(null);
-      setPickedAlbumId(undefined);
-    }
+    if (authenticated === false) setVerification(null);
   }, [authenticated]);
 
   useEffect(() => {
-    if (!isActiveChapter) {
-      setSuggestionsOpen(false);
-      setGenrePanelOpen(false);
-    }
-  }, [isActiveChapter]);
+    setGenrePanelOpen(false);
+  }, [isActiveChapter, artist?.id, pickedAlbum?.id]);
 
   useEffect(() => {
     const railRoot = document.querySelector<HTMLElement>(
@@ -197,13 +182,6 @@ export function CollectionChapter() {
     }
   }, [authenticated, cachedAlbums, genresState]);
 
-  const localArtists = useMemo(() => {
-    const found = new Map<string, ArtistItem>();
-    for (const album of albums) for (const artist of album.artists) {
-      if (!found.has(artist.id)) found.set(artist.id, { ...artist, images: [] });
-    }
-    return [...found.values()];
-  }, [albums]);
   const pickedGenres = useMemo(() => normalizeGenres([...(artist?.genres ?? []), ...artistGenres.genres]),
     [artist?.genres, artistGenres.genres]);
   const artistAlbums = useMemo(() => {
@@ -214,10 +192,15 @@ export function CollectionChapter() {
         genreMetadata: album.genreMetadata ?? stored?.genreMetadata };
     });
   }, [albums, artistCatalog.items, pickedGenres]);
-  const searchableAlbums = useMemo(() => selectedArtist ? [...artistAlbums, ...albums] : albums,
-    [albums, artistAlbums, selectedArtist]);
+  const gridAlbums = useMemo(() => {
+    if (pickedAlbum) return [albums.find(({ id }) => id === pickedAlbum.id) ?? pickedAlbum];
+    if (!searchingCatalog || !search.result?.albums.length) return albums;
+    const byId = new Map(albums.map((album) => [album.id, album]));
+    for (const album of search.result.albums) if (!byId.has(album.id)) byId.set(album.id, album);
+    return [...byId.values()];
+  }, [albums, pickedAlbum, search.result, searchingCatalog]);
   // Options cover the entire active catalog before filtering and pagination.
-  const filterScope = exploringArtist && artist ? artistAlbums : albums;
+  const filterScope = artist ? artistAlbums : gridAlbums;
   const decades = useMemo(() => collectionDecades(filterScope), [filterScope]);
   const topGenres = useMemo(() => collectionGenres(filterScope), [filterScope]);
   const years = useMemo(() => collectionYears(filterScope, decade), [filterScope, decade]);
@@ -227,32 +210,31 @@ export function CollectionChapter() {
     !verificationActive || normalizeGenres(album.genres).includes(genre) ||
     Boolean(selectedArtistId && matchingIds.has(selectedArtistId)) || album.artists.some(({ id }) => matchingIds.has(id)),
   [genre, matchingIds, verificationActive]);
-  const filtered = useMemo(() => filterCollection(albums, collectionQuery, decade, verificationActive ? "all" : genre, year)
-    .filter((album) => genreFilter(album)), [albums, collectionQuery, decade, genre, year, verificationActive, genreFilter]);
-  const releaseScope = useMemo(() => {
-    if (!pickedAlbumId) return artistAlbums;
-    const picked = artistAlbums.find(({ id }) => id === pickedAlbumId);
-    return picked ? [picked] : artistCatalog.loading ? [] : artistAlbums;
-  }, [artistAlbums, artistCatalog.loading, pickedAlbumId]);
-  const filteredArtist = useMemo(() => {
-    const matching = filterCollection(releaseScope, query, decade, verificationActive ? "all" : genre, year)
-      .filter((album) => genreFilter(album, artist?.id));
-    if (!query.trim()) return matching;
-    const exact = matching.filter((album) => exactAlbumSearch(album, query));
-    return exact.length ? exact : matching;
-  }, [artist?.id, releaseScope, query, decade, genre, year, verificationActive, genreFilter]);
+  const textMatches = useMemo(() => {
+    if (!searchingCatalog) return gridAlbums;
+    const matches = filterCollection(gridAlbums, query, "all", "all");
+    const exact = matches.filter((album) => exactAlbumSearch(album, query));
+    if (!exact.length) return matches;
+    const savedIds = new Set(albums.map(({ id }) => id));
+    const savedExact = exact.filter(({ id }) => savedIds.has(id));
+    return savedExact.length ? savedExact : exact;
+  }, [albums, gridAlbums, query, searchingCatalog]);
+  const filtered = useMemo(() => filterCollection(textMatches, "", decade, verificationActive ? "all" : genre, year)
+    .filter((album) => genreFilter(album)), [textMatches, decade, genre, year, verificationActive, genreFilter]);
+  const filteredArtist = useMemo(() => filterCollection(artistAlbums, "", decade, verificationActive ? "all" : genre, year)
+    .filter((album) => genreFilter(album, artist?.id)), [artist?.id, artistAlbums, decade, genre, year, verificationActive, genreFilter]);
   const verificationArtists = useMemo(() => {
-    if (exploringArtist && artist) return [artist];
+    if (artist) return [artist];
     const found = new Map<string, Pick<ArtistItem, "id" | "name">>();
-    for (const album of filterCollection(albums, query, decade, "all", year)) {
+    for (const album of filterCollection(textMatches, "", decade, "all", year)) {
       for (const artist of album.artists) if (!found.has(artist.id)) found.set(artist.id, artist);
     }
     return [...found.values()];
-  }, [albums, artist, decade, exploringArtist, query, year]);
+  }, [artist, decade, textMatches, year]);
   const checkedForContext = verificationActive ? verificationArtists.filter(({ id }) => verificationActive.checkedArtistIds.includes(id)).length : 0;
-  const genreState = selectedArtist ? artistGenres.state : genresState;
-  const genreError = selectedArtist ? artistGenres.error : genresError;
-  const genreWait = selectedArtist ? artistGenres.waitSeconds : genresWait;
+  const genreState = artist ? artistGenres.state : genresState;
+  const genreError = artist ? artistGenres.error : genresError;
+  const genreWait = artist ? artistGenres.waitSeconds : genresWait;
   const canRetryGenres = genreState === "partial" || genreState === "error" || genreState === "unavailable";
   const offerVerification = authenticated === true && verificationArtists.length > 0;
   const genreNotice = genreState === "loading" ? "Consultando géneros de los artistas…"
@@ -263,7 +245,7 @@ export function CollectionChapter() {
 
   useEffect(() => {
     setPage(0);
-  }, [collectionQuery, decade, genre, year]);
+  }, [query, pickedAlbum?.id, decade, genre, year]);
 
   // Keep the last usable page geometry while a temporarily short frame has no rows.
   const anchorPageSize = pageSize || paginationRef.current.pageSize;
@@ -282,40 +264,28 @@ export function CollectionChapter() {
     openAlbum(album, origin);
   }, [openAlbum]);
 
+  const clearFilters = useCallback(() => { setDecade("all"); setGenre("all"); setYear("all"); }, []);
+  useEffect(() => {
+    if (!isActiveChapter || view.kind !== "album" || !view.openOnArrival) return;
+    if (!filtered.length) {
+      clearFilters();
+      return;
+    }
+    const origin = pageSize
+      ? gridRef.current?.querySelector<HTMLElement>("[data-collection-album-id]")
+      : document.querySelector<HTMLElement>("[data-nav-catalog-search] input");
+    if (!origin || origin.closest("[inert]")) return;
+    handleSelect(filtered[0], origin);
+    finishOpeningAlbum(view.album.id);
+  }, [clearFilters, filtered, finishOpeningAlbum, handleSelect, isActiveChapter, pageSize, view]);
+
   const changeDecade = (value: string) => {
     setDecade(value);
     if (!collectionYears(filterScope, value).some((option) => option.id === year)) setYear("all");
   };
-  const changeQuery = (value: string) => {
-    if (selectedArtist) setPickedAlbumId(undefined);
-    search.changeQuery(value);
-  };
-  const changeMode = (toArtist: boolean) => {
-    if (toArtist === exploringArtist) return;
-    modeQueries.current[exploringArtist ? "artist" : "collection"] = query;
-    search.changeQuery(modeQueries.current[toArtist ? "artist" : "collection"]);
-    setExploringArtist(toArtist);
-    setSuggestionsOpen(toArtist);
-    setGenrePanelOpen(false);
-    if (toArtist) searchRef.current?.focus({ preventScroll: true });
-  };
-  const clearFilters = () => { changeQuery(""); setDecade("all"); setGenre("all"); setYear("all"); };
-  const selectArtist = (value: ArtistItem) => {
-    if (!exploringArtist) {
-      modeQueries.current.collection = query;
-    }
-    setArtist(value);
-    setPickedAlbumId(value.matchedAlbum?.id);
-    search.changeQuery(value.matchedAlbum?.name ?? "");
-    setSuggestionsOpen(false);
-    setExploringArtist(true);
-    searchRef.current?.focus({ preventScroll: true });
-  };
   const unselectArtist = () => {
-    setArtist(null);
-    setPickedAlbumId(undefined);
-    search.changeQuery("");
-    searchRef.current?.focus({ preventScroll: true });
+    changeQuery("");
+    document.querySelector<HTMLElement>("[data-nav-catalog-search] input")?.focus({ preventScroll: true });
   };
   const applyVerification = (result: VerifiedGenre) => {
     setVerification((previous) => previous?.genre === result.genre ? {
@@ -338,19 +308,9 @@ export function CollectionChapter() {
     >
       <div className={styles.collectionMain}>
       <div className={styles.controls}>
-      <header className={styles.header}>
-        <h2 className={styles.screenReaderTitle}>Tu colección</h2>
-        <nav className={styles.sectionNavigation} aria-label="Colección y artistas">
-          <button type="button" className={!exploringArtist ? styles.sectionActive : undefined} aria-current={!exploringArtist ? "page" : undefined}
-            onClick={() => changeMode(false)}>Tu colección</button>
-          <button type="button" className={exploringArtist ? styles.sectionActive : undefined} aria-current={exploringArtist ? "page" : undefined}
-            onClick={() => changeMode(true)}>Buscar artista</button>
-        </nav>
-      </header>
+      <h2 className={styles.title}>{artist ? "Discografía" : searchingCatalog || pickedAlbum ? "Resultados" : "Tu colección"}</h2>
 
       <div className={styles.toolbar}>
-        <CollectionSearch search={search} input={searchRef} artists={localArtists} albums={searchableAlbums} selectedArtist={selectedArtist} artistMode={exploringArtist}
-          expanded={suggestionsOpen && isActiveChapter} setExpanded={setSuggestionsOpen} change={changeQuery} select={selectArtist} />
         <div className={`${styles.field} ${styles.genreField}`} onBlur={(event) => {
           if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) setGenrePanelOpen(false);
         }} onKeyDown={(event) => {
@@ -379,14 +339,14 @@ export function CollectionChapter() {
               {genreError?.status === 401 && <a href="/api/auth/login"> Conectar Spotify</a>}
             </p>}
             {genreWait > 0 && <p role="status">Reintento disponible en {genreWait} s.</p>}
-            {offerVerification && <GenreVerification key={selectedArtist?.id ?? "saved"}
+            {offerVerification && <GenreVerification key={artist?.id ?? "saved"}
               artists={verificationArtists} previous={verification} onApply={applyVerification} />}
             {verificationActive && verificationArtists.length > 0 && <p role="status">
               Género comprobado en Spotify · {checkedForContext} de {verificationArtists.length} artistas.
               {checkedForContext < verificationArtists.length && " Resultados parciales."}
             </p>}
             {canRetryGenres && <button type="button" className={styles.retryGenres}
-              onClick={selectedArtist ? artistGenres.retry : handleLoadGenres} disabled={genreWait > 0 || (!selectedArtist && !albums.length)}>
+              onClick={artist ? artistGenres.retry : handleLoadGenres} disabled={genreWait > 0 || (!artist && !albums.length)}>
               Reintentar géneros
             </button>}
           </div>}
@@ -408,14 +368,15 @@ export function CollectionChapter() {
       </div>
       </div>
 
-      {(selectedArtist || hasActiveFilters) && <div className={styles.activeFilters} aria-label="Filtros activos">
-        {selectedArtist && <button type="button" className={styles.artistChip} aria-label={`Quitar artista: ${selectedArtist.name}`} onClick={unselectArtist}>
-          {selectedArtist.name} <span aria-hidden="true">×</span>
+      {(artist || hasActiveFilters) && <div className={styles.activeFilters} aria-label="Filtros activos">
+        {artist && <button type="button" className={styles.artistChip} aria-label={`Quitar artista: ${artist.name}`} onClick={unselectArtist}>
+          {artist.name} <span aria-hidden="true">×</span>
         </button>}
         {genre !== "all" && <button type="button" aria-label={`Quitar género: ${genre}`} onClick={() => setGenre("all")}>Género: {genre} <span aria-hidden="true">×</span></button>}
         {decade !== "all" && <button type="button" aria-label={`Quitar década: ${decade}`} onClick={() => setDecade("all")}>Década: {decade === "unknown" ? "Sin fecha" : decade} <span aria-hidden="true">×</span></button>}
         {year !== "all" && <button type="button" aria-label={`Quitar año: ${year}`} onClick={() => setYear("all")}>Año: {year === "unknown" ? "Sin fecha" : year} <span aria-hidden="true">×</span></button>}
-        {hasActiveFilters && <button type="button" className={styles.clearFilters} onClick={clearFilters}>Limpiar filtros</button>}
+        {hasActiveFilters && <button type="button" className={styles.clearFilters}
+          onClick={() => { clearFilters(); if (view.kind === "grid") changeQuery(""); }}>Limpiar filtros</button>}
       </div>}
 
       <div ref={gridRef} className={styles.gridFrame} hidden={exploringArtist} data-page-size={pageSize} onFocusCapture={(event) => {
@@ -425,16 +386,22 @@ export function CollectionChapter() {
         const index = filtered.findIndex((album) => album.id === anchorIdRef.current);
         if (index >= 0) paginationRef.current.anchorIndex = index;
       }}>
-        {collectionState === "error" ? (
+        {collectionState === "error" && !searchingCatalog && !pickedAlbum ? (
           <div className={styles.emptyState} role="alert"><div>{collectionError?.message}<div className={styles.recoveryActions}><button type="button" onClick={() => { setNow(Date.now()); void loadCollection(authenticated)?.catch(() => undefined); }} disabled={collectionWait > 0}>Reintentar colección</button>{collectionError?.status === 401 && <a href="/api/auth/login">Conectar Spotify</a>}</div>{collectionWait > 0 && <p>Reintento disponible en {collectionWait} s.</p>}</div></div>
-        ) : loading ? (
+        ) : loading && !searchingCatalog && !pickedAlbum ? (
           <div className={styles.emptyState} role="status">Cargando colección…</div>
         ) : authenticated === false && !cachedAlbums ? (
           <div className={styles.emptyState} role="status"><p>Conectá Spotify para ver tu colección. <a href="/api/auth/login">Conectar Spotify</a></p></div>
+        ) : searchingCatalog && !textMatches.length && search.loading ? (
+          <div className={styles.emptyState} role="status">Buscando discos…</div>
+        ) : searchingCatalog && !textMatches.length && search.error ? (
+          <div className={styles.emptyState} role="alert"><div>{search.error.message}
+            <div className={styles.recoveryActions}><button type="button" onClick={search.retry}>Reintentar búsqueda</button></div>
+          </div></div>
         ) : !pageSize && filtered.length > 0 ? (
           <div className={styles.emptyState} role="status">Ampliá la ventana para ver los discos.</div>
         ) : pageItems.length === 0 ? (
-          <div className={styles.emptyState} role="status">{albums.length ? "Sin resultados para estos filtros" : "Colección vacía"}</div>
+          <div className={styles.emptyState} role="status">{searchingCatalog || gridAlbums.length ? "Sin resultados para estos filtros" : "Colección vacía"}</div>
         ) : (
           <div className={styles.grid}>
             {pageItems.map((album) => <JewelCaseFront key={album.id} album={album} presentation="collection" onSelect={(origin) => handleSelect(album, origin)} />)}

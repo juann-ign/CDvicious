@@ -22,6 +22,22 @@
   pointer-events: auto;
 }
 
+.trackListing {
+  --track-listing-inset: clamp(24px, 10vw, 192px);
+  --track-listing-height: clamp(88px, calc(43dvh - 82px), 350px);
+
+  position: fixed;
+  inset: calc(var(--shell-nav-height) + clamp(14px, 2.4dvh, 26px)) auto auto var(--track-listing-inset);
+  z-index: 18;
+  pointer-events: none;
+}
+
+.trackListing[data-track-listing-placement="split"] {
+  --track-listing-inset: clamp(24px, calc(3.1vw - 6px), 52px);
+  --track-listing-width: calc(44vw - var(--track-listing-inset) - 16px);
+  --track-listing-height: clamp(88px, calc(38dvh - 90px), 320px);
+}
+
 /* The overlay paints above the rail panels. Interactive targets follow the active chapter. */
 .layer[data-deck-interactive="false"] .interactive,
 .layer[data-deck-interactive="false"] .interactive * {

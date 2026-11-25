@@ -13,6 +13,7 @@ import { SIGNED_IN_TAB_KEY } from "@/lib/entryNavigation";
 export function UserProfileChip() {
   const { authenticated } = useSpotifyPlayer();
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [failedAvatar, setFailedAvatar] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [rateLimited, setRateLimited] = useState(false);
   const [quotaExceeded, setQuotaExceeded] = useState(false);
@@ -140,25 +141,33 @@ export function UserProfileChip() {
 
   if (!authenticated) {
     return (
-      <a href="/api/auth/login" className={styles.profileConnect}>
-        CONECTAR SPOTIFY
+      <a href="/api/auth/login" className={styles.profileConnect} aria-label="Conectar Spotify" data-user-profile-connect>
+        <svg viewBox="0 0 20 20" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden="true" data-user-profile-connect-icon>
+          <path d="M10 4h6v12h-6M3 10h10m-4-4 4 4-4 4" />
+        </svg>
+        <span data-user-profile-connect-label>CONECTAR SPOTIFY</span>
       </a>
     );
   }
 
   return (
     <div className={styles.profileContainer}>
-      <button
+      <button type="button"
         className={styles.profileTrigger}
+        aria-expanded={open}
+        aria-label={profile?.displayName ?? "Cuenta de Spotify"}
+        data-user-profile-trigger
         onClick={() => setOpen((o) => !o)}
       >
-        {profile?.avatarUrl ? (
+        {profile?.avatarUrl && profile.avatarUrl !== failedAvatar ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={profile.avatarUrl} alt="" className={styles.avatar} />
+          <img src={profile.avatarUrl} alt="" className={styles.avatar} onError={() => setFailedAvatar(profile.avatarUrl)} />
         ) : (
-          <div className={`${styles.avatar} ${styles.avatarPlaceholder}`} />
+          <span aria-hidden="true" className={`${styles.avatar} ${styles.avatarPlaceholder}`}>
+            {(profile?.displayName || "CD").slice(0, 2).toUpperCase()}
+          </span>
         )}
-        <span className={styles.username}>
+        <span className={styles.username} data-user-profile-name>
           {profile?.displayName ??
             (quotaExceeded
               ? "SPOTIFY QUOTA EXCEEDED"

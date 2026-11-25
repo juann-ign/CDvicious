@@ -4,39 +4,41 @@ const { collection, openRail } = require("./support/b2-harness.cjs");
 const filterGenre = (page) => collection(page).getByRole("combobox", { name: "Filtrar por género", exact: true });
 const filterDecade = (page) => collection(page).getByRole("combobox", { name: "Filtrar por década", exact: true });
 const filterYear = (page) => collection(page).getByRole("combobox", { name: "Filtrar por año de edición", exact: true });
-const suggestions = (page) => collection(page).getByRole("listbox", { name: "Resultados de artistas" });
+const query = (page) => page.getByRole("combobox", { name: "Buscar discos o artistas", exact: true });
+const suggestions = (page) => page.getByRole("listbox", { name: "Resultados de búsqueda", exact: true });
 const grid = (page) => collection(page).locator("button[data-collection-album-id]");
 
 test.use({ viewport: { width: 1440, height: 900 },
   launchOptions: { args: ["--enable-webgl", "--ignore-gpu-blocklist", "--use-gl=angle"] } });
 
-test("Colección shares the input and filters and opens the selected artist on a Batea shelf", async ({ page }, testInfo) => {
+test("the nav search preserves Collection filters and opens the selected artist on a Batea shelf", async ({ page }, testInfo) => {
   await openRail(page);
   await go(page, "Colección", 3);
   const library = collection(page);
-  const query = library.getByRole("searchbox", { name: "Buscar artista o álbum", exact: true });
+  const finder = query(page);
   await expect(grid(page).first()).toBeVisible();
   await expect(filterGenre(page).locator('option[value="electronic"]')).toBeAttached();
   await filterGenre(page).selectOption("electronic");
   await filterDecade(page).selectOption("1990s");
-  await query.evaluate((node) => { window.__sharedCollectionSearch = node; });
+  await finder.evaluate((node) => { window.__sharedCollectionSearch = node; });
 
-  await query.fill("V");
-  await expect(suggestions(page).getByRole("option", { name: "Vértice Magnético", exact: true })).toBeVisible();
+  await finder.fill("V");
+  await expect(suggestions(page).getByRole("option", { name: "Explorar artista Vértice Magnético", exact: true })).toBeVisible();
   expect(await suggestions(page).getByRole("option").count()).toBeLessThanOrEqual(6);
-  await query.fill("vertice");
-  const matchingArtist = suggestions(page).getByRole("option", { name: "Vértice Magnético", exact: true });
+  await finder.fill("vertice");
+  const matchingArtist = suggestions(page).getByRole("option", { name: "Explorar artista Vértice Magnético", exact: true });
   await expect(matchingArtist).toBeVisible();
   expect(await matchingArtist.getAttribute("data-artist-id")).toBe("demo-vertice");
   await page.screenshot({ path: testInfo.outputPath("Coleccion-desplegable-1440x900.png") });
-  await query.press("ArrowDown");
-  await query.press("Enter");
+  await finder.press("ArrowDown");
+  await finder.press("Enter");
 
-  const artistQuery = library.getByRole("combobox", { name: "Buscar artistas", exact: true });
-  await expect(artistQuery).toHaveValue("");
+  const artistQuery = finder;
   await expect(library.getByRole("button", { name: "Quitar artista: Vértice Magnético" })).toBeVisible();
   expect(await artistQuery.evaluate((node) => node === window.__sharedCollectionSearch)).toBe(true);
-  await expect(library.getByRole("button", { name: "Buscar artista", exact: true })).toHaveAttribute("aria-current", "page");
+  await expect(library.getByRole("button", { name: "Buscar artista", exact: true })).toHaveCount(0);
+  await expect(library.getByRole("button", { name: "Tu colección", exact: true })).toHaveCount(0);
+  await expect(library.getByRole("combobox", { name: "Buscar discos o artistas", exact: true })).toHaveCount(0);
   await expect(filterGenre(page)).toHaveValue("electronic");
   await expect(filterDecade(page)).toHaveValue("1990s");
   await expect(filterYear(page)).toBeVisible();
@@ -76,52 +78,40 @@ test("Colección shares the input and filters and opens the selected artist on a
   await expect(detail).toHaveCount(0);
   await expect.poll(() => page.evaluate(() => document.activeElement === window.__clickedArtistCase)).toBe(true);
 
-  await library.getByRole("button", { name: "Tu colección", exact: true }).click();
-  await expect(query).toHaveValue("vertice");
+  await finder.fill("vertice");
+  await finder.press("Enter");
+  await expect(finder).toHaveValue("vertice");
   await expect(filterGenre(page)).toHaveValue("electronic");
   await expect(filterDecade(page)).toHaveValue("1990s");
   await expect(grid(page).first()).toBeVisible();
 });
 
-test("both searches accept artist, album, and combined words while keeping the selected artist", async ({ page }) => {
+test("one nav search accepts artist, album, and combined words and can replace the selected artist", async ({ page }) => {
   await openRail(page);
   await go(page, "Colección", 3);
   const library = collection(page);
-  const savedSearch = library.getByRole("searchbox", { name: "Buscar artista o álbum", exact: true });
+  const savedSearch = query(page);
   await expect(grid(page).first()).toBeVisible();
-  for (const input of ["campo", "vertice campo", "Vértice Magnético Campo magnético"]) {
+  for (const input of ["neon", "vertice neon", "Vértice Magnético Neon Rooms"]) {
     await savedSearch.fill(input);
     await expect(grid(page)).toHaveCount(1);
-    await expect(grid(page)).toHaveAttribute("data-collection-album-id", "demo-vertice-album-0");
+    await expect(grid(page)).toHaveAttribute("data-collection-album-id", "mock-album-01");
   }
-  await library.getByRole("button", { name: "Buscar artista", exact: true }).click();
-  const finder = library.getByRole("combobox", { name: "Buscar artistas", exact: true });
-  await finder.fill("vertice campo");
-  await expect(suggestions(page).getByRole("option", { name: /Vértice Magnético.*Campo magnético/i })).toBeVisible();
-  await finder.press("Enter");
-  const scopedSearch = finder;
+  const finder = savedSearch;
+  await finder.fill("vertice");
+  await suggestions(page).getByRole("option", { name: "Explorar artista Vértice Magnético", exact: true }).click();
   const editions = library.getByTestId("artist-discography").locator("button[data-batea-album-id]");
-  await expect(scopedSearch).toBeFocused();
-  await expect(scopedSearch).toHaveValue("Campo magnético");
-  await expect(editions).toHaveCount(1);
-  await expect(editions).toHaveAttribute("data-batea-album-id", "demo-vertice-album-0");
-  await scopedSearch.fill("");
+  await expect(library.getByTestId("artist-discography")).toHaveAttribute("data-artist-id", "demo-vertice");
   await expect(editions.nth(1)).toBeVisible();
-  await scopedSearch.fill("vertice campo");
-  await expect(editions).toHaveCount(3);
-  await scopedSearch.fill("vertice campo magnetico");
-  await expect(editions).toHaveCount(1);
   await expect(library.getByRole("button", { name: "Quitar artista: Vértice Magnético" })).toBeVisible();
-  await expect(library.getByRole("button", { name: /Quitar búsqueda/ })).toHaveCount(0);
-  await scopedSearch.fill("satelite");
-  await expect(library.getByRole("button", { name: "Quitar artista: Vértice Magnético" })).toBeVisible();
-  await suggestions(page).getByRole("option", { name: "Satélite Sur", exact: true }).click();
-  await expect(scopedSearch).toHaveValue("");
+  await finder.fill("satelite");
+  await suggestions(page).getByRole("option", { name: "Explorar artista Satélite Sur", exact: true }).click();
   await expect(library.getByTestId("artist-discography")).toHaveAttribute("data-artist-id", "demo-satelite");
   await expect(editions.first()).toBeVisible();
   await expect(library.getByRole("button", { name: "Quitar artista: Satélite Sur" })).toBeVisible();
-  await library.getByRole("button", { name: "Tu colección", exact: true }).click();
-  await expect(savedSearch).toHaveValue("Vértice Magnético Campo magnético");
+  await finder.fill("Vértice Magnético Neon Rooms");
+  await finder.press("Enter");
+  await expect(savedSearch).toHaveValue("Vértice Magnético Neon Rooms");
   await expect(grid(page)).toHaveCount(1);
 });
 

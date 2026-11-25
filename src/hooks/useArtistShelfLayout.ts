@@ -2,7 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { isMarqueeChapterActive } from "./useMarqueeBelt";
-import { ARTIST_SHELF_INITIAL_HOLD_MS, ARTIST_SHELF_SPEED, artistShelfLayout, artistShelfOffsetFor, artistShelfPosition, rebaseArtistShelf, wrapArtistShelf, type ArtistShelfLayout } from "@/lib/artistShelfLayout";
+import { ARTIST_SHELF_INITIAL_HOLD_MS, ARTIST_SHELF_SPEED, artistShelfEntryComplete, artistShelfInitialOffset, artistShelfLayout, artistShelfOffsetFor, artistShelfPosition, rebaseArtistShelf, wrapArtistShelf, type ArtistShelfLayout } from "@/lib/artistShelfLayout";
 
 interface Options {
   ids: string[];
@@ -24,6 +24,7 @@ export function useArtistShelfLayout(options: Options) {
   const priorIds = useRef<string[]>([]);
   const slots = useRef<Slot[]>([]);
   const offset = useRef(0);
+  const entry = useRef(true);
   const anchorId = useRef<string | null>(null);
   const keyboardId = useRef<string | null>(null);
   const emphasisId = useRef<string | null>(null);
@@ -50,7 +51,7 @@ export function useArtistShelfLayout(options: Options) {
     let nearest = 0, nearestDistance = Infinity;
     const positions: { slot: Slot; left: number }[] = [];
     slots.current.forEach((slot, index) => {
-      const left = artistShelfPosition(index, offset.current, current);
+      const left = artistShelfPosition(index, offset.current, current, entry.current);
       positions.push({ slot, left });
       slot.node.style.transform = `translate3d(${left}px,0,0)`;
       slot.node.style.setProperty("--case-shift", "0px");
@@ -66,12 +67,15 @@ export function useArtistShelfLayout(options: Options) {
     }
     if (!focused.current) keyboardId.current = current.fit ? slots.current[0]?.id ?? null : slots.current[nearest]?.id ?? null;
     slots.current.forEach((slot) => { slot.button.tabIndex = slot.id === keyboardId.current ? 0 : -1; });
-    const nextPage = current.fit ? 0 : Math.min(pagesRef.current - 1, Math.floor(wrapArtistShelf(offset.current, current.length) / current.length * pagesRef.current));
+    const displacement = offset.current - artistShelfInitialOffset(current);
+    const travelled = entry.current ? Math.max(0, displacement) : wrapArtistShelf(displacement, current.length);
+    const nextPage = current.fit ? 0 : Math.min(pagesRef.current - 1, Math.floor(travelled / current.length * pagesRef.current));
     if (nextPage !== pageRef.current) { pageRef.current = nextPage; setPage(nextPage); }
     const root = viewport.closest<HTMLElement>("[data-artist-shelf]");
     if (root) {
       root.dataset.artistCycleOffset = offset.current.toFixed(4);
       root.dataset.artistCycleLength = String(current.length);
+      root.dataset.artistSequence = entry.current && !current.fit ? "entry" : "cycle";
     }
   };
   paintRef.current = paint;
@@ -88,14 +92,17 @@ export function useArtistShelfLayout(options: Options) {
       const size = parseFloat(getComputedStyle(first).height) || first.offsetHeight;
       if (!(width > 0 && size > 0)) return;
       const ids = optionsRef.current.ids;
-      const next = artistShelfLayout(ids.length, viewport.clientWidth, width, size);
+      const buttonLeft = first.getBoundingClientRect().left;
+      const faces = [...(first.firstElementChild?.children ?? [])];
+      const visualLeft = faces.length ? Math.min(...faces.map((face) => face.getBoundingClientRect().left)) - buttonLeft : 0;
+      const next = artistShelfLayout(ids.length, viewport.clientWidth, width, size, ARTIST_SHELF_SPEED, visualLeft);
       if (!layoutRef.current) {
         anchorId.current = ids[0] ?? null;
         // A short catalog never needs an introductory animation. Later page
         // arrivals keep its existing anchor instead of restarting the shelf.
-        if (next.fit) initialHoldRemaining.current = 0;
+        if (next.fit) { initialHoldRemaining.current = 0; entry.current = false; }
       }
-      offset.current = rebaseArtistShelf(priorIds.current, ids, offset.current, layoutRef.current, next, anchorId.current);
+      offset.current = rebaseArtistShelf(priorIds.current, ids, offset.current, layoutRef.current, next, anchorId.current, entry.current);
       priorIds.current = [...ids];
       layoutRef.current = next;
       slots.current = nodes.flatMap((node) => {
@@ -160,7 +167,11 @@ export function useArtistShelfLayout(options: Options) {
         else offset.current = wrapArtistShelf(offset.current + delta * Math.min(1, dt * 7), current.length);
       } else if (autoEligible()) {
         if (initialHoldRemaining.current > 0) initialHoldRemaining.current = Math.max(0, initialHoldRemaining.current - elapsed);
-        else offset.current = wrapArtistShelf(offset.current + ARTIST_SHELF_SPEED * dt, current.length);
+        else {
+          offset.current += ARTIST_SHELF_SPEED * dt;
+          if (entry.current && artistShelfEntryComplete(offset.current, current)) entry.current = false;
+          if (!entry.current) offset.current = wrapArtistShelf(offset.current, current.length);
+        }
       }
       paintRef.current();
       sync();
@@ -189,6 +200,7 @@ export function useArtistShelfLayout(options: Options) {
       const slot = slots.current[index];
       if (!current || !slot) return;
       target.current = null;
+      entry.current = false;
       keyboardId.current = slot.id;
       anchorId.current = slot.id;
       emphasisId.current = slot.id;
@@ -242,7 +254,11 @@ export function useArtistShelfLayout(options: Options) {
       }
       if (!current.captured) return;
       const model = layoutRef.current;
-      if (model) offset.current = wrapArtistShelf(offset.current - (event.clientX - current.lastX), model.length);
+      if (model) {
+        offset.current -= event.clientX - current.lastX;
+        if (entry.current && artistShelfEntryComplete(offset.current, model)) entry.current = false;
+        if (!entry.current) offset.current = wrapArtistShelf(offset.current, model.length);
+      }
       current.lastX = event.clientX;
       paintRef.current();
     };
@@ -285,7 +301,9 @@ export function useArtistShelfLayout(options: Options) {
     const current = layoutRef.current;
     if (!current || current.fit) return;
     const index = Math.max(0, Math.min(pagesRef.current - 1, next));
-    target.current = current.length / pagesRef.current * index;
+    entry.current = false;
+    offset.current = wrapArtistShelf(offset.current, current.length);
+    target.current = wrapArtistShelf(artistShelfInitialOffset(current) + current.length / pagesRef.current * index, current.length);
     if (reduced.current) { offset.current = target.current; target.current = null; paintRef.current(); }
     syncRef.current();
   };

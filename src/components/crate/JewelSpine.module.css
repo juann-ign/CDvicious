@@ -46,12 +46,12 @@
 
 .rear {
   transform: translateZ(calc(-1 * var(--case-depth)));
-  background: linear-gradient(145deg, #7d948c, #24332e 72%);
+  background: var(--jewel-case-rear-fill, linear-gradient(145deg, #7d948c, #24332e 72%));
 }
 
 .front {
   overflow: hidden;
-  background: linear-gradient(130deg, #bdcdc5, #17231e 55%);
+  background: var(--jewel-case-front-fill, linear-gradient(130deg, #bdcdc5, #17231e 55%));
   box-shadow: 3px 5px 8px #04080680;
 }
 
@@ -77,7 +77,7 @@
   inset: 3px auto 3px 2px;
   width: calc(9% - 3px);
   border-right: 1px solid #ebf2ed77;
-  background: repeating-linear-gradient(90deg, #20352fbb 0 1px, #9db5a98c 1px 2px);
+  background: var(--jewel-case-hinge-fill, repeating-linear-gradient(90deg, #20352fbb 0 1px, #9db5a98c 1px 2px));
 }
 
 .spineFace {
@@ -91,7 +91,7 @@
   transform: rotateY(-90deg);
   transform-origin: right center;
   background-color: #384b40;
-  background-image: linear-gradient(90deg, #0c171b48, #111d208f 53%, #101a1a50), var(--demo-ink, none), var(--cover);
+  background-image: var(--jewel-case-spine-glass, linear-gradient(90deg, #0c171b48, #111d208f 53%, #101a1a50)), var(--demo-ink, none), var(--cover);
   background-position: center, center, 36% center;
   background-size: 100% 100%, 100% 100%, var(--case-size) var(--case-size);
   box-shadow: inset 2px 0 #effbef35, inset -2px 0 #182724a1;
@@ -104,7 +104,7 @@
   border: 1px solid var(--jewel-case-top-edge, #d4e0d5ad);
   transform-origin: top center;
   transform: rotateX(-90deg);
-  background: linear-gradient(#bdccc1, #4c6658 60%, #a3b8ac);
+  background: var(--jewel-case-top-fill, linear-gradient(#bdccc1, #4c6658 60%, #a3b8ac));
 }
 
 :global([data-rail-moving="true"]) .spine .case,
