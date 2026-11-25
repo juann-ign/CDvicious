@@ -5,25 +5,19 @@ import { flushSync } from "react-dom";
 import { useRailActions } from "@/components/scroll/RailContext";
 import { advanceArtistCycle, artistCaseSlots, fitArtistTitle } from "@/lib/artistCaseLayout";
 import type { ArtistRelease } from "@/types/artist";
-import { ArtistInlineCase } from "./ArtistInlineCase";
 import styles from "./ArtistDiscography.module.css";
 
-export type CaseMode = "browse" | "selected" | "open";
+export type CaseMode = "browse" | "selected";
 interface Props {
   albums: ArtistRelease[];
   index: number;
   mode: CaseMode;
   active: boolean;
   drifting: boolean;
-  hiddenDiscId?: string;
-  disabled?: boolean;
   select: (index: number) => void;
   advance: () => void;
-  open: () => void;
+  openAlbum: (album: ArtistRelease, origin: HTMLElement) => void;
   escape: () => void;
-  onPlay: (album: ArtistRelease, element: HTMLElement) => void;
-  onOpened?: () => void;
-  discRef: RefObject<HTMLDivElement | null>;
   caseRef: RefObject<HTMLButtonElement | null>;
 }
 
@@ -55,7 +49,7 @@ function CaseTitle({ value, vertical = false }: { value: string; vertical?: bool
 
 // At the step boundary, slot N becomes N-1 at exactly the same pixel. Only
 // offscreen copies are recycled; every edition retains one canonical button.
-export function ArtistDiscScene({ albums, index, mode, active, drifting, hiddenDiscId, disabled, select, advance, open, escape, onPlay, onOpened, discRef, caseRef }: Props) {
+export function ArtistDiscScene({ albums, index, mode, active, drifting, select, advance, openAlbum, escape, caseRef }: Props) {
   const { start, stop } = useRailActions();
   const token = useRef(Symbol("artist-jewelcase-drag"));
   const sceneRef = useRef<HTMLDivElement>(null);
@@ -72,22 +66,7 @@ export function ArtistDiscScene({ albums, index, mode, active, drifting, hiddenD
   const [focused, setFocused] = useState(false);
   const [focusedAlbum, setFocusedAlbum] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
-  const [detailId, setDetailId] = useState<string | null>(null);
-  const activeRef = useRef(active);
-  const modeRef = useRef(mode);
-  activeRef.current = active;
-  modeRef.current = mode;
-  const albumId = albums[index]?.id;
-  const detailVisible = mode === "open" || (detailId === albumId && mode === "selected");
-  const closeDone = useCallback(() => {
-    setDetailId(null);
-    if (activeRef.current && modeRef.current === "selected") requestAnimationFrame(() => caseRef.current?.focus({ preventScroll: true }));
-  }, [caseRef]);
-  useEffect(() => {
-    if (mode === "open") setDetailId(albumId);
-    else if (mode === "browse" || detailId !== albumId) setDetailId(null);
-  }, [mode, albumId, detailId]);
-  const running = active && drifting && mode === "browse" && !hovered && !focused && !dragging && !disabled && albums.length > 1;
+  const running = active && drifting && mode === "browse" && !hovered && !focused && !dragging && albums.length > 1;
   useLayoutEffect(() => {
     // The strip is positioned, never a native horizontal scroller. Focusing
     // an edition must not leave a hidden scroll offset behind its transforms.
@@ -108,7 +87,7 @@ export function ArtistDiscScene({ albums, index, mode, active, drifting, hiddenD
     setHovered(active && element.matches(":hover"));
     const down = (event: PointerEvent) => {
       if (!gesture.current) suppressClick.current = false;
-      if (disabled || !active || event.button !== 0 || gesture.current) return;
+      if (!active || event.button !== 0 || gesture.current) return;
       const target = event.target as Element;
       if (target.closest("[data-gesture-owner]")) return;
       const caseTarget = target.closest("[data-case-hit]");
@@ -157,7 +136,7 @@ export function ArtistDiscScene({ albums, index, mode, active, drifting, hiddenD
       element.removeEventListener("lostpointercapture", lost);
       release();
     };
-  }, [active, disabled, release, stop]);
+  }, [active, release, stop]);
 
   useEffect(() => {
     if (!running) return;
@@ -187,12 +166,14 @@ export function ArtistDiscScene({ albums, index, mode, active, drifting, hiddenD
   // Chronological DOM/tab order is independent from the cyclic visual window.
   const ordered = [...slots].sort((a, b) => Number(a.copy) - Number(b.copy) || (a.copy ? a.offset - b.offset : a.at - b.at));
   const focusedTitle = albums.find((album) => album.id === focusedAlbum)?.name;
-  const choose = (at: number, copy: boolean) => {
-    if (disabled) return;
-    if (mode !== "browse" && at === index) open(); else select(at);
-    if (copy) requestAnimationFrame(() => caseRef.current?.focus({ preventScroll: true }));
+  const choose = (at: number, origin: HTMLElement, copy = false) => {
+    const album = albums[at];
+    if (!album) return;
+    const canonical = copy ? [...sceneRef.current?.querySelectorAll<HTMLButtonElement>("button[data-album-id]") ?? []]
+      .find((button) => button.dataset.albumId === album.id) : origin;
+    if (canonical) openAlbum(album, canonical);
   };
-  return <div ref={sceneRef} className={styles.scene} data-testid="artist-disc-scene" data-mode={mode} data-reserved={detailVisible} data-drifting={running} data-dragging={dragging} data-cycle-index={index} data-cycle-phase={phase.current.toFixed(5)}
+  return <div ref={sceneRef} className={styles.scene} data-testid="artist-disc-scene" data-mode={mode} data-drifting={running} data-dragging={dragging} data-cycle-index={index} data-cycle-phase={phase.current.toFixed(5)}
     role="group" aria-label="Recorrer discografía" tabIndex={-1}
     onPointerEnter={() => setHovered(true)} onPointerLeave={() => setHovered(false)}
     onPointerMove={(event) => { if (event.pointerType !== "touch") setHovered(true); }}
@@ -200,7 +181,7 @@ export function ArtistDiscScene({ albums, index, mode, active, drifting, hiddenD
     onBlurCapture={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) { setFocused(false); setFocusedAlbum(null); } }}
     onClickCapture={(event) => { if (suppressClick.current && event.detail !== 0) { event.preventDefault(); event.stopPropagation(); suppressClick.current = false; } }}
     onKeyDown={(event) => {
-      if (disabled || (event.target as Element).closest("[data-gesture-owner], input")) return;
+      if ((event.target as Element).closest("[data-gesture-owner], input")) return;
       if (event.key === "Escape") { event.preventDefault(); escape(); return; }
       if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
         event.preventDefault();
@@ -208,7 +189,7 @@ export function ArtistDiscScene({ albums, index, mode, active, drifting, hiddenD
         requestAnimationFrame(() => caseRef.current?.focus({ preventScroll: true }));
       }
     }}>
-    <div className={styles.sceneLegend} aria-hidden="true"><span>{mode === "browse" ? "01 / RECORRER" : mode === "selected" ? "02 / SELECCIONAR" : "03 / INSPECCIONAR"}</span><span>CD · ARCHIVO FÍSICO</span></div>
+    <div className={styles.sceneLegend} aria-hidden="true"><span>{mode === "browse" ? "01 / RECORRER" : "02 / SELECCIONAR"}</span><span>CD · ARCHIVO FÍSICO</span></div>
     {focusedTitle && <div className={styles.focusedTitle} data-testid="artist-full-title" role="tooltip">{focusedTitle}</div>}
     <div className={styles.shelf} aria-hidden="true" />
     <div className={styles.cases}>
@@ -232,14 +213,13 @@ export function ArtistDiscScene({ albums, index, mode, active, drifting, hiddenD
         </span>;
         // Visual copies delegate pointer selection by ID and never enter the
         // accessibility tree, tab order or the canonical album-control query.
-        return copy ? <div key={`copy-${album.id}-${offset}`} {...props} aria-hidden="true" onMouseDown={(event) => event.preventDefault()} onClick={() => choose(at, true)}>{content}</div>
-          : <button key={album.id} {...props} ref={selected ? caseRef : undefined} type="button" disabled={disabled} tabIndex={at === index && mode !== "open" ? 0 : -1} aria-disabled={mode === "open" && selected || undefined}
+        return copy ? <div key={`copy-${album.id}-${offset}`} {...props} aria-hidden="true" onMouseDown={(event) => event.preventDefault()} onClick={(event) => choose(at, event.currentTarget, true)}>{content}</div>
+          : <button key={album.id} {...props} ref={selected ? caseRef : undefined} type="button" tabIndex={at === index ? 0 : -1}
             data-testid={selected ? "artist-selected-case" : undefined} data-album-id={album.id} data-release-date={album.release_date}
-            aria-label={selected ? `Abrir caja de ${album.name}` : `Seleccionar ${album.name}`} aria-pressed={selected}
-            onClick={() => choose(at, false)}>{content}</button>;
+            aria-label={selected ? `Ver álbum ${album.name}` : `Seleccionar ${album.name}`} aria-pressed={selected}
+            onClick={(event) => choose(at, event.currentTarget)}>{content}</button>;
       })}
     </div>
-    {detailVisible && albums[index] && <ArtistInlineCase key={albums[index].id} expanded={mode === "open"} onClosed={closeDone} onOpened={onOpened} onClose={escape} album={albums[index]} active={active} pending={Boolean(disabled)} hiddenDiscId={hiddenDiscId} discRef={discRef} onPlay={onPlay} />}
-    <span className={styles.dragHint}>{mode === "browse" ? "ARRASTRÁ EL ESPACIO LIBRE · ELEGÍ UNA CAJA" : mode === "selected" ? "OTRO CLIC PARA ABRIR · ESC PARA RECORRER" : "CD: ARRASTRÁ PARA INSPECCIONAR · ESC PARA CERRAR"}</span>
+    <span className={styles.dragHint}>{mode === "browse" ? "ARRASTRÁ EL ESPACIO LIBRE · ELEGÍ UNA CAJA" : "ELEGÍ LA CAJA PARA VER EL ÁLBUM · ESC PARA RECORRER"}</span>
   </div>;
 }

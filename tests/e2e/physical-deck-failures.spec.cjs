@@ -8,9 +8,9 @@ test.use({ launchOptions: { args: ["--enable-webgl", "--ignore-gpu-blocklist", "
 const ALBUM_ID = "mock-album-02";
 const ORIGINAL_VOLUME = .37;
 const collection = (page) => page.getByRole("region", { name: "La Colección", exact: true });
-const dialog = (page) => page.getByRole("dialog", { name: "Nocturnal FM — Satélite Sur", exact: true });
-const presentation = (page) => dialog(page).getByTestId("jewel-case-presentation");
-const play = (page) => dialog(page).getByRole("button", { name: "Reproducir Nocturnal FM", exact: true });
+const detail = (page) => page.getByTestId("album-detail-page");
+const presentation = (page) => detail(page).getByTestId("jewel-case-presentation");
+const play = (page) => detail(page).getByRole("button", { name: "Reproducir Nocturnal FM", exact: true });
 const display = (page) => page.getByTestId("deck-now-playing");
 const overlay = (page) => page.locator("[data-rail-overlay]");
 const flight = (page) => page.getByTestId("rail-flying-disc");
@@ -63,7 +63,7 @@ test.afterEach(async ({ page }, testInfo) => {
     vfd: document.querySelector('[data-testid="deck-now-playing"]')?.textContent,
     playing: document.querySelector('[data-testid="deck-now-playing"]')?.dataset.isPlaying,
     focused: document.activeElement?.getAttribute("aria-label") || document.activeElement?.textContent,
-    alert: document.querySelector('[role="dialog"] [role="alert"]')?.textContent,
+    alert: document.querySelector('[data-testid="album-detail-page"] [role="alert"]')?.textContent,
     volume: await window.__b2Mock?.mockSpotifyPlayer.getVolume(),
     mock: window.__b2Mock?.getSnapshot(),
   })).catch((error) => ({ evidenceError: error.message }));
@@ -71,7 +71,9 @@ test.afterEach(async ({ page }, testInfo) => {
     body: JSON.stringify({ status: testInfo.status, rows: evidence.get(page), state }, null, 2), contentType: "application/json",
   });
   if (!page.isClosed()) {
-    await testInfo.attach("physical-deck-recovery", { body: await page.screenshot(), contentType: "image/png" });
+    if (testInfo.status !== testInfo.expectedStatus) {
+      await testInfo.attach("physical-deck-recovery", { body: await page.screenshot(), contentType: "image/png" });
+    }
     await page.evaluate(async () => {
       if (!window.__b2Mock || !window.__deckFailureFixture) return;
       window.__b2Mock.restoreMockSnapshot(window.__deckFailureFixture.snapshot);
@@ -82,7 +84,9 @@ test.afterEach(async ({ page }, testInfo) => {
 });
 
 async function contextState(page) {
-  return collection(page).evaluate((node) => ({
+  // The detail owns the screen. Read the hidden catalog's retained state
+  // through its DOM identity rather than the visible accessibility tree.
+  return page.locator('[aria-label="La Colección"]').evaluate((node) => ({
     query: node.querySelector('[aria-label="Buscar artista o álbum"]')?.value,
     genre: node.querySelector('[aria-label="Filtrar por género"]')?.value,
     decade: node.querySelector('[aria-label="Filtrar por década"]')?.value,
@@ -117,7 +121,7 @@ async function prepare(page) {
   await expect(card).toBeVisible();
   const context = await contextState(page);
   await card.click();
-  await expect(dialog(page)).toBeVisible();
+  await expect(detail(page)).toBeVisible();
   await expect(presentation(page)).toHaveAttribute("data-presentation", "closed");
   return { prior, context };
 }
@@ -175,8 +179,8 @@ async function startLoad(page, requests, count = 1) {
 
 async function expectRecovered(page, setup, phase, message) {
   await expect(overlay(page)).toHaveAttribute("data-playback-phase", phase);
-  await expect(dialog(page)).toBeVisible();
-  await expect(dialog(page).getByRole("alert")).toContainText(message);
+  await expect(detail(page)).toBeVisible();
+  await expect(detail(page).getByRole("alert")).toContainText(message);
   await expect(play(page)).toBeEnabled();
   await expect(play(page)).toBeFocused();
   await expect(page.locator("html")).toHaveAttribute("data-chapter", "3");

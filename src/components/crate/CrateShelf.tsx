@@ -9,7 +9,7 @@ import styles from "./CrateShelf.module.css";
 
 interface CrateShelfProps {
   albums: AlbumItem[];
-  onSelect: (album: AlbumItem) => void;
+  onSelect: (album: AlbumItem, origin: HTMLButtonElement) => void;
   onGrabStart?: () => void;
   onGrabEnd?: () => void;
 }
@@ -25,6 +25,7 @@ export function CrateShelf({
   onGrabEnd,
 }: CrateShelfProps) {
   const [hovering, setHovering] = useState(false);
+  const [focused, setFocused] = useState(false);
   const [driftEnabled, setDriftEnabled] = useState(true);
   const [length, setLength] = useState(0);
   const [hover, setHover] = useState<{
@@ -54,7 +55,8 @@ export function CrateShelf({
     const sync = () => {
       const enabled =
         railRoot.dataset.chapter === "2" &&
-        railRoot.dataset.railMoving !== "true";
+        railRoot.dataset.railMoving !== "true" &&
+        railRoot.dataset.albumDetailOpen !== "true";
       wrapRef.current?.setAttribute(
         "data-belt-animation-enabled",
         enabled ? "true" : "false",
@@ -65,7 +67,7 @@ export function CrateShelf({
     const observer = new MutationObserver(sync);
     observer.observe(railRoot, {
       attributes: true,
-      attributeFilter: ["data-chapter", "data-rail-moving"],
+      attributeFilter: ["data-chapter", "data-rail-moving", "data-album-detail-open"],
     });
     return () => observer.disconnect();
   }, []);
@@ -76,7 +78,7 @@ export function CrateShelf({
     useMarqueeBelt({
       speed: 60,
       enabled: albums.length > 0,
-      paused: !driftEnabled || hovering || albums.length === 0,
+      paused: !driftEnabled || hovering || focused || albums.length === 0,
       length,
       pages,
       onGrabStart,
@@ -135,6 +137,10 @@ export function CrateShelf({
           setHovering(false);
           setHover(null);
         }}
+        onFocus={() => setFocused(true)}
+        onBlur={(event) => {
+          if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false);
+        }}
       >
         <div
           ref={containerRef}
@@ -151,11 +157,12 @@ export function CrateShelf({
                 {albums.map((album, i) => (
                   <JewelSpine
                     key={`${copy}-${album.id}`}
+                    albumId={album.id}
                     title={album.name}
                     artist={album.artists.map((a) => a.name).join(", ")}
                     coverUrl={album.images[0]?.url || ""}
-                    tilt={(i % 5) * 0.5 - 1}
-                    onSelect={() => onSelect(album)}
+                    tilt={(i % 5 - 2) * 0.8}
+                    onSelect={(origin) => onSelect(album, origin)}
                     onHover={(rect) => setHover(rect ? { album, rect } : null)}
                   />
                 ))}

@@ -70,7 +70,8 @@ export function useMarqueeBelt({
     const canAnimate = () =>
       !railRoot ||
       (railRoot.dataset.chapter === "2" &&
-        railRoot.dataset.railMoving !== "true");
+        railRoot.dataset.railMoving !== "true" &&
+        railRoot.dataset.albumDetailOpen !== "true");
 
     const stop = () => {
       if (raf !== null) {
@@ -136,7 +137,7 @@ export function useMarqueeBelt({
     const observer = railRoot ? new MutationObserver(sync) : null;
     observer?.observe(railRoot!, {
       attributes: true,
-      attributeFilter: ["data-chapter", "data-rail-moving"],
+      attributeFilter: ["data-chapter", "data-rail-moving", "data-album-detail-open"],
     });
     sync();
 

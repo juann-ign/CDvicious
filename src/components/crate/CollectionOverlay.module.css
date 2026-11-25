@@ -8,6 +8,8 @@
   padding: var(--space-4);
 }
 
+.overlay[hidden] { display: none; }
+
 :global(body:has([data-rail-ready])) .overlay { top: var(--shell-nav-height); bottom: var(--shell-player-height); }
 :global(body:has([data-rail-ready])) .panel { height: 100%; }
 

@@ -22,21 +22,9 @@
   pointer-events: auto;
 }
 
-.discHitArea {
-  pointer-events: none;
-}
-
-.discHitArea > * {
-  pointer-events: auto;
-}
-
-/* The overlay paints above the rail panels, so re-enabled hit targets must
-   follow the active chapter. Keep this gate in the CSS Module that owns the
-   local .interactive and .discHitArea classes. */
+/* The overlay paints above the rail panels. Interactive targets follow the active chapter. */
 .layer[data-deck-interactive="false"] .interactive,
-.layer[data-deck-interactive="false"] .interactive *,
-.layer[data-deck-interactive="false"] .discHitArea > *,
-.layer[data-deck-interactive="false"] .discHitArea > * * {
+.layer[data-deck-interactive="false"] .interactive * {
   pointer-events: none;
 }
 
@@ -105,16 +93,6 @@
 }
 .globalPlayer[data-footer-visible="false"] { visibility: hidden; pointer-events: none; }
 .globalPlayer[data-prototype-player-active="true"] { opacity: 1; visibility: visible; pointer-events: auto; }
-
-/* Preserve the disc body inside the useful Deck height, including short windows. */
-.discHitArea {
-  --disc-min-size: min(460px, calc(var(--shell-content-height) - 32px));
-  --disc-max-size: min(620px, calc(var(--shell-content-height) - 32px));
-}
-.discHitArea > div {
-  max-width: calc(var(--shell-content-height) - 32px);
-  max-height: calc(var(--shell-content-height) - 32px);
-}
 
 @media (prefers-reduced-motion: reduce) {
   .layer {

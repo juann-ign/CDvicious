@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useSpotifyPlayer } from "@/components/SpotifyPlayerProvider";
 import {
   loadCollection,
@@ -10,7 +10,7 @@ import {
 } from "@/lib/collectionClient";
 import { CrateShelf } from "./CrateShelf";
 import { CollectionOverlay } from "./CollectionOverlay";
-import { JewelCaseDetailModal } from "./JewelCaseDetailModal";
+import { StandaloneAlbumDetailPage } from "./AlbumDetailPage";
 import { FlyingDisc } from "./FlyingDisc";
 import type { AlbumItem } from "@/types/crate";
 import styles from "./CrateTeaser.module.css";
@@ -29,6 +29,7 @@ export function CrateTeaser({ onLoadAlbum }: CrateTeaserProps) {
   const [loadingGenres, setLoadingGenres] = useState(false);
   const [overlayOpen, setOverlayOpen] = useState(false);
   const [selected, setSelected] = useState<AlbumItem | null>(null);
+  const selectedOrigin = useRef<HTMLButtonElement | null>(null);
   const [flight, setFlight] = useState<{ album: AlbumItem; rect: DOMRect } | null>(null);
 
   useEffect(() => {
@@ -85,13 +86,17 @@ export function CrateTeaser({ onLoadAlbum }: CrateTeaserProps) {
       </div>
 
       {!loading && teaserAlbums.length > 0 && (
-        <CrateShelf albums={teaserAlbums} onSelect={setSelected} />
+        <CrateShelf albums={teaserAlbums} onSelect={(album, origin) => { selectedOrigin.current = origin; setSelected(album); }} />
       )}
 
       {selected && !overlayOpen && (
-        <JewelCaseDetailModal
+        <StandaloneAlbumDetailPage
           album={selected}
-          onClose={() => setSelected(null)}
+          onClose={() => {
+            const origin = selectedOrigin.current;
+            setSelected(null);
+            requestAnimationFrame(() => origin?.focus({ preventScroll: true }));
+          }}
           onLoad={(el) => handleLoad(selected, el)}
         />
       )}

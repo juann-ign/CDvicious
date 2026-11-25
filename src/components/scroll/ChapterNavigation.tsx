@@ -2,6 +2,7 @@
 
 import { useRailActions, useRailNavigation } from "./RailContext";
 import { UserProfileChip } from "@/components/UserProfileChip";
+import { useAlbumDetailActions } from "@/components/crate/AlbumDetailNavigation";
 import styles from "./ChapterNavigation.module.css";
 
 const CHAPTERS = [
@@ -15,6 +16,7 @@ const CHAPTERS = [
 export function ChapterNavigation() {
   const { activeChapterIndex } = useRailNavigation();
   const { scrollToChapter } = useRailActions();
+  const { closeAlbum } = useAlbumDetailActions();
 
   return (
     <header className={styles.shellHeader} data-shell-header>
@@ -30,7 +32,10 @@ export function ChapterNavigation() {
               type="button"
               aria-label={`Ir al capítulo ${chapter.label}`}
               aria-current={active ? "location" : undefined}
-              onClick={() => scrollToChapter(index)}
+              onClick={() => {
+                if (closeAlbum(false)) requestAnimationFrame(() => scrollToChapter(index));
+                else scrollToChapter(index);
+              }}
             >
               <span
                 className={styles.indicator}

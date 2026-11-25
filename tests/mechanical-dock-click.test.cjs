@@ -37,6 +37,13 @@ function soundHarness({ mock = true, activation = true, visibility = "visible", 
   };
 }
 
+function armPrepared(run) {
+  const releaseUnused = run.api.prepareMechanicalDockClick();
+  const armed = run.api.armMechanicalDockClick();
+  releaseUnused();
+  return armed;
+}
+
 test("the click preference defaults to mock only and publishes stable changes", () => {
   const mock = soundHarness(), live = soundHarness({ mock: false });
   assert.equal(mock.api.getDockClickEnabled(), true);
@@ -53,7 +60,7 @@ test("the click preference defaults to mock only and publishes stable changes", 
 
 test("a trusted, safe mock dock plays one original click shorter than 50 ms", async () => {
   const run = soundHarness();
-  const armed = run.api.armMechanicalDockClick();
+  const armed = armPrepared(run);
   const context = run.contexts[0];
   assert.equal(context.resumeCalls, 1, "Audio is armed synchronously in the trusted gesture.");
   const task = armed.play(run.options());
@@ -79,16 +86,36 @@ test("a trusted, safe mock dock plays one original click shorter than 50 ms", as
   assert.equal(context.closeCalls, 1);
 });
 
+test("an unprepared play click starts without allocating an audio context", async () => {
+  const run = soundHarness();
+  const armed = run.api.armMechanicalDockClick();
+  assert.equal(run.contexts.length, 0);
+  assert.equal(await armed.play(run.options()), "unavailable");
+  armed.dispose();
+});
+
+test("idle preparation never resumes an audio device and releases an unused context", () => {
+  const run = soundHarness({ activation: false });
+  const release = run.api.prepareMechanicalDockClick();
+  assert.equal(run.contexts.length, 1);
+  assert.equal(run.contexts[0].resumeCalls, 0);
+  release(); release();
+  assert.equal(run.contexts[0].closeCalls, 1);
+  const live = soundHarness({ mock: false });
+  live.api.prepareMechanicalDockClick()();
+  assert.equal(live.contexts.length, 0);
+});
+
 test("lack of activation, visibility, AudioContext or running context explicitly omits sound", async () => {
   for (const [options, expected] of [
     [{ activation: false }, "no-activation"], [{ visibility: "hidden" }, "hidden"],
     [{ audio: false }, "unavailable"], [{ state: "suspended" }, "suspended"],
   ]) {
-    const run = soundHarness(options), armed = run.api.armMechanicalDockClick();
+    const run = soundHarness(options), armed = armPrepared(run);
     run.navigator.userActivation.isActive = true;
     assert.equal(await armed.play(run.options()), expected);
     assert.equal(run.contexts.reduce((count, context) => count + context.sources.length, 0), 0);
-    assert.ok(run.contexts.every((context) => context.resumeCalls === 1), "No autoplay retry is made at docking.");
+    assert.equal(run.contexts.reduce((count, context) => count + context.resumeCalls, 0), expected === "suspended" ? 1 : 0, "No autoplay retry is made at docking.");
     armed.dispose();
   }
 });
@@ -100,7 +127,7 @@ test("live is silent until opted in and still requires confirmed safety and orig
   assert.equal(run.contexts.length, 0); disabled.dispose();
   run.api.setDockClickEnabled(true);
   for (const options of [{ safeToPlay: false }, { volume: 0 }, { volume: NaN }]) {
-    const armed = run.api.armMechanicalDockClick();
+    const armed = armPrepared(run);
     assert.equal(await armed.play(run.options(options)), "unsafe");
     assert.equal(run.contexts.at(-1).sources.length, 0); armed.dispose();
   }
@@ -108,7 +135,7 @@ test("live is silent until opted in and still requires confirmed safety and orig
 
 test("abort, hiding, disabling and disposal stop an active click and release its nodes", async () => {
   for (const [reason, expected] of [["abort", "cancelled"], ["hidden", "hidden"], ["disable", "cancelled"], ["dispose", "cancelled"]]) {
-    const run = soundHarness(), armed = run.api.armMechanicalDockClick(), controller = new AbortController();
+    const run = soundHarness(), armed = armPrepared(run), controller = new AbortController();
     const task = armed.play(run.options({ signal: controller.signal }));
     const context = run.contexts[0], source = context.sources[0];
     if (reason === "abort") controller.abort();
@@ -125,7 +152,7 @@ test("abort, hiding, disabling and disposal stop an active click and release its
 });
 
 test("the guarded click finishes within the existing 45 ms cap if onended is unavailable", async () => {
-  const run = soundHarness(), armed = run.api.armMechanicalDockClick();
+  const run = soundHarness(), armed = armPrepared(run);
   const task = armed.play(run.options());
   const timeout = [...run.timers.values()][0];
   assert.equal(timeout.ms, 45);

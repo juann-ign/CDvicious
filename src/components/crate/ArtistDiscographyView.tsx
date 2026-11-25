@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { ArtistDiscScene, type CaseMode } from "./ArtistDiscScene";
+import { useAlbumDetailActions } from "./AlbumDetailNavigation";
 import { useArtistCatalog } from "@/hooks/useArtistCatalog";
 import type { ArtistItem, ArtistRelease } from "@/types/artist";
 import { compareArtistEditions } from "@/lib/artistCaseLayout";
@@ -15,12 +16,9 @@ interface Props {
   settled: boolean;
   onResults: () => void;
   onCollection: () => void;
-  onPlay: (album: ArtistRelease, element: HTMLElement) => void;
-  pending: boolean;
-  hiddenDiscId?: string;
-  playError: string | null;
 }
-export function ArtistDiscographyView({ artist, active, settled, onResults, onCollection, onPlay, pending, hiddenDiscId, playError }: Props) {
+export function ArtistDiscographyView({ artist, active, settled, onResults, onCollection }: Props) {
+  const { openAlbum } = useAlbumDetailActions();
   const catalog = useArtistCatalog(artist.id, "album", active && settled);
   const albums = useMemo(() => [...catalog.items].sort(compareArtistEditions), [catalog.items]);
   const [positions, setPositions] = useState<Record<string, Position>>({});
@@ -28,12 +26,8 @@ export function ArtistDiscographyView({ artist, active, settled, onResults, onCo
   const found = position.id ? albums.findIndex((album) => album.id === position.id) : -1;
   const index = Math.max(0, Math.min(found >= 0 ? found : position.index, albums.length - 1));
   const album = albums[index];
-  const discRef = useRef<HTMLDivElement>(null);
   const caseRef = useRef<HTMLButtonElement>(null);
   const viewRef = useRef<HTMLDivElement>(null);
-  const queuedPlay = useRef<{ artistId: string; albumId: string } | null>(null);
-  const [openingForPlay, setOpeningForPlay] = useState(false);
-  const busy = pending || openingForPlay;
   const [paused, setPaused] = useState(false);
   const [visible, setVisible] = useState(true);
   const [reducedMotion, setReducedMotion] = useState(false);
@@ -51,48 +45,24 @@ export function ArtistDiscographyView({ artist, active, settled, onResults, onCo
     setPositions((all) => ({ ...all, [artist.id]: { index, id: album.id, mode: "browse" } }));
   }, [album, artist.id, index, position.id]);
   const select = (next: number) => {
-    if (busy) return;
     const safe = Math.max(0, Math.min(next, albums.length - 1));
     setPositions((all) => ({ ...all, [artist.id]: { index: safe, id: albums[safe]?.id, mode: "selected" } }));
   };
   const changeMode = useCallback((mode: CaseMode) => {
-    if (busy) return;
     setPositions((all) => ({ ...all, [artist.id]: { index, id: album?.id, mode } }));
-  }, [busy, artist.id, index, album?.id]);
+  }, [artist.id, index, album?.id]);
   const escape = useCallback(() => {
-    if (pending) return;
-    queuedPlay.current = null;
-    setOpeningForPlay(false);
-    setPositions((all) => ({ ...all, [artist.id]: { index, id: album?.id, mode: position.mode === "open" ? "selected" : "browse" } }));
+    changeMode("browse");
     requestAnimationFrame(() => {
       viewRef.current?.querySelector<HTMLElement>('[data-testid="artist-disc-scene"]')?.focus({ preventScroll: true });
     });
-  }, [pending, artist.id, index, album?.id, position.mode]);
-  const requestPlay = useCallback((release: ArtistRelease) => {
-    if (busy || queuedPlay.current || release.id !== album?.id) return;
-    const disc = discRef.current;
-    const opened = disc?.closest('[data-testid="artist-inline-case"]')?.getAttribute("data-presentation") === "open";
-    if (position.mode === "open" && disc && opened) { onPlay(release, disc); return; }
-    // Capture the real CD only after the shared hinge has actually opened.
-    queuedPlay.current = { artistId: artist.id, albumId: release.id };
-    setOpeningForPlay(true);
-    changeMode("open");
-  }, [busy, album?.id, position.mode, onPlay, artist.id, changeMode]);
-  const caseOpened = useCallback(() => {
-    const queued = queuedPlay.current;
-    if (!queued || !active || pending || queued.artistId !== artist.id || queued.albumId !== album?.id) return;
-    const disc = discRef.current;
-    if (!disc) return;
-    queuedPlay.current = null;
-    setOpeningForPlay(false);
-    onPlay(album, disc);
-  }, [active, pending, artist.id, album, onPlay]);
-  useEffect(() => {
-    if (!active || queuedPlay.current?.artistId !== artist.id && queuedPlay.current) {
-      queuedPlay.current = null;
-      setOpeningForPlay(false);
-    }
-  }, [active, artist.id]);
+  }, [changeMode]);
+  const showAlbum = (release: ArtistRelease, origin: HTMLElement) => {
+    const next = albums.findIndex(({ id }) => id === release.id);
+    if (next < 0) return;
+    select(next);
+    openAlbum(release, origin);
+  };
   const escapeRef = useRef(escape);
   const modeRef = useRef(position.mode);
   escapeRef.current = escape;
@@ -100,7 +70,8 @@ export function ArtistDiscographyView({ artist, active, settled, onResults, onCo
   useEffect(() => {
     if (!active) return;
     const keydown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape" || event.defaultPrevented || modeRef.current === "browse") return;
+      if (event.key !== "Escape" || event.defaultPrevented || modeRef.current === "browse" ||
+        document.querySelector('[data-album-detail-open="true"]')) return;
       event.preventDefault(); escapeRef.current();
     };
     window.addEventListener("keydown", keydown);
@@ -109,14 +80,14 @@ export function ArtistDiscographyView({ artist, active, settled, onResults, onCo
   const previousActive = useRef(active);
   useEffect(() => {
     if (active && !previousActive.current && album && position.mode !== "browse") {
-      (position.mode === "open" ? discRef.current : caseRef.current)?.focus({ preventScroll: true });
+      caseRef.current?.focus({ preventScroll: true });
     }
     previousActive.current = active;
   }, [active, album, position.mode]);
 
   return <div ref={viewRef} className={styles.view} data-testid="artist-discography" data-artist-id={artist.id} data-mode={position.mode}>
     <header className={styles.header}>
-      <div className={styles.breadcrumb}><button onClick={() => { if (position.mode === "open") changeMode("selected"); onResults(); }} disabled={pending}>← VOLVER A RESULTADOS</button><button onClick={() => { if (position.mode === "open") changeMode("selected"); onCollection(); }} disabled={pending}>TU COLECCIÓN ↗</button></div>
+      <div className={styles.breadcrumb}><button onClick={onResults}>← VOLVER A RESULTADOS</button><button onClick={onCollection}>TU COLECCIÓN ↗</button></div>
       <div className={styles.artistHeading}><div><span className={styles.eyebrow}>COLECCIÓN / ARCHIVO DE ARTISTA</span><h2>{artist.name}</h2><p className={styles.chronology}>DISCOGRAFÍA · ÁLBUMES · ORDEN CRONOLÓGICO ↑</p></div><span className={styles.catalogCount} role="status">{albums.length} {catalog.nextOffset !== null ? `/ ${catalog.total || "…"} CARGADOS` : "LANZAMIENTOS"}{catalog.loading ? <small>CONSULTANDO CATÁLOGO…</small> : catalog.error && <small>CATÁLOGO INCOMPLETO</small>}</span></div>
     </header>
     {catalog.error && <div className={styles.error} role="alert">{catalog.error.message} <button onClick={catalog.retry}>REINTENTAR</button>{catalog.error.status === 401 && <a href="/api/auth/login">CONECTAR SPOTIFY</a>}</div>}
@@ -124,7 +95,7 @@ export function ArtistDiscographyView({ artist, active, settled, onResults, onCo
       <div className={styles.sceneFrame}>
         <ArtistDiscScene albums={albums} index={index} mode={position.mode} active={active && visible} drifting={!paused && !reducedMotion && settled} select={select}
           advance={() => { const next = (index + 1) % albums.length; setPositions((all) => ({ ...all, [artist.id]: { index: next, id: albums[next]?.id, mode: "browse" } })); }}
-          open={() => changeMode("open")} escape={escape} discRef={discRef} caseRef={caseRef} hiddenDiscId={hiddenDiscId} disabled={busy} onPlay={requestPlay} onOpened={caseOpened} />
+          openAlbum={showAlbum} escape={escape} caseRef={caseRef} />
       </div>
       <footer className={styles.catalogFooter}>
         <div className={styles.exploredInfo} aria-live="polite">
@@ -132,18 +103,14 @@ export function ArtistDiscographyView({ artist, active, settled, onResults, onCo
             {album.artworkSource !== "demo" && album.images[0] && <a href={album.external_urls?.spotify ?? `https://open.spotify.com/album/${album.id}`} target="_blank" rel="noreferrer"><Image src={album.images[0].url} alt={`Portada de ${album.name}`} className={styles.intactArtwork} width={52} height={52} unoptimized /></a>}
             <div><span className={styles.infoLabel}>ÁLBUM EXPLORADO / {String(index + 1).padStart(2, "0")}</span><h3 title={album.name}>{album.name}</h3><p>FECHA DE EDICIÓN: {album.release_date ?? "NO DISPONIBLE"}</p></div>
           </>}
-          <div className={styles.caseActions}>
-            {position.mode !== "browse" && <><button onClick={() => position.mode === "open" ? escape() : changeMode("open")} disabled={pending}>{position.mode === "open" ? "CERRAR CAJA" : "ABRIR CAJA"}</button><button className={styles.play} onClick={() => requestPlay(album)} disabled={busy}>{openingForPlay ? "ABRIENDO CAJA…" : pending ? "ESPERANDO SPOTIFY…" : "REPRODUCIR ÁLBUM"}</button></>}
-          </div>
         </div>
         <div className={styles.catalogNavigation}><div className={styles.transport}>
-          <button onClick={() => select(index - 1)} disabled={busy || index === 0}>◁ ANTERIOR</button>
-          <button onClick={() => { if (position.mode !== "browse") changeMode("browse"); setPaused(position.mode === "browse" ? !paused : false); }} disabled={busy || reducedMotion} aria-pressed={paused || reducedMotion}>{paused || reducedMotion || position.mode !== "browse" ? "REANUDAR RECORRIDO" : "PAUSAR RECORRIDO"}</button>
-          <button onClick={() => select(index + 1)} disabled={busy || index === albums.length - 1}>SIGUIENTE ▷</button>
-        </div><input type="range" aria-label="Posición en la discografía" min={1} max={albums.length} value={index + 1} disabled={busy} onChange={(event) => select(Number(event.target.value) - 1)} /><span className={styles.position}>{String(index + 1).padStart(2, "0")} / {albums.length}</span></div>
+          <button onClick={() => select(index - 1)} disabled={index === 0}>◁ ANTERIOR</button>
+          <button onClick={() => { if (position.mode !== "browse") changeMode("browse"); setPaused(position.mode === "browse" ? !paused : false); }} disabled={reducedMotion} aria-pressed={paused || reducedMotion}>{paused || reducedMotion || position.mode !== "browse" ? "REANUDAR RECORRIDO" : "PAUSAR RECORRIDO"}</button>
+          <button onClick={() => select(index + 1)} disabled={index === albums.length - 1}>SIGUIENTE ▷</button>
+        </div><input type="range" aria-label="Posición en la discografía" min={1} max={albums.length} value={index + 1} onChange={(event) => select(Number(event.target.value) - 1)} /><span className={styles.position}>{String(index + 1).padStart(2, "0")} / {albums.length}</span></div>
         <div className={styles.consoleMeta}><span>{reducedMotion ? "MOVIMIENTO REDUCIDO · NAVEGACIÓN MANUAL" : "ARRASTRE LATERAL · TECLADO ← → · ESC VOLVER"}</span>{album.artworkSource === "demo" ? <span>DEMO · ARTE PROPIO / LANZAMIENTOS FICTICIOS</span> : <a href={`https://open.spotify.com/artist/${artist.id}`} target="_blank" rel="noreferrer"><Image src="/images/spotify-logo.svg" alt="Spotify" width={72} height={22} />ABRIR SPOTIFY ↗ · PORTADA ESTÁTICA / CAJA NEUTRA</a>}</div>
       </footer>
     </> : <div className={styles.empty} role="status">{catalog.loading ? "LEYENDO DISCOGRAFÍA…" : catalog.error ? "CATÁLOGO NO DISPONIBLE" : "ESTE ARTISTA NO TIENE LANZAMIENTOS EN ESTA CATEGORÍA"}</div>}
-    {playError && <div className={styles.error} role="alert">{playError} Podés volver a reproducir el disco para reintentar.</div>}
   </div>;
 }

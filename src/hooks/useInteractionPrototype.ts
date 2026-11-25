@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-export type InteractionPrototype = "deck-lift" | "collection-tray";
+export type InteractionPrototype = "deck-lift";
 
 /** Review-only variants: the regular integrated app stays the default. */
 export function useInteractionPrototype(proposal: InteractionPrototype) {

@@ -3,7 +3,14 @@ const collection = (page) => page.getByRole("region", { name: "La Colección" })
 const view = (page) => page.getByTestId("artist-discography");
 const scene = (page) => page.getByTestId("artist-disc-scene");
 const selected = (page) => page.getByTestId("artist-selected-case");
-const opened = (page) => page.getByTestId("artist-inline-case");
+const opened = (page) => page.getByTestId("album-detail-page");
+const jewelCase = (page) => opened(page).getByTestId("jewel-case-presentation");
+const goBack = (page) => opened(page).getByRole("button", { name: "Volver", exact: true });
+const play = (page) => opened(page).getByRole("button", { name: /^Reproducir / });
+async function openCase(page) {
+  await opened(page).getByRole("button", { name: "Abrir caja", exact: true }).click();
+  await expect(jewelCase(page)).toHaveAttribute("data-presentation", "open");
+}
 const next = (page) => view(page).getByRole("button", { name: "SIGUIENTE ▷", exact: true });
 const slider = (page) => view(page).getByRole("slider", { name: "Posición en la discografía" });
 const results = (page) => collection(page).locator('[aria-label="Resultados de artistas"]');
@@ -47,7 +54,7 @@ async function assertShell(page) {
 }
 const release = (id, name, year, artistId) => ({ id, name, release_date: year, artists: [{ id: artistId, name: artistId }], images: [], uri: `spotify:album:${id}`, album_group: "album" });
 
-test("buscar explícitamente, paginar, abrir inline y conservar colección, artista, albumId y foco", async ({ page }) => {
+test("buscar explícitamente, paginar, abrir ficha y conservar colección, artista, albumId y foco", async ({ page }) => {
   const urls = [];
   page.on("request", (request) => { if (request.url().includes("/api/artists/")) urls.push(request.url()); });
   const filter = collection(page).getByRole("searchbox", { name: "Buscar artista o álbum", exact: true });
@@ -63,13 +70,15 @@ test("buscar explícitamente, paginar, abrir inline y conservar colección, arti
   await expect(slider(page)).toHaveAttribute("max", "27");
   await expect(scene(page)).toHaveAttribute("data-mode", "browse");
   await next(page).click();
-  await expect(selected(page)).toHaveAccessibleName("Abrir caja de Frecuencia cero");
+  await expect(selected(page)).toHaveAccessibleName("Ver álbum Frecuencia cero");
   await scene(page).focus();
   await page.keyboard.press("ArrowRight");
-  await expect(selected(page)).toHaveAccessibleName("Abrir caja de Órbita interior");
+  await expect(selected(page)).toHaveAccessibleName("Ver álbum Órbita interior");
   const albumId = await selected(page).getAttribute("data-album-id");
   await selected(page).click();
   await expect(opened(page)).toHaveAttribute("data-album-id", albumId);
+  await expect(jewelCase(page)).toHaveAttribute("data-presentation", "closed");
+  await expect(scene(page)).toBeHidden();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page.locator("html")).not.toHaveAttribute("data-modal-open", "true");
   await page.keyboard.press("Escape");
@@ -88,23 +97,20 @@ test("buscar explícitamente, paginar, abrir inline y conservar colección, arti
   await expect(selected(page)).toBeFocused();
 });
 
-test("primer clic selecciona, segundo abre; texto y CD no cierran; Escape baja un nivel", async ({ page }) => {
+test("un clic abre la ficha cerrada; texto y CD no cierran; Escape devuelve la selección", async ({ page }) => {
   await artist(page);
   const playing = await page.getByTestId("deck-now-playing-track").textContent();
   const playingArtist = await page.getByTestId("deck-now-playing-artist").textContent();
   await scene(page).getByRole("button", { name: "Seleccionar Frecuencia cero", exact: true }).click();
-  await expect(scene(page)).toHaveAttribute("data-mode", "selected");
-  await expect(opened(page)).toHaveCount(0);
-  await expect(selected(page)).toHaveAttribute("data-album-id", "demo-vertice-album-1");
-  await selected(page).click();
-  await expect(scene(page)).toHaveAttribute("data-mode", "open");
   await expect(opened(page)).toHaveAttribute("data-album-id", "demo-vertice-album-1");
+  await expect(jewelCase(page)).toHaveAttribute("data-presentation", "closed");
+  await openCase(page);
   await opened(page).getByRole("heading").first().click();
-  await expect(scene(page)).toHaveAttribute("data-mode", "open");
-  await view(page).getByRole("button", { name: "GIRAR CD", exact: true }).click();
-  await expect(page.getByTestId("artist-case-cd")).toHaveAttribute("data-flipped", "true");
-  await page.getByTestId("artist-case-cd").click();
-  await expect(scene(page)).toHaveAttribute("data-mode", "open");
+  await expect(jewelCase(page)).toHaveAttribute("data-presentation", "open");
+  await opened(page).getByRole("button", { name: "Girar CD", exact: true }).click();
+  await expect(page.getByTestId("jewel-case-cd")).toHaveAttribute("data-flipped", "true");
+  await page.getByTestId("jewel-case-cd").click();
+  await expect(jewelCase(page)).toHaveAttribute("data-presentation", "open");
   await expect(page.getByTestId("deck-now-playing-track")).toHaveText(playing);
   await expect(page.getByTestId("deck-now-playing-artist")).toHaveText(playingArtist);
   await expect(page.getByTestId("deck-now-playing")).toHaveCount(1);
@@ -137,7 +143,8 @@ test("respuestas atrasadas, duplicados por ID y ediciones distintas", async ({ p
   await expect(slider(page)).toHaveAttribute("max", "2");
   await scene(page).hover({ position: { x: 8, y: 28 } });
   await scene(page).getByRole("button", { name: "Seleccionar Misma edición", exact: true }).first().click();
-  await expect(selected(page)).toHaveAttribute("data-album-id", "new-b"); // Earlier edition first.
+  await expect(opened(page)).toHaveAttribute("data-album-id", "new-b"); // Earlier edition first.
+  await goBack(page).click();
   await next(page).click();
   await expect(selected(page)).toHaveAttribute("data-album-id", "new-a");
 });
@@ -154,13 +161,11 @@ test("interacción antes de completar páginas conserva albumId al insertar una 
   await results(page).getByRole("button").first().click();
   await scene(page).hover({ position: { x: 8, y: 28 } });
   await scene(page).getByRole("button", { name: "Seleccionar Álbum que estoy mirando", exact: true }).click();
-  await expect(selected(page)).toHaveAttribute("data-album-id", "chosen");
-  await selected(page).click();
   await expect(opened(page)).toHaveAttribute("data-album-id", "chosen");
   completeSecondPage();
   await expect(view(page).locator("header [role=status]")).toContainText("2 LANZAMIENTOS");
   await expect(opened(page)).toHaveAttribute("data-album-id", "chosen");
-  await view(page).getByRole("button", { name: "CERRAR CAJA", exact: true }).click();
+  await goBack(page).click();
   await expect(selected(page)).toHaveAttribute("data-album-id", "chosen");
   await expect(slider(page)).toHaveValue("2");
 });
@@ -172,7 +177,7 @@ test("selecciones rápidas no abren cajas antiguas ni acumulan callbacks", async
   await expect(selected(page)).toHaveAttribute("data-album-id", "demo-vertice-album-0");
   await selected(page).click();
   await expect(opened(page)).toHaveAttribute("data-album-id", "demo-vertice-album-0");
-  await view(page).getByRole("button", { name: "CERRAR CAJA", exact: true }).click();
+  await goBack(page).click();
   await next(page).click();
   await expect(selected(page)).toHaveAttribute("data-album-id", "demo-vertice-album-1");
   await expect(opened(page)).toHaveCount(0);
@@ -201,14 +206,11 @@ test("cerrar y reabrir durante la bisagra termina en el mismo albumId sin callba
   await artist(page);
   await next(page).click();
   await selected(page).click();
-  await expect(opened(page)).toHaveAttribute("data-presentation", "open");
-  await view(page).getByRole("button", { name: "CERRAR CAJA", exact: true }).click();
-  await expect(scene(page)).toHaveAttribute("data-mode", "selected");
-  await view(page).getByRole("button", { name: "ABRIR CAJA", exact: true }).click();
-  await expect(opened(page)).toHaveAttribute("data-presentation", "open");
+  await openCase(page);
+  await opened(page).getByRole("button", { name: "Cerrar caja", exact: true }).click();
+  await openCase(page);
   await expect(opened(page)).toHaveAttribute("data-album-id", "demo-vertice-album-1");
-  await expect(scene(page)).toHaveAttribute("data-mode", "open");
-  await view(page).getByRole("button", { name: "CERRAR CAJA", exact: true }).click();
+  await goBack(page).click();
   await next(page).click();
   await expect(selected(page)).toHaveAttribute("data-album-id", "demo-vertice-album-2");
   await expect(opened(page)).toHaveCount(0);
@@ -276,7 +278,8 @@ test("cancelar arrastre del CD no abre otra caja ni deja bloqueado el rail", asy
   await artist(page);
   await next(page).click();
   await selected(page).click();
-  const cd = page.getByTestId("artist-case-cd");
+  await openCase(page);
+  const cd = page.getByTestId("jewel-case-cd");
   await expect(cd).toBeVisible();
   for (const event of ["pointercancel", "lostpointercapture"]) {
     // Resolve layout after the hinge finishes before starting the real pointer.
@@ -325,7 +328,8 @@ test("reproducción explícita, doble clic, vuelo y confirmación del Deck", asy
   let requests = 0;
   page.on("request", (request) => { if (request.url().endsWith("/api/play")) requests++; });
   await next(page).click();
-  await view(page).getByRole("button", { name: "REPRODUCIR ÁLBUM", exact: true }).dblclick();
+  await selected(page).click();
+  await play(page).dblclick();
   await expect(page.getByTestId("rail-flying-disc")).toBeVisible();
   await expect(page.getByTestId("deck-now-playing-artist")).not.toHaveText("Satélite Sur");
   await expect(page.getByTestId("deck-now-playing-artist")).toHaveText("Satélite Sur", { timeout: 20000 });
@@ -347,10 +351,13 @@ test("reproducción explícita, doble clic, vuelo y confirmación del Deck", asy
 test("fallo de playback recupera artista, álbum y posición sin confirmar", async ({ page }) => {
   await artist(page, "Satélite");
   await next(page).click();
+  await selected(page).click();
   await page.route("**/api/play", (route) => route.fulfill({ status: 409, json: { success: false, message: "El dispositivo de Spotify no está disponible." } }));
-  await view(page).getByRole("button", { name: "REPRODUCIR ÁLBUM", exact: true }).click();
-  await expect(view(page).getByRole("alert")).toContainText("dispositivo");
+  await play(page).click();
+  await expect(opened(page).getByRole("alert")).toContainText("dispositivo");
   await expect(page.locator("html")).toHaveAttribute("data-chapter", "3");
+  await expect(opened(page)).toHaveAttribute("data-album-id", "demo-satelite-album-1");
+  await goBack(page).click();
   await expect(selected(page)).toHaveAttribute("data-album-id", "demo-satelite-album-1");
   await expect(slider(page)).toHaveValue("2");
   await expect(page.getByTestId("rail-flying-disc")).toHaveCount(0);
@@ -394,24 +401,28 @@ for (const size of [{ width: 1280, height: 800 }, { width: 1440, height: 900 }, 
       expect(box.height).toBeGreaterThan(100);
       expect(box.y).toBeGreaterThanOrEqual(frame.y - 1);
       expect(box.y + box.height).toBeLessThanOrEqual(frame.y + frame.height + 1);
-      for (const name of ["ABRIR CAJA", "REPRODUCIR ÁLBUM"]) await expect(view(page).getByRole("button", { name, exact: true })).toBeInViewport({ ratio: 1 });
       await page.screenshot({ path: `test-results/jewelcase-${size.width}x${size.height}-frontal.png`, animations: "disabled" });
-      await view(page).getByRole("button", { name: "ABRIR CAJA", exact: true }).click();
+      await selected(page).click();
       await expect(opened(page)).toBeVisible();
-      const open = await opened(page).boundingBox();
-      expect(open.x).toBeGreaterThanOrEqual(frame.x - 1);
-      expect(open.x + open.width).toBeLessThanOrEqual(frame.x + frame.width + 1);
-      expect(open.y).toBeGreaterThanOrEqual(frame.y - 1);
-      expect(open.y + open.height).toBeLessThanOrEqual(frame.y + frame.height + 1);
-      for (const part of ["jewel-case-tracklist", "jewel-case-tray", "artist-case-cd"]) {
-        const physical = await opened(page).getByTestId(part).boundingBox();
-        expect(physical.y).toBeGreaterThanOrEqual(frame.y - 1);
-        expect(physical.y + physical.height).toBeLessThanOrEqual(frame.y + frame.height + 1);
+      const bounds = await opened(page).boundingBox();
+      expect(bounds.x).toBe(0);
+      expect(bounds.width).toBe(size.width);
+      expect(bounds.y).toBeGreaterThanOrEqual((await page.locator("[data-shell-header]").boundingBox()).height);
+      expect(bounds.y + bounds.height).toBeLessThanOrEqual((await page.locator("[data-global-player]").boundingBox()).y);
+      await expect(jewelCase(page)).toHaveAttribute("data-presentation", "closed");
+      await openCase(page);
+      for (const part of ["jewel-case-tracklist", "jewel-case-tray", "jewel-case-cd"]) {
+        const physical = opened(page).getByTestId(part);
+        await physical.scrollIntoViewIfNeeded();
+        await expect(physical).toBeInViewport({ ratio: .9 });
       }
-      for (const name of ["CERRAR CAJA", "GIRAR CD", "REPRODUCIR ÁLBUM"]) await expect(view(page).getByRole("button", { name, exact: true })).toBeInViewport({ ratio: 1 });
+      for (const control of [opened(page).getByRole("button", { name: "Cerrar caja", exact: true }), opened(page).getByRole("button", { name: "Girar CD", exact: true }), play(page)]) {
+        await control.scrollIntoViewIfNeeded();
+        await expect(control).toBeInViewport({ ratio: 1 });
+      }
       await assertShell(page);
       await expect(page.getByRole("dialog")).toHaveCount(0);
-      await expect(opened(page)).toHaveAttribute("data-presentation", "open");
+      await expect(jewelCase(page)).toHaveAttribute("data-presentation", "open");
       await page.screenshot({ path: `test-results/jewelcase-${size.width}x${size.height}-abierta.png`, animations: "disabled" });
     });
   });
@@ -425,30 +436,35 @@ test("pocos álbumes y títulos largos conservan selección, controles y texto",
   await expect(view(page).locator("header [role=status]")).toContainText("2 LANZAMIENTOS");
   await next(page).click();
   await expect(selected(page)).toHaveAttribute("data-album-id", "long-b");
-  await view(page).getByRole("button", { name: "ABRIR CAJA", exact: true }).click();
+  await selected(page).click();
   await expect(opened(page)).toHaveAttribute("data-album-id", "long-b");
   await expect(opened(page).getByRole("heading").first()).toHaveText(title);
-  await expect(opened(page)).toHaveAttribute("data-presentation", "open");
+  await openCase(page);
   expect(await opened(page).getByRole("list", { name: "Lista de pistas", exact: true }).evaluate((node) => node.clientHeight)).toBeGreaterThan(30);
   await assertShell(page);
-  await expect(view(page).getByRole("button", { name: "CERRAR CAJA", exact: true })).toBeInViewport({ ratio: 1 });
+  const close = opened(page).getByRole("button", { name: "Cerrar caja", exact: true });
+  await close.scrollIntoViewIfNeeded();
+  await expect(close).toBeInViewport({ ratio: 1 });
 });
 
-test("artwork live conserva portada estática e identifica la caja neutra", async ({ page }) => {
+test("artwork live conserva la caja neutra de la banda y abre la portada original en ficha", async ({ page }) => {
   const album = { ...release("live-artwork", "Portada con procedencia live", "2002", "demo-vertice"), images: [{ url: "/images/discography/demo-0.png", width: 800, height: 800 }] };
   await page.route("**/api/artists/demo-vertice/albums?*", (route) => route.fulfill({ json: { items: [album], total: 1, nextOffset: null } }));
   await search(page, "Vértice");
   await results(page).getByRole("button").first().click();
   await scene(page).hover({ position: { x: 8, y: 28 } });
-  await scene(page).getByRole("button", { name: `Seleccionar ${album.name}`, exact: true }).click();
+  const edition = scene(page).getByRole("button", { name: `Seleccionar ${album.name}`, exact: true });
+  await expect(edition.locator('[data-artwork-source="neutral"]')).toHaveCount(1);
+  await expect(scene(page).locator("img")).toHaveCount(0);
+  await edition.click();
+  await expect(opened(page)).toHaveAttribute("data-album-id", album.id);
+  await expect(opened(page).locator("img").first()).toHaveAttribute("src", album.images[0].url);
+  await goBack(page).click();
   await expect(selected(page).locator('[data-artwork-source="neutral"]')).toHaveCount(1);
   await expect(scene(page).locator("img")).toHaveCount(0);
   expect(await selected(page).evaluate((node) => node.style.getPropertyValue("--cover"))).toBe("none");
   await expect(view(page).getByRole("img", { name: `Portada de ${album.name}` })).toBeVisible();
   await expect(view(page)).toContainText("PORTADA ESTÁTICA / CAJA NEUTRA");
-  await selected(page).click();
-  await expect(opened(page)).toHaveAttribute("data-album-id", album.id);
-  await expect(opened(page).locator("img")).toHaveCount(0);
 });
 
 test("reduced motion conserva giro y navegación sin deriva ni WebGL en la escena", async ({ page }) => {
@@ -459,8 +475,9 @@ test("reduced motion conserva giro y navegación sin deriva ni WebGL en la escen
   await next(page).click();
   await expect(slider(page)).toHaveValue("2");
   await selected(page).click();
-  await view(page).getByRole("button", { name: "GIRAR CD", exact: true }).click();
-  await expect(page.getByTestId("artist-case-cd")).toHaveAttribute("data-flipped", "true");
+  await openCase(page);
+  await opened(page).getByRole("button", { name: "Girar CD", exact: true }).click();
+  await expect(page.getByTestId("jewel-case-cd")).toHaveAttribute("data-flipped", "true");
   await page.keyboard.press("Escape");
   await page.keyboard.press("Escape");
   await expect(scene(page)).toHaveAttribute("data-mode", "browse");
@@ -489,6 +506,7 @@ test("WebGL no disponible conserva el Deck estático y las cajas operables", asy
   await expect(slider(page)).toHaveValue("2");
   await selected(page).click();
   await expect(opened(page)).toHaveAttribute("data-album-id", "demo-vertice-album-1");
-  await view(page).getByRole("button", { name: "GIRAR CD", exact: true }).click();
-  await expect(page.getByTestId("artist-case-cd")).toHaveAttribute("data-flipped", "true");
+  await openCase(page);
+  await opened(page).getByRole("button", { name: "Girar CD", exact: true }).click();
+  await expect(page.getByTestId("jewel-case-cd")).toHaveAttribute("data-flipped", "true");
 });

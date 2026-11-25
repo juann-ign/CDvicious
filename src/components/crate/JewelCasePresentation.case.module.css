@@ -4,7 +4,7 @@
   position: relative;
   perspective: 1200px;
   perspective-origin: 50% 50%;
-  padding: 26px 18px 28px; /* un poco más de aire antes del corte duro */
+  padding: var(--jewel-case-padding, 26px 18px 28px);
   overflow: visible;
 }
 .caseShell {
@@ -14,7 +14,7 @@
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr);
   width: 92%;
-  min-height: 355px;
+  min-height: var(--jewel-case-height, 355px);
   margin: 0 auto;
   overflow: visible;
   transform-style: preserve-3d;

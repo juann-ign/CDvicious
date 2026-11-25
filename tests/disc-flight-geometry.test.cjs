@@ -10,7 +10,7 @@ function load(globals = {}) {
   return module.exports;
 }
 const geometry = load();
-const { discQuadHomography, projectDiscPoint, quadToCssMatrix, discQuadArea, interpolateDiscQuad, sampleDiscFlight, DISC_FLIGHT_DURATION_MS, readDiscQuad } = geometry;
+const { discQuadHomography, projectDiscPoint, quadToCssMatrix, discQuadArea, discQuadCenter, interpolateDiscQuad, sampleDiscFlight, DISC_FLIGHT_DURATION_MS, readDiscQuad } = geometry;
 const rectangle = (x, y, width, height) => ({ tl: { x, y }, tr: { x: x + width, y }, bl: { x, y: y + height }, br: { x: x + width, y: y + height } });
 const perspective = { tl: { x: 213, y: 130 }, tr: { x: 408, y: 122 }, bl: { x: 200, y: 330 }, br: { x: 437, y: 340 } };
 const closePoint = (actual, expected) => { assert.ok(Math.abs(actual.x - expected.x) < 1e-7, `${actual.x} != ${expected.x}`); assert.ok(Math.abs(actual.y - expected.y) < 1e-7, `${actual.y} != ${expected.y}`); };
@@ -64,6 +64,29 @@ test("fases mecánicas mantienen tapasabiertas al bajar y acoplan al finalizar l
   assert.equal(docked.docked, true); closeQuad(docked.quad, target);
   const end = sampleDiscFlight(source, target, air, DISC_FLIGHT_DURATION_MS);
   assert.equal(end.complete, true); assert.equal(end.lidOffset, 0); closeQuad(end.quad, target);
+});
+
+test("el centro viaja recto con un giro propio y conserva la pose de la caída", () => {
+  const source = perspective;
+  const target = rectangle(400, 490, 240, 120);
+  const air = { tl: { x: 420, y: 210 }, tr: { x: 648, y: 190 }, bl: { x: 400, y: 440 }, br: { x: 685, y: 417 } };
+  const sample = (p) => sampleDiscFlight(source, target, air, p * DISC_FLIGHT_DURATION_MS);
+  const start = discQuadCenter(sample(.18).quad), end = discQuadCenter(air);
+  let lastSpin = -1;
+  for (const part of [0, .1, .25, .5, .75, .9, .9999]) {
+    const eased = part * part * (3 - 2 * part);
+    const state = sample(.18 + .4 * part);
+    closePoint(discQuadCenter(state.quad), { x: start.x + (end.x - start.x) * eased, y: start.y + (end.y - start.y) * eased });
+    assert.ok(state.spin > lastSpin && state.spin < 360);
+    lastSpin = state.spin;
+  }
+  assert.ok(lastSpin > 359.9);
+  assert.equal(sample(.58).spin, 0);
+  closeQuad(sample(.58).quad, air);
+  const halfwayDown = sample(.74 + (.91 - .74) / 2);
+  assert.equal(halfwayDown.spin, 0);
+  closeQuad(halfwayDown.quad, interpolateDiscQuad(air, target, .5));
+  closeQuad(sample(.91).quad, target);
 });
 
 test("salto largo de RAF o pestaña oculta obtiene el estado final por tiempo real", () => {

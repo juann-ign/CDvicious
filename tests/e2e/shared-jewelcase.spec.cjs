@@ -4,6 +4,7 @@ const { functionalFixture, go } = require("./support/b2-harness.cjs");
 const collection = (page) => page.getByRole("region", { name: "La Colección", exact: true });
 const view = (page) => page.getByTestId("artist-discography");
 const scene = (page) => page.getByTestId("artist-disc-scene");
+const detail = (page) => page.getByTestId("album-detail-page");
 const presentation = (page) => page.getByTestId("jewel-case-presentation");
 const selected = (page) => page.getByTestId("artist-selected-case");
 const position = (page) => view(page).getByRole("slider", { name: "Posición en la discografía" });
@@ -47,15 +48,13 @@ async function assertOpenCaseSides(page) {
   const tray = await presentation(page).getByTestId("jewel-case-tray").boundingBox();
   expect(tracks.x + tracks.width / 2).toBeLessThan(tray.x + tray.width / 2);
   expect(await presentation(page).getByRole("list", { name: "Lista de pistas", exact: true }).evaluate((node) => node.clientHeight)).toBeGreaterThan(30);
-  if (await presentation(page).getAttribute("data-variant") === "inline") {
-    const frame = await scene(page).boundingBox();
-    const cd = await page.getByTestId("artist-case-cd").boundingBox();
-    for (const box of [tracks, tray, cd]) {
-      expect(box.y).toBeGreaterThanOrEqual(frame.y - 1);
-      expect(box.y + box.height).toBeLessThanOrEqual(frame.y + frame.height + 1);
-      expect(box.x).toBeGreaterThanOrEqual(frame.x - 1);
-      expect(box.x + box.width).toBeLessThanOrEqual(frame.x + frame.width + 1);
-    }
+  const frame = await detail(page).boundingBox();
+  const cd = await presentation(page).getByRole("slider", { name: "Girar CD", exact: true }).boundingBox();
+  for (const box of [tracks, tray, cd]) {
+    expect(box.y).toBeGreaterThanOrEqual(frame.y - 1);
+    expect(box.y + box.height).toBeLessThanOrEqual(frame.y + frame.height + 1);
+    expect(box.x).toBeGreaterThanOrEqual(frame.x - 1);
+    expect(box.x + box.width).toBeLessThanOrEqual(frame.x + frame.width + 1);
   }
 }
 
@@ -94,7 +93,7 @@ test.describe("shared-case: contratos de estado y geometría con fixture WebGL e
     await expect(page.locator("html")).toHaveAttribute("data-chapter", "2");
   });
 
-  test("Colección y Batea mantienen el modal, la misma bisagra y el foco de regreso", async ({ page }) => {
+  test("Colección y Batea comparten la ficha, la misma bisagra y el foco de regreso", async ({ page }) => {
     await openCollection(page);
     const angles = [];
     for (const chapter of ["Colección", "Batea"]) {
@@ -115,7 +114,7 @@ test.describe("shared-case: contratos de estado y geometría con fixture WebGL e
         const target = await source.boundingBox();
         await page.mouse.click(target.x + target.width / 2, target.y + target.height / 2);
       } else await source.click();
-      const dialog = page.getByRole("dialog");
+      const dialog = page.getByTestId("album-detail-page");
       await expect(dialog).toBeVisible();
       await expect(presentation(page)).toHaveAttribute("data-variant", "modal");
       await expect(presentation(page)).toHaveAttribute("data-case-open", "false");
@@ -147,23 +146,27 @@ test.describe("shared-case: contratos de estado y geometría con fixture WebGL e
     expect(angles).toEqual([-168, -168]);
   });
 
-  test("Batea secundaria conserva filtros y abre el mismo modal desde los guardados", async ({ page }) => {
+  test("Batea y la ficha de guardados conservan los filtros de Colección", async ({ page }) => {
     await openCollection(page);
     const search = collection(page).getByRole("searchbox", { name: "Buscar artista o álbum", exact: true });
     await search.fill("neon");
     const before = await collectionCard(page).getAttribute("data-collection-album-id");
-    await collection(page).getByRole("button", { name: "Mostrar Batea en Colección", exact: true }).click();
-    const tray = page.getByTestId("collection-batea-prototype");
-    await expect(tray).toBeVisible();
-    const card = tray.locator('[data-collection-album-id="mock-album-01"]');
-    await expect(card).toHaveCount(1);
+    await go(page, "Batea", 2);
+    const crate = page.locator('[data-rail-wrapper] > div > section').nth(2);
+    await crate.locator('[class*="stage"]').first().hover();
+    const cards = crate.getByRole("button", { name: "Vértice Magnético — Neon Rooms", exact: true });
+    const visible = await cards.evaluateAll((nodes) => nodes.findIndex((node) => {
+      const { x, y, width, height } = node.getBoundingClientRect();
+      return node.contains(document.elementFromPoint(x + width / 2, y + height / 2));
+    }));
+    expect(visible).toBeGreaterThanOrEqual(0);
+    const card = cards.nth(visible);
     await card.click();
     await expect(presentation(page)).toHaveAttribute("data-variant", "modal");
     await page.keyboard.press("Escape");
     await expect(card).toBeFocused();
-    await collection(page).getByRole("button", { name: "Ocultar Batea en Colección", exact: true }).click();
+    await go(page, "Colección", 3);
     await expect(search).toHaveValue("neon");
-    await expect(collection(page).getByRole("button", { name: "Mostrar Batea en Colección", exact: true })).toBeFocused();
     expect(await collectionCard(page).getAttribute("data-collection-album-id")).toBe(before);
   });
 
@@ -208,21 +211,23 @@ test.describe("shared-case: contratos de estado y geometría con fixture WebGL e
     }).toBeLessThan(2);
     await page.keyboard.press("Enter");
     await expect(presentation(page)).toHaveAttribute("data-album-id", "tab-fixture-30");
-    await expect(presentation(page)).toHaveAttribute("data-presentation", "open");
+    await expect(presentation(page)).toHaveAttribute("data-presentation", "closed");
     await page.keyboard.press("Escape");
+    await expect(detail(page)).toHaveCount(0);
     await expect(scene(page)).toHaveAttribute("data-mode", "selected");
     await expect(selected(page)).toBeFocused();
     expect(await scene(page).evaluate((node) => node.scrollLeft)).toBe(0);
   });
 
-  test("hojas, CD y scroll nativo de pistas quedan dentro de la escena en 1280×800 y 1280×600", async ({ page }) => {
+  test("hojas, CD y scroll nativo de pistas funcionan en la ficha a 1280×800 y 1280×600", async ({ page }) => {
     await openArtist(page);
     await scene(page).hover({ position: { x: 8, y: 28 } });
     await scene(page).getByRole("button", { name: "Seleccionar Campo magnético", exact: true }).click();
-    await selected(page).click();
+    await detail(page).getByRole("button", { name: "Abrir caja", exact: true }).click();
     await expect(presentation(page)).toHaveAttribute("data-presentation", "open");
     for (const height of [800, 600]) {
       await page.setViewportSize({ width: 1280, height });
+      await presentation(page).getByTestId("jewel-case-tracklist").scrollIntoViewIfNeeded();
       await assertOpenCaseSides(page);
       const list = presentation(page).getByRole("list", { name: "Lista de pistas", exact: true });
       expect(await list.evaluate((node) => node.scrollHeight > node.clientHeight)).toBe(true);
@@ -240,7 +245,10 @@ test.describe("shared-case: contratos de estado y geometría con fixture WebGL e
       await expect(list.locator("li").last()).toBeInViewport({ ratio: .5 });
       await expect(page.locator("html")).toHaveAttribute("data-chapter", "3");
       expect(await scene(page).evaluate((node) => node.scrollLeft)).toBe(0);
-      for (const label of ["CERRAR CAJA", "REPRODUCIR ÁLBUM"]) await expect(view(page).getByRole("button", { name: label, exact: true })).toBeInViewport({ ratio: 1 });
+      const close = detail(page).getByRole("button", { name: "Cerrar caja", exact: true });
+      await close.scrollIntoViewIfNeeded();
+      await expect(close).toBeInViewport({ ratio: 1 });
+      await expect(detail(page).getByRole("button", { name: "Reproducir Campo magnético", exact: true })).toBeInViewport({ ratio: 1 });
     }
   });
 
@@ -310,30 +318,29 @@ test("shared-case: mock normal buscar artista, seleccionar, abrir la bisagra y r
   page.on("request", (request) => { if (new URL(request.url()).pathname === "/api/play") requests.push(request.postDataJSON()); });
   await openArtist(page);
   await scene(page).hover({ position: { x: 8, y: 28 } });
-  await scene(page).getByRole("button", { name: "Seleccionar Campo magnético", exact: true }).click();
-  const id = await selected(page).getAttribute("data-album-id");
-  const front = await selected(page).boundingBox();
-  await selected(page).click();
-  await expect(presentation(page)).toHaveAttribute("data-variant", "inline");
+  const source = scene(page).getByRole("button", { name: "Seleccionar Campo magnético", exact: true });
+  const id = await source.getAttribute("data-album-id");
+  await source.click();
+  await expect(detail(page)).toHaveAttribute("data-album-id", id);
+  await expect(presentation(page)).toHaveAttribute("data-presentation", "closed");
+  await detail(page).getByRole("button", { name: "Abrir caja", exact: true }).click();
   await expect(presentation(page)).toHaveAttribute("data-presentation", "open");
   expect(await hingeAngle(page)).toBe(-168);
   await expect(page.getByRole("dialog")).toHaveCount(0);
-  await expect(page.locator("html")).not.toHaveAttribute("data-modal-open", "true");
+  await expect(page.locator("[data-rail-ready]")).toHaveAttribute("data-album-detail-open", "true");
+  await expect(scene(page)).toBeHidden();
   await expect(scene(page)).toHaveAttribute("data-drifting", "false");
   const frame = await presentation(page).boundingBox();
-  expect(frame.width).toBeGreaterThan(front.width * 1.8);
   await assertOpenCaseSides(page);
   const rail = await page.locator("[data-global-player]").boundingBox();
   expect(frame.y + frame.height).toBeLessThanOrEqual(rail.y);
-  await view(page).getByRole("button", { name: /REPRODUCIR ÁLBUM/i }).dblclick();
+  await detail(page).getByRole("button", { name: "Reproducir Campo magnético", exact: true }).dblclick();
   await expect(page.getByTestId("deck-now-playing")).toHaveAttribute("data-is-playing", "true");
   await expect(page.locator("html")).toHaveAttribute("data-chapter", "0", { timeout: 20000 });
   await expect.poll(() => requests.length).toBe(1);
   expect(requests[0].uri).toBe(`spotify:album:${id}`);
   await go(page, "Colección", 3);
   await expect(selected(page)).toHaveAttribute("data-album-id", id);
-  await page.keyboard.press("Escape");
-  await expect(scene(page)).toHaveAttribute("data-mode", "selected");
   await expect(selected(page)).toBeFocused();
 });
 
@@ -348,12 +355,12 @@ test("shared-case: mock normal abre, cierra y reproduce desde Colección con con
   await collection(page).locator('[data-collection-album-id="mock-album-02"]').click();
   await presentation(page).getByTestId("jewel-case-open-target").click();
   await expect(presentation(page)).toHaveAttribute("data-presentation", "open");
-  await page.getByRole("dialog").getByRole("button", { name: "Cerrar caja", exact: true }).click();
+  await page.getByTestId("album-detail-page").getByRole("button", { name: "Cerrar caja", exact: true }).click();
   await expect(presentation(page)).toHaveAttribute("data-presentation", "closed");
-  await page.getByRole("dialog").getByRole("button", { name: "Abrir caja", exact: true }).click();
+  await page.getByTestId("album-detail-page").getByRole("button", { name: "Abrir caja", exact: true }).click();
   await expect(presentation(page)).toHaveAttribute("data-presentation", "open");
-  await page.getByRole("dialog").getByRole("button", { name: "Reproducir Nocturnal FM", exact: true }).dblclick();
-  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.getByTestId("album-detail-page").getByRole("button", { name: "Reproducir Nocturnal FM", exact: true }).dblclick();
+  await expect(page.getByTestId("album-detail-page")).toHaveCount(0);
   await expect(page.getByTestId("deck-now-playing-artist")).toHaveText("Satélite Sur", { timeout: 20000 });
   await expect(page.getByTestId("deck-now-playing")).toHaveAttribute("data-is-playing", "true");
   await expect(page.locator("html")).toHaveAttribute("data-chapter", "0");

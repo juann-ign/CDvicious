@@ -1,0 +1,6 @@
+.host {
+  position: absolute;
+  inset: var(--shell-nav-height) 0 var(--shell-player-height);
+  z-index: 20;
+  background: var(--material-shell);
+}

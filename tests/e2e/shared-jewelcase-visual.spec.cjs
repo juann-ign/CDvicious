@@ -2,7 +2,7 @@ const { test, expect } = require("./support/qa-evidence.cjs");
 const { openRail, go } = require("./support/b2-harness.cjs");
 const collection = (page) => page.getByRole("region", { name: "La Colección", exact: true });
 const scene = (page) => page.getByTestId("artist-disc-scene");
-const selected = (page) => page.getByTestId("artist-selected-case");
+const detail = (page) => page.getByTestId("album-detail-page");
 const presentation = (page) => page.getByTestId("jewel-case-presentation");
 // Explicit visual profile. All pre-existing regression options remain intact.
 test.use({ launchOptions: { args: ["--enable-webgl", "--ignore-gpu-blocklist", "--use-gl=angle"] } });
@@ -52,7 +52,8 @@ test.describe("shared-case: interior visible en GPU normal", () => {
     await openArtist(page);
     await scene(page).hover({ position: { x: 8, y: 28 } });
     await scene(page).getByRole("button", { name: "Seleccionar Campo magnético", exact: true }).click();
-    await selected(page).click();
+    await expect(presentation(page)).toHaveAttribute("data-presentation", "closed");
+    await detail(page).getByRole("button", { name: "Abrir caja", exact: true }).click();
     await expect(presentation(page)).toHaveAttribute("data-presentation", "open");
 
     await visibleTrackInk(page, testInfo);
@@ -65,5 +66,11 @@ test.describe("shared-case: interior visible en GPU normal", () => {
     await border.focus();
     await expect(border).toBeFocused();
     await visibleTrackInk(page, testInfo, "focus");
+
+    await page.mouse.move(2, 2);
+    for (const [width, height] of [[1280, 720], [1920, 1080]]) {
+      await page.setViewportSize({ width, height });
+      await page.screenshot({ path: testInfo.outputPath(`album-abierto-${width}x${height}.png`), animations: "disabled" });
+    }
   });
 });

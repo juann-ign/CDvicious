@@ -28,7 +28,7 @@ async function loadArtistCampo(page) {
 async function loadCollectionNocturnal(page) {
   await go(page, "Colección", 3);
   await grid(page).locator('[data-collection-album-id="mock-album-02"]').click();
-  const modal = page.getByRole("dialog");
+  const modal = page.getByTestId("album-detail-page");
   await modal.getByRole("button", { name: "Abrir caja", exact: true }).click();
   await expect(modal.getByTestId("jewel-case-presentation")).toHaveAttribute("data-presentation", "open");
   await modal.getByRole("button", { name: "GIRAR CD", exact: true }).click();

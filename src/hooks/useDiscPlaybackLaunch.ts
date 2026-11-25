@@ -7,6 +7,7 @@ import type { PlayExecutionResult, StartPlayExecution } from "@/lib/discPlayback
 import type { AlbumItem } from "@/types/crate";
 
 type LaunchCallbacks = {
+  sourceChapter?: number;
   onCaptured?: () => void;
   onRecover: (message: string) => void;
 };
@@ -62,14 +63,14 @@ export function useDiscPlaybackLaunch<T extends AlbumItem>() {
       execution.cancel();
       return false;
     }
-    // Measuring must precede closing a modal or hiding its CD.
+    // Measure before the album page closes or hides its CD.
     const origin = captureDiscOrigin(source);
     if (!origin) {
       execution.cancel();
       callbacks.onRecover(CAPTURE_ERROR);
       return false;
     }
-    const sourceChapter = Number(document.documentElement.dataset.chapter ?? "0");
+    const sourceChapter = callbacks.sourceChapter ?? Number(document.documentElement.dataset.chapter ?? "0");
     const current: ActiveLaunch = { execution, source, sourceChapter, callbacks, settled: false, visualDone: false };
     activeRef.current = current;
     setPending(true);
@@ -79,7 +80,7 @@ export function useDiscPlaybackLaunch<T extends AlbumItem>() {
     const recover = (result: PlayExecutionResult) => {
       if (!mounted.current || activeRef.current !== current) return;
       setFlight(null);
-      // A modal must acquire its rail stop token after the return navigation.
+      // Restore the source chapter before the album page acquires its rail lock.
       nextFrame(() => {
         if (activeRef.current !== current) return;
         scrollToChapter(current.sourceChapter, 0);

@@ -8,14 +8,12 @@ import { collectionYear } from "@/lib/collectionFilters";
 interface JewelCaseFrontProps {
   album: AlbumItem;
   onSelect: (originEl: HTMLElement) => void;
-  reduceEffects?: boolean;
   presentation?: "default" | "collection";
 }
 
 export function JewelCaseFront({
   album,
   onSelect,
-  reduceEffects = false,
   presentation = "default",
 }: JewelCaseFrontProps) {
   const year = collectionYear(album.release_date);
@@ -24,9 +22,7 @@ export function JewelCaseFront({
   return (
     <button
       type="button"
-      className={[styles.case, reduceEffects ? styles.caseReduced : "", presentation === "collection" ? styles.collectionCase : ""]
-        .filter(Boolean)
-        .join(" ")}
+      className={presentation === "collection" ? `${styles.case} ${styles.collectionCase}` : styles.case}
       onClick={(e) => onSelect(e.currentTarget)}
       aria-label={`${album.artists.map((a) => a.name).join(", ")} — ${album.name}`}
       data-collection-album-id={presentation === "collection" ? album.id : undefined}

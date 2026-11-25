@@ -26,10 +26,8 @@
 .explorer .casePosition { box-sizing: border-box; position: absolute; bottom: 48px; left: 50%; width: var(--case-size); aspect-ratio: 1.04; border: 0; padding: 0; background: none; box-shadow: none; border-radius: 0; transform-style: preserve-3d; transform: translateX(calc(-50% + var(--offset) * var(--step) + var(--drag, 0px) - var(--cycle-phase, 0) * var(--step))) rotateY(-32deg) rotateZ(-7deg); transition: transform 500ms cubic-bezier(.22,.75,.18,1), opacity 250ms; pointer-events: auto; color: #f2f0d6; z-index: 2; cursor: pointer; }
 .explorer .casePosition:hover:not(:disabled) { border: 0; background: none; color: #c8f775; }
 .scene[data-mode=browse] .casePosition { transition: opacity 250ms; }
-.scene[data-mode=selected] .casePosition, .scene[data-mode=open] .casePosition { transform: translateX(calc(-50% + var(--offset) * var(--step) + var(--direction) * (var(--case-size) + 18px - var(--step)) + var(--drag, 0px))) rotateY(-32deg) rotateZ(-7deg); }
-.scene[data-reserved=true] .casePosition { transform: translateX(calc(-50% + var(--offset) * var(--step) + var(--direction) * (var(--case-size) * 1.5 + 24px - var(--step)) + var(--drag, 0px))) rotateY(-32deg) rotateZ(-7deg); transition: transform 330ms cubic-bezier(.22,.75,.18,1), opacity 250ms; }
+.scene[data-mode=selected] .casePosition { transform: translateX(calc(-50% + var(--offset) * var(--step) + var(--direction) * (var(--case-size) + 18px - var(--step)) + var(--drag, 0px))) rotateY(-32deg) rotateZ(-7deg); }
 .scene .casePosition[data-selected=true] { transform: translateX(-50%) rotateY(0deg) rotateZ(0deg); z-index: 5; }
-.scene[data-reserved=true] .casePosition[data-selected=true] { transform: translateX(2%) rotateY(0deg) rotateZ(0deg); opacity: 0; pointer-events: none; transition: transform 330ms ease, opacity 150ms 180ms; }
 .scene[data-dragging=true] .casePosition { transition: none; }
 .scene .casePosition[data-copy=true] { opacity: 1; }
 .caseObject { position: absolute; inset: 0; display: block; transform-style: preserve-3d; }
@@ -51,8 +49,6 @@
 .frontSpineTitle > span { display: block; height: 100%; overflow: hidden; white-space: nowrap; }
 .spine small { font-size: 9px; }
 .caseEdge { position: absolute; top: -1px; left: 0; right: 0; height: 20px; background: repeating-linear-gradient(90deg,#c0cbc7aa 0 2px,#4c62597a 2px 4px); transform: translateY(-50%) rotateX(90deg); border: 1px solid #e0e7de; }
-.openCase { position: absolute; left: 50%; bottom: 48px; width: calc(var(--case-size) * 2 + 12px); height: calc(var(--case-size) / 1.04); transform: translateX(-50%); z-index: 6; perspective: 1800px; }
-.openCase[data-presentation=reserving] { opacity: 0; pointer-events: none; }
 .focusedTitle { position: absolute; z-index: 60; top: 32px; left: 50%; transform: translateX(-50%); box-sizing: border-box; max-width: min(700px, 94%); width: max-content; padding: 8px 12px; border: 1px solid #617158; background: var(--material-silver); color: #273620; box-shadow: 0 3px 6px #24322944; font: var(--text-reading, 17px)/1.45 var(--font-ui); overflow-wrap: anywhere; pointer-events: none; }
 .dragHint { position: absolute; bottom: 2px; left: 0; right: 0; text-align: center; font-size: 9px; letter-spacing: .8px; color: #44533f; pointer-events: none; }
 .catalogFooter { flex: 0 0 auto; padding-top: 8px; }
@@ -61,9 +57,6 @@
 .infoLabel { font-size: 9px; letter-spacing: 1.2px; color: #526348; }
 .exploredInfo h3 { margin: 5px 0; font: 400 clamp(17px,1.7vw,25px)/1.15 var(--font-ui); color: #26352a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .exploredInfo p { margin: 0; font-size: 10px; color: #46573e; }
-.caseActions { display: flex; gap: 8px; flex: 0 0 auto; }
-.caseActions button { min-height: 34px; padding: 6px 14px; }
-.explorer .play { border-color: #3b5b23; color: #c3fa78; background: linear-gradient(#455936,#27391d); }
 .catalogNavigation { display: flex; gap: 16px; align-items: center; padding-top: 12px; }
 .transport { display: flex; align-items: center; gap: 7px; }
 .transport button { min-height: 30px; padding: 4px 12px; white-space: nowrap; font-size: 10px; }
@@ -102,15 +95,7 @@
 .searchView .sourceNote { padding-top: 16px; }
 .sourceNote { margin-top: auto; padding-top: 22px; font-size: 11px !important; color: #4b594c; }
 .spotifyLink { margin-top: auto; font-size: 9px; }
-/* Shared with the existing catalog-disc flight, and the inline CD. */
-.front, .back { position: absolute; inset: 0; border-radius: 50%; border: 2px solid #5e6869; box-shadow: inset 0 0 0 2px #e3e8e6, inset 0 0 0 4px #6d787b; backface-visibility: hidden; mask-image: radial-gradient(circle, transparent 0 6.2%, black 6.5%); background-size: cover; background-position: center; }
-.front { background-color: #aab5b3; background-image: linear-gradient(135deg,#d5dcdb,#8b9a97); }
-.front::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: linear-gradient(125deg,#ffffff40,transparent 32%,#e7ede914 60%,#00000016); pointer-events: none; }
-.back { background: repeating-radial-gradient(circle,transparent 0 .6px,#5c677b35 .8px 1px,transparent 1.3px 2px),conic-gradient(from 25deg,#9ba8ad,#d0dadd 10%,#bbc2d5 17%,#b2c6bd 22%,#d0bfc9 29%,#dad8bb 33%,#677375 45%,#c3cccf 52%,#9eafad 65%,#c2b7ce 73%,#c6d7c2 79%,#d8d2c4 84%,#6e7f84 94%,#9ba8ad); }
-.hub { position: absolute; inset: 36%; border-radius: 50%; background: radial-gradient(circle,transparent 0 31%,#d0d7d285 32% 52%,#6c777573 54% 57%,#e2e7dfc4 59% 62%,#a3b3b159 64% 68%,#303c389e 70% 73%,#dce4de90 75%); border: 1px solid #d8e0da80; box-shadow: 0 0 0 2px #52615d7a; }
-.discLabel { position: absolute; top: 18%; left: 18%; width: 64%; text-align: center; font: 400 clamp(14px,1.5vw,25px)/1 var(--font-display); letter-spacing: 1px; color: #303b37; }
-.discLabel small { display: block; margin-top: 8px; font: 9px var(--font-ui); }
-@media (min-height: 950px) { .scene { --case-size: min(30vw,calc(100cqh - 68px),340px); } .breadcrumb { margin-bottom: 22px; } .artistHeading { padding-bottom: 18px; } .exploredInfo { min-height: 78px; } .caseActions button { min-height: 40px; } }
+@media (min-height: 950px) { .scene { --case-size: min(30vw,calc(100cqh - 68px),340px); } .breadcrumb { margin-bottom: 22px; } .artistHeading { padding-bottom: 18px; } .exploredInfo { min-height: 78px; } }
 @media (max-height: 700px) {
   .breadcrumb { margin-bottom: 2px; }
   .breadcrumb button { min-height: 18px !important; font-size: 10px !important; }
@@ -120,14 +105,13 @@
   .chronology { margin-top: 4px; font-size: 9px; }
   .scene { --case-size: min(30vw, calc(100cqh - 48px)); }
   .sceneLegend { top: 8px; font-size: 8px; }
-  .scene .casePosition, .openCase { bottom: 34px; }
+  .scene .casePosition { bottom: 34px; }
   .shelf { bottom: 17px; height: 20px; }
   .dragHint { font-size: 8px; }
   .exploredInfo { min-height: 32px; padding: 0 0 5px; }
   .exploredInfo h3 { font-size: 17px; margin-block: 3px; }
   .infoLabel { display: none; }
   .exploredInfo p { font-size: 9px; }
-  .caseActions button { min-height: 30px; padding-inline: 10px; font-size: 10px; }
   .catalogNavigation { padding-top: 7px; }
   .transport button { min-height: 27px; font-size: 9px; }
   .consoleMeta { margin-top: 5px; font-size: 7px; min-height: 10px; }

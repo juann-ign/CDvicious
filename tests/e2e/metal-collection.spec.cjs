@@ -8,7 +8,7 @@ async function fits(p){
  const result=await frame(p).evaluate(n=>{const r=n.getBoundingClientRect();const footer=document.querySelector('[data-global-player]').getBoundingClientRect();return{fits:[...n.querySelectorAll('button')].every(c=>{const b=c.getBoundingClientRect();return b.top>=r.top&&b.bottom<=r.bottom+1&&b.left>=r.left&&b.right<=r.right+1;}),footer:r.bottom<=footer.top,overflow:n.scrollWidth<=n.clientWidth};});
  expect(result).toEqual({fits:true,footer:true,overflow:true});
 }
-test('metal: resting controls meet contrast and keyboard focus stays visible; popup uses metal around acrylic',async({page})=>{
+test('metal: resting controls meet contrast and keyboard focus stays visible; album page uses metal around acrylic',async({page})=>{
  await open(page);
  const contrasts=await page.locator('[aria-label="Navegación por capítulos"] button, [class*="profileTrigger"] [class*="username"]').evaluateAll(nodes=>{
    const luminance=rgb=>rgb.slice(0,3).map(v=>v/255).map(v=>v<=0.04045?v/12.92:((v+0.055)/1.055)**2.4).reduce((n,v,i)=>n+v*[.2126,.7152,.0722][i],0);
@@ -16,12 +16,12 @@ test('metal: resting controls meet contrast and keyboard focus stays visible; po
  });expect(contrasts.length).toBeGreaterThanOrEqual(6);for(const value of contrasts)expect(value).toBeGreaterThanOrEqual(4.5);
  const nav=page.getByRole('navigation',{name:'Navegación por capítulos',exact:true});await nav.getByRole('button').first().focus();await page.keyboard.press('Tab');await expect(nav.getByRole('button').nth(1)).toBeFocused();
  expect(await nav.getByRole('button').nth(1).evaluate(n=>getComputedStyle(n).outlineStyle)).toBe('solid');
- await cards(page).first().click();await expect(page.getByRole('dialog')).toBeVisible();
- const close=page.getByRole('dialog').locator('header').getByRole('button',{name:'Cerrar',exact:true});
+ await cards(page).first().click();await expect(page.getByTestId('album-detail-page')).toBeVisible();
+ const close=page.getByTestId('album-detail-page').locator('header').getByRole('button',{name:'Volver',exact:true});
  expect(await close.locator('[aria-hidden]').evaluate(n=>getComputedStyle(n).color)).toBe('rgb(32, 52, 42)');
- const releaseText=await page.getByRole('dialog').locator('aside[aria-hidden="false"] small, aside[aria-hidden="false"] strong').evaluateAll(nodes=>nodes.map(n=>({color:getComputedStyle(n).color,size:parseFloat(getComputedStyle(n).fontSize)})));
+ const releaseText=await page.getByTestId('album-detail-page').locator('aside[aria-hidden="false"] small, aside[aria-hidden="false"] strong').evaluateAll(nodes=>nodes.map(n=>({color:getComputedStyle(n).color,size:parseFloat(getComputedStyle(n).fontSize)})));
  expect(releaseText).toHaveLength(8);for(const label of releaseText){expect(['rgb(32, 52, 42)','rgb(53, 76, 60)']).toContain(label.color);expect(label.size).toBeGreaterThanOrEqual(14);}
- await page.screenshot({path:'.qa/metal/popup-final.png'});await close.click();
+ await page.screenshot({path:'.qa/metal/album-page-final.png'});await close.click();
  for(const [name,index] of [['Batea',2],['Mixtape Lab',4]]){
    await go(page,name,index);
    expect(await page.locator('[data-rail-wrapper] > div > section').nth(index).locator('h2').first().evaluate(n=>getComputedStyle(n).color)).toBe('rgb(32, 52, 42)');
@@ -42,14 +42,14 @@ test('metal: normal mock auto-enriches once, paginates and combines accent-insen
  await expect(cards(page)).toHaveCount(1);await expect(cards(page)).toHaveAttribute('data-collection-album-id','demo-vertice-album-0');await expect(cards(page)).toContainText('(artista)');
  await query(page).fill('VÉRTICE');await expect(cards(page)).toHaveCount(1);await query(page).fill('inexistente');await expect(collection(page)).toContainText('Sin resultados para estos filtros');
 });
-test('metal: large catalog preserves focused identity on resize and modal return, clamps the partial last page',async({page})=>{
+test('metal: large catalog preserves focused identity on resize and album page return, clamps the partial last page',async({page})=>{
  const albums=Array.from({length:101},(_,i)=>makeAlbum(`metal-${i}`,'1994',['rock'],{name:`Disco ${i}`,images:[]}));
  await page.route('**/api/collection?*',r=>{const enriched=r.request().url().includes('includeGenres=1');return r.fulfill({json:albums.map(a=>({...a,genres:enriched?a.genres:[],genreMetadata:enriched?coverage('complete',1,1):undefined})),headers:{'X-CDV-Genres-State':enriched?'complete':'not-requested'}});});
  await open(page);await expect(genre(page).locator('option[value="rock"]')).toHaveCount(1);
  await collection(page).getByRole('button',{name:'Siguiente',exact:true}).click();
  const chosen=cards(page).nth(4);const id=await chosen.getAttribute('data-collection-album-id');await chosen.focus();
  await page.setViewportSize({width:1440,height:900});await expect(frame(page)).toHaveAttribute('data-page-size','16');await expect(frame(page).locator(`[data-collection-album-id="${id}"]`)).toBeFocused();await fits(page);
- await frame(page).locator(`[data-collection-album-id="${id}"]`).click();await expect(page.getByRole('dialog')).toBeVisible();await page.getByRole('dialog').locator('header').getByRole('button',{name:'Cerrar',exact:true}).click();await expect(frame(page).locator(`[data-collection-album-id="${id}"]`)).toBeFocused();
+ await frame(page).locator(`[data-collection-album-id="${id}"]`).click();await expect(page.getByTestId('album-detail-page')).toBeVisible();await page.getByTestId('album-detail-page').locator('header').getByRole('button',{name:'Volver',exact:true}).click();await expect(frame(page).locator(`[data-collection-album-id="${id}"]`)).toBeFocused();
  for(let i=0;i<5;i++)await collection(page).getByRole('button',{name:'Siguiente',exact:true}).click();await expect(cards(page)).toHaveCount(5);await expect(collection(page).getByRole('button',{name:'Siguiente',exact:true})).toBeDisabled();await fits(page);
  await query(page).fill('Disco 100');await expect(cards(page)).toHaveCount(1);await expect(collection(page).getByRole('button',{name:'Anterior',exact:true})).toHaveCount(0);
 });

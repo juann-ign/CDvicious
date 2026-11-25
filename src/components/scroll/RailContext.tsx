@@ -198,8 +198,7 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
             hasWheelDelta &&
             activeLenis &&
             !activeLenis.isStopped &&
-            stopTokensRef.current.size === 0 &&
-            document.documentElement.dataset.modalOpen !== "true";
+            stopTokensRef.current.size === 0;
 
           if (canHandleWheel && activeLenis) {
             markRailMoving();
@@ -305,8 +304,7 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
         !anchor ||
         activeLenis.isStopped ||
         stopTokensRef.current.size > 0 ||
-        snapInProgressRef.current ||
-        document.documentElement.dataset.modalOpen === "true"
+        snapInProgressRef.current
       ) {
         snapAnchorRef.current = null;
         return;
@@ -377,8 +375,7 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
       if (
         !activeLenis ||
         activeLenis.isStopped ||
-        stopTokensRef.current.size > 0 ||
-        document.documentElement.dataset.modalOpen === "true"
+        stopTokensRef.current.size > 0
       ) {
         return;
       }
@@ -493,18 +490,21 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
     const resizeObserver = new ResizeObserver(() => {
       const width = Math.max(1, wrapper.clientWidth);
       const changedWidth = width !== measuredViewportWidth;
+      const detailChapter = Number(root.dataset.albumDetailChapter);
+      const detailAnchored = Number.isInteger(detailChapter) && detailChapter >= 0;
       // Layout can change its logical width under browser/CSS zoom. Keep a
       // settled chapter in view without replacing a gesture, lock or timed
       // navigation. The RAF clock and its current owner remain untouched.
       const canAnchor = changedWidth && !snapInProgressRef.current &&
         stopTokensRef.current.size === 0 && !lenis.isTouching &&
         (lenis.isScrolling === false || (lenis.isScrolling === "native" && lenis.velocity === 0));
-      const chapter = content.children[resizeAnchorIndex] as HTMLElement | undefined;
+      const chapter = content.children[detailAnchored ? detailChapter : resizeAnchorIndex] as HTMLElement | undefined;
       measuredViewportWidth = width;
       measureRail();
-      if (canAnchor && chapter) {
+      if ((canAnchor || changedWidth && detailAnchored) && chapter) {
         lenis.resize();
-        lenis.scrollTo(chapter.offsetLeft, { immediate: true });
+        // The hidden rail follows the open page's source even while locked.
+        lenis.scrollTo(chapter.offsetLeft, { immediate: true, force: detailAnchored });
       }
       updateRailProgress(lenis.scroll);
     });

@@ -30,18 +30,29 @@ export function validDiscQuad(quad: DiscQuad) {
   return corners.every((corner) => Number.isFinite(quad[corner].x) && Number.isFinite(quad[corner].y)) && discQuadArea(quad) > epsilon;
 }
 
-/** Read actual projected plane corners, never an axis-aligned bounding box. */
-export function readDiscQuad(element: HTMLElement | null): DiscQuad | null {
+/** Retain the real corner markers while the same disc plane is moving. */
+export function bindDiscQuad(element: HTMLElement | null): (() => DiscQuad | null) | null {
   if (!element?.isConnected) return null;
-  const points: Partial<DiscQuad> = {};
+  const markers = {} as Record<typeof corners[number], HTMLElement>;
   for (const corner of corners) {
     const marker = element.querySelector<HTMLElement>(`[data-disc-pose-corner="${corner}"]`);
     if (!marker) return null;
-    const rect = marker.getBoundingClientRect();
-    points[corner] = { x: rect.left, y: rect.top };
+    markers[corner] = marker;
   }
-  const quad = points as DiscQuad;
-  return validDiscQuad(quad) ? quad : null;
+  return () => {
+    if (!element.isConnected) return null;
+    const quad = {} as DiscQuad;
+    for (const corner of corners) {
+      const rect = markers[corner].getBoundingClientRect();
+      quad[corner] = { x: rect.left, y: rect.top };
+    }
+    return validDiscQuad(quad) ? quad : null;
+  };
+}
+
+/** Read actual projected plane corners, never an axis-aligned bounding box. */
+export function readDiscQuad(element: HTMLElement | null): DiscQuad | null {
+  return bindDiscQuad(element)?.() ?? null;
 }
 
 /** Homography from a local unit square to a perspective-projected CD plane. */
@@ -125,37 +136,55 @@ export function translateDiscQuad(quad: DiscQuad, x: number, y: number): DiscQua
   return Object.fromEntries(corners.map((corner) => [corner, { x: quad[corner].x + x, y: quad[corner].y + y }])) as unknown as DiscQuad;
 }
 
-export function sampleDiscFlight(origin: DiscQuad, target: DiscQuad, air: DiscQuad, elapsedMs: number) {
+export function sampleDiscLoad(elapsedMs: number) {
   const p = clamp(elapsedMs / DISC_FLIGHT_DURATION_MS);
-  const lift = Math.min(100, Math.max(48, Math.sqrt(discQuadArea(origin)) * .3));
-  const raised = translateDiscQuad(origin, 0, -lift);
-  let quad: DiscQuad;
   let phase: DiscLoadPhase;
   let lidOffset = 0;
   if (p < .18) {
     phase = "lifting";
-    quad = translateDiscQuad(origin, 0, -lift * smooth(p / .18));
   } else if (p < .58) {
     phase = "travelling";
-    const t = smooth((p - .18) / .4);
-    const a = discQuadCenter(raised), b = discQuadCenter(air);
-    const mid = { x: (a.x + b.x) / 2, y: Math.min(a.y, b.y) - Math.min(80, Math.hypot(a.x - b.x, a.y - b.y) * .2) };
-    const center = { x: (1 - t) ** 2 * a.x + 2 * (1 - t) * t * mid.x + t ** 2 * b.x, y: (1 - t) ** 2 * a.y + 2 * (1 - t) * t * mid.y + t ** 2 * b.y };
-    quad = interpolateDiscQuad(raised, air, t, center);
   } else if (p < .74) {
     phase = "opening";
     lidOffset = 135 * smooth((p - .58) / .16);
-    quad = air;
   } else if (p < DISC_DOCK_PROGRESS) {
     phase = "lowering";
     lidOffset = 135;
-    quad = interpolateDiscQuad(air, target, smooth((p - .74) / (DISC_DOCK_PROGRESS - .74)));
   } else {
     phase = p === 1 ? "complete" : "closing";
     lidOffset = 135 * (1 - smooth((p - DISC_DOCK_PROGRESS) / (1 - DISC_DOCK_PROGRESS)));
-    quad = target;
   }
-  return { quad, phase, lidOffset, progress: p, docked: p >= DISC_DOCK_PROGRESS, complete: p === 1 };
+  return { phase, lidOffset, progress: p, docked: p >= DISC_DOCK_PROGRESS, complete: p === 1 };
+}
+
+export function sampleDiscFlight(origin: DiscQuad, target: DiscQuad, air: DiscQuad, elapsedMs: number) {
+  const load = sampleDiscLoad(elapsedMs);
+  const { phase, progress } = load;
+  let quad = target;
+  let spin = 0;
+  if (phase === "lifting" || phase === "travelling") {
+    const lift = Math.min(100, Math.max(48, Math.sqrt(discQuadArea(origin)) * .3));
+    if (phase === "lifting") {
+      quad = translateDiscQuad(origin, 0, -lift * smooth(progress / .18));
+    } else {
+      const raised = translateDiscQuad(origin, 0, -lift);
+      const t = smooth((progress - .18) / .4);
+      const start = discQuadCenter(raised), end = discQuadCenter(air);
+      const interpolated = interpolateDiscQuad(raised, air, t);
+      // The projected hub can drift while blending perspective. Keep it on
+      // the line between the lifted CD and the live point over the spindle.
+      const hub = discQuadCenter(interpolated);
+      quad = translateDiscQuad(interpolated, mix(start.x, end.x, t) - hub.x, mix(start.y, end.y, t) - hub.y);
+      // Rotate within the CD plane. A full turn rejoins the unchanged
+      // opening pose at the same orientation before the drop begins.
+      spin = 360 * t;
+    }
+  } else if (phase === "opening") {
+    quad = air;
+  } else if (phase === "lowering") {
+    quad = interpolateDiscQuad(air, target, smooth((progress - .74) / (DISC_DOCK_PROGRESS - .74)));
+  }
+  return { ...load, quad, spin };
 }
 
 let motionSupport: boolean | null = null;
@@ -169,13 +198,11 @@ export function supportsDiscFlightMotion() {
   return motionSupport;
 }
 
-function inlineComputedStyle(source: Element, target: HTMLElement, pseudo?: string) {
-  const computed = getComputedStyle(source, pseudo);
-  for (const property of computed) target.style.setProperty(property, computed.getPropertyValue(property));
-  target.style.setProperty("animation", "none", "important");
-  target.style.setProperty("transition", "none", "important");
-  target.style.setProperty("pointer-events", "none", "important");
-  return computed;
+function inlineComputedStyle(computed: CSSStyleDeclaration, target: HTMLElement) {
+  // Apply the captured declarations in one pass. Updating each property on a
+  // detached clone made the trusted playback click spend time in CSSOM.
+  const declarations = Array.from(computed, property => `${property}:${computed.getPropertyValue(property)};`);
+  target.style.cssText += declarations.join("") + "animation:none!important;transition:none!important;pointer-events:none!important;";
 }
 
 function frozenDiscVisual(element: HTMLElement, width: number, height: number) {
@@ -184,7 +211,8 @@ function frozenDiscVisual(element: HTMLElement, width: number, height: number) {
   const copies = [clone, ...clone.querySelectorAll<HTMLElement>("*")];
   originals.forEach((original, index) => {
     const copy = copies[index];
-    inlineComputedStyle(original, copy);
+    if (original.matches("[data-disc-pose-corner],[data-disc-pose-center]")) { copy.remove(); return; }
+    inlineComputedStyle(getComputedStyle(original), copy);
     for (const name of copy.getAttributeNames()) {
       if (name === "class" || name === "id" || name === "role" || name === "tabindex" || name === "autofocus" || name === "contenteditable" || name === "href" || name.startsWith("on") || name.startsWith("data-") || name.startsWith("aria-")) copy.removeAttribute(name);
     }
@@ -199,7 +227,7 @@ function frozenDiscVisual(element: HTMLElement, width: number, height: number) {
       const style = getComputedStyle(original, pseudo);
       if (style.content === "none" || style.content === "normal" || style.display === "none") continue;
       const decoration = document.createElement("span");
-      inlineComputedStyle(original, decoration, pseudo);
+      inlineComputedStyle(style, decoration);
       try { decoration.textContent = JSON.parse(style.content); } catch { decoration.textContent = ""; }
       if (pseudo === "::before") copy.prepend(decoration); else copy.append(decoration);
     }

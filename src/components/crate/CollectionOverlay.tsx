@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { JewelCaseFront } from "./JewelCaseFront";
-import { JewelCaseDetailModal } from "./JewelCaseDetailModal";
+import { StandaloneAlbumDetailPage } from "./AlbumDetailPage";
 import type { AlbumItem } from "@/types/crate";
 import styles from "./CollectionOverlay.module.css";
 
@@ -52,6 +52,13 @@ export function CollectionOverlay({
   const [genre, setGenre] = useState<string>("all");
   const [page, setPage] = useState(0);
   const [selected, setSelected] = useState<AlbumItem | null>(null);
+  const selectedOrigin = useRef<HTMLElement | null>(null);
+
+  const closeDetail = () => {
+    const origin = selectedOrigin.current;
+    setSelected(null);
+    requestAnimationFrame(() => origin?.focus({ preventScroll: true }));
+  };
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) =>
@@ -96,11 +103,12 @@ export function CollectionOverlay({
   );
 
   return (
-    <div
+    <><div
       className={styles.overlay}
       role="dialog"
       aria-modal="true"
       aria-label="Colección completa"
+      hidden={selected !== null}
     >
       <button
         type="button"
@@ -188,7 +196,7 @@ export function CollectionOverlay({
               <JewelCaseFront
                 key={album.id}
                 album={album}
-                onSelect={() => setSelected(album)}
+                onSelect={(origin) => { selectedOrigin.current = origin; setSelected(album); }}
               />
             ))}
           </div>
@@ -215,17 +223,18 @@ export function CollectionOverlay({
           </div>
         )}
       </div>
+    </div>
 
       {selected && (
-        <JewelCaseDetailModal
+        <StandaloneAlbumDetailPage
           album={selected}
-          onClose={() => setSelected(null)}
+          onClose={closeDetail}
           onLoad={(el) => {
             onLoadAlbum(selected, el);
             setSelected(null);
           }}
         />
       )}
-    </div>
+    </>
   );
 }

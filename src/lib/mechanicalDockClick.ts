@@ -6,6 +6,8 @@ const CLICK_SECONDS = 0.028;
 let enabled = DEFAULT_ENABLED;
 const listeners = new Set<() => void>();
 const stops = new Set<() => void>();
+let preparedContext: AudioContext | null = null;
+const visible = () => typeof document !== "undefined" && document.visibilityState === "visible";
 export const getDockClickEnabled = () => enabled;
 export const getServerDockClickEnabled = () => DEFAULT_ENABLED;
 export function subscribeDockClickEnabled(listener: () => void) { listeners.add(listener); return () => { listeners.delete(listener); }; }
@@ -21,8 +23,25 @@ export interface ArmedMechanicalDockClick {
   dispose(): void;
 }
 
-// This function must run in the trusted load gesture, before any SDK awaits.
-// It never retries resume outside that gesture or forces autoplay permission.
+/** Only called while the album detail is idle. Opening an audio device can
+ * block the main thread even when no sample plays. Leave the trusted play
+ * click free to start the flight immediately. */
+export function prepareMechanicalDockClick(): () => void {
+  if (!enabled || !visible() || preparedContext) return () => undefined;
+  const Audio = typeof window === "undefined" ? undefined : window.AudioContext ?? (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  if (!Audio) return () => undefined;
+  let context: AudioContext;
+  try { context = new Audio(); } catch { return () => undefined; }
+  preparedContext = context;
+  return () => {
+    if (preparedContext !== context) return;
+    preparedContext = null;
+    if (context.state !== "closed") void context.close().catch(() => undefined);
+  };
+}
+
+// Resume only in the trusted load gesture, before any SDK awaits. If the
+// context isn't ready, playback still starts without the optional click.
 export function armMechanicalDockClick(): ArmedMechanicalDockClick {
   let unavailable: MechanicalDockClickOutcome | null = null;
   let context: AudioContext | null = null;
@@ -32,19 +51,14 @@ export function armMechanicalDockClick(): ArmedMechanicalDockClick {
   let disposed = false;
   let finishCurrent: ((outcome: MechanicalDockClickOutcome) => void) | null = null;
   const stop = () => finishCurrent?.("cancelled");
-  const visible = () => typeof document !== "undefined" && document.visibilityState === "visible";
   if (!enabled) unavailable = "disabled";
   else if (!visible()) unavailable = "hidden";
   else if (typeof navigator === "undefined" || navigator.userActivation?.isActive !== true) unavailable = "no-activation";
+  else if (!preparedContext || preparedContext.state === "closed") unavailable = "unavailable";
   else {
-    const Audio = typeof window === "undefined" ? undefined : window.AudioContext ?? (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (!Audio) unavailable = "unavailable";
-    else {
-      try {
-        context = new Audio();
-        void context.resume().catch(() => undefined);
-      } catch { unavailable = "unavailable"; }
-    }
+    context = preparedContext;
+    preparedContext = null;
+    try { void context.resume().catch(() => undefined); } catch { unavailable = "unavailable"; }
   }
   stops.add(stop);
   return {

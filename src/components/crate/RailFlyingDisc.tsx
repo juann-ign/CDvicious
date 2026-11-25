@@ -3,7 +3,7 @@
 import { useLayoutEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { discRegistry } from "@/lib/discRegistry";
-import { DISC_FLIGHT_DURATION_MS, quadToCssMatrix, readDiscQuad, sampleDiscFlight, supportsDiscFlightMotion, type DiscFlightOrigin, type DiscQuad } from "@/lib/discFlightGeometry";
+import { bindDiscQuad, DISC_FLIGHT_DURATION_MS, quadToCssMatrix, sampleDiscFlight, sampleDiscLoad, supportsDiscFlightMotion, type DiscFlightOrigin, type DiscLoadPhase, type DiscQuad } from "@/lib/discFlightGeometry";
 import type { StartPlayExecution } from "@/lib/discPlayback";
 import { getPlaybackState, subscribePlaybackState } from "@/lib/playbackSnapshotCoordinator";
 import { useRailActions } from "@/components/scroll/RailContext";
@@ -56,11 +56,19 @@ export function RailFlyingDisc({ origin, execution, onArrive, onDone }: RailFlyi
     let lastPhase = "";
     let lastTarget: DiscQuad | null = null;
     let lastAir: DiscQuad | null = null;
+    let targetElement: HTMLElement | null = null;
+    let readSpindle: ReturnType<typeof bindDiscQuad> = null;
+    let readAir: ReturnType<typeof bindDiscQuad> = null;
     let mechanism: HTMLElement | null = null;
+    let lastSpin = 0;
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
     const startedAt = performance.now();
     const setLids = (offset: number) => {
-      if (getPlaybackState().attempt?.attemptId === attemptId) mechanism?.style.setProperty("--deck-lid-offset", String(offset));
+      if (getPlaybackState().attempt?.attemptId !== attemptId || !mechanism) return;
+      const value = String(offset);
+      if (mechanism.style.getPropertyValue("--deck-lid-offset") !== value) {
+        mechanism.style.setProperty("--deck-lid-offset", value);
+      }
     };
     const publishPhase = (phase: string) => {
       if (lastPhase === phase) return;
@@ -68,13 +76,27 @@ export function RailFlyingDisc({ origin, execution, onArrive, onDone }: RailFlyi
       surface.dataset.flightPhase = phase;
       window.dispatchEvent(new CustomEvent("cdvicious:deck-load-pose", { detail: { attemptId, phase } }));
     };
-    const readTarget = () => {
+    const connectTarget = () => {
       const target = discRegistry.discTarget;
-      if (!target?.isConnected) return null;
-      const deck = target.closest<HTMLElement>("[data-physical-deck]");
-      mechanism = deck?.querySelector<HTMLElement>("[data-deck-mechanism]") ?? null;
-      lastTarget = readDiscQuad(target) ?? lastTarget;
-      lastAir = readDiscQuad(deck?.querySelector<HTMLElement>("[data-deck-air-disc]") ?? null) ?? lastAir;
+      if (!target?.isConnected) return false;
+      if (target !== targetElement || !mechanism?.isConnected || !readSpindle || !readAir) {
+        const deck = target.closest<HTMLElement>("[data-physical-deck]");
+        mechanism = deck?.querySelector<HTMLElement>("[data-deck-mechanism]") ?? null;
+        readSpindle = bindDiscQuad(target);
+        readAir = bindDiscQuad(deck?.querySelector<HTMLElement>("[data-deck-air-disc]") ?? null);
+        targetElement = target;
+      }
+      return Boolean(mechanism);
+    };
+    const readTarget = (phase?: DiscLoadPhase) => {
+      // Only sample the pose used by this frame. Both are checked at launch,
+      // and lowering always reads both after applying the current lid pose.
+      if (!lastTarget || !phase || phase === "lowering" || phase === "closing" || phase === "complete") {
+        lastTarget = readSpindle?.() ?? lastTarget;
+      }
+      if (!lastAir || !phase || phase === "travelling" || phase === "opening" || phase === "lowering") {
+        lastAir = readAir?.() ?? lastAir;
+      }
       return lastTarget && lastAir && mechanism ? { target: lastTarget, air: lastAir } : null;
     };
     const finish = (phase = "complete") => {
@@ -109,12 +131,21 @@ export function RailFlyingDisc({ origin, execution, onArrive, onDone }: RailFlyi
         finish("cancelled");
         return false;
       }
+      const elapsed = now - startedAt;
+      const load = sampleDiscLoad(elapsed);
       // Mechanical pose and the fitted player transform share this frame.
       // Apply the pose before measuring the actual spindle/air planes.
-      mechanism = discRegistry.discTarget?.closest<HTMLElement>("[data-physical-deck]")?.querySelector<HTMLElement>("[data-deck-mechanism]") ?? null;
-      const elapsed = now - startedAt;
-      setLids(sampleDiscFlight(origin.quad, lastTarget ?? origin.quad, lastAir ?? origin.quad, elapsed).lidOffset);
-      const measured = readTarget();
+      const connected = connectTarget();
+      setLids(load.lidOffset);
+      if (arrivedRef.current) {
+        // The seated CD is already owned by the persistent deck. Closing
+        // only needs the lid clock, not reads/writes for an invisible portal.
+        surface.dataset.flightProgress = load.progress.toFixed(5);
+        if (load.complete) { finish(); return false; }
+        publishPhase(load.phase);
+        return true;
+      }
+      const measured = connected ? readTarget(load.phase) : null;
       if (!measured) {
         execution.cancel();
         finish("cancelled");
@@ -128,7 +159,12 @@ export function RailFlyingDisc({ origin, execution, onArrive, onDone }: RailFlyi
         return false;
       }
       surface.style.transform = matrix;
+      if (state.spin !== lastSpin) {
+        lastSpin = state.spin;
+        visual.style.transform = state.spin === 0 ? "" : `rotate(${state.spin}deg)`;
+      }
       surface.dataset.flightProgress = state.progress.toFixed(5);
+      surface.dataset.flightSpin = state.spin.toFixed(2);
       surface.dataset.flightRoll = String(Math.atan2(state.quad.tr.y - state.quad.tl.y, state.quad.tr.x - state.quad.tl.x) * 180 / Math.PI);
       publishPhase(state.phase);
       if (state.docked && !dock(state.quad)) {
@@ -148,9 +184,9 @@ export function RailFlyingDisc({ origin, execution, onArrive, onDone }: RailFlyi
       if (stopped) return;
       cancelAnimationFrame(frame);
       scrollToChapter(0, 0, "flight");
-      mechanism = discRegistry.discTarget?.closest<HTMLElement>("[data-physical-deck]")?.querySelector<HTMLElement>("[data-deck-mechanism]") ?? null;
+      const connected = connectTarget();
       setLids(0);
-      const measured = readTarget();
+      const measured = connected ? readTarget() : null;
       const matrix = measured && quadToCssMatrix(measured.target, origin.width, origin.height);
       if (!matrix) {
         execution.cancel();

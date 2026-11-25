@@ -231,7 +231,7 @@ test("physical controls: normal Collection handoff emits one order and preserves
   await expect(footerVolume(page)).toHaveValue("0.4");
   await go(page, "Colección", 3);
   await collection(page).locator("[data-page-size]").getByRole("button", { name: "Satélite Sur — Nocturnal FM", exact: true }).click();
-  const modal = page.getByRole("dialog");
+  const modal = page.getByTestId("album-detail-page");
   await modal.getByRole("button", { name: "Abrir caja", exact: true }).click();
   await expect(modal.getByTestId("jewel-case-presentation")).toHaveAttribute("data-presentation", "open");
   await modal.getByRole("button", { name: "Reproducir Nocturnal FM", exact: true }).dblclick();
@@ -272,7 +272,7 @@ test("physical controls: first load from an explicit empty-playback fixture meas
   await expect(title(page)).toHaveText("INSERT DISC");
   await go(page, "Colección", 3);
   await collection(page).locator("[data-page-size]").getByRole("button", { name: "Satélite Sur — Nocturnal FM", exact: true }).click();
-  const modal = page.getByRole("dialog");
+  const modal = page.getByTestId("album-detail-page");
   await modal.getByRole("button", { name: "Abrir caja", exact: true }).click();
   await expect(modal.getByTestId("jewel-case-presentation")).toHaveAttribute("data-presentation", "open");
   await modal.getByRole("button", { name: "Reproducir Nocturnal FM", exact: true }).click();

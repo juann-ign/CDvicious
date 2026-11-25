@@ -253,7 +253,7 @@ test("P1 explicit pending-POST fixture: visual actions stay disabled through a r
   await rememberDisc(page);
   await go(page, "Colección", 3);
   await grid(page).getByRole("button", { name: "Satélite Sur — Nocturnal FM", exact: true }).click();
-  const modal = page.getByRole("dialog");
+  const modal = page.getByTestId("album-detail-page");
   await modal.getByRole("button", { name: "Abrir caja", exact: true }).click();
   await expect(modal.getByTestId("jewel-case-presentation")).toHaveAttribute("data-presentation", "open");
   await modal.getByRole("button", { name: "Reproducir Nocturnal FM", exact: true }).click();

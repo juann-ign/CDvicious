@@ -103,7 +103,7 @@ async function expectConfirmedAlbum(page, album) {
 async function playCollectionAlbum(page, album, firstTrack) {
   await go(page, "Colección", 3);
   await collection(page).getByRole("button", { name: `${album.artist} — ${album.name}`, exact: true }).click();
-  const dialog = page.getByRole("dialog");
+  const dialog = page.getByTestId("album-detail-page");
   await expect(dialog).toBeVisible();
   await expect(dialog).toContainText(firstTrack.name);
   await expect.poll(() => http.findLast((row) => new URL(row.url).pathname === `/api/album/${album.id}/tracks`)?.body?.tracks?.length).toBe(10);
@@ -163,10 +163,10 @@ test("mock normal: Explorar artista reproduce y avanza dentro del álbum elegido
   await scene.hover({ position: { x: 8, y: 28 } });
   await expect(scene).toHaveAttribute("data-drifting", "false");
   await scene.getByRole("button", { name: `Seleccionar ${CAMPO.name}`, exact: true }).click();
-  await expect(page.getByTestId("artist-selected-case")).toHaveAttribute("data-album-id", CAMPO.id);
-  await page.getByTestId("artist-selected-case").click();
-  await expect(page.getByTestId("artist-inline-case")).toHaveAttribute("data-album-id", CAMPO.id);
-  await view.getByRole("button", { name: "REPRODUCIR ÁLBUM", exact: true }).click();
+  const detail = page.getByTestId("album-detail-page");
+  await expect(detail).toHaveAttribute("data-album-id", CAMPO.id);
+  await expect(detail.getByTestId("jewel-case-presentation")).toHaveAttribute("data-presentation", "closed");
+  await detail.getByRole("button", { name: `Reproducir ${CAMPO.name}`, exact: true }).click();
   await expectConfirmedAlbum(page, CAMPO);
   await go(page, "Split", 1);
   await expectTrack(page, CAMPO, tracks.orbita);

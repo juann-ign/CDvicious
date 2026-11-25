@@ -28,6 +28,10 @@
   display: none;
 }
 
+.root[data-album-detail-open="true"] .wrapper {
+  visibility: hidden;
+}
+
 .content {
   display: flex;
   width: max-content;

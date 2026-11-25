@@ -3,6 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { CollectionChapter } from "@/components/crate/CollectionChapter";
 import { CrateChapter } from "@/components/crate/CrateChapter";
+import { AlbumDetailHost, AlbumDetailNavigation } from "@/components/crate/AlbumDetailNavigation";
 import { MixtapeChapter } from "@/components/crate/MixtapeChapter";
 import { ChapterNavigation } from "./ChapterNavigation";
 import { DeckPinnedLayer } from "./DeckPinnedLayer";
@@ -40,9 +41,9 @@ export function HorizontalRail({ fallback }: { fallback: ReactNode }) {
     return <>{fallback}</>;
   }
 
-  return (
+  return <AlbumDetailNavigation>
     <RailProvider
-      overlay={<DeckPinnedLayer />}
+      overlay={<><DeckPinnedLayer /><AlbumDetailHost /></>}
       navigation={<ChapterNavigation />}
     >
       <RailEntryNavigation />
@@ -82,5 +83,5 @@ export function HorizontalRail({ fallback }: { fallback: ReactNode }) {
         </div>
       </section>
     </RailProvider>
-  );
+  </AlbumDetailNavigation>;
 }

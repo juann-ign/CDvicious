@@ -100,16 +100,52 @@ test("volver de una ficha conserva búsqueda, filtros, página y foco en el mism
   const chosen = cards(page).nth(3);
   const chosenId = await chosen.getAttribute("data-collection-album-id");
   await chosen.click();
-  await expect(page.getByRole("dialog")).toBeVisible();
-  await page.getByRole("dialog").locator("header").getByRole("button", { name: "Cerrar", exact: true }).click();
+  const detail = page.getByTestId("album-detail-page");
+  const rail = page.locator("[data-rail-wrapper]");
+  const back = detail.getByRole("button", { name: "Volver", exact: true });
+  await expect(detail).toBeVisible();
+  await expect(detail).toHaveAttribute("data-album-id", chosenId);
+  await expect(detail.getByTestId("jewel-case-presentation")).toHaveAttribute("data-presentation", "closed");
+  await expect(rail).toBeHidden();
+  await expect(rail).toHaveAttribute("inert", "");
   await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(back).toBeFocused();
+  await back.click();
+  await expect(detail).toHaveCount(0);
   await expect(query(page)).toHaveValue("orbita");
   await expect(genre(page)).toHaveValue("rock");
   await expect(decade(page)).toHaveValue("1990s");
   await expect(year(page)).toHaveValue("1994");
   await expect(collection(page)).toContainText(`Página 2 de ${pages}`);
   expect(await ids(page)).toEqual(before);
-  await expect(collection(page).locator(`[data-collection-album-id="${chosenId}"]`)).toBeFocused();
+  const restoredCard = collection(page).locator(`[data-collection-album-id="${chosenId}"]`);
+  await expect(restoredCard).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(detail).toHaveAttribute("data-album-id", chosenId);
+  await expect(back).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(detail).toHaveCount(0);
+  await expect(rail).toBeVisible();
+  await expect(restoredCard).toBeFocused();
+
+  // Resizing while the selected chapter is hidden changes its page size and
+  // rail coordinates. Preserve the exact album anchor and origin chapter.
+  const grid = rail.locator("[data-page-size]");
+  const originalSize = await grid.getAttribute("data-page-size");
+  await page.keyboard.press("Enter");
+  await expect(detail).toHaveAttribute("data-album-id", chosenId);
+  await page.setViewportSize({ width: 1920, height: 900 });
+  await expect(grid).not.toHaveAttribute("data-page-size", originalSize);
+  await expect(page.locator("html")).toHaveAttribute("data-chapter", "3");
+  await expect(detail).toHaveAttribute("data-album-id", chosenId);
+  await page.keyboard.press("Escape");
+  await expect(detail).toHaveCount(0);
+  await expect(query(page)).toHaveValue("orbita");
+  await expect(genre(page)).toHaveValue("rock");
+  await expect(decade(page)).toHaveValue("1990s");
+  await expect(year(page)).toHaveValue("1994");
+  await expect(restoredCard).toBeVisible();
+  await expect(restoredCard).toBeFocused();
 });
 
 test("Artista normal: Vertice y Satelite mantienen nombres, resultados y foco al volver", async ({ page }) => {

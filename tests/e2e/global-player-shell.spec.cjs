@@ -152,27 +152,33 @@ for (const [width, height] of sizes) {
       const jewelcase = await page.getByTestId("artist-selected-case").boundingBox();
       expect(jewelcase.y).toBeGreaterThanOrEqual(scene.y - 1);
       expect(jewelcase.y + jewelcase.height).toBeLessThanOrEqual(scene.y + scene.height + 1);
-      for (const name of ["ABRIR CAJA", "REPRODUCIR ÁLBUM"]) {
-        await expect(discography.getByRole("button", { name, exact: true })).toBeInViewport({ ratio: 1 });
-      }
       await page.screenshot({ path: path.join(evidence, `${prefix}-discography.png`), animations: "disabled" });
-      const albumId = await page.getByTestId("artist-selected-case").getAttribute("data-album-id");
-      await discography.getByRole("button", { name: "ABRIR CAJA", exact: true }).click();
-      const inlineCase = page.getByTestId("artist-inline-case");
-      await expect(inlineCase).toHaveAttribute("data-album-id", albumId);
+      const selected = page.getByTestId("artist-selected-case");
+      const albumId = await selected.getAttribute("data-album-id");
+      await selected.click();
+      const detail = page.getByTestId("album-detail-page");
+      await expect(detail).toHaveAttribute("data-album-id", albumId);
       await expect(page.getByRole("dialog")).toHaveCount(0);
-      await expect(page.locator("html")).not.toHaveAttribute("data-modal-open", "true");
-      const bounds = await inlineCase.boundingBox();
+      await expect(page.locator("[data-rail-ready]")).toHaveAttribute("data-album-detail-open", "true");
+      await expect(discography).toBeHidden();
+      const bounds = await detail.boundingBox();
       expect(bounds.y).toBeGreaterThanOrEqual(72);
       expect(bounds.y + bounds.height).toBeLessThanOrEqual(height - 128);
       await assertShell(page, width, height);
       expect(await geometry(page)).toEqual(initial);
-      await expect(inlineCase).toBeVisible();
-      await expect(inlineCase).toHaveAttribute("data-presentation", "open");
+      await expect(detail).toBeVisible();
+      await expect(detail.getByTestId("jewel-case-presentation")).toHaveAttribute("data-presentation", "closed");
+      const play = detail.getByRole("button", { name: /^Reproducir / });
+      const openCase = detail.getByRole("button", { name: "Abrir caja", exact: true });
+      await openCase.scrollIntoViewIfNeeded();
+      await expect(play).toBeInViewport({ ratio: 1 });
+      await openCase.click();
+      await expect(detail.getByTestId("jewel-case-presentation")).toHaveAttribute("data-presentation", "open");
       await page.screenshot({ path: path.join(evidence, `${prefix}-album.png`), animations: "disabled" });
       await page.keyboard.press("Escape");
-      await expect(inlineCase).toHaveCount(0);
-      await expect(page.getByTestId("artist-selected-case")).toHaveAttribute("data-album-id", albumId);
+      await expect(detail).toHaveCount(0);
+      await expect(selected).toHaveAttribute("data-album-id", albumId);
+      await expect(selected).toBeFocused();
 
       await page.evaluate(() => {
         window.__shellMock.restoreMockSnapshot({ data: null, error: false });
@@ -184,7 +190,8 @@ for (const [width, height] of sizes) {
         }
       });
       await expect(page.getByTestId("deck-now-playing-track")).toHaveText("INSERT DISC");
-      await discography.getByRole("button", { name: "REPRODUCIR ÁLBUM", exact: true }).click();
+      await selected.click();
+      await play.click();
       await expect(page.getByTestId("rail-flying-disc")).toBeVisible();
       await expect(page.getByTestId("deck-now-playing-track")).toHaveText("CARGANDO");
       await assertShell(page, width, height);

@@ -9,7 +9,7 @@ const hardware = (page) => page.locator("[data-physical-deck]");
 const display = (page) => page.getByTestId("deck-now-playing");
 const title = (page) => page.getByTestId("deck-now-playing-track");
 const flight = (page) => page.getByTestId("rail-flying-disc");
-const modal = (page) => page.getByRole("dialog");
+const detail = (page) => page.getByTestId("album-detail-page");
 const quad = async (locator, attribute = "data-disc-pose-corner") => locator.evaluate((node, attr) =>
   Object.fromEntries(["tl", "tr", "bl", "br"].map((key) => {
     const marker = node.querySelector(`[${attr}="${key}"]`);
@@ -61,12 +61,13 @@ async function observe(page) {
 async function fromCollection(page, album = "Nocturnal FM") {
   await go(page, "Colección", 3);
   await collection(page).getByRole("button", { name: new RegExp(` — ${album}$`) }).first().click();
-  await expect(modal(page)).toBeVisible();
-  return modal(page).getByRole("button", { name: `Reproducir ${album}`, exact: true });
+  await expect(detail(page)).toBeVisible();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  return detail(page).getByRole("button", { name: `Reproducir ${album}`, exact: true });
 }
 async function openCase(page) {
-  await modal(page).getByRole("button", { name: "Abrir caja", exact: true }).click();
-  await expect(modal(page).getByTestId("jewel-case-presentation")).toHaveAttribute("data-presentation", "open");
+  await detail(page).getByRole("button", { name: "Abrir caja", exact: true }).click();
+  await expect(detail(page).getByTestId("jewel-case-presentation")).toHaveAttribute("data-presentation", "open");
 }
 async function assertConfirmed(page, artist) {
   await expect(display(page)).toHaveAttribute("data-is-playing", "true");
@@ -104,10 +105,10 @@ test("physical-deck: Colección conserva el CD real girado y reverso, carga una 
   page.on("request", (request) => { if (new URL(request.url()).pathname === "/api/play") requests.push(request.postDataJSON()); });
   const play = await fromCollection(page);
   await openCase(page);
-  const source = modal(page).getByTestId("jewel-case-cd");
+  const source = detail(page).getByTestId("jewel-case-cd");
   await source.focus(); await page.keyboard.press("ArrowRight"); await page.keyboard.press("ArrowRight");
   await page.keyboard.press("Enter");
-  await modal(page).getByRole("button", { name: "GIRAR CD", exact: true }).click();
+  await detail(page).getByRole("button", { name: "GIRAR CD", exact: true }).click();
   await expect(source).toHaveAttribute("data-flipped", "true");
   await expect.poll(() => source.evaluate((node) => node.getAnimations().every((animation) => animation.playState !== "running"))).toBe(true);
   await play.dblclick();
@@ -123,23 +124,29 @@ test("physical-deck: Colección conserva el CD real girado y reverso, carga una 
   await expect(page.locator("[data-global-player]")).toHaveAttribute("data-dock-click", "played");
 });
 
-test("physical-deck: Artista abre la caja antes de tomar el CD y conserva edición y foco al volver", async ({ page }) => {
+test("physical-deck: Artista comparte la ficha, recupera el foco y abre la caja antes de tomar el CD", async ({ page }) => {
   await observe(page); await openRail(page); await go(page, "Colección", 3);
   await collection(page).getByRole("button", { name: "Buscar artista", exact: true }).click();
   await page.getByRole("searchbox", { name: "Buscar artistas", exact: true }).fill("Vertice");
   await collection(page).locator('[aria-label="Resultados de artistas"]').getByRole("button").first().click();
   const scene = page.getByTestId("artist-disc-scene");
   await scene.hover({ position: { x: 8, y: 28 } });
-  await scene.getByRole("button", { name: "Seleccionar Campo magnético", exact: true }).click();
-  const selectedId = await page.getByTestId("artist-selected-case").getAttribute("data-album-id");
-  await page.getByTestId("artist-discography").getByRole("button", { name: "REPRODUCIR ÁLBUM", exact: true }).dblclick();
+  const album = scene.getByRole("button", { name: "Seleccionar Campo magnético", exact: true });
+  const selectedId = await album.getAttribute("data-album-id");
+  const source = scene.locator(`button[data-album-id="${selectedId}"]`);
+  await album.click();
+  await expect(detail(page).getByTestId("jewel-case-presentation")).toHaveAttribute("data-presentation", "closed");
+  await detail(page).getByRole("button", { name: /Volver/i }).click();
+  await expect(detail(page)).toHaveCount(0);
+  await expect(source).toBeFocused();
+  await source.click();
+  await detail(page).getByRole("button", { name: "Reproducir Campo magnético", exact: true }).dblclick();
   await expect(title(page)).toHaveText("CARGANDO");
   await assertConfirmed(page, "Vértice Magnético");
   await expect(title(page)).toHaveText("Órbita de papel");
   expect(await page.evaluate(() => window.__deckReview.source)).not.toBeNull();
   await go(page, "Colección", 3);
-  await expect(page.getByTestId("artist-inline-case")).toHaveAttribute("data-album-id", selectedId);
-  await expect(page.getByTestId("artist-case-cd")).toBeFocused();
+  await expect(source).toHaveAttribute("data-album-id", selectedId);
 });
 
 test("physical-deck: Batea comparte el mismo ejecutor y dispositivo confirmado", async ({ page }) => {
@@ -154,8 +161,8 @@ test("physical-deck: Batea comparte el mismo ejecutor y dispositivo confirmado",
   });
   expect(visibleIndex).toBeGreaterThanOrEqual(0);
   await candidates.nth(visibleIndex).click();
-  await expect(modal(page)).toBeVisible();
-  await modal(page).getByRole("button", { name: "Reproducir Ciudad de Vidrio", exact: true }).click();
+  await expect(detail(page)).toBeVisible();
+  await detail(page).getByRole("button", { name: "Reproducir Ciudad de Vidrio", exact: true }).click();
   await expect(title(page)).toHaveText("CARGANDO");
   const result = await assertConfirmed(page, "Los Inerciales");
   expect(result.confirmed.attemptId).toBe(result.started.attemptId);

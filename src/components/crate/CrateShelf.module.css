@@ -78,21 +78,40 @@
 }
 
 .stage {
+  --case-size: clamp(154px, 14vw, 220px);
   box-sizing: border-box;
   position: relative;
   user-select: none;
   -webkit-user-select: none;
   overflow: hidden;
-  height: 256px;
-  padding: var(--space-3) 0;
-  background: linear-gradient(
-    180deg,
-    var(--color-surface-dark),
-    var(--color-bg) 60%
-  );
-  border-top: 1px solid var(--color-border);
-  border-bottom: 1px solid var(--color-border);
-  box-shadow: var(--shadow-inset-dark);
+  height: calc(var(--case-size) + 76px);
+  border: 4px ridge #bfcac1;
+  background: linear-gradient(#32463e, #172822 68%, #4b6054);
+  box-shadow: inset 0 7px 14px #101c16a8, 0 10px 22px #263a3633;
+}
+
+.stage::before,
+.stage::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  pointer-events: none;
+}
+
+.stage::before {
+  height: 52px;
+  border-top: 1px solid #c7d6c55e;
+  background:
+    repeating-linear-gradient(109deg, #526b5c 0 7px, #151f1c 8px 10px, #778e7e 11px 12px),
+    #3e5548;
+  box-shadow: inset 0 12px 15px #081b11a3;
+}
+
+.stage::after {
+  z-index: 3;
+  height: 12px;
+  border-top: 1px solid #dfebe1a8;
+  background: linear-gradient(#afc2b5, #577162 50%, #344c41);
 }
 
 .viewport {
@@ -109,19 +128,18 @@
   cursor: grabbing;
 }
 
-.viewport.dragging .spine {
+.viewport.dragging [data-batea-album-id] {
   cursor: grabbing;
 }
 
 .track {
   position: absolute;
-  bottom: var(--space-3);
+  bottom: 31px;
   left: 0;
   display: flex;
-  align-items: flex-end;
   will-change: transform;
   justify-content: center;
-  align-items: center;
+  align-items: flex-end;
   gap: 8px;
 }
 
@@ -142,12 +160,12 @@
 
 .fadeLeft {
   left: 0;
-  background: linear-gradient(90deg, var(--color-bg), transparent);
+  background: linear-gradient(90deg, #14201b, transparent);
 }
 
 .fadeRight {
   right: 0;
-  background: linear-gradient(270deg, var(--color-bg), transparent);
+  background: linear-gradient(270deg, #14201b, transparent);
 }
 
 .dots {

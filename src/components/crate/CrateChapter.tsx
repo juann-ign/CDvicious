@@ -4,19 +4,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRailActions } from "@/components/scroll/RailContext";
 import { useSpotifyPlayer } from "@/components/SpotifyPlayerProvider";
 import { loadCollection, syncCollectionAuth, useCollectionCache } from "@/lib/collectionClient";
-import { useDiscPlaybackLaunch } from "@/hooks/useDiscPlaybackLaunch";
-import {
-  JewelCaseDetailModal,
-  type StartPlayExecution,
-} from "./JewelCaseDetailModal";
-import { RailFlyingDisc } from "./RailFlyingDisc";
+import { useAlbumDetailActions } from "./AlbumDetailNavigation";
 import { CrateShelf } from "./CrateShelf";
-import type { AlbumItem } from "@/types/crate";
 import { bateaAlbums } from "@/lib/bateaAlbums";
 import styles from "./CrateChapter.module.css";
 
 export function CrateChapter() {
   const { stop, start } = useRailActions();
+  const { openAlbum } = useAlbumDetailActions();
   const dragLockTokenRef = useRef(Symbol("crate-shelf-drag"));
   const chapterRef = useRef<HTMLDivElement>(null);
   const { authenticated } = useSpotifyPlayer();
@@ -74,12 +69,6 @@ export function CrateChapter() {
 
   const albums = cachedAlbums ?? [];
   const loading = collectionState === "loading" || (collectionState === "idle" && !cachedAlbums && authenticated !== false);
-  const [selected, setSelected] = useState<AlbumItem | null>(null);
-  const [playErrorForAlbum, setPlayErrorForAlbum] = useState<{
-    albumId: string;
-    message: string;
-  } | null>(null);
-  const { flight, launch, onArrive, onDone } = useDiscPlaybackLaunch<AlbumItem>();
 
   const handleGrabStart = useCallback(() => {
     stop(dragLockTokenRef.current);
@@ -88,32 +77,6 @@ export function CrateChapter() {
   const handleGrabEnd = useCallback(() => {
     start(dragLockTokenRef.current);
   }, [start]);
-
-  const handleSelect = useCallback((album: AlbumItem) => {
-    setPlayErrorForAlbum(null);
-    setSelected(album);
-  }, []);
-
-  const handleClose = useCallback(() => {
-    setSelected(null);
-    setPlayErrorForAlbum(null);
-  }, []);
-
-  const handleLoad = useCallback(() => {
-    setSelected(null);
-    setPlayErrorForAlbum(null);
-  }, []);
-
-  const handlePlay = useCallback((
-    album: AlbumItem,
-    originEl: HTMLElement,
-    executePlayback: StartPlayExecution,
-  ) => {
-    return launch(album, originEl, executePlayback, {
-      onCaptured: () => { setPlayErrorForAlbum(null); setSelected(null); },
-      onRecover: (message) => { setPlayErrorForAlbum({ albumId: album.id, message }); setSelected(album); },
-    });
-  }, [launch]);
 
   const statusLabel =
     collectionState === "error"
@@ -159,38 +122,13 @@ export function CrateChapter() {
         ) : (
           <CrateShelf
             albums={bateaAlbums(albums)}
-            onSelect={handleSelect}
+            onSelect={openAlbum}
             onGrabStart={handleGrabStart}
             onGrabEnd={handleGrabEnd}
           />
         )}
       </div>
 
-      {selected && (
-        <JewelCaseDetailModal
-          album={selected}
-          onClose={handleClose}
-          onLoad={handleLoad}
-          initialPlayError={
-            playErrorForAlbum?.albumId === selected.id
-              ? playErrorForAlbum.message
-              : null
-          }
-          onPlay={(originEl, executePlayback) =>
-            handlePlay(selected, originEl, executePlayback)
-          }
-        />
-      )}
-
-      {flight && (
-        <RailFlyingDisc
-          key={flight.execution.attempt.attemptId}
-          origin={flight.origin}
-          execution={flight.execution}
-          onArrive={onArrive}
-          onDone={onDone}
-        />
-      )}
     </div>
   );
 }

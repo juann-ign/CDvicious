@@ -9,29 +9,15 @@ const REFRESH_THROTTLE_MS = 1_000;
 type Snapshot = {
   data: NowPlayingResponse | null;
   error: boolean;
-  requestSeq: number;
-  requestStartedAt: number | null;
-  receivedAt: number | null;
 };
 
-type SnapshotUpdate = Pick<Snapshot, "data" | "error"> &
-  Partial<Omit<Snapshot, "data" | "error">>;
-
-type RefreshSource =
-  | "poll"
-  | "event"
-  | "visibility"
-  | "modal-close"
-  | "playback-confirmation";
+type RefreshSource = "poll" | "event" | "visibility";
 
 const listeners = new Set<() => void>();
 
 let snapshot: Snapshot = {
   data: null,
   error: false,
-  requestSeq: 0,
-  requestStartedAt: null,
-  receivedAt: null,
 };
 
 let subscriberCount = 0;
@@ -40,16 +26,11 @@ let abortController: AbortController | null = null;
 let quotaExceeded = false;
 
 let lastRefreshAt = 0;
-let lastPollStartedAt = 0;
 let lastEventRefreshAt = 0;
-let nextRequestSeq = 0;
-let lastAppliedRequestSeq = 0;
-let confirmationRefreshPending = false;
 
 let timer: ReturnType<typeof setTimeout> | null = null;
 let eventDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
-let mutationObserver: MutationObserver | null = null;
 let observersInstalled = false;
 
 const notify = () => {
@@ -58,29 +39,18 @@ const notify = () => {
   }
 };
 
-const setSnapshot = (next: SnapshotUpdate) => {
-  const updated: Snapshot = { ...snapshot, ...next };
-
-  if (
-    snapshot.data === updated.data &&
-    snapshot.error === updated.error &&
-    snapshot.requestSeq === updated.requestSeq &&
-    snapshot.requestStartedAt === updated.requestStartedAt &&
-    snapshot.receivedAt === updated.receivedAt
-  ) {
+const setSnapshot = (next: Snapshot) => {
+  if (snapshot.data === next.data && snapshot.error === next.error) {
     return;
   }
 
-  snapshot = updated;
+  snapshot = next;
   notify();
 };
-
-const isModalOpen = () => document.documentElement.dataset.modalOpen === "true";
 
 const canRefresh = () =>
   subscriberCount > 0 &&
   document.visibilityState === "visible" &&
-  !isModalOpen() &&
   !quotaExceeded &&
   !inFlight;
 
@@ -110,7 +80,6 @@ const scheduleNextPoll = () => {
   if (
     subscriberCount === 0 ||
     document.visibilityState !== "visible" ||
-    isModalOpen() ||
     quotaExceeded
   ) {
     return;
@@ -131,13 +100,8 @@ const fetchNowPlaying = async (source: RefreshSource) => {
   abortController = controller;
   inFlight = true;
 
-  const requestSeq = ++nextRequestSeq;
   const startedAt = Date.now();
   lastRefreshAt = startedAt;
-
-  if (source === "poll") {
-    lastPollStartedAt = startedAt;
-  }
 
   if (source === "event") {
     lastEventRefreshAt = startedAt;
@@ -153,11 +117,6 @@ const fetchNowPlaying = async (source: RefreshSource) => {
       const body = (await res.json().catch(() => null)) as {
         reason?: string;
       } | null;
-
-      if (controller.signal.aborted || requestSeq < lastAppliedRequestSeq) {
-        return;
-      }
-      lastAppliedRequestSeq = requestSeq;
 
       if (body?.reason === "QUOTA_EXCEEDED") {
         quotaExceeded = true;
@@ -178,10 +137,6 @@ const fetchNowPlaying = async (source: RefreshSource) => {
     }
 
     if (!res.ok) {
-      if (controller.signal.aborted || requestSeq < lastAppliedRequestSeq) {
-        return;
-      }
-      lastAppliedRequestSeq = requestSeq;
       setSnapshot({
         data: snapshot.data,
         error: true,
@@ -191,35 +146,23 @@ const fetchNowPlaying = async (source: RefreshSource) => {
 
     const json: NowPlayingResponse = await res.json();
 
-    if (
-      controller.signal.aborted ||
-      requestSeq < lastAppliedRequestSeq ||
-      document.visibilityState !== "visible" ||
-      isModalOpen()
-    ) {
+    if (document.visibilityState !== "visible") {
       return;
     }
 
-    lastAppliedRequestSeq = requestSeq;
     setSnapshot({
       data: json,
       error: false,
-      requestSeq,
-      requestStartedAt: startedAt,
-      receivedAt: Date.now(),
     });
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") {
       return;
     }
 
-    if (!controller.signal.aborted && requestSeq >= lastAppliedRequestSeq) {
-      lastAppliedRequestSeq = requestSeq;
-      setSnapshot({
-        data: snapshot.data,
-        error: true,
-      });
-    }
+    setSnapshot({
+      data: snapshot.data,
+      error: true,
+    });
   } finally {
     if (abortController === controller) {
       abortController = null;
@@ -227,24 +170,9 @@ const fetchNowPlaying = async (source: RefreshSource) => {
     }
 
     if (
-      confirmationRefreshPending &&
       subscriberCount > 0 &&
       !quotaExceeded &&
-      document.visibilityState === "visible" &&
-      !isModalOpen() &&
-      !inFlight
-    ) {
-      confirmationRefreshPending = false;
-      clearTimer();
-      void fetchNowPlaying("playback-confirmation");
-      return;
-    }
-
-    if (
-      subscriberCount > 0 &&
-      !quotaExceeded &&
-      document.visibilityState === "visible" &&
-      !isModalOpen()
+      document.visibilityState === "visible"
     ) {
       scheduleNextPoll();
     }
@@ -253,12 +181,6 @@ const fetchNowPlaying = async (source: RefreshSource) => {
 
 const refresh = (source: RefreshSource) => {
   if (subscriberCount === 0 || quotaExceeded || inFlight) {
-    return;
-  }
-
-  if (source === "playback-confirmation") {
-    clearTimer();
-    void fetchNowPlaying(source);
     return;
   }
 
@@ -298,7 +220,6 @@ const handlePlayerStateChanged = () => {
   if (
     subscriberCount === 0 ||
     document.visibilityState !== "visible" ||
-    isModalOpen() ||
     quotaExceeded ||
     inFlight
   ) {
@@ -325,30 +246,6 @@ const handleVisibilityChange = () => {
   }
 };
 
-const handleModalMutation: MutationCallback = (mutations) => {
-  for (const mutation of mutations) {
-    if (
-      mutation.type !== "attributes" ||
-      mutation.attributeName !== "data-modal-open"
-    ) {
-      continue;
-    }
-
-    if (isModalOpen()) {
-      clearTimer();
-      clearEventDebounce();
-      abortInFlight();
-      return;
-    }
-
-    if (subscriberCount > 0) {
-      refresh("modal-close");
-    }
-
-    return;
-  }
-};
-
 const installObservers = () => {
   if (observersInstalled || typeof window === "undefined") {
     return;
@@ -361,12 +258,6 @@ const installObservers = () => {
     handlePlayerStateChanged,
   );
   document.addEventListener("visibilitychange", handleVisibilityChange);
-
-  mutationObserver = new MutationObserver(handleModalMutation);
-  mutationObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ["data-modal-open"],
-  });
 };
 
 const uninstallObservers = () => {
@@ -380,8 +271,6 @@ const uninstallObservers = () => {
     handlePlayerStateChanged,
   );
   document.removeEventListener("visibilitychange", handleVisibilityChange);
-  mutationObserver?.disconnect();
-  mutationObserver = null;
 };
 
 const start = () => {
@@ -390,7 +279,6 @@ const start = () => {
   if (
     subscriberCount > 0 &&
     document.visibilityState === "visible" &&
-    !isModalOpen() &&
     !quotaExceeded
   ) {
     refresh("poll");
@@ -413,29 +301,6 @@ const subscribe = (listener: () => void) => {
 };
 
 const getSnapshot = () => snapshot;
-const getLatestIssuedRequestSeq = () => nextRequestSeq;
-
-const refreshForPlaybackConfirmation = () => {
-  if (
-    subscriberCount === 0 ||
-    quotaExceeded ||
-    document.visibilityState !== "visible" ||
-    isModalOpen()
-  ) {
-    return;
-  }
-
-  clearTimer();
-  if (inFlight) {
-    // Once the current request settles, issue a new request whose start time
-    // is guaranteed to be after the playback attempt's confirmation signal.
-    confirmationRefreshPending = true;
-    return;
-  }
-
-  confirmationRefreshPending = false;
-  void fetchNowPlaying("playback-confirmation");
-};
 
 const acquire = () => {
   subscriberCount += 1;
@@ -453,12 +318,4 @@ const release = () => {
   }
 };
 
-export {
-  acquire,
-  getSnapshot,
-  getLatestIssuedRequestSeq,
-  refresh,
-  refreshForPlaybackConfirmation,
-  release,
-  subscribe,
-};
+export { acquire, getSnapshot, refresh, release, subscribe };

@@ -9,7 +9,7 @@ const navButton = (page, chapter) =>
 const panels = (page) => page.locator("[data-rail-wrapper] > div > section");
 const activePanel = (page) =>
   page.locator('[data-rail-wrapper] > div > section[data-chapter-active="true"]');
-const dialog = (page) => page.getByRole("dialog");
+const dialog = (page) => page.getByTestId("album-detail-page");
 
 async function openRail(page, viewport = { width: 1280, height: 800 }) {
   await page.setViewportSize(viewport);
@@ -106,7 +106,7 @@ test("capítulo activo, inert y gating del Deck permanecen sincronizados", async
   }
 });
 
-test("drag de Batea mayor a 6px no abre modal y libera wheel después de pointerup", async ({ page }) => {
+test("drag de Batea mayor a 6px no abre una ficha y libera wheel después de pointerup", async ({ page }) => {
   test.skip(!RAIL_ENABLED, "Requiere Batea en el rail desktop.");
   await openRail(page);
   await primeCollection(page);
@@ -137,7 +137,7 @@ test("drag de Batea mayor a 6px no abre modal y libera wheel después de pointer
   // Pointerup must release both pointer capture and the rail lock.
   await expect(shelfViewport).not.toHaveClass(/dragging/);
   await expect(dialog(page)).toHaveCount(0);
-  await expect(page.locator("html")).not.toHaveAttribute("data-modal-open", "true");
+  await expect(page.locator("[data-rail-ready]")).not.toHaveAttribute("data-album-detail-open", "true");
   await expect(crate).toHaveAttribute("data-chapter-active", "true");
 
   // Send the wheel over the static chapter heading, not the viewport that just
