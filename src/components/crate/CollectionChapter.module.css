@@ -85,6 +85,16 @@
   overflow: hidden;
 }
 
+.filterCaption { font: 9px var(--font-ui); letter-spacing: 1px; color: var(--color-text-secondary); }
+.filterStatus { margin: 0; font: 10px/1.4 var(--font-ui); color: var(--color-text-secondary); }
+.filterStatus[role="alert"] { color: #e7bb9c; }
+.clearFilters { align-self: flex-start; min-height: 25px; padding: 3px 8px; border: var(--border-thin); border-radius: 0; background: var(--color-surface); color: var(--color-phosphor); font: 9px var(--font-ui); cursor: pointer; }
+.clearFilters:focus-visible, .recoveryActions :is(button,a):focus-visible { outline: 2px solid var(--color-phosphor); outline-offset: 3px; }
+.recoveryActions { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 15px; }
+.recoveryActions button { min-height: 32px; padding: 5px 12px; border: var(--border-thin); border-radius: 0; background: var(--color-surface); color: var(--color-phosphor); font: 11px var(--font-ui); cursor: pointer; }
+.recoveryActions button:disabled { opacity: .45; cursor: default; }
+.recoveryActions a { color: var(--color-phosphor); }
+
 .pillRow {
   display: flex;
   min-width: 0;

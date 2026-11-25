@@ -17,43 +17,23 @@ import { JewelCaseFront } from "./JewelCaseFront";
 import { ArtistExplorer } from "./ArtistExplorer";
 import { RailFlyingDisc } from "./RailFlyingDisc";
 import type { AlbumItem } from "@/types/crate";
+import { collectionDecades, collectionGenres, filterCollection } from "@/lib/collectionFilters";
 import styles from "./CollectionChapter.module.css";
 
-type DecadeFilter = "all" | "2020s" | "2010s" | "older";
-
-const DECADES: { id: DecadeFilter; label: string }[] = [
-  { id: "all", label: "TODAS" },
-  { id: "2020s", label: "2020s" },
-  { id: "2010s", label: "2010s" },
-  { id: "older", label: "ARCHIVO" },
-];
-
 const PAGE_SIZE = 32;
-const TOP_GENRES_COUNT = 10;
-
-function decadeOf(album: AlbumItem): DecadeFilter {
-  const year = Number(album.release_date?.slice(0, 4));
-
-  if (!year) return "older";
-  if (year >= 2020) return "2020s";
-  if (year >= 2010) return "2010s";
-  return "older";
-}
 
 export function CollectionChapter() {
   const [exploringArtist, setExploringArtist] = useState(false);
   const [artistExplorerVisited, setArtistExplorerVisited] = useState(false);
   const { authenticated } = useSpotifyPlayer();
   const { scrollToChapter } = useRailActions();
-  const { albums: cachedAlbums, genresLoaded } = useCollectionCache();
+  const { albums: cachedAlbums, collectionState, collectionError, collectionRetryAt, genresState, genresError, genresRetryAt, genresResolvedArtists, genresTotalArtists } = useCollectionCache();
   const albums = useMemo(() => cachedAlbums ?? [], [cachedAlbums]);
-  const [loading, setLoading] = useState(false);
-  const [loadingGenres, setLoadingGenres] = useState(false);
-  const [rateLimitSeconds, setRateLimitSeconds] = useState<number | null>(null);
+  const loading = collectionState === "loading";
+  const loadingGenres = genresState === "loading";
   const [isActiveChapter, setIsActiveChapter] = useState(false);
-  const [quotaExceeded, setQuotaExceeded] = useState(false);
   const [query, setQuery] = useState("");
-  const [decade, setDecade] = useState<DecadeFilter>("all");
+  const [decade, setDecade] = useState("all");
   const [genre, setGenre] = useState("all");
   const [page, setPage] = useState(0);
   const [selected, setSelected] = useState<AlbumItem | null>(null);
@@ -66,13 +46,20 @@ export function CollectionChapter() {
     originRect: DOMRect;
   } | null>(null);
   const chapterRef = useRef<HTMLDivElement>(null);
-  const requestStartedRef = useRef(false);
+  const [now, setNow] = useState(Date.now);
+  const collectionWait = Math.max(0, Math.ceil((collectionRetryAt - now) / 1000));
+  const genresWait = Math.max(0, Math.ceil((genresRetryAt - now) / 1000));
+
+  useEffect(() => { setNow(Date.now()); }, [collectionRetryAt, genresRetryAt]);
+
+  useEffect(() => {
+    if (!collectionWait && !genresWait) return;
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [collectionWait, genresWait]);
 
   useEffect(() => {
     syncCollectionAuth(authenticated);
-    if (authenticated !== true) {
-      requestStartedRef.current = false;
-    }
   }, [authenticated]);
 
   useEffect(() => {
@@ -135,84 +122,23 @@ export function CollectionChapter() {
       !isActiveChapter ||
       authenticated !== true ||
       cachedAlbums ||
-      requestStartedRef.current ||
-      quotaExceeded
+      collectionState !== "idle"
     ) {
       return;
     }
 
-    requestStartedRef.current = true;
-    setLoading(true);
-    setRateLimitSeconds(null);
-
-    void loadCollection(authenticated)
-      ?.catch((error: unknown) => {
-        const status =
-          typeof error === "object" && error !== null && "status" in error
-            ? Number((error as { status?: number }).status)
-            : 0;
-        const reason =
-          typeof error === "object" && error !== null && "reason" in error
-            ? (error as { reason?: string }).reason
-            : undefined;
-
-        if (status === 429 && reason === "QUOTA_EXCEEDED") {
-          setQuotaExceeded(true);
-          setRateLimitSeconds(null);
-        } else if (status === 429) {
-          setRateLimitSeconds(60);
-        }
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-  }, [authenticated, cachedAlbums, isActiveChapter, quotaExceeded]);
+    void loadCollection(authenticated)?.catch(() => undefined);
+  }, [authenticated, cachedAlbums, isActiveChapter, collectionState]);
 
   const handleLoadGenres = useCallback(() => {
-    if (authenticated !== true || genresLoaded || loadingGenres) return;
+    if (authenticated !== true || loadingGenres || genresWait) return;
+    void loadCollectionGenres(authenticated)?.catch(() => undefined);
+  }, [authenticated, loadingGenres, genresWait]);
 
-    setLoadingGenres(true);
-
-    void loadCollectionGenres(authenticated)
-      ?.catch(() => undefined)
-      .finally(() => setLoadingGenres(false));
-  }, [authenticated, genresLoaded, loadingGenres]);
-
-  const topGenres = useMemo(() => {
-    const counts = new Map<string, number>();
-
-    for (const album of albums) {
-      for (const item of album.genres ?? []) {
-        counts.set(item, (counts.get(item) ?? 0) + 1);
-      }
-    }
-
-    return Array.from(counts.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, TOP_GENRES_COUNT)
-      .map(([item]) => item);
-  }, [albums]);
-
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-
-    return albums.filter((album) => {
-      const matchesQuery =
-        q === "" ||
-        album.name.toLowerCase().includes(q) ||
-        album.artists.some((artist) =>
-          artist.name.toLowerCase().includes(q),
-        );
-
-      const matchesDecade =
-        decade === "all" || decadeOf(album) === decade;
-
-      const matchesGenre =
-        genre === "all" || (album.genres ?? []).includes(genre);
-
-      return matchesQuery && matchesDecade && matchesGenre;
-    });
-  }, [albums, query, decade, genre]);
+  // Options describe the full saved collection, before search and pagination.
+  const decades = useMemo(() => collectionDecades(albums), [albums]);
+  const topGenres = useMemo(() => collectionGenres(albums), [albums]);
+  const filtered = useMemo(() => filterCollection(albums, query, decade, genre), [albums, query, decade, genre]);
 
   useEffect(() => {
     setPage(0);
@@ -315,11 +241,9 @@ export function CollectionChapter() {
           <h2>LA COLECCIÓN</h2>
         </div>
         <span className={styles.meta}>
-          {quotaExceeded
-            ? "SPOTIFY QUOTA EXCEEDED"
-            : rateLimitSeconds !== null
-              ? "RATE LIMITED / RETRY IN " + rateLimitSeconds + "s"
-              : loading
+          {collectionState === "error"
+            ? "COLECCIÓN NO DISPONIBLE"
+            : loading
               ? "INDEXANDO..."
               : filtered.length + " / " + albums.length + " DISCOS"}
         </span>
@@ -337,8 +261,9 @@ export function CollectionChapter() {
         />
 
         <div className={styles.filterBlock}>
+          <div className={styles.filterCaption}>DÉCADA · FECHA DE EDICIÓN</div>
           <div className={styles.pillRow} aria-label="Filtrar por década">
-            {DECADES.map((item) => (
+            {decades.map((item) => (
               <button
                 key={item.id}
                 type="button"
@@ -347,59 +272,45 @@ export function CollectionChapter() {
                   (decade === item.id ? " " + styles.pillActive : "")
                 }
                 onClick={() => setDecade(item.id)}
+                aria-pressed={decade === item.id}
+                title={`${item.count} discos`}
               >
                 {item.label}
               </button>
             ))}
           </div>
 
+          <div className={styles.filterCaption}>GÉNEROS DEL ARTISTA</div>
           <div className={styles.pillRow} aria-label="Filtrar por género">
-            {!genresLoaded ? (
+            <button type="button" className={styles.pill + (genre === "all" ? " " + styles.pillActive : "")} onClick={() => setGenre("all")} aria-pressed={genre === "all"}>TODOS</button>
+            {topGenres.map((item) => <button key={item.id} type="button" className={styles.pill + (genre === item.id ? " " + styles.pillActive : "")} onClick={() => setGenre(item.id)} aria-pressed={genre === item.id} title={`${item.count} discos`}>{item.label}</button>)}
+            {(genresState === "idle" || loadingGenres || genresState === "partial" || genresState === "error") && (
               <button
                 type="button"
                 className={styles.pill}
                 onClick={handleLoadGenres}
-                disabled={loadingGenres}
+                disabled={loadingGenres || genresWait > 0 || !albums.length}
               >
-                {loadingGenres ? "CARGANDO GÉNEROS..." : "CARGAR GÉNEROS"}
+                {loadingGenres ? "CARGANDO GÉNEROS..." : genresState === "idle" ? "CARGAR GÉNEROS" : "REINTENTAR GÉNEROS"}
               </button>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  className={
-                    styles.pill +
-                    (genre === "all" ? " " + styles.pillActive : "")
-                  }
-                  onClick={() => setGenre("all")}
-                >
-                  TODOS
-                </button>
-
-                {topGenres.map((item) => (
-                  <button
-                    key={item}
-                    type="button"
-                    className={
-                      styles.pill +
-                      (genre === item ? " " + styles.pillActive : "")
-                    }
-                    onClick={() => setGenre(item)}
-                  >
-                    {item.toUpperCase()}
-                  </button>
-                ))}
-              </>
             )}
           </div>
+          {loadingGenres && <p className={styles.filterStatus} role="status">CONSULTANDO GÉNEROS DE LOS ARTISTAS…</p>}
+          {genresState === "empty" && <p className={styles.filterStatus} role="status">SIN GÉNEROS INFORMADOS PARA ESTOS ARTISTAS.</p>}
+          {genresState === "partial" && <p className={styles.filterStatus} role="status">GÉNEROS PARCIALES · {genresResolvedArtists} / {genresTotalArtists} ARTISTAS CONSULTADOS. Podés filtrar con los datos disponibles.</p>}
+          {genresState === "error" && <p className={styles.filterStatus} role="alert">GÉNEROS DEL ARTISTA: {genresError?.message}{genresError?.status === 401 && <a href="/api/auth/login"> CONECTAR SPOTIFY</a>}</p>}
+          {genresWait > 0 && <p className={styles.filterStatus} role="status">REINTENTO DISPONIBLE EN {genresWait} s.</p>}
+          {(query || decade !== "all" || genre !== "all") && <button type="button" className={styles.clearFilters} onClick={() => { setQuery(""); setDecade("all"); setGenre("all"); }}>LIMPIAR FILTROS</button>}
         </div>
       </div>
 
       <div className={styles.gridFrame}>
-        {loading ? (
+        {collectionState === "error" ? (
+          <div className={styles.emptyState} role="alert"><div>{collectionError?.message}<div className={styles.recoveryActions}><button type="button" onClick={() => { setNow(Date.now()); void loadCollection(authenticated)?.catch(() => undefined); }} disabled={collectionWait > 0}>REINTENTAR COLECCIÓN</button>{collectionError?.status === 401 && <a href="/api/auth/login">CONECTAR SPOTIFY</a>}</div>{collectionWait > 0 && <p>REINTENTO DISPONIBLE EN {collectionWait} s.</p>}</div></div>
+        ) : loading ? (
           <div className={styles.emptyState}>CARGANDO COLECCIÓN...</div>
         ) : pageItems.length === 0 ? (
-          <div className={styles.emptyState}>SIN RESULTADOS</div>
+          <div className={styles.emptyState}>{albums.length ? "SIN RESULTADOS PARA ESTOS FILTROS" : "COLECCIÓN VACÍA"}</div>
         ) : (
           <div className={styles.grid}>
             {pageItems.map((album) => (

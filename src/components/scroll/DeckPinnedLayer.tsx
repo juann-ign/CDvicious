@@ -10,6 +10,7 @@ import { useNowPlaying } from "@/hooks/useNowPlaying";
 import { getConfirmedPlayback, subscribePlaybackConfirmation } from "@/lib/playbackSnapshotCoordinator";
 import { useDominantColor } from "@/hooks/useDominantColor";
 import { useSpotifyPlayer } from "@/components/SpotifyPlayerProvider";
+import { useRailNavigation } from "./RailContext";
 import pageStyles from "@/app/page.module.css";
 import styles from "./DeckPinnedLayer.module.css";
 
@@ -20,6 +21,7 @@ const getEmptyConfirmation = () => null;
 
 export function DeckPinnedLayer() {
   const { authenticated } = useSpotifyPlayer();
+  const { activeChapterIndex } = useRailNavigation();
   const layerRef = useRef<HTMLDivElement>(null);
   const [deckHidden, setDeckHidden] = useState(false);
   const [flightStage, setFlightStage] = useState<DiscFlightStage>("idle");
@@ -232,6 +234,7 @@ export function DeckPinnedLayer() {
             <LyricsBooklet
               track={visibleData.track}
               isOpen
+              active={activeChapterIndex === 1 && !deckHidden}
               onToggle={() => undefined}
               accentColor={accentColor}
               showTab={false}

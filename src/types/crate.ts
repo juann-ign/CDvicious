@@ -7,6 +7,12 @@ export interface AlbumItem {
   release_date?: string;
   label?: string;
   genres?: string[];
+  genreMetadata?: {
+    source: "spotify-artist" | "demo";
+    state: "complete" | "partial" | "unavailable";
+    resolvedArtists: number;
+    totalArtists: number;
+  };
 }
 
 export interface AlbumTrack {
