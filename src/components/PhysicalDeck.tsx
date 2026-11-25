@@ -179,7 +179,8 @@ export function PhysicalDeck({ pose, albumName = "COMPACT DISC", artwork, status
           {controls ? <PhysicalVolumeKnob value={controls.volume} disabled={!controlsActive || !controls.volumeAvailable || controls.volumeLoading || controls.blocked} pending={controls.volumePending} error={controls.volumeError} onChange={controls.setVolume} /> : <span className={styles.rotary}><i /></span>}
           <PhysicalDeckFront title={displayTitle ?? (pose === "wait" ? "CDVICIOUS" : albumName)}
             artist={artistText} status={statusText} pose={pose} isPlaying={isPlaying} loading={loading}
-            progressMs={progressMs} durationMs={durationMs} controls={controls} controlsActive={controlsActive} />
+            progressMs={progressMs} durationMs={durationMs} controls={controls} controlsActive={controlsActive}
+            trackId={track?.id} />
         </div>
         <span className={`${styles.foot} ${styles.footLeft}`} data-deck-surface /><span className={`${styles.foot} ${styles.footRight}`} data-deck-surface />
       </div>

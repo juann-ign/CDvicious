@@ -153,13 +153,13 @@ export function LyricsBooklet({ track, isOpen, onToggle, accentColor, showTab = 
         if (event.clientX - bounds.left < bounds.width / 2) previous(); else next();
       }}>
         <div className={styles.bookletPageStack} /><div className={styles.bookletCenterSpine} />
-        <div className={`${styles.bookletPageHalf} ${styles.bookletPageLeft}`}><div className={styles.bookletContent}>
+        <div className={`${styles.bookletPageHalf} ${styles.bookletPageLeft}`} data-booklet-page-half="left"><div className={styles.bookletContent}>
           {header}
           {statusText ? <div className={styles.bookletStatus} data-testid="lyrics-status" role={reading.status === "error" ? "alert" : "status"}>{statusText}
             {reading.status === "error" && <button type="button" disabled={reading.retryBlocked} onClick={(event) => { event.stopPropagation(); reading.retry(); }}>REINTENTAR</button>}
           </div> : <div className={`${styles.bookletLyrics} ${!measured ? styles.lyricsFallback : ""}`} data-testid="lyrics-content" data-page-index={safePage}>{pages[safePage] ?? ""}</div>}
         </div></div>
-        <div className={`${styles.bookletPageHalf} ${styles.bookletPageRight}`}><div className={styles.bookletContent}>
+        <div className={`${styles.bookletPageHalf} ${styles.bookletPageRight}`} data-booklet-page-half="right"><div className={styles.bookletContent}>
           <div className={styles.bookletHeaderPlaceholder} aria-hidden="true" />
           <div className={styles.bookletLyrics} data-testid="lyrics-content" data-page-index={safePage + 1}>{pages[safePage + 1] ?? ""}</div>
           {reading.provenance.provider === "demo" && <span className={styles.lyricsProvenance}>DEMO · LETRA FICTICIA</span>}

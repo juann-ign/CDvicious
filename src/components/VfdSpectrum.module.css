@@ -1,0 +1,53 @@
+.spectrum {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: calc(8 * var(--u));
+  flex: 0 0 calc(180 * var(--u));
+  padding-inline-start: calc(8 * var(--u));
+  border-inline-start: calc(1 * var(--u)) solid #a9bc7e2b;
+  box-sizing: border-box;
+}
+
+.label {
+  color: color-mix(in srgb, var(--color-phosphor-dim) 72%, #a9b398);
+  font: calc(12 * var(--u))/1 var(--font-ui);
+  letter-spacing: calc(.65 * var(--u));
+}
+
+.bands {
+  --segment: calc(4.5 * var(--u));
+  --segment-gap: calc(1.35 * var(--u));
+  --peak-size: calc(1.85 * var(--u));
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: calc(3.1 * var(--u));
+  height: calc(27 * var(--u));
+}
+
+.band {
+  position: relative;
+  background: repeating-linear-gradient(to top,
+    #9eba7824 0 calc(var(--segment) - var(--segment-gap)),
+    transparent calc(var(--segment) - var(--segment-gap)) var(--segment));
+}
+
+.fill, .peak {
+  position: absolute;
+  inset-inline: 0;
+}
+
+.fill {
+  bottom: 0;
+  height: var(--band-level, 0%);
+  background: repeating-linear-gradient(to top,
+    var(--color-phosphor-dim) 0 calc(var(--segment) - var(--segment-gap)),
+    transparent calc(var(--segment) - var(--segment-gap)) var(--segment));
+}
+
+.peak {
+  height: var(--peak-size);
+  bottom: clamp(0px, var(--band-peak, 0%), calc(100% - var(--peak-size)));
+  background: color-mix(in srgb, var(--color-phosphor) 62%, #d8f594);
+  opacity: var(--peak-opacity, 0);
+}

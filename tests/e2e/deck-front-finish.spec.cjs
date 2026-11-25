@@ -1,5 +1,4 @@
-const fs = require("node:fs");
-const path = require("node:path");
+const approvedPoses = require("./fixtures/split-balance-approved.json");
 const {
   test, expect, hardware, canonicalState, saveRecord, go, bootPrototype, observeRequests,
 } = require("./support/prototype-harness.cjs");
@@ -70,7 +69,8 @@ test("front layout: Deck and Split retain their composition, readable contents a
       await expect(screen(page).locator('[class*="progressTimes"] span')).toHaveCount(2);
       const current = await measure(page);
       const name = `${stem}-${viewport.width}x${viewport.height}`;
-      const approved = JSON.parse(fs.readFileSync(path.resolve(".qa/finish/before", `${name}.json`), "utf8"));
+      const size = `${viewport.width}x${viewport.height}`;
+      const approved = index === 1 ? approvedPoses.split[size] : approvedPoses.deck[size];
       await page.screenshot({ path: testInfo.outputPath(`${name}.png`), animations: "allow" });
       await saveRecord(testInfo, name, { current, approved });
       records.push({ name, current });

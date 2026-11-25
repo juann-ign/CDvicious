@@ -25,19 +25,17 @@ async function expectFooterHidden(page) {
   expect(await footerValue(page).evaluate((node) => { node.focus(); return document.activeElement === node; })).toBe(false);
 }
 
-// These are measurements from the approved B build, source 7e667bc, recorded
-// in .qa/deck-controls-worktree/.qa/controls/after/Split-<viewport>.json.
-// They intentionally constrain the visible silhouette, not transparent scene size.
-const approvedSplit = {
-  "1440x900": { left: 26.400007, right: 693.600037, top: 403.008331, bottom: 642.280640, paperLeft: 817.953369, paperTop: 377.020355, paperWidth: 580.970215, paperHeight: 368.007111 },
-  "1280x800": { left: 24.800005, right: 615.200012, top: 336.245361, bottom: 547.975525, paperLeft: 668.992554, paperTop: 312.018677, paperWidth: 574.552002, paperHeight: 337.926270 },
-  "1280x720": { left: 24.800005, right: 615.200012, top: 260.245361, bottom: 471.975494, paperLeft: 668.992554, paperTop: 236.018661, paperWidth: 574.552002, paperHeight: 337.926270 },
-};
+// Root-reviewed poses implement the new raised Split composition. Keep the
+// original 2px tolerance, physical silhouette and unchanged Deck guards.
+const approvedSplit = Object.fromEntries(Object.entries(require("./fixtures/split-balance-approved.json").split).map(([size, pose]) => [size, {
+  ...pose.equipment, paperLeft: pose.booklet.x, paperTop: pose.booklet.y,
+  paperWidth: pose.booklet.width, paperHeight: pose.booklet.height,
+}]));
 
 for (const viewport of [{ width: 1440, height: 900 }, { width: 1280, height: 800 }, { width: 1280, height: 720 }]) {
   test.describe(`polish ${viewport.width}x${viewport.height}`, () => {
     test.use({ viewport });
-    test("Deck leaves breathing room while Split retains its approved composition and hidden footer", async ({ page }, testInfo) => {
+    test("Deck leaves breathing room while Split follows its approved raised composition and hidden footer", async ({ page }, testInfo) => {
       await ready(page);
       const measure = () => hardware(page).evaluate((deck) => {
         const faces = [...deck.querySelectorAll("[data-deck-surface]")].map((node) => node.getBoundingClientRect());

@@ -57,8 +57,8 @@
   --booklet-height: calc(100% - 42px);
 
   position: absolute;
-  right: max(3vw, calc(50vw - 980px));
-  bottom: max(20px, 5%);
+  right: clamp(10px, calc(10px + (100vw - 1280px) * .05), 18px);
+  top: 48%;
   z-index: 6;
   width: min(900px, max(570px, 40vw));
   height: min(calc(100% - 32px), clamp(330px, 25vw, 550px));
@@ -67,7 +67,7 @@
   transform-origin: 100% 58%;
   backface-visibility: hidden;
   transform:
-    translate3d(calc((1 - var(--pSplit)) * 28vw), 0, 0)
+    translate3d(calc((1 - var(--pSplit)) * 28vw), -40%, 0)
     rotateZ(-0.8deg)
     scale(calc(0.98 + (0.02 * var(--pSplit))));
 
@@ -132,7 +132,7 @@
   }
 
   .bookletLayer {
-    transform: translate3d(0, 0, 0) rotateZ(-0.8deg) scale(1);
+    transform: translate3d(0, -40%, 0) rotateZ(-0.8deg) scale(1);
   }
 }
 

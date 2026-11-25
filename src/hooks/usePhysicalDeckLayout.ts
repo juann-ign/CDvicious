@@ -1,6 +1,6 @@
 "use client";
 import { useLayoutEffect, type RefObject } from "react";
-import { fitDeck, type DeckBounds } from "@/lib/physicalDeckLayout";
+import { fitDeck, fitSplitDeck, type DeckBounds } from "@/lib/physicalDeckLayout";
 
 /** Measure only on actual resize/content mounting, never on rail progress. */
 export function usePhysicalDeckLayout(viewport: RefObject<HTMLDivElement | null>, placement: RefObject<HTMLDivElement | null>, scene: RefObject<HTMLDivElement | null>, identity: string) {
@@ -30,24 +30,40 @@ export function usePhysicalDeckLayout(viewport: RefObject<HTMLDivElement | null>
         body.style.setProperty("--deck-lid-offset", "135"); open = measure(true);
       } finally { body.style.setProperty("--deck-lid-offset", offset || "0"); }
       const w = frameRect.width, h = frameRect.height;
-      const paper = document.querySelector<HTMLElement>('[data-testid="lyrics-paper"]')?.getBoundingClientRect();
-      const centerY = paper && paper.height > 0 ? (paper.top + paper.bottom) / 2 - frameRect.top : h * .62;
-      // Deck is a centered object, with breathing room around the equipment.
-      // Split keeps the approved fit and actual paper alignment unchanged.
+      // Measure the final Split pose, including leaves that extend beyond the
+      // spread and the full keyboard-focus region. Restore before painting;
+      // the rail remains the only owner of its animation progress.
+      const booklet = document.querySelector<HTMLElement>("[data-rail-booklet]");
+      let bookletLeft: number | null = null;
+      if (booklet) {
+        const value = booklet.style.getPropertyValue("--pSplit");
+        const priority = booklet.style.getPropertyPriority("--pSplit");
+        try {
+          booklet.style.setProperty("--pSplit", "1");
+          const parts = [...booklet.querySelectorAll<HTMLElement>('[data-testid="lyrics-booklet"], [data-testid="lyrics-paper"], [data-booklet-page-half], [data-testid="lyrics-pagination-controls"], [aria-label="Booklet de letras"]')]
+            .map(node => node.getBoundingClientRect()).filter(rect => rect.width > 0 && rect.height > 0);
+          if (parts.length) bookletLeft = Math.min(...parts.map(rect => rect.left)) - frameRect.left;
+        } finally {
+          if (value) booklet.style.setProperty("--pSplit", value, priority);
+          else booklet.style.removeProperty("--pSplit");
+        }
+      }
+      // The approved Deck camera stays unchanged; Split gets its own measured
+      // slot and a shared, higher centre with the unchanged-size booklet.
       const deckWidth = w * .80;
       const deckClosed = fitDeck(closed, deckWidth, h - 128, w / 2, h - 64);
       const deckCenter = h * .55;
       const deckBottom = deckCenter + (closed.bottom - closed.top) * deckClosed.scale / 2;
-      const splitClosed = fitDeck(closed, w * .48 - 24, h - 96, w * .25, h - 64);
-      const splitBottom = Math.min(h - 64, centerY + (closed.bottom - closed.top) * splitClosed.scale / 2);
+      const split = fitSplitDeck(closed, open, { width: w, height: h, bookletLeft });
       const fits = { "deck-closed": fitDeck(closed, deckWidth, h - 128, w / 2, deckBottom),
         "deck-open": fitDeck(open, w - 64, h - 96, w / 2, h - 64),
-        "split-closed": fitDeck(closed, w * .48 - 24, h - 96, w * .25, splitBottom),
-        "split-open": fitDeck(open, w * .48 - 24, h - 96, w * .25, splitBottom) };
+        "split-closed": split.closed,
+        "split-open": split.open };
       for (const [name, fit] of Object.entries(fits)) {
         body.style.setProperty(`--${name}-x`, `${fit.x}px`); body.style.setProperty(`--${name}-y`, `${fit.y}px`); body.style.setProperty(`--${name}-s`, String(fit.scale));
       }
       frame.dataset.closedBounds = JSON.stringify(closed); frame.dataset.openBounds = JSON.stringify(open);
+      frame.dataset.splitSlot = JSON.stringify(split.slot);
       frame.dataset.layoutMeasurements = String(Number(frame.dataset.layoutMeasurements ?? 0) + 1);
     };
     update();

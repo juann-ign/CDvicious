@@ -98,7 +98,7 @@
   display: flex;
   align-items: center;
   gap: calc(10 * var(--u));
-  height: calc(25 * var(--u));
+  height: calc((25 + 6 * var(--pSplit, 0)) * var(--u));
   pointer-events: auto;
 }
 
@@ -107,7 +107,7 @@
   display: grid;
   place-items: center;
   width: calc(70 * var(--u));
-  height: calc(25 * var(--u));
+  height: calc((25 + 6 * var(--pSplit, 0)) * var(--u));
   padding: 0;
   border: calc(1 * var(--u)) solid #586d50;
   border-radius: 0;
@@ -118,7 +118,7 @@
 }
 
 .transport button::before { content: ""; position: absolute; inset: calc(-17 * var(--u)) 0; }
-.transport button svg { width: calc(31 * var(--u)); height: calc(19 * var(--u)); fill: currentColor; pointer-events: none; }
+.transport button svg { width: calc((31 + 3 * var(--pSplit, 0)) * var(--u)); height: calc((19 + 2 * var(--pSplit, 0)) * var(--u)); fill: currentColor; pointer-events: none; }
 .transport button[aria-pressed="true"] { background: linear-gradient(#334a2b, #253c24); color: #adcb83; box-shadow: inset 0 calc(1 * var(--u)) calc(2 * var(--u)) #0b160c88; }
 .transport button:disabled { opacity: .5; cursor: default; }
 .transport button:focus-visible { outline: calc(2 * var(--u)) solid #223f25; outline-offset: calc(3 * var(--u)); }
