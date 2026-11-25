@@ -4,6 +4,16 @@ export function fitDeck(bounds: DeckBounds, width: number, height: number, cente
   return { scale, x: centerX - (bounds.left + bounds.right) * scale / 2, y: bottom - bounds.bottom * scale };
 }
 
+/** Fit both parts of the listening view to the measured metal silhouette. */
+export function fitListeningDeck(bounds: DeckBounds, width: number, height: number) {
+  const top = Math.min(72, Math.max(62, height * .095));
+  const fit = fitDeck(bounds, Math.min(1000, width * .78), Math.max(100, height * .42 - 8), width / 2, 0);
+  const shelfWidth = (bounds.right - bounds.left) * fit.scale;
+  const shelfTop = top + (bounds.bottom - bounds.top) * fit.scale + Math.min(28, Math.max(16, height * .038));
+  const caseSize = Math.max(82, Math.min(198, shelfWidth * .215, height - shelfTop - 116));
+  return { ...fit, y: top - bounds.top * fit.scale, shelfWidth, shelfTop, caseSize };
+}
+
 type SplitDeckFrame = { width: number; height: number; bookletLeft: number | null };
 const SPLIT_HEIGHT_RATIO = 1.16;
 const SPLIT_ROTATION = -1.8;

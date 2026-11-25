@@ -87,6 +87,17 @@
   will-change: transform;
 }
 
+:global([data-next-listen-open="true"]) .placement:not([data-deck-measuring]) {
+  transform: translate3d(var(--listen-x, 0px), var(--listen-y, 0px), 0) rotateZ(0deg)
+    scale(calc(var(--listen-scale, 1) / var(--deck-density)));
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :global([data-rail-moving="false"] [data-next-listen-motion="true"]) .placement:not([data-deck-measuring]) {
+    transition: transform 520ms cubic-bezier(.24, .7, .23, 1);
+  }
+}
+
 .floorShadow {
   position: absolute;
   width: calc(840 * var(--u));

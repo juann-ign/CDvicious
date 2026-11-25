@@ -107,6 +107,21 @@
   background: var(--jewel-case-top-fill, linear-gradient(#bdccc1, #4c6658 60%, #a3b8ac));
 }
 
+/* Close the same prism rather than leaving two bright, disconnected rear
+   outlines. These two planes stay inside the existing front/rear silhouette. */
+.outerRim, .bottomRim {
+  position: absolute;
+  border: 1px solid #bdcbc1a6;
+  background: linear-gradient(90deg, #c4d1c5b3, #82978a9c 52%, #dce5d7c2);
+}
+.outerRim { top: 0; left: 100%; width: var(--case-depth); height: 100%; transform-origin: 0 50%; transform: rotateY(90deg); }
+.bottomRim { top: 100%; left: 0; width: 100%; height: var(--case-depth); transform-origin: 50% 0; transform: rotateX(-90deg); }
+.refined .rear { border-width: 1px; border-color: #becbc2b3; border-radius: 2px; box-shadow: inset 0 0 0 1px #f0f6e82e; }
+.refined .front { border-width: 1px; border-color: #e4ece2d4; box-shadow: 1px 3px 5px #22372b45; }
+.refined .front::after { border-color: #f5f9ee66; background: linear-gradient(119deg, #eff8ed2b, transparent 23% 56%, #edf6e81c 67%, transparent 74%); }
+.refined .topRim { border-color: #d9e4d3b8; }
+.refined .spineFace { border-color: #d6e2d2c9; border-inline-color: #edf5e0c7 #9aada0a8; box-shadow: inset 1px 0 #f5ffed2e, inset -1px 0 #334e3a66; }
+
 :global([data-rail-moving="true"]) .spine .case,
 :global([data-belt-animation-enabled="false"]) .spine .case {
   transition: none;

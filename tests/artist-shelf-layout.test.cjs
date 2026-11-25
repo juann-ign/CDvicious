@@ -19,6 +19,7 @@ function load(file) {
       "@/lib/artistShelfLayout": "src/lib/artistShelfLayout.ts",
       "@/hooks/useArtistShelfLayout": "src/hooks/useArtistShelfLayout.ts",
       "./useMarqueeBelt": "src/hooks/useMarqueeBelt.ts",
+      "@/hooks/useMarqueeBelt": "src/hooks/useMarqueeBelt.ts",
       "./JewelSpine": "src/components/crate/JewelSpine.tsx",
     };
     if (files[name]) return load(files[name]);
@@ -171,4 +172,30 @@ test("el componente real renderiza un solo JewelSpine por ID, también si la fue
       assert.equal(html.includes('aria-label="Página siguiente"'), false);
     }
   }
+});
+
+test("el acabado refinado es optativo y la Batea clásica conserva sus casos y controles", () => {
+  const { CrateShelf } = load("src/components/crate/CrateShelf.tsx");
+  const { ArtistCrateShelf } = load("src/components/crate/ArtistCrateShelf.tsx");
+  const albums = Array.from({ length: 3 }, (_, index) => ({ id: `edition-${index}`, name: `Disco ${index}`, artists: [{ id: "artist", name: "Artista" }], images: [], uri: `spotify:album:edition-${index}` }));
+  const props = { albums, onSelect() {} };
+  const classic = renderToStaticMarkup(React.createElement(CrateShelf, props));
+  assert.equal(classic, renderToStaticMarkup(React.createElement(CrateShelf, { ...props, presentation: "classic" })));
+  assert.equal((classic.match(/data-case-presentation="classic"/g) ?? []).length, 9);
+  assert.equal(classic.includes('class="outerRim"'), false);
+  assert.equal(classic.includes('class="bottomRim"'), false);
+  const artist = renderToStaticMarkup(React.createElement(ArtistCrateShelf, props));
+  const listening = renderToStaticMarkup(React.createElement(ArtistCrateShelf, { ...props, startAt: "leading", chapterIndex: 0 }));
+  assert.equal((listening.match(/data-case-presentation="refined"/g) ?? []).length, albums.length);
+  assert.equal((listening.match(/class="outerRim"/g) ?? []).length, albums.length);
+  assert.equal((listening.match(/class="bottomRim"/g) ?? []).length, albums.length);
+  assert.equal((artist.match(/data-batea-album-id=/g) ?? []).length, albums.length);
+});
+
+test("Next listen fills the opening shelf from its leading edge without wrapping any editions into view", () => {
+  const layout = artistShelfLayout(18, 780, 92, 154, ARTIST_SHELF_SPEED, -8, "leading");
+  const offset = artistShelfInitialOffset(layout);
+  assert.ok(!layout.fit);
+  assert.equal(artistShelfPosition(0, offset, layout, true) + layout.visualLeft, 24);
+  assert.ok(artistShelfPosition(17, offset, layout, true) > layout.width);
 });

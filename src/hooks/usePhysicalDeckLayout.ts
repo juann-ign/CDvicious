@@ -1,12 +1,13 @@
 "use client";
 import { useLayoutEffect, type RefObject } from "react";
-import { fitDeck, fitSplitDeck, type DeckBounds } from "@/lib/physicalDeckLayout";
+import { fitDeck, fitListeningDeck, fitSplitDeck, type DeckBounds } from "@/lib/physicalDeckLayout";
 
 /** Measure only on actual resize/content mounting, never on rail progress. */
 export function usePhysicalDeckLayout(viewport: RefObject<HTMLDivElement | null>, placement: RefObject<HTMLDivElement | null>, scene: RefObject<HTMLDivElement | null>, identity: string) {
   useLayoutEffect(() => {
     const frame = viewport.current, body = placement.current, design = scene.current;
     if (!frame || !body || !design) return;
+    const overlay = frame.closest<HTMLElement>("[data-rail-overlay]");
     const update = () => {
       const frameRect = frame.getBoundingClientRect(), designRect = design.getBoundingClientRect();
       if (!frameRect.width || !designRect.width) return;
@@ -27,6 +28,7 @@ export function usePhysicalDeckLayout(viewport: RefObject<HTMLDivElement | null>
       const rotation = body.style.getPropertyValue("--split-rotation");
       let closed: DeckBounds, open: DeckBounds;
       try {
+        body.dataset.deckMeasuring = "true";
         body.style.setProperty("--split-rotation", "0deg");
         body.style.setProperty("--deck-lid-offset", "0"); closed = measure(false);
         body.style.setProperty("--deck-lid-offset", "135"); open = measure(true);
@@ -34,6 +36,7 @@ export function usePhysicalDeckLayout(viewport: RefObject<HTMLDivElement | null>
         body.style.setProperty("--deck-lid-offset", offset || "0");
         if (rotation) body.style.setProperty("--split-rotation", rotation);
         else body.style.removeProperty("--split-rotation");
+        delete body.dataset.deckMeasuring;
       }
       const w = frameRect.width, h = frameRect.height;
       // Measure the final Split pose, including leaves that extend beyond the
@@ -71,6 +74,15 @@ export function usePhysicalDeckLayout(viewport: RefObject<HTMLDivElement | null>
       body.style.setProperty("--split-closed-sy", String(split.closed.scaleY));
       body.style.setProperty("--split-open-sy", String(split.open.scaleY));
       body.style.setProperty("--split-rotation", `${split.rotation}deg`);
+      if (overlay) {
+        const listening = fitListeningDeck(closed, w, h);
+        body.style.setProperty("--listen-x", `${listening.x}px`);
+        body.style.setProperty("--listen-y", `${listening.y}px`);
+        body.style.setProperty("--listen-scale", String(listening.scale));
+        overlay.style.setProperty("--listen-width", `${listening.shelfWidth}px`);
+        overlay.style.setProperty("--listen-top", `${listening.shelfTop}px`);
+        overlay.style.setProperty("--listen-case-size", `${listening.caseSize}px`);
+      }
       frame.dataset.closedBounds = JSON.stringify(closed); frame.dataset.openBounds = JSON.stringify(open);
       frame.dataset.splitSlot = JSON.stringify(split.slot);
       frame.dataset.layoutMeasurements = String(Number(frame.dataset.layoutMeasurements ?? 0) + 1);
@@ -86,7 +98,7 @@ export function usePhysicalDeckLayout(viewport: RefObject<HTMLDivElement | null>
         if (!mounted) return;
         mounting?.disconnect(); observer.observe(mounted); update();
       });
-      mounting.observe(frame.closest('[data-rail-overlay]') ?? frame, { childList: true, subtree: true });
+      mounting.observe(overlay ?? frame, { childList: true, subtree: true });
     }
     return () => { mounting?.disconnect(); observer.disconnect(); };
   }, [viewport, placement, scene, identity]);

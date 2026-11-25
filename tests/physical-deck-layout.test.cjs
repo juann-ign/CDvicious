@@ -8,7 +8,7 @@ const moduleUnderTest = { exports: {} };
 vm.runInNewContext(ts.transpileModule(fs.readFileSync("src/lib/physicalDeckLayout.ts", "utf8"), {
   compilerOptions: { module: ts.ModuleKind.CommonJS },
 }).outputText, { module: moduleUnderTest, exports: moduleUnderTest.exports });
-const { fitDeck, fitSplitDeck } = moduleUnderTest.exports;
+const { fitDeck, fitListeningDeck, fitSplitDeck } = moduleUnderTest.exports;
 
 // Projected silhouette fixtures, not the transparent 1280×660 design frame.
 // The open fixture includes the lateral lids and the raised CD envelope.
@@ -32,6 +32,19 @@ function assertInside(rect, slot) {
   assert.ok(rect.top >= slot.top - 1e-7, `Top edge ${rect.top} outside ${slot.top}`);
   assert.ok(rect.bottom <= slot.bottom + 1e-7, `Bottom edge ${rect.bottom} outside ${slot.bottom}`);
 }
+
+test("Next listen aligns its shelf to the visible equipment and fits both in the useful height", () => {
+  for (const [width, windowHeight] of [[1920, 1080], ...viewports]) {
+    const height = windowHeight - 72 - 128;
+    const listen = fitListeningDeck(closed, width, height);
+    const visible = project(closed, listen);
+    close(visible.right - visible.left, listen.shelfWidth);
+    close((visible.right + visible.left) / 2, width / 2);
+    assert.ok(visible.top >= 62);
+    assert.ok(listen.shelfTop - visible.bottom >= 16);
+    assert.ok(listen.shelfTop + listen.caseSize + 116 <= height + 1e-7);
+  }
+});
 
 test("Deck fits closed and open silhouette fixtures between nav, action reserve and footer", () => {
   for (const [width, windowHeight] of viewports) {

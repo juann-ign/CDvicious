@@ -9,6 +9,7 @@ interface Options {
   active: boolean;
   paused: boolean;
   chapterIndex?: number;
+  startAt?: "center" | "leading";
   onGrabStart?: () => void;
   onGrabEnd?: () => void;
 }
@@ -95,7 +96,7 @@ export function useArtistShelfLayout(options: Options) {
       const buttonLeft = first.getBoundingClientRect().left;
       const faces = [...(first.firstElementChild?.children ?? [])];
       const visualLeft = faces.length ? Math.min(...faces.map((face) => face.getBoundingClientRect().left)) - buttonLeft : 0;
-      const next = artistShelfLayout(ids.length, viewport.clientWidth, width, size, ARTIST_SHELF_SPEED, visualLeft);
+      const next = artistShelfLayout(ids.length, viewport.clientWidth, width, size, ARTIST_SHELF_SPEED, visualLeft, optionsRef.current.startAt);
       if (!layoutRef.current) {
         anchorId.current = ids[0] ?? null;
         // A short catalog never needs an introductory animation. Later page

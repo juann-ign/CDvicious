@@ -4,6 +4,7 @@ export interface ArtistShelfLayout {
   slotWidth: number;
   visualOverflow: number;
   visualLeft: number;
+  startAt: "center" | "leading";
   overscan: number;
   pitch: number;
   inset: number;
@@ -17,14 +18,14 @@ export const ARTIST_SHELF_REENTRY_SECONDS = 2;
 export const ARTIST_SHELF_INITIAL_HOLD_MS = 1000;
 export const wrapArtistShelf = (value: number, length: number) => length > 0 ? ((value % length) + length) % length : 0;
 
-export function artistShelfLayout(count: number, width: number, slotWidth: number, caseSize: number, speed = ARTIST_SHELF_SPEED, visualLeft = 0): ArtistShelfLayout {
+export function artistShelfLayout(count: number, width: number, slotWidth: number, caseSize: number, speed = ARTIST_SHELF_SPEED, visualLeft = 0, startAt: ArtistShelfLayout["startAt"] = "center"): ArtistShelfLayout {
   const visualOverflow = Math.max(0, caseSize * .23);
   const overscan = visualOverflow + 12;
   const naturalWidth = count * slotWidth + Math.max(0, count - 1) * ARTIST_SHELF_GAP;
   const fit = count <= 1 || naturalWidth + overscan * 2 <= width;
   const pitch = fit ? slotWidth + ARTIST_SHELF_GAP : Math.max(slotWidth + ARTIST_SHELF_GAP, (width - overscan * 2) / 6.5);
   return {
-    count, width, slotWidth, visualOverflow, visualLeft, overscan, pitch, fit,
+    count, width, slotWidth, visualOverflow, visualLeft, startAt, overscan, pitch, fit,
     inset: fit ? Math.max(0, (width - naturalWidth) / 2) : overscan,
     // A recycled node is already fully out at both ends. Near capacity, the
     // first edition waits off the right edge for two seconds after it exits.
@@ -48,7 +49,8 @@ export function artistShelfOffsetFor(index: number, left: number, layout: Artist
 }
 
 export function artistShelfInitialOffset(layout: ArtistShelfLayout) {
-  return artistShelfOffsetFor(0, layout.width / 2 - layout.visualLeft, layout, true);
+  const edge = layout.startAt === "leading" ? Math.min(24, layout.width * .04) : layout.width / 2;
+  return artistShelfOffsetFor(0, edge - layout.visualLeft, layout, true);
 }
 
 export function artistShelfEntryComplete(offset: number, layout: ArtistShelfLayout) {

@@ -22,17 +22,19 @@
   pointer-events: auto;
 }
 
-.trackListing {
+.trackListing, .nextListen {
   --track-listing-inset: clamp(24px, 10vw, 192px);
   --track-listing-height: clamp(88px, calc(43dvh - 82px), 350px);
 
   position: fixed;
-  inset: calc(var(--shell-nav-height) + clamp(14px, 2.4dvh, 26px)) auto auto var(--track-listing-inset);
+  top: calc(var(--shell-nav-height) + clamp(14px, 2.4dvh, 26px));
   z-index: 18;
   pointer-events: none;
 }
+.trackListing { left: var(--track-listing-inset); }
+.nextListen { right: var(--track-listing-inset); }
 
-.trackListing[data-track-listing-placement="split"] {
+.trackListing[data-track-listing-placement="split"], .nextListen[data-track-listing-placement="split"] {
   --track-listing-inset: clamp(24px, calc(3.1vw - 6px), 52px);
   --track-listing-width: calc(44vw - var(--track-listing-inset) - 16px);
   --track-listing-height: clamp(88px, calc(38dvh - 90px), 320px);
@@ -76,6 +78,18 @@
     scale(calc(0.98 + (0.02 * var(--pSplit))));
 
   will-change: transform, opacity;
+}
+
+.layer[data-next-listen-open="true"] .bookletLayer {
+  opacity: 0;
+  visibility: hidden;
+  transform: translate3d(24px, -34%, 0) rotateZ(-.8deg) scale(.95);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .layer[data-next-listen-motion="true"] .bookletLayer {
+    transition: opacity 190ms ease, transform 380ms cubic-bezier(.24, .7, .23, 1), visibility 190ms;
+  }
 }
 
 @media (max-width: 1200px) {

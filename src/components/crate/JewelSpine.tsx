@@ -9,6 +9,7 @@ interface JewelSpineProps {
   artist: string;
   coverUrl: string;
   tilt: number;
+  presentation?: "classic" | "refined";
   onSelect: (origin: HTMLButtonElement) => void;
   onHover?: (rect: DOMRect | null, anchor?: HTMLButtonElement) => void;
 }
@@ -25,6 +26,7 @@ export function JewelSpine({
   artist,
   coverUrl,
   tilt,
+  presentation = "classic",
   onSelect,
   onHover,
 }: JewelSpineProps) {
@@ -35,7 +37,8 @@ export function JewelSpine({
   return (
     <button
       type="button"
-      className={styles.spine}
+      className={presentation === "refined" ? `${styles.spine} ${styles.refined}` : styles.spine}
+      data-case-presentation={presentation}
       style={{
         "--tilt": `${tilt}deg`,
         "--cover": coverUrl ? `url(${JSON.stringify(coverUrl)})` : "none",
@@ -58,6 +61,7 @@ export function JewelSpine({
         </span>
         <span className={styles.spineFace} />
         <span className={styles.topRim} />
+        {presentation === "refined" && <><span className={styles.outerRim} /><span className={styles.bottomRim} /></>}
       </span>
     </button>
   );

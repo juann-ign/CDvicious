@@ -160,8 +160,9 @@ test("Track listing acomoda títulos largos, permite reintentar y muestra el nue
       && duration.right <= bounds.right && duration.bottom <= bounds.bottom;
   })).toBe(true);
 
-  await page.getByRole("button", { name: "Siguiente disco", exact: true }).click();
+  await page.getByRole("button", { name: "Next listen", exact: true }).click();
   const shelf = page.getByRole("region", { name: "Discos guardados para seguir escuchando" });
+  await shelf.locator("[data-batea-tray]").hover({ position: { x: 10, y: 8 } });
   await shelf.getByRole("button", { name: /Frecuencia cero/ }).click();
   const detail = page.getByTestId("album-detail-page");
   await detail.getByRole("button", { name: "Reproducir Frecuencia cero", exact: true }).click();
