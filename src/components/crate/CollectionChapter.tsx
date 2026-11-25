@@ -23,6 +23,7 @@ import styles from "./CollectionChapter.module.css";
 export function CollectionChapter() {
   const [exploringArtist, setExploringArtist] = useState(false);
   const [artistExplorerVisited, setArtistExplorerVisited] = useState(false);
+  const [trayOpen, setTrayOpen] = useState(false);
   const { authenticated } = useSpotifyPlayer();
   const { scrollToChapter } = useRailActions();
   const { albums: cachedAlbums, collectionState, collectionError, collectionRetryAt, genresState, genresError, genresRetryAt, genresResolvedArtists, genresTotalArtists } = useCollectionCache();
@@ -37,6 +38,7 @@ export function CollectionChapter() {
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(12);
   const artistButtonRef = useRef<HTMLButtonElement>(null);
+  const trayButtonRef = useRef<HTMLButtonElement>(null);
   const [selected, setSelected] = useState<AlbumItem | null>(null);
   const [playErrorForAlbum, setPlayErrorForAlbum] = useState<{
     albumId: string;
@@ -269,11 +271,30 @@ export function CollectionChapter() {
         <nav className={styles.sectionNavigation} aria-label="Colección y artistas">
           <button type="button" className={styles.sectionActive} aria-current="page">Tu colección</button>
           <button ref={artistButtonRef} type="button" onClick={() => { setArtistExplorerVisited(true); setExploringArtist(true); }}>Buscar artista</button>
+          <button ref={trayButtonRef} type="button" aria-label={trayOpen ? "Ocultar Batea en Colección" : "Mostrar Batea en Colección"} aria-expanded={trayOpen} aria-controls="collection-batea" onClick={() => setTrayOpen((open) => !open)}>Batea (prototipo)</button>
         </nav>
         <span className={styles.meta} role="status" aria-live="polite">
           {collectionState === "error" ? "Colección no disponible" : loading ? "Cargando colección…" : `${filtered.length} ${filtered.length === 1 ? "disco" : "discos"}`}
         </span>
       </header>
+
+      {trayOpen && <section id="collection-batea" className={styles.trayPrototype} data-testid="collection-batea-prototype" aria-labelledby="collection-batea-title" onKeyDown={(event) => {
+        if (event.key !== "Escape" || event.defaultPrevented) return;
+        event.preventDefault();
+        setTrayOpen(false);
+        requestAnimationFrame(() => trayButtonRef.current?.focus({ preventScroll: true }));
+      }}>
+        <header className={styles.trayHeader}>
+          <div><h3 id="collection-batea-title">Batea en Colección</h3><p>Ubicación en prueba · tus discos guardados</p></div>
+          <button type="button" className={styles.pageButton} onClick={() => { setTrayOpen(false); requestAnimationFrame(() => trayButtonRef.current?.focus({ preventScroll: true })); }}>Cerrar Batea</button>
+        </header>
+        <div className={styles.trayAlbums} data-lenis-prevent tabIndex={0} aria-label="Discos guardados en la Batea">
+          {collectionState === "error" ? <p role="alert">{collectionError?.message}</p>
+            : loading ? <p role="status">Cargando discos guardados…</p>
+            : albums.length ? albums.map((album) => <JewelCaseFront key={album.id} album={album} presentation="collection" onSelect={() => handleSelect(album)} />)
+            : <p role="status">{authenticated === false ? "Conectá Spotify para ver tus discos guardados." : "La Batea está vacía."}</p>}
+        </div>
+      </section>}
 
       <div className={styles.toolbar}>
         <label className={styles.field}>

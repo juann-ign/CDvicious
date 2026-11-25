@@ -201,11 +201,11 @@ test("cerrar y reabrir durante la bisagra termina en el mismo albumId sin callba
   await artist(page);
   await next(page).click();
   await selected(page).click();
-  await expect(scene(page).locator('[data-presentation="open"]')).toBeVisible();
+  await expect(opened(page)).toHaveAttribute("data-presentation", "open");
   await view(page).getByRole("button", { name: "CERRAR CAJA", exact: true }).click();
   await expect(scene(page)).toHaveAttribute("data-mode", "selected");
   await view(page).getByRole("button", { name: "ABRIR CAJA", exact: true }).click();
-  await expect(scene(page).locator('[data-presentation="open"]')).toBeVisible();
+  await expect(opened(page)).toHaveAttribute("data-presentation", "open");
   await expect(opened(page)).toHaveAttribute("data-album-id", "demo-vertice-album-1");
   await expect(scene(page)).toHaveAttribute("data-mode", "open");
   await view(page).getByRole("button", { name: "CERRAR CAJA", exact: true }).click();
@@ -221,9 +221,14 @@ test("arrastre del fondo y cancelación liberan el rail; rueda conserva capítul
   const x = bounds.x + bounds.width * .6;
   const y = bounds.y + 4;
   expect(await page.evaluate(({ x, y }) => Boolean(document.elementFromPoint(x, y)?.closest("button, [data-gesture-owner]")), { x, y })).toBe(false);
+  const editionStep = await scene(page).locator('button[data-album-id][data-offset="0"], button[data-album-id][data-offset="1"]').evaluateAll((nodes) => {
+    const centres = nodes.map((node) => { const box = node.getBoundingClientRect(); return box.left + box.width / 2; });
+    return Math.abs(centres[1] - centres[0]);
+  });
+  expect(editionStep).toBeGreaterThan(0);
   await page.mouse.move(x, y);
   await page.mouse.down();
-  await page.mouse.move(x - 70, y, { steps: 8 });
+  await page.mouse.move(x - editionStep, y, { steps: 8 });
   await expect(scene(page)).toHaveAttribute("data-dragging", "true");
   await page.mouse.up();
   await expect(scene(page)).toHaveAttribute("data-dragging", "false");
@@ -285,7 +290,7 @@ test("cancelar arrastre del CD no abre otra caja ni deja bloqueado el rail", asy
     await cd.locator("..").dispatchEvent(event, { pointerId: 1, clientX: x + 22, clientY: y + 8 });
     await page.mouse.up();
     await expect(opened(page)).toHaveAttribute("data-album-id", "demo-vertice-album-1");
-    await expect(cd).toHaveAttribute("aria-pressed", "false");
+    await expect(cd).toHaveAttribute("data-inspecting", "false");
   }
   await page.getByRole("button", { name: "Ir al capítulo Batea" }).click();
   await expect.poll(() => page.locator("[data-rail-wrapper] > div > section").nth(2).evaluate((node) => Math.abs(node.getBoundingClientRect().left)), { timeout: 15000 }).toBeLessThan(2);
@@ -320,7 +325,7 @@ test("reproducción explícita, doble clic, vuelo y confirmación del Deck", asy
   let requests = 0;
   page.on("request", (request) => { if (request.url().endsWith("/api/play")) requests++; });
   await next(page).click();
-  await view(page).getByRole("button", { name: "REPRODUCIR DISCO ↗", exact: true }).dblclick();
+  await view(page).getByRole("button", { name: "REPRODUCIR ÁLBUM", exact: true }).dblclick();
   await expect(page.getByTestId("rail-flying-disc")).toBeVisible();
   await expect(page.getByTestId("deck-now-playing-artist")).not.toHaveText("Satélite Sur");
   await expect(page.getByTestId("deck-now-playing-artist")).toHaveText("Satélite Sur", { timeout: 20000 });
@@ -343,7 +348,7 @@ test("fallo de playback recupera artista, álbum y posición sin confirmar", asy
   await artist(page, "Satélite");
   await next(page).click();
   await page.route("**/api/play", (route) => route.fulfill({ status: 409, json: { success: false, message: "El dispositivo de Spotify no está disponible." } }));
-  await view(page).getByRole("button", { name: "REPRODUCIR DISCO ↗", exact: true }).click();
+  await view(page).getByRole("button", { name: "REPRODUCIR ÁLBUM", exact: true }).click();
   await expect(view(page).getByRole("alert")).toContainText("dispositivo");
   await expect(page.locator("html")).toHaveAttribute("data-chapter", "3");
   await expect(selected(page)).toHaveAttribute("data-album-id", "demo-satelite-album-1");
@@ -389,7 +394,7 @@ for (const size of [{ width: 1280, height: 800 }, { width: 1440, height: 900 }, 
       expect(box.height).toBeGreaterThan(100);
       expect(box.y).toBeGreaterThanOrEqual(frame.y - 1);
       expect(box.y + box.height).toBeLessThanOrEqual(frame.y + frame.height + 1);
-      for (const name of ["ABRIR CAJA", "REPRODUCIR DISCO ↗"]) await expect(view(page).getByRole("button", { name, exact: true })).toBeInViewport({ ratio: 1 });
+      for (const name of ["ABRIR CAJA", "REPRODUCIR ÁLBUM"]) await expect(view(page).getByRole("button", { name, exact: true })).toBeInViewport({ ratio: 1 });
       await page.screenshot({ path: `test-results/jewelcase-${size.width}x${size.height}-frontal.png`, animations: "disabled" });
       await view(page).getByRole("button", { name: "ABRIR CAJA", exact: true }).click();
       await expect(opened(page)).toBeVisible();
@@ -398,10 +403,15 @@ for (const size of [{ width: 1280, height: 800 }, { width: 1440, height: 900 }, 
       expect(open.x + open.width).toBeLessThanOrEqual(frame.x + frame.width + 1);
       expect(open.y).toBeGreaterThanOrEqual(frame.y - 1);
       expect(open.y + open.height).toBeLessThanOrEqual(frame.y + frame.height + 1);
-      for (const name of ["CERRAR CAJA", "GIRAR CD", "REPRODUCIR DISCO ↗"]) await expect(view(page).getByRole("button", { name, exact: true })).toBeInViewport({ ratio: 1 });
+      for (const part of ["jewel-case-tracklist", "jewel-case-tray", "artist-case-cd"]) {
+        const physical = await opened(page).getByTestId(part).boundingBox();
+        expect(physical.y).toBeGreaterThanOrEqual(frame.y - 1);
+        expect(physical.y + physical.height).toBeLessThanOrEqual(frame.y + frame.height + 1);
+      }
+      for (const name of ["CERRAR CAJA", "GIRAR CD", "REPRODUCIR ÁLBUM"]) await expect(view(page).getByRole("button", { name, exact: true })).toBeInViewport({ ratio: 1 });
       await assertShell(page);
       await expect(page.getByRole("dialog")).toHaveCount(0);
-      await expect(scene(page).locator('[data-presentation="open"]')).toBeVisible();
+      await expect(opened(page)).toHaveAttribute("data-presentation", "open");
       await page.screenshot({ path: `test-results/jewelcase-${size.width}x${size.height}-abierta.png`, animations: "disabled" });
     });
   });
@@ -418,6 +428,8 @@ test("pocos álbumes y títulos largos conservan selección, controles y texto",
   await view(page).getByRole("button", { name: "ABRIR CAJA", exact: true }).click();
   await expect(opened(page)).toHaveAttribute("data-album-id", "long-b");
   await expect(opened(page).getByRole("heading").first()).toHaveText(title);
+  await expect(opened(page)).toHaveAttribute("data-presentation", "open");
+  expect(await opened(page).getByRole("list", { name: "Lista de pistas", exact: true }).evaluate((node) => node.clientHeight)).toBeGreaterThan(30);
   await assertShell(page);
   await expect(view(page).getByRole("button", { name: "CERRAR CAJA", exact: true })).toBeInViewport({ ratio: 1 });
 });

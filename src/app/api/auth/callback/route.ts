@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { exchangeCodeForTokens } from "@/lib/spotify";
 import { setSession } from "@/lib/session";
+import { AUTH_RETURN_COOKIE, safeAuthReturn } from "@/lib/entryNavigation";
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -13,10 +14,12 @@ export async function GET(request: NextRequest) {
   const homeUrl = new URL("/", process.env.APP_URL?.trim()
     || process.env.SPOTIFY_REDIRECT_URI?.trim() || request.nextUrl.origin);
   const redirectHome = (error?: string) => {
-    const target = new URL(homeUrl);
+    const destination = safeAuthReturn(request.cookies.get(AUTH_RETURN_COOKIE)?.value ?? null, homeUrl.origin);
+    const target = error ? new URL(homeUrl) : new URL(destination ?? "/?entry=collection", homeUrl);
     if (error) target.searchParams.set("auth_error", error);
     const response = NextResponse.redirect(target);
     response.cookies.delete("sp_oauth_state");
+    response.cookies.delete(AUTH_RETURN_COOKIE);
     return response;
   };
 

@@ -8,6 +8,7 @@ import {
 } from "@/lib/clientProfile";
 import { useSpotifyPlayer } from "./SpotifyPlayerProvider";
 import styles from "./UserProfileChip.module.css";
+import { SIGNED_IN_TAB_KEY } from "@/lib/entryNavigation";
 
 export function UserProfileChip() {
   const { authenticated } = useSpotifyPlayer();
@@ -131,6 +132,7 @@ export function UserProfileChip() {
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
+    try { window.sessionStorage.removeItem(SIGNED_IN_TAB_KEY); } catch { /* storage may be unavailable */ }
     window.location.reload();
   }
 

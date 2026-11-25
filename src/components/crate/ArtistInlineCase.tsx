@@ -1,49 +1,49 @@
 "use client";
 
-import { useLayoutEffect, useRef, type ComponentProps } from "react";
-import gsap from "gsap";
+import { useLayoutEffect, useRef, useState, type ComponentProps } from "react";
 import { ArtistJewelCaseDetail } from "./ArtistJewelCaseDetail";
 import styles from "./ArtistDiscography.module.css";
 
-type Props = ComponentProps<typeof ArtistJewelCaseDetail> & { expanded: boolean; onClosed: () => void };
+type Props = Omit<ComponentProps<typeof ArtistJewelCaseDetail>, "open" | "onOpened" | "onClosed"> & { expanded: boolean; onClosed: () => void };
 
-// Killing a timeline preserves its current transforms. A quick close/reopen
-// therefore reverses the same hinge instead of replaying an obsolete callback.
+// The scene reserves the neighbouring space first; the exact modal hinge and
+// its completion/cancellation live in JewelCasePresentation, not in this shell.
 export function ArtistInlineCase({ expanded, onClosed, ...detail }: Props) {
-  const root = useRef<HTMLDivElement>(null);
-  const initialized = useRef(false);
+  const [hingeOpen, setHingeOpen] = useState(false);
+  const [phase, setPhase] = useState("reserving");
+  const expandedRef = useRef(expanded);
+  const hingeRef = useRef(false);
+  expandedRef.current = expanded;
   useLayoutEffect(() => {
-    const element = root.current;
-    const lid = element?.querySelector("section");
-    if (!element || !lid) return;
-    if (!initialized.current) {
-      gsap.set(lid, { rotateY: 165 });
-      gsap.set(element, { opacity: 0 });
-      initialized.current = true;
-    }
-    element.dataset.presentation = expanded ? "opening" : "closing";
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      gsap.set(lid, { rotateY: expanded ? 0 : 165 });
-      gsap.set(element, { opacity: expanded ? 1 : 0 });
-      element.dataset.presentation = expanded ? "open" : "closed";
-      if (!expanded) onClosed();
-      return;
-    }
-    const timeline = gsap.timeline({ onComplete: () => {
-      element.dataset.presentation = expanded ? "open" : "closed";
-      if (!expanded) onClosed();
-    } });
+    let timer = 0;
     if (expanded) {
-      // Finish reserving the two-case footprint before unfolding the lid.
-      timeline.to(element, { opacity: 1, duration: .12 }, .34)
-        .to(lid, { rotateY: 0, duration: .65, ease: "power2.inOut" }, .34);
+      setPhase("reserving");
+      const unfold = () => {
+        hingeRef.current = true;
+        setPhase("opening");
+        setHingeOpen(true);
+      };
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) unfold();
+      else timer = window.setTimeout(unfold, 330);
     } else {
-      timeline.to(lid, { rotateY: 165, duration: .35, ease: "power2.inOut" })
-        .to(element, { opacity: 0, duration: .12 });
+      setPhase("closing");
+      if (!hingeRef.current) { setPhase("closed"); onClosed(); }
+      else { hingeRef.current = false; setHingeOpen(false); }
     }
-    return () => { timeline.kill(); };
+    return () => window.clearTimeout(timer);
   }, [expanded, onClosed]);
-  return <div ref={root} className={styles.openCase} data-presentation="opening" inert={!expanded}>
-    <ArtistJewelCaseDetail {...detail} active={detail.active && expanded} />
+  return <div className={styles.openCase} data-testid="artist-inline-case" data-album-id={detail.album.id} data-presentation={phase} data-gesture-owner="detail" inert={!expanded}
+    onClick={(event) => event.stopPropagation()} onPointerDown={(event) => event.stopPropagation()}>
+    <ArtistJewelCaseDetail {...detail} active={detail.active && expanded} open={hingeOpen}
+      onOpened={() => {
+        if (!expandedRef.current) return;
+        setPhase("open");
+        if (detail.active && !detail.pending) detail.discRef.current?.focus({ preventScroll: true });
+      }}
+      onClosed={() => {
+        if (expandedRef.current) return;
+        setPhase("closed");
+        onClosed();
+      }} />
   </div>;
 }

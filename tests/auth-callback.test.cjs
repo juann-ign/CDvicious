@@ -4,6 +4,10 @@ const fs = require("node:fs");
 const vm = require("node:vm");
 const ts = require("typescript");
 const { NextResponse } = require("next/server");
+const entryModule = { exports: {} };
+vm.runInNewContext(ts.transpileModule(fs.readFileSync("src/lib/entryNavigation.ts", "utf8"), {
+  compilerOptions: { module: ts.ModuleKind.CommonJS },
+}).outputText, { module: entryModule, exports: entryModule.exports, URL, URLSearchParams });
 
 function callback({ exchange, save = async () => {}, env = {} }) {
   const module = { exports: {} };
@@ -18,15 +22,16 @@ function callback({ exchange, save = async () => {}, env = {} }) {
       "next/server": { NextResponse },
       "@/lib/spotify": { exchangeCodeForTokens: exchange },
       "@/lib/session": { setSession: save },
+      "@/lib/entryNavigation": entryModule.exports,
     })[name],
   });
   return { GET: module.exports.GET, messages };
 }
 
-function request(state = "matching") {
+function request(state = "matching", returnTo) {
   return {
     nextUrl: new URL(`http://127.0.0.1:3002/api/auth/callback?code=one-use-code&state=${state}`),
-    cookies: { get: () => ({ value: "matching" }) },
+    cookies: { get: (name) => name === "sp_oauth_state" ? { value: "matching" } : name === "sp_oauth_return" && returnTo ? { value: returnTo } : undefined },
   };
 }
 
@@ -41,7 +46,7 @@ test("callback sin APP_URL guarda la sesión y vuelve al origen sin falso error 
   });
   const response = await api.GET(request());
   assert.equal(response.status, 307);
-  assert.equal(response.headers.get("location"), "http://127.0.0.1:3002/");
+  assert.equal(response.headers.get("location"), "http://127.0.0.1:3002/?entry=collection");
   assert.equal(saved.accessToken, "private-access");
   assert.equal(saved.refreshToken, "private-refresh");
   assert.match(response.headers.get("set-cookie"), /sp_oauth_state=;/);
@@ -53,6 +58,7 @@ test("state inválido no intercambia el código y limpia la cookie", async () =>
   const response = await api.GET(request("different"));
   assert.equal(response.headers.get("location"), "http://127.0.0.1:3002/?auth_error=invalid_state");
   assert.match(response.headers.get("set-cookie"), /sp_oauth_state=;/);
+  assert.match(response.headers.get("set-cookie"), /sp_oauth_return=;/);
 });
 
 test("callback conserva 127.0.0.1 del redirect configurado si Next normaliza el origen a localhost", async () => {
@@ -63,7 +69,7 @@ test("callback conserva 127.0.0.1 del redirect configurado si Next normaliza el 
   const incoming = request();
   incoming.nextUrl = new URL(incoming.nextUrl.href.replace("127.0.0.1", "localhost"));
   const response = await api.GET(incoming);
-  assert.equal(response.headers.get("location"), "http://127.0.0.1:3002/");
+  assert.equal(response.headers.get("location"), "http://127.0.0.1:3002/?entry=collection");
 });
 
 test("rechazo real de Spotify redirige con error absoluto y registra solo el status", async () => {
@@ -83,4 +89,20 @@ test("fallo al guardar cookies se distingue del intercambio y respeta APP_URL co
   const response = await api.GET(request());
   assert.equal(response.headers.get("location"), "https://cd.example/?auth_error=session_failed");
   assert.equal(JSON.stringify(api.messages).includes("private-access"), false);
+});
+
+test("callback de reautenticación vuelve al capítulo guardado y consume ambas cookies OAuth", async () => {
+  const api = callback({ exchange: async () => ({ access_token: "private-access", refresh_token: "private-refresh", expires_in: 3600 }) });
+  const response = await api.GET(request("matching", "/?chapter=split&entry=collection"));
+  assert.equal(response.headers.get("location"), "http://127.0.0.1:3002/?chapter=1");
+  assert.match(response.headers.get("set-cookie"), /sp_oauth_state=;/);
+  assert.match(response.headers.get("set-cookie"), /sp_oauth_return=;/);
+});
+
+test("callback nunca usa un destino externo o un capítulo inventado", async () => {
+  const api = callback({ exchange: async () => ({ access_token: "private-access", refresh_token: "private-refresh", expires_in: 3600 }) });
+  for (const destination of ["https://evil.example/?chapter=1", "//evil.example/?chapter=1", "/?chapter=99", "/account?chapter=1", "/\\evil.example/?chapter=1"]) {
+    const response = await api.GET(request("matching", destination));
+    assert.equal(response.headers.get("location"), "http://127.0.0.1:3002/?entry=collection");
+  }
 });

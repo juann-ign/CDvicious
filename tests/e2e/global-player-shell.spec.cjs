@@ -152,7 +152,7 @@ for (const [width, height] of sizes) {
       const jewelcase = await page.getByTestId("artist-selected-case").boundingBox();
       expect(jewelcase.y).toBeGreaterThanOrEqual(scene.y - 1);
       expect(jewelcase.y + jewelcase.height).toBeLessThanOrEqual(scene.y + scene.height + 1);
-      for (const name of ["ABRIR CAJA", "REPRODUCIR DISCO ↗"]) {
+      for (const name of ["ABRIR CAJA", "REPRODUCIR ÁLBUM"]) {
         await expect(discography.getByRole("button", { name, exact: true })).toBeInViewport({ ratio: 1 });
       }
       await page.screenshot({ path: path.join(evidence, `${prefix}-discography.png`), animations: "disabled" });
@@ -167,7 +167,8 @@ for (const [width, height] of sizes) {
       expect(bounds.y + bounds.height).toBeLessThanOrEqual(height - 128);
       await assertShell(page, width, height);
       expect(await geometry(page)).toEqual(initial);
-      await expect(page.getByTestId("artist-disc-scene").locator('[data-presentation="open"]')).toBeVisible();
+      await expect(inlineCase).toBeVisible();
+      await expect(inlineCase).toHaveAttribute("data-presentation", "open");
       await page.screenshot({ path: path.join(evidence, `${prefix}-album.png`), animations: "disabled" });
       await page.keyboard.press("Escape");
       await expect(inlineCase).toHaveCount(0);
@@ -183,7 +184,7 @@ for (const [width, height] of sizes) {
         }
       });
       await expect(page.getByTestId("deck-now-playing-track")).toHaveText("INSERT DISC");
-      await discography.getByRole("button", { name: "REPRODUCIR DISCO ↗", exact: true }).click();
+      await discography.getByRole("button", { name: "REPRODUCIR ÁLBUM", exact: true }).click();
       await expect(page.getByTestId("rail-flying-disc")).toBeVisible();
       await expect(page.getByTestId("deck-now-playing-track")).toHaveText("INSERT DISC");
       await assertShell(page, width, height);

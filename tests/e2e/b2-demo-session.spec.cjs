@@ -166,7 +166,7 @@ test("mock normal: Explorar artista reproduce y avanza dentro del álbum elegido
   await expect(page.getByTestId("artist-selected-case")).toHaveAttribute("data-album-id", CAMPO.id);
   await page.getByTestId("artist-selected-case").click();
   await expect(page.getByTestId("artist-inline-case")).toHaveAttribute("data-album-id", CAMPO.id);
-  await view.getByRole("button", { name: "REPRODUCIR DISCO ↗", exact: true }).click();
+  await view.getByRole("button", { name: "REPRODUCIR ÁLBUM", exact: true }).click();
   await expectConfirmedAlbum(page, CAMPO);
   await go(page, "Split", 1);
   await expectTrack(page, CAMPO, tracks.orbita);

@@ -7,6 +7,7 @@ import { MixtapeChapter } from "@/components/crate/MixtapeChapter";
 import { ChapterNavigation } from "./ChapterNavigation";
 import { DeckPinnedLayer } from "./DeckPinnedLayer";
 import { RailProvider } from "./RailContext";
+import { RailEntryNavigation } from "./RailEntryNavigation";
 import styles from "./HorizontalRail.module.css";
 
 const DESKTOP_QUERY = "(min-width: 761px)";
@@ -44,6 +45,7 @@ export function HorizontalRail({ fallback }: { fallback: ReactNode }) {
       overlay={<DeckPinnedLayer />}
       navigation={<ChapterNavigation />}
     >
+      <RailEntryNavigation />
       {PANELS.map((panel) => (
         <section
           key={panel.id}
