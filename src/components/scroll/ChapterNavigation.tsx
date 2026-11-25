@@ -19,7 +19,7 @@ export function ChapterNavigation() {
   return (
     <header className={styles.shellHeader} data-shell-header>
       <div className={styles.brand}>CD<span>vicious</span></div>
-      <nav className={styles.navigation} aria-label="Navegación por capítulos">
+      <nav className={styles.navigation} aria-label="Navegación por capítulos" data-hardware-front="navigation">
         {CHAPTERS.map((chapter, index) => {
           const active = index === activeChapterIndex;
 

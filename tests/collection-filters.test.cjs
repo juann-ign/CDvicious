@@ -8,7 +8,7 @@ const { makeAlbum, complete, partial, empty } = require("./fixtures/collection-f
 function load(path, dependencies = {}, globals = {}) {
   const module = { exports: {} };
   const source = ts.transpileModule(fs.readFileSync(path, "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
-  vm.runInNewContext(source, { module, exports: module.exports, require: (name) => dependencies[name], URL, URLSearchParams, Response, Request, Date, Number, setTimeout, clearTimeout, console, ...globals });
+  vm.runInNewContext(source, { module, exports: module.exports, require: (name) => dependencies[name] ?? (name === "./searchText" ? load("src/lib/searchText.ts") : undefined), URL, URLSearchParams, Response, Request, Date, Number, setTimeout, clearTimeout, console, ...globals });
   return module.exports;
 }
 const plain = (value) => JSON.parse(JSON.stringify(value));

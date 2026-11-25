@@ -31,7 +31,7 @@
 
 :root {
   --type-ui-font: var(--font-ui);
-  --type-ui-size: var(--text-md);
+  --type-ui-size: var(--text-control);
   --type-ui-weight: var(--weight-regular);
   --type-ui-spacing: var(--tracking-wider);
   --type-ui-leading: var(--leading-tight);
@@ -45,7 +45,7 @@
 
 :root {
   --type-ui-small-font: var(--font-ui);
-  --type-ui-small-size: var(--text-sm);
+  --type-ui-small-size: var(--text-caption);
   --type-ui-small-weight: var(--weight-regular);
   --type-ui-small-spacing: var(--tracking-wide-2);
   --type-ui-small-leading: var(--leading-tight);
@@ -129,7 +129,7 @@
 
 :root {
   --type-lyrics-font: var(--font-editorial);
-  --type-lyrics-size: var(--text-lg);
+  --type-lyrics-size: var(--text-reading-large);
   --type-lyrics-weight: var(--weight-regular);
   --type-lyrics-spacing: var(--tracking-normal);
   --type-lyrics-leading: var(--leading-readable);
@@ -166,6 +166,12 @@
   letter-spacing: var(--type-ui-spacing);
   line-height: var(--type-ui-leading);
   color: var(--type-ui-color);
+}
+
+.type-reading {
+  font-family: var(--font-ui);
+  font-size: var(--text-reading);
+  line-height: var(--leading-readable);
 }
 
 .type-ui-small {

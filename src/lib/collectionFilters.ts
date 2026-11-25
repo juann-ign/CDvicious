@@ -1,4 +1,5 @@
 import type { AlbumItem } from "@/types/crate";
+import { normalizeSearchText } from "./searchText";
 
 export type CollectionFilterOption = { id: string; label: string; count: number };
 
@@ -25,7 +26,7 @@ export function normalizeGenres(values: unknown): string[] {
 
 // Spotify dates have year, month or day precision. Reject malformed calendar
 // values instead of silently assigning them to an older decade.
-export function collectionDecade(date: unknown): string {
+export function collectionYear(date: unknown): string {
   if (typeof date !== "string") return "unknown";
   const match = /^(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?$/.exec(date);
   if (!match) return "unknown";
@@ -35,7 +36,12 @@ export function collectionDecade(date: unknown): string {
   if (year < 1 || month < 1 || month > 12 || day < 1) return "unknown";
   const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
   const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-  return day <= days[month - 1] ? `${Math.floor(year / 10) * 10}s` : "unknown";
+  return day <= days[month - 1] ? match[1] : "unknown";
+}
+
+export function collectionDecade(date: unknown): string {
+  const year = collectionYear(date);
+  return year === "unknown" ? year : `${Math.floor(Number(year) / 10) * 10}s`;
 }
 
 export function collectionDecades(albums: readonly AlbumItem[]): CollectionFilterOption[] {
@@ -57,10 +63,24 @@ export function collectionGenres(albums: readonly AlbumItem[]): CollectionFilter
     .map(([id, count]) => ({ id, label: id.toLocaleUpperCase(), count }));
 }
 
-export function filterCollection(albums: readonly AlbumItem[], query: string, decade: string, genre: string): AlbumItem[] {
-  const term = query.trim().toLocaleLowerCase();
+export function collectionYears(albums: readonly AlbumItem[], decade = "all"): CollectionFilterOption[] {
+  const available = albums.filter((album) => decade === "all" || collectionDecade(album.release_date) === decade);
+  const counts = new Map<string, number>();
+  for (const album of available) {
+    const year = collectionYear(album.release_date);
+    counts.set(year, (counts.get(year) ?? 0) + 1);
+  }
+  return [{ id: "all", label: "TODOS", count: available.length }, ...[...counts.keys()]
+    .filter((year) => year !== "unknown").sort((a, b) => Number(b) - Number(a))
+    .map((id) => ({ id, label: id, count: counts.get(id)! })),
+  ...(counts.has("unknown") ? [{ id: "unknown", label: "SIN FECHA", count: counts.get("unknown")! }] : [])];
+}
+
+export function filterCollection(albums: readonly AlbumItem[], query: string, decade: string, genre: string, year = "all"): AlbumItem[] {
+  const term = normalizeSearchText(query);
   const normalizedGenre = normalizeGenres([genre])[0];
-  return albums.filter((album) => (!term || album.name.toLocaleLowerCase().includes(term) || album.artists.some((artist) => artist.name.toLocaleLowerCase().includes(term)))
+  return albums.filter((album) => (!term || normalizeSearchText(album.name).includes(term) || album.artists.some((artist) => normalizeSearchText(artist.name).includes(term)))
     && (decade === "all" || collectionDecade(album.release_date) === decade)
+    && (year === "all" || collectionYear(album.release_date) === year)
     && (genre === "all" || normalizeGenres(album.genres).includes(normalizedGenre)));
 }

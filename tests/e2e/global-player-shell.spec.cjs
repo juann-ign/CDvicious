@@ -90,7 +90,7 @@ for (const [width, height] of sizes) {
           const collection = panels(page).nth(3);
           await expect(collection.getByRole("button", { name: /— Neon Rooms$/ })).toBeVisible();
           await expect(collection.getByRole("searchbox", { name: "Buscar artista o álbum" })).toBeInViewport({ ratio: 1 });
-          await expect(collection.getByRole("button", { name: "SIGUIENTE ►" })).toBeInViewport({ ratio: 1 });
+          await expect(collection.getByRole("button", { name: "Siguiente", exact: true })).toBeInViewport({ ratio: 1 });
           expect(await collection.locator('[class*="gridFrame"]').evaluate((node) => {
             const frame = node.getBoundingClientRect();
             return [...node.querySelectorAll("button")].every((card) => {
@@ -141,7 +141,7 @@ for (const [width, height] of sizes) {
 
       await go(page, 3);
       const collection = panels(page).nth(3);
-      await collection.getByRole("button", { name: /EXPLORAR ARTISTA/ }).click();
+      await collection.getByRole("button", { name: "Buscar artista", exact: true }).click();
       await page.getByRole("searchbox", { name: "Buscar artistas", exact: true }).fill("Vértice");
       await page.locator('[aria-label="Resultados de artistas"]').getByRole("button").first().click();
       const discography = page.getByTestId("artist-discography");

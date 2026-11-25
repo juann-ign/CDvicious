@@ -154,7 +154,7 @@ test("mock normal: álbum, pista siguiente, cambio rápido, letra larga y estado
 test("mock normal: Explorar artista reproduce y avanza dentro del álbum elegido", async ({ page }) => {
   await openRail(page);
   await go(page, "Colección", 3);
-  await collection(page).getByRole("button", { name: /EXPLORAR ARTISTA/ }).click();
+  await collection(page).getByRole("button", { name: "Buscar artista", exact: true }).click();
   await page.getByRole("searchbox", { name: "Buscar artistas", exact: true }).fill("Vértice");
   await collection(page).locator('[aria-label="Resultados de artistas"]').getByRole("button").first().click();
   const view = page.getByTestId("artist-discography");
@@ -179,22 +179,24 @@ test("mock normal: Explorar artista reproduce y avanza dentro del álbum elegido
 test("mock normal: búsqueda, género compartido y década combinan el catálogo de sesión", async ({ page }) => {
   await openRail(page);
   await go(page, "Colección", 3);
-  await expect(cards(page)).toHaveCount(21);
-  await collection(page).getByRole("button", { name: "CARGAR GÉNEROS", exact: true }).click();
+  await expect(cards(page)).toHaveCount(6);
+  await expect(collection(page).locator("header [role=status]")).toHaveText("21 discos");
+  await collection(page).getByRole("button", { name: "Cargar géneros", exact: true }).click();
   const genres = collection(page).locator('[aria-label="Filtrar por género"]');
   const decades = collection(page).locator('[aria-label="Filtrar por década"]');
-  await genres.getByRole("button", { name: "ELECTRONIC", exact: true }).click();
-  await decades.getByRole("button", { name: "1990s", exact: true }).click();
+  await genres.selectOption("electronic");
+  await decades.selectOption("1990s");
   await expect(cards(page)).toHaveCount(2); // Vértice and Satélite share this genre.
   await collection(page).getByRole("searchbox", { name: "Buscar artista o álbum", exact: true }).fill("Vértice");
   await expect(cards(page)).toHaveCount(1);
   await expect(cards(page)).toHaveAccessibleName(`${CAMPO.artist} — ${CAMPO.name}`);
-  await genres.getByRole("button", { name: "TODOS", exact: true }).click();
+  await genres.selectOption("all");
   await expect(cards(page)).toHaveCount(1);
-  await decades.getByRole("button", { name: "2020s", exact: true }).click();
+  await decades.selectOption("2020s");
   await expect(cards(page)).toHaveCount(1);
   await expect(cards(page)).toHaveAccessibleName(`${NEON.artist} — ${NEON.name}`);
-  await collection(page).getByRole("button", { name: "LIMPIAR FILTROS", exact: true }).click();
-  await expect(cards(page)).toHaveCount(21);
+  await collection(page).getByRole("button", { name: "Limpiar filtros", exact: true }).click();
+  await expect(cards(page)).toHaveCount(6);
+  await expect(collection(page).locator("header [role=status]")).toHaveText("21 discos");
   expect(providerRequests).toEqual([]);
 });

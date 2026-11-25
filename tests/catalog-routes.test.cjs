@@ -6,7 +6,7 @@ const ts = require("typescript");
 function load(path, dependencies, globals = {}) {
   const module = { exports: {} };
   const js = ts.transpileModule(fs.readFileSync(path, "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
-  vm.runInNewContext(js, { module, exports: module.exports, require: (name) => dependencies[name], URL, URLSearchParams, Response, Request, Number, Date, ...globals });
+  vm.runInNewContext(js, { module, exports: module.exports, require: (name) => dependencies[name] ?? (name === "@/lib/searchText" ? load("src/lib/searchText.ts", {}) : undefined), URL, URLSearchParams, Response, Request, Number, Date, ...globals });
   return module.exports;
 }
 const next = { NextResponse: { json: (value, options) => Response.json(value, options) } };

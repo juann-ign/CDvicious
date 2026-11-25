@@ -20,7 +20,7 @@ test.beforeEach(async ({ page }) => {
   }
 });
 async function search(page, query) {
-  await collection(page).getByRole("button", { name: /EXPLORAR ARTISTA/ }).click();
+  await collection(page).getByRole("button", { name: "Buscar artista", exact: true }).click();
   await page.getByRole("searchbox", { name: "Buscar artistas", exact: true }).fill(query);
   await expect(results(page).getByRole("button").first()).toBeVisible();
 }
@@ -83,7 +83,7 @@ test("buscar explícitamente, paginar, abrir inline y conservar colección, arti
   await expect(slider(page)).toHaveValue("3");
   await view(page).getByRole("button", { name: /TU COLECCIÓN/ }).click();
   await expect(filter).toHaveValue("Nocturnal");
-  await collection(page).getByRole("button", { name: /EXPLORAR ARTISTA/ }).click();
+  await collection(page).getByRole("button", { name: "Buscar artista", exact: true }).click();
   await expect(selected(page)).toHaveAttribute("data-album-id", albumId);
   await expect(selected(page)).toBeFocused();
 });

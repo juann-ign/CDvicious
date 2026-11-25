@@ -37,6 +37,12 @@
   --text-xl: 18px;
   --text-2xl: 20px;
   --text-3xl: 24px;
+  /* Shared reading and hardware roles. Families and phosphor colors stay local. */
+  --text-reading: 17px;
+  --text-reading-large: 18px;
+  --text-control: 14px;
+  --text-caption: 14px;
+  --text-heading: 24px;
   --tracking-tight: -0.3px;
   --tracking-normal: 0;
   --tracking-wide: 1px;
@@ -52,8 +58,8 @@
   /* BOOKLET TYPOGRAPHY */
   --booklet-title-size: clamp(16px, 1.45vw, 18px);
   --booklet-meta-size: var(--text-sm);
-  --booklet-body-size: 15px;
-  --booklet-body-line-height: 1.42;
+  --booklet-body-size: var(--text-reading-large);
+  --booklet-body-line-height: 1.38;
   --booklet-body-letter-spacing: -0.05px;
 
   /* SPACING */
@@ -107,6 +113,10 @@
   --header-height: 72px;
   --content-max-width: 1500px;
   --vfd-max-width: 620px;
+  --material-silver: repeating-linear-gradient(0deg, #ffffff08 0 1px, #374b4205 1px 3px), linear-gradient(115deg, #bcc4c2, #9eaaa8 45%, #c4ccca 72%, #adb7b9);
+  --hardware-front: linear-gradient(180deg, #202522, var(--color-vfd-bg) 34%, #151916);
+  --hardware-button: linear-gradient(180deg, #343b36, #1d221f 64%, #171b18);
+  --hardware-inset: inset 0 2px 5px #0009, inset 0 -1px #e5eee31c;
   --disc-min-size: 460px;
   --disc-max-size: 620px;
   --booklet-width: 540px;

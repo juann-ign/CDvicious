@@ -10,6 +10,21 @@
   transition: transform var(--transition-fast);
 }
 
+.caseFace { position: absolute; inset: 0; display: block; }
+
+/* The Collection uses the same cover, acrylic edge and reflections face on.
+   The default presentation used by Batea keeps its existing footprint. */
+.collectionCase { display: flex; flex-direction: column; aspect-ratio: auto; color: #27362b; text-align: left; }
+.collectionCase .caseFace { position: relative; inset: auto; width: 100%; aspect-ratio: 1.08; background: linear-gradient(135deg, #e4efea99, #7b8d8566 52%, #f1f7efbb); border: 2px ridge #d2ddd6; box-shadow: 2px 4px 5px #27382f4d; }
+.collectionCase .caseFace::before { content: ""; position: absolute; top: 2px; bottom: 2px; left: 2px; width: 9px; background: repeating-linear-gradient(90deg, #25382c 0 1px, #b5c1b999 1px 2px); border-right: 1px solid #eef4e5aa; }
+.collectionCase .cover { position: absolute; top: 3px; bottom: 3px; left: 13px; right: 3px; width: auto; height: auto; }
+.collectionCase .edge { border: 1px solid #33443b; box-shadow: inset 0 0 0 2px #f2fff13b, inset -3px 0 6px #ffffff3b, inset 3px 0 7px #18291f54; }
+.details { display: flex; flex-direction: column; width: 100%; min-width: 0; padding-top: 6px; font-family: var(--font-ui); }
+.details strong, .details > span, .details small { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-weight: 400; }
+.details strong { font-size: var(--text-reading, 17px); line-height: 1.15; color: #202d25; }
+.details > span { font-size: 16px; line-height: 1.15; color: #34432e; }
+.details small { font-size: var(--text-caption, 14px); line-height: 1.2; color: #42513b; }
+
 .case:hover,
 .case:focus-visible {
   transform: translateY(-3px);

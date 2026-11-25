@@ -283,21 +283,27 @@ test("búsqueda y filtros de Colección siguen accesibles con ventana baja y esc
   await search.fill("Neon Rooms");
   await expect(neonRooms.first()).toBeVisible();
 
-  await collection.getByRole("button", { name: "2010s", exact: true }).click();
+  const filter = collection.getByRole("combobox", { name: "Filtrar por década", exact: true });
+  await filter.selectOption("2010s");
   await expect(neonRooms).toHaveCount(0);
-  await collection.getByRole("button", { name: "TODAS", exact: true }).click();
+  await filter.selectOption("all");
   await search.fill("");
 
   // CSS zoom scales layout but does not operate the browser chrome zoom control.
   await page.evaluate(() => { document.documentElement.style.zoom = "125%"; });
   await expect(search).toBeVisible();
-  const nextPage = page.getByRole("button", { name: "SIGUIENTE ►" });
+  const nextPage = page.getByRole("button", { name: "Siguiente", exact: true });
   await expect(nextPage).toBeVisible();
-  await expect(nextPage).toBeDisabled();
+  await expect(nextPage).toBeEnabled();
+  await nextPage.click();
+  await expect(collection).toContainText("Página 2 de 4");
+  await expect(collection.getByRole("button", { name: "Anterior", exact: true })).toBeEnabled();
 
-  const filter = collection.getByRole("button", { name: "TODAS", exact: true });
   const box = await filter.boundingBox();
   expect(box).not.toBeNull();
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
   await expect(filter).toBeVisible();
+  await expect(filter).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(filter).toHaveValue("all");
 });

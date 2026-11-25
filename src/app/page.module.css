@@ -9,6 +9,7 @@
   align-items: center;
   width: 100%;
   min-height: 100vh;
+  padding-bottom: var(--shell-player-height);
   box-sizing: border-box;
   color: var(--color-bg);
   background-color: var(--color-bg);
@@ -138,12 +139,14 @@
 }
 
 .nowPlayingDock {
-  position: relative;
+  position: fixed;
+  inset: auto 0 0;
   flex-shrink: 0;
   display: flex;
   justify-content: center;
   width: 100%;
-  padding: var(--space-4) var(--space-6) var(--space-5);
+  height: var(--shell-player-height);
+  padding: 0;
   z-index: var(--z-controls);
 }
 

@@ -87,6 +87,14 @@
 .resultImage img { width: 46px; height: 46px; object-fit: contain; }
 .searchPagination { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-top: 16px; font-size: 12px; }
 .searchPagination button { padding: 8px 12px; }
+.searchView { font-size: var(--text-reading, 17px); }
+.searchView h2 { font-size: 34px; }
+.searchView p { font-size: var(--text-reading, 17px); line-height: 1.5; }
+.searchView .breadcrumb button, .searchLabel, .searchPagination { font-size: var(--text-control, 14px); }
+.searchLabel input { font-size: var(--text-reading, 17px); padding: 12px; }
+.searchView .results button { font-size: var(--text-reading, 17px); }
+.searchView .results small, .searchView .sourceNote { font-size: var(--text-caption, 14px) !important; }
+.searchView .sourceNote { padding-top: 16px; }
 .sourceNote { margin-top: auto; padding-top: 22px; font-size: 11px !important; color: #4b594c; }
 .spotifyLink { margin-top: auto; font-size: 9px; }
 /* Shared with the existing catalog-disc flight, and the inline CD. */

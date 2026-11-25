@@ -1,342 +1,156 @@
-/* =========================================================
-   CDVICIOUS — NOW PLAYING / VFD
-   ========================================================= */
-
-/* =========================================================
-   CHASSIS
-   ========================================================= */
-
+/* The display and transport are one recessed front inside the shared silver plate. */
 .chassis {
   box-sizing: border-box;
-  background-color: var(--color-surface);
-
-  padding: var(--space-5);
-
-  border-top: 3px solid var(--color-surface-raised);
-
-  box-shadow: var(--shadow-hardware-heavy), var(--shadow-inset);
-
-  display: flex;
-  flex-direction: column;
-
-  gap: var(--space-5);
-
   width: 100%;
-  max-width: var(--vfd-max-width);
+  height: var(--shell-player-height);
+  padding: 14px 24px;
+  border-top: 2px solid #d4dfd254;
+  border-radius: 0;
+  background: var(--material-silver);
+  box-shadow: inset 0 2px #f1f4ed8a, inset 0 -3px #767e80;
 }
-
-/* =========================================================
-   VFD DISPLAY
-   ========================================================= */
-
-.vfdDisplay {
-  box-sizing: border-box;
+.globalChassis { height: 100%; }
+.front {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  align-items: center;
+  gap: 20px;
   width: 100%;
-
-  padding: var(--space-3) var(--space-5);
-
-  background: var(--color-vfd-bg);
-
-  border: 2px inset var(--color-vfd-border);
-
-  box-shadow: var(--shadow-inset-dark), var(--shadow-vfd);
-
+  height: 100%;
+  min-width: 0;
+  padding: 8px 16px;
+  background: var(--hardware-front);
+  border: 1px solid #0b100b;
+  box-shadow: var(--hardware-inset), 0 1px #eef4e875;
+}
+.vfdDisplay {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, .65fr);
+  grid-template-rows: 32px 24px;
+  column-gap: 24px;
+  align-content: center;
+  width: 100%;
+  height: 76px;
+  min-width: 0;
+  padding: 0 16px 0 0;
+  border-right: 1px solid #55614b55;
   font-family: var(--font-ui);
 }
-
-/* =========================================================
-   VFD TRACK
-   ========================================================= */
-
 .vfdTrackName {
-  font-family: var(--type-vfd-font);
-  font-size: clamp(26px, 1.8vw, 32px);
-  font-weight: var(--type-vfd-weight);
-  letter-spacing: var(--type-vfd-spacing);
-  line-height: var(--type-vfd-leading);
-
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 0;
   color: var(--type-vfd-color);
-
+  font-family: var(--type-vfd-font);
+  font-size: 26px;
+  font-weight: var(--type-vfd-weight);
+  letter-spacing: 1.5px;
+  line-height: 32px;
   text-shadow: 0 0 8px var(--color-phosphor-glow);
-
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-
-/* =========================================================
-   VFD ARTIST
-   ========================================================= */
-
 .vfdArtist {
-  font-family: var(--type-vfd-secondary-font);
-  font-size: clamp(14px, 1.05vw, 18px);
-  font-weight: var(--type-vfd-secondary-weight);
-  letter-spacing: var(--type-vfd-secondary-spacing);
-  line-height: var(--type-vfd-secondary-leading);
-
+  grid-column: 1;
+  grid-row: 2;
+  min-width: 0;
   color: var(--type-vfd-secondary-color);
-
+  font-family: var(--type-vfd-secondary-font);
+  font-size: 16px;
+  letter-spacing: .8px;
+  line-height: 24px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-
-/* =========================================================
-   TRANSPORT GROUP
-   ========================================================= */
-
 .transportGroup {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: center;
-
+  gap: 20px;
   width: 100%;
-
-  padding: 0 var(--space-1);
+  height: 76px;
+  min-width: 0;
 }
-
-/* =========================================================
-   PLAYBACK BUTTONS
-   ========================================================= */
-
-.buttonsWrapper {
-  display: flex;
-  align-items: center;
-
-  gap: 10px;
-}
-
-.hwBtn {
-  width: 44px;
-  height: 32px;
-
-  display: flex;
+.buttonsWrapper { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.hwBtn, .muteLabel {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-
-  background: var(--color-surface);
-
-  border: 1px solid var(--color-bg);
-  border-top: 1px solid var(--color-surface-raised);
-
+  flex-shrink: 0;
+  height: 38px;
+  width: 44px;
+  padding: 0;
+  border: 1px solid #090d09;
+  border-top-color: #59654d;
+  border-radius: 0;
+  background: var(--hardware-button);
   color: var(--color-phosphor-dim);
-
+  box-shadow: inset 0 1px #ffffff0c, 0 3px 0 #050805;
   font-family: var(--font-ui);
-  font-size: 13px;
-
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.6);
-
+  font-size: var(--text-control);
+  line-height: 1.2;
   cursor: pointer;
-
-  transition:
-    background-color var(--transition-fast),
-    border-color var(--transition-fast),
-    color var(--transition-fast),
-    box-shadow var(--transition-fast),
-    transform var(--transition-fast);
 }
-
-.hwBtnPlay {
-  width: 56px;
-}
-
-.hwBtn:active,
-.hwBtn.isActive {
-  background: var(--color-bg);
-
-  border-top: 1px solid var(--color-surface);
-
+.hwBtnPlay { width: 50px; }
+.hwBtn:hover, .muteLabel:hover { color: var(--color-phosphor); }
+.hwBtn:active, .hwBtn.isActive, .muteLabel:active {
+  background: var(--color-vfd-border);
   color: var(--color-phosphor);
-
+  box-shadow: inset 0 2px 4px #0008, 0 1px #ffffff12;
   text-shadow: 0 0 8px var(--color-phosphor-glow);
-
-  transform: translateY(2px);
-
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
 }
-
-/* =========================================================
-   PROGRESS
-   ========================================================= */
-
+.hwBtn:disabled, .muteLabel:disabled { cursor: default; color: var(--color-text-subtle); }
+.hwBtn:focus-visible, .muteLabel:focus-visible, .faderTrack:focus-within { outline: 2px solid var(--color-phosphor); outline-offset: 3px; }
 .progressContainer {
-  margin-top: 14px;
-
+  grid-column: 2;
+  grid-row: 1 / 3;
+  align-self: center;
   display: flex;
   flex-direction: column;
-
-  gap: var(--space-2);
+  min-width: 0;
+  gap: 10px;
 }
-
-.progressBlocks {
-  display: flex;
-
-  gap: 3px;
-
-  width: 100%;
-  height: 9px;
-}
-
-.progressBlock {
-  flex: 1;
-
-  background-color: var(--color-surface-raised);
-}
-
-.progressBlockActive {
-  background-color: var(--color-phosphor);
-
-  box-shadow: 0 0 6px var(--color-phosphor-glow);
-}
-
+.progressBlocks { display: flex; gap: 3px; width: 100%; height: 8px; }
+.progressBlock { flex: 1; background: var(--color-surface-raised); }
+.progressBlockActive { background: var(--color-phosphor); box-shadow: 0 0 6px var(--color-phosphor-glow); }
 .progressTimes {
   display: flex;
   justify-content: space-between;
-
-  font-family: var(--type-ui-small-font);
-  font-size: var(--type-ui-small-size);
-  font-weight: var(--type-ui-small-weight);
-  letter-spacing: var(--type-ui-small-spacing);
-  line-height: var(--type-ui-small-leading);
-
-  color: var(--type-ui-small-color);
-}
-
-/* =========================================================
-   VOLUME / FADER
-   ========================================================= */
-
-.faderWrapper {
-  display: flex;
-  align-items: center;
-
-  gap: var(--space-2);
-}
-
-.muteLabel {
-  font-family: var(--font-ui);
-  font-size: 22px;
-  letter-spacing: 1.4px;
-
   color: var(--color-phosphor-dim);
-
-  transform: translateY(-1px);
-
-  cursor: pointer;
-  user-select: none;
+  font-family: var(--font-ui);
+  font-size: var(--text-caption);
+  letter-spacing: .7px;
+  line-height: 20px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
-
-.muteLabelActive {
-  color: var(--color-danger);
-
-  text-shadow: 0 0 5px var(--color-danger-glow);
-}
-
-/* =========================================================
-   FADER TRACK
-   ========================================================= */
-
-.faderTrack {
-  position: relative;
-
-  display: flex;
-  align-items: center;
-
-  width: 110px;
-  height: 18px;
-
-  padding: 2px 5px;
-
-  background: var(--color-surface);
-
-  border: 1px solid #000000;
-  border-top: 1px solid #2a2e35;
-}
-
-.faderTrackInner {
-  display: flex;
-  align-items: center;
-
-  width: 100%;
-  height: 12px;
-
-  gap: 3px;
-
-  pointer-events: none;
-}
-
-.faderBlock {
-  flex: 1;
-  height: 100%;
-
-  background-color: var(--color-surface-raised);
-}
-
-.faderBlockActive {
-  background-color: var(--color-phosphor);
-
-  box-shadow: 0 0 4px var(--color-phosphor-glow);
-}
-
-/* =========================================================
-   FADER INPUT
-   ========================================================= */
-
-.faderInput {
-  position: absolute;
-  inset: 0;
-
-  width: 100%;
-  height: 100%;
-
-  opacity: 0;
-
-  cursor: default;
-
-  z-index: var(--z-content);
-}
-
-.faderInput:active {
-  cursor: grabbing !important;
-}
-
-/* Fixed faceplate geometry; metadata can only consume its own grid tracks. */
-.globalChassis {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 360px;
-  align-items: center;
-  gap: 28px;
-  width: 100%;
-  max-width: none;
-  height: 100%;
-  padding: 18px 28px;
-  border-top: 2px solid #d4dfd254;
-  border-radius: 0;
-  background: repeating-linear-gradient(0deg, #ffffff08 0 1px, #374b4205 1px 3px), radial-gradient(ellipse at 85% 18%, #b8bdc8b0, transparent 55%), linear-gradient(115deg, #bcc4c2, #9eaaa8 45%, #c4ccca 72%, #adb7b9);
-  box-shadow: inset 0 2px #f1f4ed8a, inset 0 -3px #767e80;
-}
-.globalChassis .vfdDisplay {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(200px, .75fr);
-  grid-template-rows: 32px 24px;
-  column-gap: 28px;
-  align-content: center;
-  height: 90px;
-  min-width: 0;
-  padding: 12px 18px;
-}
-.globalChassis .vfdTrackName { grid-column: 1; grid-row: 1; min-width: 0; font-size: clamp(24px, 1.8vw, 30px); line-height: 32px; }
-.globalChassis .vfdArtist { grid-column: 1; grid-row: 2; min-width: 0; font-size: 15px; line-height: 24px; }
-.globalChassis .progressContainer { grid-column: 2; grid-row: 1 / 3; align-self: center; min-width: 0; margin: 0; gap: 12px; }
-.globalChassis .progressTimes { font-variant-numeric: tabular-nums; white-space: nowrap; }
-.globalChassis .transportGroup { gap: 22px; padding: 0; min-width: 0; }
-.globalChassis .buttonsWrapper, .globalChassis .faderWrapper { flex-shrink: 0; }
-.hwBtn:focus-visible, .faderTrack:focus-within { outline: 2px solid var(--color-phosphor); outline-offset: 3px; }
+.faderWrapper { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.muteLabel { width: 40px; font-size: var(--text-control); letter-spacing: .5px; }
+.muteLabelActive { color: var(--color-danger); text-shadow: 0 0 5px var(--color-danger-glow); }
+.faderTrack { position: relative; display: flex; align-items: center; width: 90px; height: 24px; padding: 3px 5px; border: 1px solid #050805; background: #101510; box-shadow: var(--hardware-inset); }
+.faderTrackInner { display: flex; align-items: center; gap: 3px; width: 100%; height: 12px; pointer-events: none; }
+.faderBlock { flex: 1; height: 100%; background: var(--color-surface-raised); }
+.faderBlockActive { background: var(--color-phosphor); box-shadow: 0 0 4px var(--color-phosphor-glow); }
+.faderInput { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
 @media (max-width: 1100px) {
-  .globalChassis { grid-template-columns: minmax(0, 1fr) 310px; gap: 16px; padding-inline: 16px; }
-  .globalChassis .vfdDisplay { grid-template-columns: minmax(0, 1fr) 160px; column-gap: 16px; padding-inline: 12px; }
-  .globalChassis .transportGroup { gap: 12px; }
-  .globalChassis .buttonsWrapper { gap: 6px; }
-  .globalChassis .faderTrack { width: 80px; }
+  .chassis { padding-inline: 16px; }
+  .front { grid-template-columns: minmax(0, 1fr) 290px; gap: 12px; padding-inline: 12px; }
+  .vfdDisplay { grid-template-columns: minmax(0, 1fr) 140px; column-gap: 16px; padding-right: 12px; }
+  .transportGroup { gap: 10px; }
+  .faderTrack { width: 72px; }
+}
+@media (max-width: 700px) {
+  .chassis { padding: 12px 8px; }
+  .front { grid-template-columns: minmax(0, 1fr) 154px; gap: 10px; padding-inline: 10px; }
+  .vfdDisplay { grid-template-columns: minmax(0, 1fr); grid-template-rows: 28px 22px 24px; column-gap: 0; padding-right: 10px; }
+  .vfdTrackName { font-size: 22px; line-height: 28px; }
+  .vfdArtist { font-size: var(--text-control); line-height: 22px; }
+  .progressContainer { grid-column: 1; grid-row: 3; gap: 0; }
+  .progressBlocks { display: none; }
+  .transportGroup { flex-direction: column; justify-content: center; gap: 6px; }
+  .hwBtn { height: 32px; }
+  .muteLabel { height: 24px; }
+  .faderTrack { width: 90px; }
 }

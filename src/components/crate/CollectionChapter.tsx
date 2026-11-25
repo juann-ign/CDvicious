@@ -17,10 +17,8 @@ import { JewelCaseFront } from "./JewelCaseFront";
 import { ArtistExplorer } from "./ArtistExplorer";
 import { RailFlyingDisc } from "./RailFlyingDisc";
 import type { AlbumItem } from "@/types/crate";
-import { collectionDecades, collectionGenres, filterCollection } from "@/lib/collectionFilters";
+import { collectionDecades, collectionGenres, collectionYears, filterCollection } from "@/lib/collectionFilters";
 import styles from "./CollectionChapter.module.css";
-
-const PAGE_SIZE = 32;
 
 export function CollectionChapter() {
   const [exploringArtist, setExploringArtist] = useState(false);
@@ -29,13 +27,16 @@ export function CollectionChapter() {
   const { scrollToChapter } = useRailActions();
   const { albums: cachedAlbums, collectionState, collectionError, collectionRetryAt, genresState, genresError, genresRetryAt, genresResolvedArtists, genresTotalArtists } = useCollectionCache();
   const albums = useMemo(() => cachedAlbums ?? [], [cachedAlbums]);
-  const loading = collectionState === "loading";
+  const loading = collectionState === "loading" || (collectionState === "idle" && !cachedAlbums && authenticated !== false);
   const loadingGenres = genresState === "loading";
   const [isActiveChapter, setIsActiveChapter] = useState(false);
   const [query, setQuery] = useState("");
   const [decade, setDecade] = useState("all");
   const [genre, setGenre] = useState("all");
+  const [year, setYear] = useState("all");
   const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(12);
+  const artistButtonRef = useRef<HTMLButtonElement>(null);
   const [selected, setSelected] = useState<AlbumItem | null>(null);
   const [playErrorForAlbum, setPlayErrorForAlbum] = useState<{
     albumId: string;
@@ -49,6 +50,22 @@ export function CollectionChapter() {
   const [now, setNow] = useState(Date.now);
   const collectionWait = Math.max(0, Math.ceil((collectionRetryAt - now) / 1000));
   const genresWait = Math.max(0, Math.ceil((genresRetryAt - now) / 1000));
+
+  useEffect(() => {
+    const compact = window.matchMedia("(max-height: 850px)");
+    let previousSize = 12;
+    const resize = () => {
+      const nextSize = compact.matches ? 6 : 12;
+      if (previousSize === nextSize) return;
+      const before = previousSize;
+      previousSize = nextSize;
+      setPage((current) => Math.floor(current * before / nextSize));
+      setPageSize(nextSize);
+    };
+    resize();
+    compact.addEventListener("change", resize);
+    return () => compact.removeEventListener("change", resize);
+  }, []);
 
   useEffect(() => { setNow(Date.now()); }, [collectionRetryAt, genresRetryAt]);
 
@@ -138,17 +155,18 @@ export function CollectionChapter() {
   // Options describe the full saved collection, before search and pagination.
   const decades = useMemo(() => collectionDecades(albums), [albums]);
   const topGenres = useMemo(() => collectionGenres(albums), [albums]);
-  const filtered = useMemo(() => filterCollection(albums, query, decade, genre), [albums, query, decade, genre]);
+  const years = useMemo(() => collectionYears(albums, decade), [albums, decade]);
+  const filtered = useMemo(() => filterCollection(albums, query, decade, genre, year), [albums, query, decade, genre, year]);
 
   useEffect(() => {
     setPage(0);
-  }, [query, decade, genre]);
+  }, [query, decade, genre, year]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage = Math.min(page, totalPages - 1);
   const pageItems = filtered.slice(
-    safePage * PAGE_SIZE,
-    safePage * PAGE_SIZE + PAGE_SIZE,
+    safePage * pageSize,
+    safePage * pageSize + pageSize,
   );
 
   const handleSelect = useCallback((album: AlbumItem) => {
@@ -228,6 +246,16 @@ export function CollectionChapter() {
     setPlayErrorForAlbum(null);
   }, []);
 
+  const changeDecade = (value: string) => {
+    setDecade(value);
+    if (!collectionYears(albums, value).some((option) => option.id === year)) setYear("all");
+  };
+  const clearFilters = () => { setQuery(""); setDecade("all"); setGenre("all"); setYear("all"); };
+  const returnToCollection = () => {
+    setExploringArtist(false);
+    requestAnimationFrame(() => artistButtonRef.current?.focus());
+  };
+
   return (
     <div
       ref={chapterRef}
@@ -237,121 +265,82 @@ export function CollectionChapter() {
     >
       <div className={styles.collectionContent} hidden={exploringArtist}>
       <header className={styles.header}>
-        <div>
-          <h2>LA COLECCIÓN</h2>
-        </div>
-        <span className={styles.meta}>
-          {collectionState === "error"
-            ? "COLECCIÓN NO DISPONIBLE"
-            : loading
-              ? "INDEXANDO..."
-              : filtered.length + " / " + albums.length + " DISCOS"}
+        <h2 className={styles.screenReaderTitle}>Tu colección</h2>
+        <nav className={styles.sectionNavigation} aria-label="Colección y artistas">
+          <button type="button" className={styles.sectionActive} aria-current="page">Tu colección</button>
+          <button ref={artistButtonRef} type="button" onClick={() => { setArtistExplorerVisited(true); setExploringArtist(true); }}>Buscar artista</button>
+        </nav>
+        <span className={styles.meta} role="status" aria-live="polite">
+          {collectionState === "error" ? "Colección no disponible" : loading ? "Cargando colección…" : `${filtered.length} ${filtered.length === 1 ? "disco" : "discos"}`}
         </span>
       </header>
 
-      <button className={styles.exploreArtist} onClick={() => { setArtistExplorerVisited(true); setExploringArtist(true); }}>EXPLORAR ARTISTA ↗</button>
       <div className={styles.toolbar}>
-        <input
-          type="search"
-          className={styles.search}
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="BUSCAR ARTISTA O ÁLBUM..."
-          aria-label="Buscar artista o álbum"
-        />
-
-        <div className={styles.filterBlock}>
-          <div className={styles.filterCaption}>DÉCADA · FECHA DE EDICIÓN</div>
-          <div className={styles.pillRow} aria-label="Filtrar por década">
-            {decades.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                className={
-                  styles.pill +
-                  (decade === item.id ? " " + styles.pillActive : "")
-                }
-                onClick={() => setDecade(item.id)}
-                aria-pressed={decade === item.id}
-                title={`${item.count} discos`}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-
-          <div className={styles.filterCaption}>GÉNEROS DEL ARTISTA</div>
-          <div className={styles.pillRow} aria-label="Filtrar por género">
-            <button type="button" className={styles.pill + (genre === "all" ? " " + styles.pillActive : "")} onClick={() => setGenre("all")} aria-pressed={genre === "all"}>TODOS</button>
-            {topGenres.map((item) => <button key={item.id} type="button" className={styles.pill + (genre === item.id ? " " + styles.pillActive : "")} onClick={() => setGenre(item.id)} aria-pressed={genre === item.id} title={`${item.count} discos`}>{item.label}</button>)}
-            {(genresState === "idle" || loadingGenres || genresState === "partial" || genresState === "error") && (
-              <button
-                type="button"
-                className={styles.pill}
-                onClick={handleLoadGenres}
-                disabled={loadingGenres || genresWait > 0 || !albums.length}
-              >
-                {loadingGenres ? "CARGANDO GÉNEROS..." : genresState === "idle" ? "CARGAR GÉNEROS" : "REINTENTAR GÉNEROS"}
-              </button>
-            )}
-          </div>
-          {loadingGenres && <p className={styles.filterStatus} role="status">CONSULTANDO GÉNEROS DE LOS ARTISTAS…</p>}
-          {genresState === "empty" && <p className={styles.filterStatus} role="status">SIN GÉNEROS INFORMADOS PARA ESTOS ARTISTAS.</p>}
-          {genresState === "partial" && <p className={styles.filterStatus} role="status">GÉNEROS PARCIALES · {genresResolvedArtists} / {genresTotalArtists} ARTISTAS CONSULTADOS. Podés filtrar con los datos disponibles.</p>}
-          {genresState === "error" && <p className={styles.filterStatus} role="alert">GÉNEROS DEL ARTISTA: {genresError?.message}{genresError?.status === 401 && <a href="/api/auth/login"> CONECTAR SPOTIFY</a>}</p>}
-          {genresWait > 0 && <p className={styles.filterStatus} role="status">REINTENTO DISPONIBLE EN {genresWait} s.</p>}
-          {(query || decade !== "all" || genre !== "all") && <button type="button" className={styles.clearFilters} onClick={() => { setQuery(""); setDecade("all"); setGenre("all"); }}>LIMPIAR FILTROS</button>}
-        </div>
+        <label className={styles.field}>
+          <span>Buscar en tu colección</span>
+          <input type="search" className={styles.search} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Artista o álbum…" aria-label="Buscar artista o álbum" />
+        </label>
+        <label className={styles.field}>
+          <span>Género del artista</span>
+          <select value={genre} onChange={(event) => setGenre(event.target.value)} aria-label="Filtrar por género">
+            <option value="all">Todos</option>
+            {topGenres.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
+          </select>
+        </label>
+        <label className={styles.field}>
+          <span>Década de edición</span>
+          <select value={decade} onChange={(event) => changeDecade(event.target.value)} aria-label="Filtrar por década">
+            {decades.map((item) => <option key={item.id} value={item.id}>{item.id === "all" ? "Todas" : item.label}</option>)}
+          </select>
+        </label>
+        <label className={styles.field}>
+          <span>Año de edición</span>
+          <select value={year} onChange={(event) => setYear(event.target.value)} aria-label="Filtrar por año de edición">
+            {years.map((item) => <option key={item.id} value={item.id}>{item.id === "all" ? "Todos" : item.label}</option>)}
+          </select>
+        </label>
+        {(genresState === "idle" || loadingGenres || genresState === "partial" || genresState === "error") && <button type="button" className={styles.loadGenres} onClick={handleLoadGenres} disabled={loadingGenres || genresWait > 0 || !albums.length}>
+          {loadingGenres ? "Cargando géneros…" : genresState === "idle" ? "Cargar géneros" : "Reintentar géneros"}
+        </button>}
       </div>
 
-      <div className={styles.gridFrame}>
+      {loadingGenres && <p className={styles.filterStatus} role="status">Consultando géneros de los artistas…</p>}
+      {genresState === "empty" && <p className={styles.filterStatus} role="status">Sin géneros informados para estos artistas.</p>}
+      {genresState === "partial" && <p className={styles.filterStatus} role="status">Géneros parciales · {genresResolvedArtists} de {genresTotalArtists} artistas consultados. Podés filtrar con los datos disponibles.</p>}
+      {genresState === "error" && <p className={styles.filterStatus} role="alert">Géneros del artista: {genresError?.message}{genresError?.status === 401 && <a href="/api/auth/login"> Conectar Spotify</a>}</p>}
+      {genresWait > 0 && <p className={styles.filterStatus} role="status">Reintento disponible en {genresWait} s.</p>}
+
+      {(query || decade !== "all" || genre !== "all" || year !== "all") && <div className={styles.activeFilters} aria-label="Filtros activos">
+        {query && <button type="button" aria-label={`Quitar búsqueda: ${query}`} onClick={() => setQuery("")}>Búsqueda: {query} <span aria-hidden="true">×</span></button>}
+        {genre !== "all" && <button type="button" aria-label={`Quitar género: ${genre}`} onClick={() => setGenre("all")}>Género: {genre} <span aria-hidden="true">×</span></button>}
+        {decade !== "all" && <button type="button" aria-label={`Quitar década: ${decade}`} onClick={() => setDecade("all")}>Década: {decade === "unknown" ? "Sin fecha" : decade} <span aria-hidden="true">×</span></button>}
+        {year !== "all" && <button type="button" aria-label={`Quitar año: ${year}`} onClick={() => setYear("all")}>Año: {year === "unknown" ? "Sin fecha" : year} <span aria-hidden="true">×</span></button>}
+        <button type="button" className={styles.clearFilters} onClick={clearFilters}>Limpiar filtros</button>
+      </div>}
+
+      <div className={styles.gridFrame} data-page-size={pageSize}>
         {collectionState === "error" ? (
-          <div className={styles.emptyState} role="alert"><div>{collectionError?.message}<div className={styles.recoveryActions}><button type="button" onClick={() => { setNow(Date.now()); void loadCollection(authenticated)?.catch(() => undefined); }} disabled={collectionWait > 0}>REINTENTAR COLECCIÓN</button>{collectionError?.status === 401 && <a href="/api/auth/login">CONECTAR SPOTIFY</a>}</div>{collectionWait > 0 && <p>REINTENTO DISPONIBLE EN {collectionWait} s.</p>}</div></div>
+          <div className={styles.emptyState} role="alert"><div>{collectionError?.message}<div className={styles.recoveryActions}><button type="button" onClick={() => { setNow(Date.now()); void loadCollection(authenticated)?.catch(() => undefined); }} disabled={collectionWait > 0}>Reintentar colección</button>{collectionError?.status === 401 && <a href="/api/auth/login">Conectar Spotify</a>}</div>{collectionWait > 0 && <p>Reintento disponible en {collectionWait} s.</p>}</div></div>
         ) : loading ? (
-          <div className={styles.emptyState}>CARGANDO COLECCIÓN...</div>
+          <div className={styles.emptyState} role="status">Cargando colección…</div>
+        ) : authenticated === false && !cachedAlbums ? (
+          <div className={styles.emptyState} role="status"><p>Conectá Spotify para ver tu colección. <a href="/api/auth/login">Conectar Spotify</a></p></div>
         ) : pageItems.length === 0 ? (
-          <div className={styles.emptyState}>{albums.length ? "SIN RESULTADOS PARA ESTOS FILTROS" : "COLECCIÓN VACÍA"}</div>
+          <div className={styles.emptyState} role="status">{albums.length ? "Sin resultados para estos filtros" : "Colección vacía"}</div>
         ) : (
           <div className={styles.grid}>
-            {pageItems.map((album) => (
-              <JewelCaseFront
-                key={album.id}
-                album={album}
-                onSelect={() => handleSelect(album)}
-              />
-            ))}
+            {pageItems.map((album) => <JewelCaseFront key={album.id} album={album} presentation="collection" onSelect={() => handleSelect(album)} />)}
           </div>
         )}
       </div>
 
-      <footer className={styles.footer}>
-        <span className={styles.pageLabel}>
-          PÁGINA {safePage + 1}/{totalPages}
-        </span>
-
-        <div className={styles.pagination}>
-          <button
-            type="button"
-            className={styles.pageButton}
-            disabled={safePage === 0}
-            onClick={() => setPage((current) => Math.max(0, current - 1))}
-          >
-            ◄ ANTERIOR
-          </button>
-          <button
-            type="button"
-            className={styles.pageButton}
-            disabled={safePage >= totalPages - 1}
-            onClick={() =>
-              setPage((current) => Math.min(totalPages - 1, current + 1))
-            }
-          >
-            SIGUIENTE ►
-          </button>
-        </div>
-      </footer>
+      {totalPages > 1 && <footer className={styles.footer}>
+        <button type="button" className={styles.pageButton} disabled={safePage === 0} onClick={() => setPage((current) => Math.max(0, current - 1))}>Anterior</button>
+        <span className={styles.pageLabel}>Página {safePage + 1} de {totalPages}</span>
+        <button type="button" className={styles.pageButton} disabled={safePage >= totalPages - 1} onClick={() => setPage((current) => Math.min(totalPages - 1, current + 1))}>Siguiente</button>
+      </footer>}
       </div>
-      {artistExplorerVisited && <ArtistExplorer open={exploringArtist} active={isActiveChapter} onCollection={() => setExploringArtist(false)} />}
+      {artistExplorerVisited && <ArtistExplorer open={exploringArtist} active={isActiveChapter} onCollection={returnToCollection} />}
 
       {selected && (
         <JewelCaseDetailModal

@@ -13,25 +13,27 @@ export function PlaybackControls({ isPlaying }: PlaybackControlsProps) {
   const [volumeLevel, setVolumeLevel] = useState(0.5);
   const [previousVolume, setPreviousVolume] = useState(0.5);
 
-  if (!isReady || !player) return null;
+  const canControl = isReady && player !== null;
 
   const totalVolumeBlocks = 10;
   const activeVolumeBlocks = Math.round(volumeLevel * totalVolumeBlocks);
   const isMuted = volumeLevel === 0;
 
   const handleToggleMute = () => {
+    if (!canControl) return;
     if (isMuted) {
       const restored = previousVolume > 0 ? previousVolume : 0.5;
       setVolumeLevel(restored);
-      player.setVolume(restored);
+      player?.setVolume(restored);
     } else {
       setPreviousVolume(volumeLevel);
       setVolumeLevel(0);
-      player.setVolume(0);
+      player?.setVolume(0);
     }
   };
 
   const handleTrackClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!canControl) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
     const width = rect.width;
@@ -39,7 +41,7 @@ export function PlaybackControls({ isPlaying }: PlaybackControlsProps) {
     const steppedRatio =
       Math.round(ratio * totalVolumeBlocks) / totalVolumeBlocks;
     setVolumeLevel(steppedRatio);
-    player.setVolume(steppedRatio);
+    player?.setVolume(steppedRatio);
   };
 
   return (
@@ -47,34 +49,41 @@ export function PlaybackControls({ isPlaying }: PlaybackControlsProps) {
       <div className={styles.buttonsWrapper}>
         <button
           className={styles.hwBtn}
-          onClick={() => player.previousTrack()}
+          disabled={!canControl}
+          onClick={() => player?.previousTrack()}
           aria-label="Previous"
         >
           |◄◄
         </button>
         <button
           className={`${styles.hwBtn} ${styles.hwBtnPlay} ${isPlaying ? styles.isActive : ""}`}
-          onClick={() => player.togglePlay()}
+          disabled={!canControl}
+          onClick={() => player?.togglePlay()}
           aria-label="Play/Pause"
         >
           {isPlaying ? "❚❚" : "►"}
         </button>
         <button
           className={styles.hwBtn}
-          onClick={() => player.nextTrack()}
+          disabled={!canControl}
+          onClick={() => player?.nextTrack()}
           aria-label="Next"
         >
           ►►|
         </button>
       </div>
       <div className={styles.faderWrapper}>
-        <span
+        <button
+          type="button"
+          disabled={!canControl}
+          aria-label="Silenciar volumen"
+          aria-pressed={isMuted}
           onClick={handleToggleMute}
           className={`${styles.muteLabel} ${isMuted ? styles.muteLabelActive : ""}`}
           title="Clic para Silenciar / Restaurar"
         >
           {isMuted ? "MUT" : "VOL"}
-        </span>
+        </button>
         <div onClick={handleTrackClick} className={styles.faderTrack}>
           <div className={styles.faderTrackInner}>
             {Array.from({ length: totalVolumeBlocks }).map((_, i) => (
@@ -90,10 +99,11 @@ export function PlaybackControls({ isPlaying }: PlaybackControlsProps) {
             max="1"
             step="0.01"
             value={volumeLevel}
+            disabled={!canControl}
             onChange={(e) => {
               const val = parseFloat(e.target.value);
               setVolumeLevel(val);
-              player.setVolume(val);
+              player?.setVolume(val);
             }}
             className={styles.faderInput}
             title={`Volumen: ${Math.round(volumeLevel * 100)}%`}
