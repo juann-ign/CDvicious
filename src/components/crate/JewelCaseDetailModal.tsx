@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import {
   useCallback,
   useContext,
@@ -9,20 +8,15 @@ import {
   useRef,
   useState,
 } from "react";
-import gsap from "gsap";
 import type { AlbumItem } from "@/types/crate";
 import { JewelCasePresentation } from "./JewelCasePresentation";
 import { useSpotifyPlayer } from "@/components/SpotifyPlayerProvider";
-import { createDiscPlaybackExecution } from "@/lib/discPlayback";
+import { createDiscPlaybackExecution, type StartPlayExecution } from "@/lib/discPlayback";
+import { captureDiscOrigin } from "@/lib/discFlightGeometry";
+export type { PlayExecutionResult, StartPlayExecution } from "@/lib/discPlayback";
 import { RailContext } from "@/components/scroll/RailContext";
 import styles from "./JewelCaseDetailModal.module.css";
 import polishStyles from "./JewelCaseDetailModal.polish.module.css";
-
-const CASE_OPEN_DURATION_MS = 900;
-const CASE_CLOSE_START_MS = 240;
-const CASE_CLOSE_MS = 620;
-const POST_CLOSE_HOLD_MS = 160;
-const EXIT_MS = 340;
 
 const FOCUSABLE_SELECTOR = [
   "a[href]",
@@ -124,522 +118,217 @@ function unregisterModal(entryId: symbol) {
   }
 }
 
-type PlayApiResponse = {
-  success?: boolean;
-  error?: string;
-  message?: string;
-};
-
-function getPlayFailureMessage(
-  status: number,
-  response: PlayApiResponse | null,
-): string {
-  if (response?.message) return response.message;
-
-  if (
-    response?.error === "AUTH_REQUIRED" ||
-    response?.error === "SPOTIFY_AUTH_EXPIRED" ||
-    status === 401
-  ) {
-    return "Tu sesión de Spotify expiró. Volvé a iniciar sesión.";
-  }
-
-  if (response?.error === "DEVICE_NOT_AVAILABLE") {
-    return "El dispositivo de Spotify no está disponible. Activá un dispositivo e intentá de nuevo.";
-  }
-
-  if (status === 403) {
-    return "Spotify no permitió la reproducción. Verificá tu cuenta y los permisos.";
-  }
-
-  if (status === 429) {
-    return "Spotify está limitando las solicitudes. Esperá un momento e intentá de nuevo.";
-  }
-
-  return "Spotify no confirmó la reproducción. Podés intentarlo de nuevo.";
-}
-
-export type PlayExecutionResult = {
-  success: boolean;
-  message?: string;
-};
-
-export type StartPlayExecution = () => Promise<PlayExecutionResult>;
-
 interface JewelCaseDetailModalProps {
   album: AlbumItem;
   onClose: () => void;
   onLoad: (originEl: HTMLElement) => void;
-  onPlay?: (originEl: HTMLElement, executePlayback: StartPlayExecution) => void;
+  onPlay?: (originEl: HTMLElement, executePlayback: StartPlayExecution) => boolean | void;
   initialPlayError?: string | null;
 }
 
-export function JewelCaseDetailModal({
-  album,
-  onClose,
-  onLoad,
-  onPlay,
-  initialPlayError = null,
-}: JewelCaseDetailModalProps) {
+export function JewelCaseDetailModal({ album, onClose, onLoad, onPlay, initialPlayError = null }: JewelCaseDetailModalProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [isCaseOpen, setIsCaseOpen] = useState(false);
-  const [isLaunching, setIsLaunching] = useState(false);
+  const [isCaseOpen, setIsCaseOpen] = useState(Boolean(initialPlayError));
   const [isPlayPending, setIsPlayPending] = useState(false);
   const [isOpeningForPlay, setIsOpeningForPlay] = useState(false);
   const [playError, setPlayError] = useState<string | null>(initialPlayError);
-  const [isLifting, setIsLifting] = useState(false);
-  const [isExiting, setIsExiting] = useState(false);
-  const [launchOrigin, setLaunchOrigin] = useState<{
-    left: number;
-    top: number;
-    width: number;
-    height: number;
-  } | null>(null);
   const rail = useContext(RailContext);
   const stopRail = rail?.stop;
   const startRail = rail?.start;
   const { deviceId, isReady, player } = useSpotifyPlayer();
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const playButtonRef = useRef<HTMLButtonElement>(null);
+  const discRef = useRef<HTMLDivElement>(null);
   const railLockTokenRef = useRef(Symbol("jewel-case-modal"));
   const onCloseRef = useRef(onClose);
   const onLoadRef = useRef(onLoad);
-  const isLaunchingRef = useRef(isLaunching);
-  const isPlayPendingRef = useRef(isPlayPending);
-
-  onCloseRef.current = onClose;
-  onLoadRef.current = onLoad;
-  isLaunchingRef.current = isLaunching;
-  isPlayPendingRef.current = isPlayPending;
-  const discRef = useRef<HTMLDivElement>(null);
-  const launchDiscRef = useRef<HTMLDivElement>(null);
-  const launchSpinnerRef = useRef<HTMLDivElement>(null);
+  const initialErrorRef = useRef(initialPlayError);
+  const busyRef = useRef(false);
   const pendingPlayRef = useRef(false);
   const playStartedRef = useRef(false);
-  const launchTimelineRef = useRef<gsap.core.Timeline | null>(null);
-  const handedOffRef = useRef(false);
-  useLayoutEffect(() => {
-    const modalOwner = railLockTokenRef.current;
+  const hingeOpenRef = useRef(false);
+  const mountedRef = useRef(true);
+  const fallbackExecution = useRef<StartPlayExecution | null>(null);
+  const busy = isPlayPending || isOpeningForPlay;
+  onCloseRef.current = onClose;
+  onLoadRef.current = onLoad;
+  busyRef.current = busy;
 
-    registerModal(modalOwner, {
+  useLayoutEffect(() => {
+    const owner = railLockTokenRef.current;
+    registerModal(owner, {
       getDialog: () => dialogRef.current,
-      isLaunching: () => isLaunchingRef.current || isPlayPendingRef.current,
+      isLaunching: () => busyRef.current,
       close: () => onCloseRef.current(),
     });
-
-    return () => {
-      unregisterModal(modalOwner);
-    };
+    return () => unregisterModal(owner);
   }, []);
 
-  const coverUrl =
-    [...album.images].sort((a, b) => (b.width ?? 0) - (a.width ?? 0))[0]?.url ??
-    album.images[0]?.url;
-
   useLayoutEffect(() => {
-    const lockToken = railLockTokenRef.current;
-    stopRail?.(lockToken);
+    const token = railLockTokenRef.current;
+    stopRail?.(token);
     const previousActive = document.activeElement as HTMLElement | null;
-    const raf = requestAnimationFrame(() => {
+    const frame = requestAnimationFrame(() => {
       setIsOpen(true);
-      closeButtonRef.current?.focus();
+      (initialErrorRef.current ? playButtonRef.current : closeButtonRef.current)?.focus({ preventScroll: true });
     });
-
     return () => {
-      cancelAnimationFrame(raf);
-      startRail?.(lockToken);
-      const anotherModalIsActive = Array.from(activeModalEntries.keys()).some(
-        (owner) => owner !== railLockTokenRef.current,
-      );
-
-      if (
-        !anotherModalIsActive &&
-        previousActive &&
-        document.contains(previousActive)
-      ) {
-        previousActive.focus();
-      }
+      cancelAnimationFrame(frame);
+      startRail?.(token);
+      const anotherModal = Array.from(activeModalEntries.keys()).some((owner) => owner !== token);
+      if (!anotherModal && previousActive?.isConnected) previousActive.focus({ preventScroll: true });
     };
   }, [startRail, stopRail]);
 
-  // Escape and Tab are handled by the single shared modal keyboard listener.
+  useEffect(() => {
+    setPlayError(initialPlayError);
+    if (!initialPlayError) return;
+    const frame = requestAnimationFrame(() => playButtonRef.current?.focus({ preventScroll: true }));
+    return () => cancelAnimationFrame(frame);
+  }, [initialPlayError]);
 
-  const handleOpenCase = () => {
-    if (!isCaseOpen && !isPlayPending && !isLaunching && !isOpeningForPlay) {
-      setIsCaseOpen(true);
-    }
-  };
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      pendingPlayRef.current = false;
+      fallbackExecution.current?.cancel();
+    };
+  }, []);
 
-  const handleCloseCase = () => {
-    if (
-      isCaseOpen &&
-      !isPlayPending &&
-      !isLaunching &&
-      !isOpeningForPlay
-    ) {
-      setIsCaseOpen(false);
-    }
-  };
-
-  const beginLaunch = useCallback(() => {
-    const disc = discRef.current;
-    if (!disc || isLaunching) return;
-
-    const rect = disc.getBoundingClientRect();
-    setLaunchOrigin({
-      left: rect.left,
-      top: rect.top,
-      width: rect.width,
-      height: rect.height,
-    });
-    setIsLaunching(true);
-    setIsLifting(true);
-  }, [isLaunching]);
+  const failPlay = useCallback((message: string) => {
+    if (!mountedRef.current) return;
+    pendingPlayRef.current = false;
+    playStartedRef.current = false;
+    busyRef.current = false;
+    setIsPlayPending(false);
+    setIsOpeningForPlay(false);
+    setPlayError(message);
+    playButtonRef.current?.focus({ preventScroll: true });
+  }, []);
 
   const beginPlay = useCallback(() => {
-    if (isLaunching || isPlayPending || playStartedRef.current) return;
-
+    if (playStartedRef.current) return;
     const disc = discRef.current;
-    if (!disc) return;
-
+    if (!disc || !hingeOpenRef.current) return;
     if (!deviceId || !isReady || !player) {
-      setPlayError(
-        "No hay un dispositivo Spotify activo. Abrí Spotify y esperá a que el reproductor se conecte.",
-      );
-      setIsOpeningForPlay(false);
-      pendingPlayRef.current = false;
+      failPlay("No hay un dispositivo Spotify activo. Abrí Spotify y esperá a que el reproductor se conecte.");
       return;
     }
-
-    setPlayError(null);
     playStartedRef.current = true;
-
+    const execution = createDiscPlaybackExecution(album, deviceId, player);
+    if (!execution) {
+      failPlay("Ya hay una carga en curso. Esperá a que termine antes de volver a intentar.");
+      return;
+    }
+    setPlayError(null);
+    busyRef.current = true;
+    setIsPlayPending(true);
     if (onPlay) {
-      const executePlayback = createDiscPlaybackExecution(album, deviceId, player);
-      if (!executePlayback) { playStartedRef.current = false; return; }
-      onPlay(disc, executePlayback);
-      onClose();
+      try {
+        // The adapter captures the real CD before it hides or unmounts us.
+        if (onPlay(disc, execution) === false) {
+          execution.cancel();
+          failPlay("No se pudo iniciar la carga del CD. Volvé a abrir la caja e intentá de nuevo.");
+        }
+      } catch {
+        execution.cancel();
+        failPlay("No se pudo iniciar la carga del CD. Podés intentarlo de nuevo.");
+      }
       return;
     }
 
-    // Fallback for modal consumers that do not provide a flying-disc handler.
-    setIsPlayPending(true);
-    void fetch("/api/play", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ uri: album.uri, deviceId }),
-    })
-      .then(async (response) => {
-        const result = (await response.json().catch(() => null)) as
-          | PlayApiResponse
-          | null;
-
-        if (!response.ok || result?.success !== true) {
-          setPlayError(getPlayFailureMessage(response.status, result));
-          playStartedRef.current = false;
-          return;
-        }
-
-        beginLaunch();
-      })
-      .catch(() => {
-        setPlayError(
-          "No se pudo conectar con Spotify. Revisá tu conexión e intentá de nuevo.",
-        );
-        playStartedRef.current = false;
-      })
+    // Legacy consumers share the executor, with a valid visible static source.
+    // The three rail origins always supply onPlay and use the measured flight.
+    if (!captureDiscOrigin(disc)) {
+      execution.cancel();
+      failPlay("No se pudo medir el CD visible. Volvé a abrir la caja e intentá de nuevo.");
+      return;
+    }
+    fallbackExecution.current = execution;
+    const result = execution();
+    execution.markDocked();
+    void result.then((response) => {
+      if (!mountedRef.current) return;
+      if (!response.success) {
+        failPlay(response.cancelled ? "Carga cancelada. Podés intentarlo de nuevo." : response.message ?? "Spotify no confirmó la reproducción.");
+        return;
+      }
+      onLoadRef.current(disc);
+    }).catch(() => failPlay("No se pudo conectar con Spotify. Revisá tu conexión e intentá de nuevo."))
       .finally(() => {
-        setIsPlayPending(false);
+        if (fallbackExecution.current === execution) fallbackExecution.current = null;
+        if (mountedRef.current) {
+          playStartedRef.current = false;
+          busyRef.current = false;
+          setIsPlayPending(false);
+        }
       });
-  }, [
-    album,
-    beginLaunch,
-    deviceId,
-    isLaunching,
-    isPlayPending,
-    isReady,
-    onClose,
-    onPlay,
-    player,
-  ]);
+  }, [album, deviceId, failPlay, isReady, onPlay, player]);
 
   const handlePlay = useCallback(() => {
-    if (isLaunching || isPlayPending || isOpeningForPlay || playStartedRef.current) {
-      return;
-    }
-
+    if (busyRef.current || playStartedRef.current) return;
     setPlayError(null);
-
     if (!deviceId || !isReady || !player) {
-      setPlayError(
-        "No hay un dispositivo Spotify activo. Abrí Spotify y esperá a que el reproductor se conecte.",
-      );
+      failPlay("No hay un dispositivo Spotify activo. Abrí Spotify y esperá a que el reproductor se conecte.");
       return;
     }
-
-    if (!isCaseOpen) {
+    if (!hingeOpenRef.current) {
       pendingPlayRef.current = true;
+      busyRef.current = true;
       setIsOpeningForPlay(true);
       setIsCaseOpen(true);
       return;
     }
-
     beginPlay();
-  }, [
-    beginPlay,
-    deviceId,
-    isCaseOpen,
-    isLaunching,
-    isOpeningForPlay,
-    isPlayPending,
-    isReady,
-    player,
-  ]);
+  }, [beginPlay, deviceId, failPlay, isReady, player]);
 
-  useEffect(() => {
-    if (!isCaseOpen || isLaunching || !pendingPlayRef.current) return;
+  const handleOpened = useCallback(() => {
+    hingeOpenRef.current = true;
+    if (!pendingPlayRef.current) return;
+    pendingPlayRef.current = false;
+    setIsOpeningForPlay(false);
+    beginPlay();
+  }, [beginPlay]);
 
-    const timer = window.setTimeout(() => {
-      pendingPlayRef.current = false;
-      setIsOpeningForPlay(false);
-      beginPlay();
-    }, CASE_OPEN_DURATION_MS);
-
-    return () => window.clearTimeout(timer);
-  }, [beginPlay, isCaseOpen, isLaunching]);
-
-  useEffect(() => {
-    if (
-      !isLaunching ||
-      !launchOrigin ||
-      !launchDiscRef.current ||
-      !launchSpinnerRef.current
-    ) {
-      return;
-    }
-
-    const disc = launchDiscRef.current;
-    const spinner = launchSpinnerRef.current;
-    handedOffRef.current = false;
-    launchTimelineRef.current?.kill();
-
-    gsap.set(disc, {
-      left: launchOrigin.left + launchOrigin.width / 2,
-      top: launchOrigin.top + launchOrigin.height / 2,
-      width: launchOrigin.width,
-      height: launchOrigin.height,
-      xPercent: -50,
-      yPercent: -50,
-      y: 0,
-      scale: 0.92,
-      opacity: 1,
-      rotate: 0,
-    });
-    gsap.set(spinner, { rotate: 0 });
-
-    const tl = gsap.timeline();
-    launchTimelineRef.current = tl;
-
-    tl.fromTo(
-      disc,
-      { scale: 0.92, y: 0 },
-      {
-        scale: 1.14,
-        y: -56,
-        duration: 0.2,
-        ease: "back.out(3.2)",
-      },
-    );
-    tl.to(disc, {
-      scale: 1,
-      y: -40,
-      duration: 0.16,
-      ease: "power1.out",
-    });
-    tl.to(
-      spinner,
-      {
-        rotate: 1080,
-        duration: 1.36,
-        ease: "none",
-      },
-      0,
-    );
-    tl.call(() => setIsCaseOpen(false), [], CASE_CLOSE_START_MS / 1000);
-    tl.to(
-      disc,
-      {
-        y: -72,
-        duration: (CASE_CLOSE_MS + POST_CLOSE_HOLD_MS) / 1000,
-        ease: "sine.inOut",
-      },
-      CASE_CLOSE_START_MS / 1000,
-    );
-    tl.call(
-      () => setIsExiting(true),
-      [],
-      (CASE_CLOSE_START_MS + CASE_CLOSE_MS + POST_CLOSE_HOLD_MS) / 1000,
-    );
-    tl.to(
-      disc,
-      {
-        y: -82,
-        duration: EXIT_MS / 1000,
-        ease: "sine.inOut",
-      },
-      (CASE_CLOSE_START_MS + CASE_CLOSE_MS + POST_CLOSE_HOLD_MS) / 1000,
-    );
-    tl.call(
-      () => {
-        if (handedOffRef.current || !launchDiscRef.current) return;
-        handedOffRef.current = true;
-        onLoadRef.current(launchDiscRef.current);
-      },
-      [],
-      (CASE_CLOSE_START_MS + CASE_CLOSE_MS + POST_CLOSE_HOLD_MS + EXIT_MS) /
-        1000,
-    );
-
-    return () => {
-      tl.kill();
-      launchTimelineRef.current = null;
-    };
-  }, [isLaunching, launchOrigin]);
-
-  useEffect(() => {
-    return () => {
-      launchTimelineRef.current?.kill();
-      pendingPlayRef.current = false;
-    };
-  }, []);
+  const closeCase = () => {
+    if (busyRef.current) return;
+    hingeOpenRef.current = false;
+    setIsCaseOpen(false);
+  };
 
   return (
-    <div
-      className={[styles.overlay, isExiting ? styles.overlayExiting : ""].filter(Boolean).join(" ")}
-      ref={dialogRef}
-      tabIndex={-1}
-      role="dialog"
-      aria-modal="true"
-      aria-label={`${album.name} — ${album.artists.map((a) => a.name).join(", ")}`}
-    >
-      <button
-        type="button"
-        className={styles.scrim}
-        onClick={() => !isLaunching && !isPlayPending && !isOpeningForPlay && onClose()}
-        aria-label="Cerrar"
-        disabled={isLaunching || isPlayPending || isOpeningForPlay}
-      />
-
-      <div
-        className={[styles.sheet, polishStyles.modalPolish, isOpen ? styles.sheetOpen : "", isLaunching ? styles.sheetLaunching : ""].filter(Boolean).join(" ")}
-      >
+    <div className={styles.overlay} ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true"
+      aria-label={`${album.name} — ${album.artists.map((artist) => artist.name).join(", ")}`}>
+      <button type="button" className={styles.scrim} onClick={() => !busyRef.current && onClose()} aria-label="Cerrar" disabled={busy} />
+      <div className={[styles.sheet, polishStyles.modalPolish, isOpen ? styles.sheetOpen : ""].filter(Boolean).join(" ")}>
         <header className={styles.header}>
           <div>
             <p className={styles.eyebrow}>álbum / caja de CD</p>
             <h2 className={styles.title}>{album.name}</h2>
-            <p className={styles.artist}>
-              {album.artists.map((a) => a.name).join(", ")}
-              {album.release_date?.slice(0, 4)
-                ? ` · ${album.release_date.slice(0, 4)}`
-                : ""}
-            </p>
+            <p className={styles.artist}>{album.artists.map((artist) => artist.name).join(", ")}{album.release_date?.slice(0, 4) ? ` · ${album.release_date.slice(0, 4)}` : ""}</p>
           </div>
-          <button
-            type="button"
-            ref={closeButtonRef}
-            className={styles.closeBtn}
-            onClick={() => !isLaunching && !isPlayPending && !isOpeningForPlay && onClose()}
-            disabled={isLaunching || isPlayPending || isOpeningForPlay}
-            aria-label="Cerrar"
-          >
-            <span className={polishStyles.closeIcon} aria-hidden="true">
-              ×
-            </span>
+          <button type="button" ref={closeButtonRef} className={styles.closeBtn} onClick={() => !busyRef.current && onClose()} disabled={busy} aria-label="Cerrar">
+            <span className={polishStyles.closeIcon} aria-hidden="true">×</span>
             <span className={polishStyles.closeLabel}>cerrar</span>
           </button>
         </header>
-
-        <JewelCasePresentation album={album} open={isCaseOpen} onOpen={handleOpenCase} onClose={handleCloseCase} disabled={isLaunching || isPlayPending || isOpeningForPlay} hideDisc={isLaunching} discRef={discRef} />
-
-        {isLaunching && launchOrigin && (
-          <div className={styles.launchDiscLayer} aria-hidden="true">
-            <div
-              ref={launchDiscRef}
-              className={[styles.launchDisc, isLifting ? styles.launchDiscLifting : ""].filter(Boolean).join(" ")}
-            >
-              <div className={styles.launchDiscHalo} />
-              <div ref={launchSpinnerRef} className={styles.launchDiscSpinner}>
-                {coverUrl && (
-                  <Image
-                    src={coverUrl}
-                    alt=""
-                    fill
-                    unoptimized
-                    className={styles.launchDiscArt}
-                  />
-                )}
-                <span className={styles.launchDiscSheen} />
-                <span className={styles.launchDiscRing} />
-                <span className={styles.launchDiscHub} />
-              </div>
-            </div>
-          </div>
-        )}
-
+        <JewelCasePresentation album={album} open={isCaseOpen} onOpen={() => !busyRef.current && setIsCaseOpen(true)}
+          onClose={closeCase} onOpened={handleOpened} onClosed={() => { hingeOpenRef.current = false; }}
+          disabled={busy} discRef={discRef} />
         <footer className={[styles.actions, polishStyles.vfdFooter].join(" ")}>
-          <button
-            type="button"
-            className={polishStyles.vfdMainAction}
-            onClick={handlePlay}
-            disabled={isLaunching || isPlayPending || isOpeningForPlay}
-            aria-busy={isPlayPending || isOpeningForPlay}
-            aria-label={`Reproducir ${album.name}`}
-          >
-            <span className={polishStyles.vfdMainInfo}>
-              <strong>{album.name}</strong>
-              <small>{album.artists.map((a) => a.name).join(", ")}</small>
-            </span>
-            <span className={polishStyles.vfdMainHover}>
-              {isOpeningForPlay
-                ? "ESPERANDO A SPOTIFY..."
-                : "REPRODUCIR CD"}
-            </span>
+          <button type="button" ref={playButtonRef} className={polishStyles.vfdMainAction} onClick={handlePlay}
+            disabled={busy} aria-busy={busy} aria-label={`Reproducir ${album.name}`}>
+            <span className={polishStyles.vfdMainInfo}><strong>{album.name}</strong><small>{album.artists.map((artist) => artist.name).join(", ")}</small></span>
+            <span className={polishStyles.vfdMainHover}>{isOpeningForPlay ? "ABRIENDO CAJA..." : isPlayPending ? "ESPERANDO A SPOTIFY..." : "REPRODUCIR CD"}</span>
           </button>
-
           <div className={polishStyles.hardwareControls}>
-            <button
-              type="button"
-              className={`${polishStyles.hwBtn} ${polishStyles.hwBtnTray}`}
-              onClick={() =>
-                !isLaunching && !isPlayPending && !isOpeningForPlay && onClose()
-              }
-              disabled={isLaunching || isPlayPending || isOpeningForPlay}
-              aria-label="Dejar en batea"
-            >
-              DEJAR EN BATEA
-            </button>
-            <button
-              type="button"
-              className={`${polishStyles.hwBtn} ${polishStyles.hwBtnCase}`}
-              onClick={() =>
-                !isLaunching &&
-                !isPlayPending &&
-                !isOpeningForPlay &&
-                setIsCaseOpen((open) => !open)
-              }
-              disabled={isLaunching || isPlayPending || isOpeningForPlay}
-              aria-expanded={isCaseOpen}
-              aria-label={isCaseOpen ? "Cerrar caja" : "Abrir caja"}
-            >
-              {isCaseOpen ? "CERRAR CAJA" : "ABRIR CAJA"}
-            </button>
+            <button type="button" className={`${polishStyles.hwBtn} ${polishStyles.hwBtnTray}`} onClick={() => !busyRef.current && onClose()} disabled={busy} aria-label="Dejar en batea">DEJAR EN BATEA</button>
+            <button type="button" className={`${polishStyles.hwBtn} ${polishStyles.hwBtnCase}`} onClick={() => !busyRef.current && (isCaseOpen ? closeCase() : setIsCaseOpen(true))} disabled={busy} aria-expanded={isCaseOpen} aria-label={isCaseOpen ? "Cerrar caja" : "Abrir caja"}>{isCaseOpen ? "CERRAR CAJA" : "ABRIR CAJA"}</button>
           </div>
         </footer>
-        {playError && (
-          <p className={styles.playError} role="alert" aria-live="polite">
-            {playError}
-          </p>
-        )}
+        {playError && <p className={styles.playError} role="alert" aria-live="polite">{playError}</p>}
       </div>
     </div>
   );

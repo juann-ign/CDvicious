@@ -1,326 +1,210 @@
 "use client";
 
-import { useEffect, useRef, type CSSProperties } from "react";
-import gsap from "gsap";
+import { useLayoutEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { discRegistry } from "@/lib/discRegistry";
-import discStyles from "../Disc/Disc.module.css";
-import { useRail } from "@/components/scroll/RailContext";
+import { DISC_FLIGHT_DURATION_MS, quadToCssMatrix, readDiscQuad, sampleDiscFlight, supportsDiscFlightMotion, type DiscFlightOrigin, type DiscQuad } from "@/lib/discFlightGeometry";
+import type { StartPlayExecution } from "@/lib/discPlayback";
+import { getPlaybackState, subscribePlaybackState } from "@/lib/playbackSnapshotCoordinator";
+import { useRailActions } from "@/components/scroll/RailContext";
 import styles from "./RailFlyingDisc.module.css";
-import { CatalogDiscFace, type CatalogDiscPresentation } from "./CatalogDiscSurface";
 
 interface RailFlyingDiscProps {
-  catalogDisc?: CatalogDiscPresentation;
-  coverUrl: string;
-  originRect: DOMRect;
+  origin: DiscFlightOrigin;
+  execution: StartPlayExecution;
   onArrive: () => void;
   onDone: () => void;
 }
 
-const PARTICLES = Array.from({ length: 12 }, (_, index) => {
-  const angle = (index / 12) * Math.PI * 2;
-  const distance = 38 + (index % 4) * 10;
-
-  return {
-    dx: Math.cos(angle) * distance,
-    dy: Math.sin(angle) * distance,
-    delay: (index % 5) * 0.02,
-  };
-});
-
-const DOCK_PULSE_DURATION_MS = 900;
-const FLIGHT_DURATION_SECONDS = 4.8;
-
-export function RailFlyingDisc({
-  catalogDisc,
-  coverUrl,
-  originRect,
-  onArrive,
-  onDone,
-}: RailFlyingDiscProps) {
-  const { isReady, scrollToChapter } = useRail();
-  const wrapRef = useRef<HTMLDivElement>(null);
-  const spinnerRef = useRef<HTMLDivElement>(null);
-  const impactRef = useRef<HTMLDivElement>(null);
+/** The portal carries the captured physical CD, not a newly painted circle. */
+export function RailFlyingDisc({ origin, execution, onArrive, onDone }: RailFlyingDiscProps) {
+  const { isReady, scrollToChapter } = useRailActions();
+  const surfaceRef = useRef<HTMLDivElement>(null);
+  const visualRef = useRef<HTMLDivElement>(null);
+  const onArriveRef = useRef(onArrive);
+  const onDoneRef = useRef(onDone);
   const arrivedRef = useRef(false);
   const doneRef = useRef(false);
-  const impactTimelineRef = useRef<gsap.core.Timeline | null>(null);
-  const pulseTimeoutRef = useRef<number | null>(null);
-  const pulseTargetRef = useRef<HTMLElement | null>(null);
+  const ownerRef = useRef(execution.attempt.attemptId);
+  const lifetimeRef = useRef(0);
+  onArriveRef.current = onArrive;
+  onDoneRef.current = onDone;
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!isReady) return;
+    const attemptId = execution.attempt.attemptId;
+    if (ownerRef.current !== attemptId) {
+      ownerRef.current = attemptId;
+      arrivedRef.current = false;
+      doneRef.current = false;
+    }
+    if (doneRef.current) return;
+    const epoch = ++lifetimeRef.current;
+    const ownsLifetime = () => lifetimeRef.current === epoch;
+    const surface = surfaceRef.current;
+    const visual = visualRef.current;
+    if (!surface || !visual) return;
+    const replica = origin.visual.cloneNode(true) as HTMLElement;
+    visual.replaceChildren(replica);
+    visual.style.visibility = "visible";
+    const firstMatrix = quadToCssMatrix(origin.quad, origin.width, origin.height);
+    if (firstMatrix) surface.style.transform = firstMatrix;
+    surface.style.visibility = "visible";
 
-    const el = wrapRef.current;
-    const spinner = spinnerRef.current;
-
-    if (!el || !spinner) return;
-
-    const fromX = originRect.left + originRect.width / 2;
-    const fromY = originRect.top + originRect.height / 2;
-    const fromSize = Math.max(1, originRect.width);
-    const reduceMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
-    const duration = reduceMotion ? 0 : FLIGHT_DURATION_SECONDS;
-
+    let frame = 0;
+    let stopped = false;
+    let lastPhase = "";
+    let lastTarget: DiscQuad | null = null;
+    let lastAir: DiscQuad | null = null;
+    let mechanism: HTMLElement | null = null;
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const startedAt = performance.now();
+    const setLids = (offset: number) => {
+      if (getPlaybackState().attempt?.attemptId === attemptId) mechanism?.style.setProperty("--deck-lid-offset", String(offset));
+    };
+    const publishPhase = (phase: string) => {
+      if (lastPhase === phase) return;
+      lastPhase = phase;
+      surface.dataset.flightPhase = phase;
+      window.dispatchEvent(new CustomEvent("cdvicious:deck-load-pose", { detail: { attemptId, phase } }));
+    };
     const readTarget = () => {
       const target = discRegistry.discTarget;
-      return target?.isConnected ? target.getBoundingClientRect() : null;
+      if (!target?.isConnected) return null;
+      const deck = target.closest<HTMLElement>("[data-physical-deck]");
+      mechanism = deck?.querySelector<HTMLElement>("[data-deck-mechanism]") ?? null;
+      lastTarget = readDiscQuad(target) ?? lastTarget;
+      lastAir = readDiscQuad(deck?.querySelector<HTMLElement>("[data-deck-air-disc]") ?? null) ?? lastAir;
+      return lastTarget && lastAir && mechanism ? { target: lastTarget, air: lastAir } : null;
     };
-
-    const initialTarget = readTarget();
-    let lastTarget = initialTarget;
-    const path = { p: 0 };
-    let lastX = fromX;
-    let lastY = fromY;
-    let tween: gsap.core.Tween | null = null;
-    let fadeComplete = false;
-
-    const finish = () => {
+    const finish = (phase = "complete") => {
       if (doneRef.current) return;
       doneRef.current = true;
-      onDone();
+      stopped = true;
+      cancelAnimationFrame(frame);
+      setLids(0);
+      publishPhase(phase);
+      surface.style.visibility = "hidden";
+      visual.replaceChildren();
+      window.dispatchEvent(new CustomEvent("cdvicious:disc-flight-done", { detail: { attemptId } }));
+      onDoneRef.current();
     };
-
-    const maybeFinish = () => {
-      if (fadeComplete && pulseTimeoutRef.current === null) finish();
+    const dock = (quad: DiscQuad) => {
+      if (arrivedRef.current) return true;
+      if (!execution.markDocked()) return false;
+      arrivedRef.current = true;
+      publishPhase("docked");
+      window.dispatchEvent(new CustomEvent("cdvicious:disc-flight-arrived", { detail: { attemptId, origin, quad } }));
+      window.dispatchEvent(new CustomEvent("cdvicious:disc-flight-playback-ready", { detail: { attemptId } }));
+      onArriveRef.current();
+      // The persistent rotor now owns this exact captured visual. Retain only
+      // the mechanical closing clock; no second CD covers its first spin.
+      visual.style.visibility = "hidden";
+      return true;
     };
-
-    const clearPulse = () => {
-      if (pulseTimeoutRef.current !== null) {
-        window.clearTimeout(pulseTimeoutRef.current);
-        pulseTimeoutRef.current = null;
+    const paint = (now: number) => {
+      if (stopped || doneRef.current) return false;
+      const current = getPlaybackState();
+      if (current.attempt?.attemptId !== attemptId || ["failed", "cancelled"].includes(current.phase)) {
+        finish("cancelled");
+        return false;
       }
-
-      pulseTargetRef.current?.classList.remove(discStyles.dockPulse);
-      pulseTargetRef.current = null;
+      const measured = readTarget();
+      if (!measured) {
+        execution.cancel();
+        finish("cancelled");
+        return false;
+      }
+      const state = sampleDiscFlight(origin.quad, measured.target, measured.air, now - startedAt);
+      const matrix = quadToCssMatrix(state.quad, origin.width, origin.height);
+      if (!matrix) {
+        execution.cancel();
+        finish("cancelled");
+        return false;
+      }
+      surface.style.transform = matrix;
+      surface.dataset.flightProgress = state.progress.toFixed(5);
+      surface.dataset.flightRoll = String(Math.atan2(state.quad.tr.y - state.quad.tl.y, state.quad.tr.x - state.quad.tl.x) * 180 / Math.PI);
+      publishPhase(state.phase);
+      setLids(state.lidOffset);
+      if (state.docked && !dock(state.quad)) {
+        finish("cancelled");
+        return false;
+      }
+      if (state.complete) {
+        finish();
+        return false;
+      }
+      return true;
     };
-
-    const startDockPulse = (target: HTMLElement) => {
-      clearPulse();
-      target.classList.remove(discStyles.dockPulse);
-      void target.offsetWidth;
-      target.classList.add(discStyles.dockPulse);
-      pulseTargetRef.current = target;
-
-      pulseTimeoutRef.current = window.setTimeout(() => {
-        target.classList.remove(discStyles.dockPulse);
-        if (pulseTargetRef.current === target) {
-          pulseTargetRef.current = null;
-        }
-        pulseTimeoutRef.current = null;
-        maybeFinish();
-      }, DOCK_PULSE_DURATION_MS);
+    const tick = (now: number) => {
+      if (paint(now)) frame = requestAnimationFrame(tick);
     };
-
-    const cleanup = () => {
-      tween?.kill();
-      impactTimelineRef.current?.kill();
-      impactTimelineRef.current = null;
-      clearPulse();
-      gsap.killTweensOf(el);
-      gsap.killTweensOf(spinner);
-    };
-
-    // Never animate to an arbitrary point if the Deck has not registered its
-    // target. Keep the chapter reset, then discard the temporary flight element.
-    if (!initialTarget) {
-      scrollToChapter(0, duration, "flight");
+    const instantDock = () => {
+      if (stopped) return;
+      cancelAnimationFrame(frame);
+      scrollToChapter(0, 0, "flight");
+      const measured = readTarget();
+      const matrix = measured && quadToCssMatrix(measured.target, origin.width, origin.height);
+      if (!matrix) {
+        execution.cancel();
+        finish("cancelled");
+        return;
+      }
+      surface.style.transform = matrix;
+      surface.dataset.flightProgress = "1";
+      setLids(0);
+      if (!dock(measured!.target)) { finish("cancelled"); return; }
       finish();
-      return cleanup;
+    };
+    const watchAttempt = () => {
+      const state = getPlaybackState();
+      if (state.attempt?.attemptId !== attemptId || ["failed", "cancelled"].includes(state.phase)) finish("cancelled");
+    };
+    const resize = () => { if (!document.hidden && !stopped) paint(performance.now()); };
+    const visibility = () => {
+      cancelAnimationFrame(frame);
+      if (!document.hidden && !stopped) frame = requestAnimationFrame(tick);
+    };
+    const preference = () => { if (media.matches) instantDock(); };
+    const unsubscribe = subscribePlaybackState(watchAttempt);
+    window.addEventListener("resize", resize);
+    document.addEventListener("visibilitychange", visibility);
+    media.addEventListener("change", preference);
+
+    if (media.matches || !supportsDiscFlightMotion()) instantDock();
+    else {
+      scrollToChapter(0, DISC_FLIGHT_DURATION_MS / 1000, "flight");
+      paint(startedAt);
+      if (!stopped && !document.hidden) frame = requestAnimationFrame(tick);
     }
-
-    gsap.set(el, {
-      left: fromX,
-      top: fromY,
-      width: fromSize,
-      height: fromSize,
-      xPercent: -50,
-      yPercent: -50,
-      x: 0,
-      y: 0,
-      opacity: 1,
-      rotate: 0,
-      rotationX: 0,
-      scaleX: 1,
-      scaleY: 1,
-    });
-
-    gsap.set(spinner, { rotate: 0 });
-    const setX = gsap.quickSetter(el, "x", "px");
-    const setY = gsap.quickSetter(el, "y", "px");
-    const setRotate = gsap.quickSetter(el, "rotate", "deg");
-    const setRotationX = gsap.quickSetter(el, "rotationX", "deg");
-    const setScaleX = gsap.quickSetter(el, "scaleX");
-    const setScaleY = gsap.quickSetter(el, "scaleY");
-    const setSpinnerRotate = gsap.quickSetter(spinner, "rotate", "deg");
-    scrollToChapter(0, duration, "flight");
-
-    if (reduceMotion) {
-      const target = readTarget() ?? initialTarget;
-      const dockRect = readTarget();
-
-      gsap.set(el, {
-        left: target.left + target.width / 2,
-        top: target.top + target.height / 2,
-        width: target.width * 0.9,
-        height: target.height * 0.9,
-        x: 0,
-        y: 0,
-        xPercent: -50,
-        yPercent: -50,
-        rotate: 0,
-        rotationX: 0,
-        scaleX: 1,
-        scaleY: 1,
+    return () => {
+      stopped = true;
+      cancelAnimationFrame(frame);
+      unsubscribe();
+      window.removeEventListener("resize", resize);
+      document.removeEventListener("visibilitychange", visibility);
+      media.removeEventListener("change", preference);
+      setLids(0);
+      visual.replaceChildren();
+      // React's development effect replay is not a user cancellation. A real
+      // unmount still cancels this attempt after its synchronous cleanup.
+      queueMicrotask(() => {
+        const state = getPlaybackState();
+        if (ownsLifetime() && !doneRef.current && state.attempt?.attemptId === attemptId && state.busy) execution.cancel();
       });
+    };
+  }, [execution, isReady, origin, scrollToChapter]);
 
-      if (impactRef.current && dockRect) {
-        gsap.set(impactRef.current, {
-          left: dockRect.left + dockRect.width / 2,
-          top: dockRect.top + dockRect.height / 2,
-        });
-      }
-
-      onArrive();
-      finish();
-      return cleanup;
-    }
-
-    tween = gsap.to(path, {
-      p: 1,
-      duration,
-      ease: "sine.inOut",
-      onUpdate: () => {
-        const target = readTarget();
-        if (target) lastTarget = target;
-        const targetRect = lastTarget ?? initialTarget;
-        if (!targetRect) return;
-        const toX = targetRect.left + targetRect.width / 2;
-        const toY = targetRect.top + targetRect.height / 2;
-        const toSize = targetRect.width * 0.9;
-        const p = path.p;
-        const midX = fromX + (toX - fromX) * 0.5 + (toX >= fromX ? 26 : -26);
-        const midY = (fromY + toY) * 0.5 - 96;
-        const x =
-          (1 - p) * (1 - p) * fromX +
-          2 * (1 - p) * p * midX +
-          p * p * toX;
-        const arc = Math.sin(Math.PI * p) * Math.min(28, window.innerHeight * 0.035);
-        const y =
-          (1 - p) * (1 - p) * fromY +
-          2 * (1 - p) * p * midY +
-          p * p * toY -
-          arc;
-        const size = fromSize + (toSize - fromSize) * p;
-        const dx = x - lastX;
-        const dy = y - lastY;
-        const distance = Math.hypot(dx, dy);
-        const travelAngle =
-          distance > 0.1 ? (Math.atan2(dy, dx) * 180) / Math.PI : 0;
-
-        setX(x - fromX);
-        setY(y - fromY);
-        setRotate(travelAngle);
-        setRotationX(30 * Math.max(0, Math.min(1, (p - 0.8) / 0.2)));
-        setScaleX((size / fromSize) * (1 + Math.min(0.06, distance / 90)));
-        setScaleY((size / fromSize) * (1 - Math.min(0.025, distance / 180)));
-        // Tie rotation to normalized progress so dropped frames do not change
-        // the spin rate or create frame-count-dependent bursts of rotation.
-        setSpinnerRotate(p * 1080 - travelAngle);
-        lastX = x;
-        lastY = y;
-
-        if (!arrivedRef.current && p >= 0.99) {
-          arrivedRef.current = true;
-          const dockTarget = discRegistry.discTarget;
-          const dockRect = readTarget();
-
-          if (dockTarget?.isConnected && dockRect) {
-            startDockPulse(dockTarget);
-          }
-
-          if (impactRef.current && dockRect) {
-            const ring = impactRef.current.querySelector("[data-impact-ring]");
-            const flash = impactRef.current.querySelector("[data-impact-flash]");
-            const particles = impactRef.current.querySelectorAll("[data-impact-particle]");
-
-            gsap.set(impactRef.current, {
-              left: dockRect.left + dockRect.width / 2,
-              top: dockRect.top + dockRect.height / 2,
-            });
-
-            impactTimelineRef.current?.kill();
-            impactTimelineRef.current = gsap.timeline();
-            impactTimelineRef.current
-              .fromTo(ring,
-                { scale: 0.3, opacity: 0.65 },
-                { scale: 1.8, opacity: 0, duration: 0.32, ease: "power2.out" },
-                0,
-              )
-              .fromTo(flash,
-                { scale: 0.4, opacity: 0.45 },
-                { scale: 1.35, opacity: 0, duration: 0.2, ease: "power2.out" },
-                0,
-              )
-              .fromTo(particles,
-                { x: 0, y: 0, opacity: 0.8 },
-                { x: (index) => PARTICLES[index]?.dx ?? 0, y: (index) => PARTICLES[index]?.dy ?? 0, opacity: 0, duration: 0.34, stagger: 0.01, ease: "power2.out" },
-                0,
-              );
-          }
-
-          onArrive();
-        }
-      },
-      onComplete: () => {
-        gsap.to(el, {
-          opacity: 0,
-          duration: 0.16,
-          ease: "power1.in",
-          onComplete: () => {
-            fadeComplete = true;
-            maybeFinish();
-          },
-        });
-      },
-    });
-
-    return cleanup;
-  }, [isReady, onArrive, onDone, originRect, scrollToChapter]);
-
-  return (
-    <>
-      <div ref={wrapRef} className={styles.disc} aria-hidden="true" data-testid="rail-flying-disc">
-        <div ref={spinnerRef} className={styles.spinner}>
-          {catalogDisc ? <CatalogDiscFace {...catalogDisc} /> : <>
-          <div
-            className={styles.discInner}
-            style={{ backgroundImage: "url(" + coverUrl + ")" }}
-          />
-          <div className={styles.sheen} />
-          <div className={styles.grooves} />
-          <div className={styles.hub} />
-          </>}
-        </div>
-      </div>
-
-      <div ref={impactRef} className={styles.impact} aria-hidden="true">
-        <span className={styles.impactRing} data-impact-ring />
-        <span className={styles.impactFlash} data-impact-flash />
-        {PARTICLES.map((particle, index) => (
-          <span
-            key={index}
-            className={styles.impactParticle}
-            data-impact-particle
-            style={{
-              "--dx": particle.dx + "px",
-              "--dy": particle.dy + "px",
-              animationDelay: particle.delay + "s",
-            } as CSSProperties}
-          />
-        ))}
-      </div>
-    </>
-  );
+  if (typeof document === "undefined") return null;
+  return createPortal(<div className={styles.overlay} aria-hidden="true" inert>
+    <div ref={surfaceRef} className={styles.disc} data-testid="rail-flying-disc" data-attempt-id={execution.attempt.attemptId} data-flight-phase="lifting" data-flight-progress="0"
+      style={{ width: origin.width, height: origin.height, transform: quadToCssMatrix(origin.quad, origin.width, origin.height) ?? undefined }}>
+      <div ref={visualRef} className={styles.visual} />
+      <span className={styles.corner} data-flight-pose-corner="tl" style={{ left: 0, top: 0 }} />
+      <span className={styles.corner} data-flight-pose-corner="tr" style={{ left: "100%", top: 0 }} />
+      <span className={styles.corner} data-flight-pose-corner="bl" style={{ left: 0, top: "100%" }} />
+      <span className={styles.corner} data-flight-pose-corner="br" style={{ left: "100%", top: "100%" }} />
+    </div>
+  </div>, document.body);
 }

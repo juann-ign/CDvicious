@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSpotifyPlayer } from "@/components/SpotifyPlayerProvider";
-import { useRailActions } from "@/components/scroll/RailContext";
+import { useDiscPlaybackLaunch } from "@/hooks/useDiscPlaybackLaunch";
 import {
   loadCollection,
   loadCollectionGenres,
@@ -25,7 +25,6 @@ export function CollectionChapter() {
   const [artistExplorerVisited, setArtistExplorerVisited] = useState(false);
   const [trayOpen, setTrayOpen] = useState(false);
   const { authenticated } = useSpotifyPlayer();
-  const { scrollToChapter } = useRailActions();
   const { albums: cachedAlbums, collectionState, collectionError, collectionRetryAt, genresState, genresError, genresRetryAt, genresResolvedArtists, genresTotalArtists } = useCollectionCache();
   const albums = useMemo(() => cachedAlbums ?? [], [cachedAlbums]);
   const loading = collectionState === "loading" || (collectionState === "idle" && !cachedAlbums && authenticated !== false);
@@ -44,10 +43,7 @@ export function CollectionChapter() {
     albumId: string;
     message: string;
   } | null>(null);
-  const [flight, setFlight] = useState<{
-    album: AlbumItem;
-    originRect: DOMRect;
-  } | null>(null);
+  const { flight, launch, onArrive, onDone } = useDiscPlaybackLaunch<AlbumItem>();
   const chapterRef = useRef<HTMLDivElement>(null);
   const [now, setNow] = useState(Date.now);
   const collectionWait = Math.max(0, Math.ceil((collectionRetryAt - now) / 1000));
@@ -181,62 +177,11 @@ export function CollectionChapter() {
     originEl: HTMLElement,
     executePlayback: StartPlayExecution,
   ) => {
-    const sourceChapter = Number(document.documentElement.dataset.chapter ?? "0");
-
-    setPlayErrorForAlbum(null);
-    setFlight({
-      album,
-      originRect: originEl.getBoundingClientRect(),
+    return launch(album, originEl, executePlayback, {
+      onCaptured: () => { setPlayErrorForAlbum(null); setSelected(null); },
+      onRecover: (message) => { setPlayErrorForAlbum({ albumId: album.id, message }); setSelected(album); },
     });
-    setSelected(null);
-
-    // Playback executes while the disc is in transit. On rejection, cancel the
-    // transient flight, return to the source chapter, and restore modal feedback.
-    void executePlayback()
-      .then((result) => {
-        if (result.success) return;
-
-        window.dispatchEvent(new Event("cdvicious:disc-flight-cancelled"));
-        setFlight(null);
-        setPlayErrorForAlbum({
-          albumId: album.id,
-          message: result.message ?? "Spotify no confirmó la reproducción. Podés intentarlo de nuevo.",
-        });
-        // Restore navigation before remounting the modal: its layout effect
-        // acquires a Lenis stop token, which would make scrollToChapter a no-op.
-        // The flight state is already cleared, so this frame runs after the disc
-        // has unmounted and before the recovery modal locks the rail again.
-        window.requestAnimationFrame(() => {
-          scrollToChapter(sourceChapter, 0);
-          setSelected(album);
-        });
-      })
-      .catch(() => {
-        window.dispatchEvent(new Event("cdvicious:disc-flight-cancelled"));
-        setFlight(null);
-        setPlayErrorForAlbum({
-          albumId: album.id,
-          message: "No se pudo conectar con Spotify. Revisá tu conexión e intentá de nuevo.",
-        });
-        // Restore navigation before remounting the modal: its layout effect
-        // acquires a Lenis stop token, which would make scrollToChapter a no-op.
-        // The flight state is already cleared, so this frame runs after the disc
-        // has unmounted and before the recovery modal locks the rail again.
-        window.requestAnimationFrame(() => {
-          scrollToChapter(sourceChapter, 0);
-          setSelected(album);
-        });
-      });
-  }, [scrollToChapter]);
-
-  const handleFlightArrive = useCallback(() => {
-    window.dispatchEvent(new Event("cdvicious:disc-flight-arrived"));
-  }, []);
-
-  const handleFlightDone = useCallback(() => {
-    window.dispatchEvent(new Event("cdvicious:disc-flight-done"));
-    setFlight(null);
-  }, []);
+  }, [launch]);
 
   const handleClose = useCallback(() => {
     setSelected(null);
@@ -386,10 +331,11 @@ export function CollectionChapter() {
 
       {flight && (
         <RailFlyingDisc
-          coverUrl={flight.album.images[0]?.url ?? ""}
-          originRect={flight.originRect}
-          onArrive={handleFlightArrive}
-          onDone={handleFlightDone}
+          key={flight.execution.attempt.attemptId}
+          origin={flight.origin}
+          execution={flight.execution}
+          onArrive={onArrive}
+          onDone={onDone}
         />
       )}
     </div>

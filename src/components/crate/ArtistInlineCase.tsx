@@ -4,11 +4,11 @@ import { useLayoutEffect, useRef, useState, type ComponentProps } from "react";
 import { ArtistJewelCaseDetail } from "./ArtistJewelCaseDetail";
 import styles from "./ArtistDiscography.module.css";
 
-type Props = Omit<ComponentProps<typeof ArtistJewelCaseDetail>, "open" | "onOpened" | "onClosed"> & { expanded: boolean; onClosed: () => void };
+type Props = Omit<ComponentProps<typeof ArtistJewelCaseDetail>, "open" | "onOpened" | "onClosed"> & { expanded: boolean; onClosed: () => void; onOpened?: () => void };
 
 // The scene reserves the neighbouring space first; the exact modal hinge and
 // its completion/cancellation live in JewelCasePresentation, not in this shell.
-export function ArtistInlineCase({ expanded, onClosed, ...detail }: Props) {
+export function ArtistInlineCase({ expanded, onClosed, onOpened, ...detail }: Props) {
   const [hingeOpen, setHingeOpen] = useState(false);
   const [phase, setPhase] = useState("reserving");
   const expandedRef = useRef(expanded);
@@ -38,6 +38,7 @@ export function ArtistInlineCase({ expanded, onClosed, ...detail }: Props) {
       onOpened={() => {
         if (!expandedRef.current) return;
         setPhase("open");
+        onOpened?.();
         if (detail.active && !detail.pending) detail.discRef.current?.focus({ preventScroll: true });
       }}
       onClosed={() => {

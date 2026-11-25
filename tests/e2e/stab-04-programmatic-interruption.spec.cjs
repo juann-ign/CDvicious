@@ -55,7 +55,7 @@ for (const input of ['middle', 'touch']) {
         const wheelTarget = nearest + direction;
         await page.getByRole('button', { name: /Mixtape Lab$/ }).hover();
         await page.mouse.wheel(0, direction * 700);
-        await expect(page.getByRole('navigation').getByRole('button').nth(wheelTarget)).toHaveAttribute('aria-current', 'location');
+        await expect(page.getByRole('navigation', { name: 'Navegación por capítulos', exact: true }).getByRole('button').nth(wheelTarget)).toHaveAttribute('aria-current', 'location');
         await expect(root).toHaveAttribute('data-rail-moving', 'false');
         await sample('after-wheel');
 

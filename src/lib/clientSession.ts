@@ -8,13 +8,15 @@ export type ClientAuthSession = {
 let cachedSession: ClientAuthSession | null = null;
 let sessionPromise: Promise<ClientAuthSession> | null = null;
 
-export function getClientAuthSession(): Promise<ClientAuthSession> {
-  if (cachedSession) {
-    return Promise.resolve(cachedSession);
-  }
-
+export function getClientAuthSession(
+  options: { refresh?: boolean } = {},
+): Promise<ClientAuthSession> {
   if (sessionPromise) {
     return sessionPromise;
+  }
+
+  if (cachedSession && !options.refresh) {
+    return Promise.resolve(cachedSession);
   }
 
   sessionPromise = fetch("/api/auth/session", {
@@ -33,6 +35,10 @@ export function getClientAuthSession(): Promise<ClientAuthSession> {
 
       cachedSession = session;
       return session;
+    })
+    .catch((error: unknown) => {
+      cachedSession = null;
+      throw error;
     })
     .finally(() => {
       sessionPromise = null;

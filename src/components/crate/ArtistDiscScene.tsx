@@ -22,6 +22,7 @@ interface Props {
   open: () => void;
   escape: () => void;
   onPlay: (album: ArtistRelease, element: HTMLElement) => void;
+  onOpened?: () => void;
   discRef: RefObject<HTMLDivElement | null>;
   caseRef: RefObject<HTMLButtonElement | null>;
 }
@@ -54,7 +55,7 @@ function CaseTitle({ value, vertical = false }: { value: string; vertical?: bool
 
 // At the step boundary, slot N becomes N-1 at exactly the same pixel. Only
 // offscreen copies are recycled; every edition retains one canonical button.
-export function ArtistDiscScene({ albums, index, mode, active, drifting, hiddenDiscId, disabled, select, advance, open, escape, onPlay, discRef, caseRef }: Props) {
+export function ArtistDiscScene({ albums, index, mode, active, drifting, hiddenDiscId, disabled, select, advance, open, escape, onPlay, onOpened, discRef, caseRef }: Props) {
   const { start, stop } = useRailActions();
   const token = useRef(Symbol("artist-jewelcase-drag"));
   const sceneRef = useRef<HTMLDivElement>(null);
@@ -238,7 +239,7 @@ export function ArtistDiscScene({ albums, index, mode, active, drifting, hiddenD
             onClick={() => choose(at, false)}>{content}</button>;
       })}
     </div>
-    {detailVisible && albums[index] && <ArtistInlineCase key={albums[index].id} expanded={mode === "open"} onClosed={closeDone} onClose={escape} album={albums[index]} active={active} pending={Boolean(disabled)} hiddenDiscId={hiddenDiscId} discRef={discRef} onPlay={onPlay} />}
+    {detailVisible && albums[index] && <ArtistInlineCase key={albums[index].id} expanded={mode === "open"} onClosed={closeDone} onOpened={onOpened} onClose={escape} album={albums[index]} active={active} pending={Boolean(disabled)} hiddenDiscId={hiddenDiscId} discRef={discRef} onPlay={onPlay} />}
     <span className={styles.dragHint}>{mode === "browse" ? "ARRASTRÁ EL ESPACIO LIBRE · ELEGÍ UNA CAJA" : mode === "selected" ? "OTRO CLIC PARA ABRIR · ESC PARA RECORRER" : "CD: ARRASTRÁ PARA INSPECCIONAR · ESC PARA CERRAR"}</span>
   </div>;
 }

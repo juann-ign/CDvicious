@@ -100,7 +100,10 @@ test("Split normal: redimensionar conserva el verso y Deck no recibe foco del bo
   await expect(root(page)).toHaveAttribute("data-reading-anchor", anchor);
   await assertFits(page);
   await expect(toolbar(page)).toBeInViewport({ ratio: 1 });
-  await expect(page.getByRole("img", { name: "CD: Neon Rooms", exact: true })).toBeVisible();
+  const equipment = page.getByRole("img", { name: /Reproductor de CD.*Neon Rooms/ });
+  await expect(equipment).toBeVisible();
+  await expect(equipment.locator("[data-deck-docked-disc]")).toBeVisible();
+  await expect(equipment.locator("[data-deck-mechanism]")).toHaveAttribute("data-deck-static", "true");
   await page.screenshot({ path: path.join(output, "split-1440x900.png"), animations: "disabled" });
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));

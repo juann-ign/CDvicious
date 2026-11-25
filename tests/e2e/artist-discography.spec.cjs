@@ -477,7 +477,11 @@ test("WebGL no disponible conserva el Deck estático y las cajas operables", asy
   });
   await page.reload({ waitUntil: "domcontentloaded" });
   await expect(page.locator('[data-rail-ready="true"]')).toBeVisible();
-  await expect(page.getByRole("img", { name: "CD: Neon Rooms" })).toBeVisible();
+  const equipment = page.getByRole("img", { name: /Reproductor de CD.*Neon Rooms/ });
+  await expect(equipment).toBeVisible();
+  await expect(equipment.locator("[data-deck-docked-disc]")).toBeVisible();
+  await expect(equipment.locator("[data-deck-mechanism]")).toHaveAttribute("data-deck-static", "true");
+  await expect(equipment.locator("[data-deck-mechanism]")).toHaveAttribute("data-disc-spinning", "false");
   await page.getByRole("button", { name: "Ir al capítulo Colección" }).click();
   await expect.poll(() => collection(page).evaluate((node) => Math.abs(node.getBoundingClientRect().left))).toBeLessThan(2);
   await artist(page);

@@ -20,6 +20,8 @@ test("solo una observación fresca del álbum/dispositivo del intento vigente co
   const unsubscribe = api.subscribePlaybackConfirmation(() => { notifications++; });
   const attempt = api.beginPlaybackAttempt(album, "device-a");
   const time = Date.now();
+  assert.equal(api.confirmPlaybackSnapshot(attempt, snapshot(), time), false, "A fresh SDK snapshot does not prove physical docking.");
+  assert.equal(api.markPlaybackDocked(attempt.attemptId), true);
   for (const invalid of [snapshot({ sampledAt: time - 10000 }), snapshot({ sampledAt: time + 20000 }), snapshot({ isPlaying: false }), snapshot({ deviceId: "other" }), snapshot({ track: { id: "other", album: { id: "other-album" } } }), snapshot({ sampledAt: undefined })]) {
     assert.equal(api.confirmPlaybackSnapshot(attempt, invalid, time), false);
     assert.equal(api.getConfirmedPlayback(), null);
@@ -50,7 +52,7 @@ function executionHarness(observation, { dockReady = true } = {}) {
   const listeners = new Map();
   let calls = 0;
   const player = { getVolume: async () => .6, setVolume: async (value) => { volumes.push(value); }, pause: async () => {}, seek: async () => {}, resume: async () => {} };
-  const runtime = load("src/lib/discPlayback.ts", { "./playbackSnapshotCoordinator": api, "./mockSpotifyStore": {} }, {
+  const runtime = load("src/lib/discPlayback.ts", { "./playbackSnapshotCoordinator": api, "./mockSpotifyStore": {}, "./mechanicalDockClick": { armMechanicalDockClick: () => ({ play: async () => "disabled", dispose() {} }) } }, {
     process: { env: { NEXT_PUBLIC_SPOTIFY_MOCK: "0" } },
     document: { documentElement: { dataset: { discFlightPlaybackReady: dockReady ? "true" : "false" } } },
     window: {
@@ -62,7 +64,9 @@ function executionHarness(observation, { dockReady = true } = {}) {
     Event: class { constructor(type) { this.type = type; } },
     fetch: async (url) => { if (url === "/api/play") { calls++; return { ok: true, json: async () => ({ success: true }) }; } return { ok: true, json: async () => observation() }; },
   });
-  return { api, events, volumes, listeners, get calls() { return calls; }, execute: runtime.createDiscPlaybackExecution(album, "device-a", player), create: () => runtime.createDiscPlaybackExecution(album, "device-a", player) };
+  const execute = runtime.createDiscPlaybackExecution(album, "device-a", player);
+  if (dockReady) execute.markDocked();
+  return { api, events, volumes, listeners, get calls() { return calls; }, execute, create: () => runtime.createDiscPlaybackExecution(album, "device-a", player) };
 }
 test("HTTP 200 y acople sin snapshot coherente terminan en timeout sin confirmar", async () => {
   const run = executionHarness(() => snapshot({ track: { id: "old-track", album: { id: "old-album" } } }));

@@ -186,7 +186,7 @@ for (const [width, height] of sizes) {
       await expect(page.getByTestId("deck-now-playing-track")).toHaveText("INSERT DISC");
       await discography.getByRole("button", { name: "REPRODUCIR ÁLBUM", exact: true }).click();
       await expect(page.getByTestId("rail-flying-disc")).toBeVisible();
-      await expect(page.getByTestId("deck-now-playing-track")).toHaveText("INSERT DISC");
+      await expect(page.getByTestId("deck-now-playing-track")).toHaveText("CARGANDO");
       await assertShell(page, width, height);
       expect(await geometry(page)).toEqual(initial);
       await page.screenshot({ path: path.join(evidence, `${prefix}-flight.png`) });

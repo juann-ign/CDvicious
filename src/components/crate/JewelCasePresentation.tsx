@@ -433,6 +433,11 @@ export function JewelCasePresentation({ album, open, onOpen, onClose, onClosed, 
                       opacity: isCaseOpen && !isLaunching ? 1 : 0,
                     }}
                   >
+                    <span data-disc-pose-corner="tl" style={{ position: "absolute", width: 0, height: 0, top: 0, left: 0, pointerEvents: "none" }} aria-hidden="true" />
+                    <span data-disc-pose-corner="tr" style={{ position: "absolute", width: 0, height: 0, top: 0, left: "100%", pointerEvents: "none" }} aria-hidden="true" />
+                    <span data-disc-pose-corner="bl" style={{ position: "absolute", width: 0, height: 0, top: "100%", left: 0, pointerEvents: "none" }} aria-hidden="true" />
+                    <span data-disc-pose-corner="br" style={{ position: "absolute", width: 0, height: 0, top: "100%", left: "100%", pointerEvents: "none" }} aria-hidden="true" />
+                    <span data-disc-pose-center style={{ position: "absolute", width: 0, height: 0, top: "50%", left: "50%", pointerEvents: "none" }} aria-hidden="true" />
                     {coverUrl && !reverse && (
                       <Image
                         src={coverUrl}

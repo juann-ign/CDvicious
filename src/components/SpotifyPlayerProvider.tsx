@@ -100,7 +100,23 @@ export function SpotifyPlayerProvider({ children }: { children: ReactNode }) {
       spotifyPlayer = new window.Spotify.Player({
         name: "CDvicious Web Player",
         getOAuthToken: (cb) => {
-          cb(token);
+          // The SDK requests this again at expiry; keep the existing player.
+          getClientAuthSession({ refresh: true })
+            .then((session) => {
+              if (!active) return;
+
+              setAuthenticated(session.authenticated);
+              if (!session.authenticated || !session.accessToken) {
+                return;
+              }
+
+              cb(session.accessToken);
+            })
+            .catch(() => {
+              if (!active) return;
+
+              setAuthenticated(false);
+            });
         },
         volume: 0.5,
       });

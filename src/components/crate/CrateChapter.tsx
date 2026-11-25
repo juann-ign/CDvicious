@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRailActions } from "@/components/scroll/RailContext";
-import { useCollectionCache } from "@/lib/collectionClient";
+import { useSpotifyPlayer } from "@/components/SpotifyPlayerProvider";
+import { loadCollection, syncCollectionAuth, useCollectionCache } from "@/lib/collectionClient";
+import { useDiscPlaybackLaunch } from "@/hooks/useDiscPlaybackLaunch";
 import {
   JewelCaseDetailModal,
   type StartPlayExecution,
@@ -15,10 +17,23 @@ import styles from "./CrateChapter.module.css";
 const SHELF_COUNT = 18;
 
 export function CrateChapter() {
-  const { stop, start, scrollToChapter } = useRailActions();
+  const { stop, start } = useRailActions();
   const dragLockTokenRef = useRef(Symbol("crate-shelf-drag"));
   const chapterRef = useRef<HTMLDivElement>(null);
-  const { albums: cachedAlbums } = useCollectionCache();
+  const { authenticated } = useSpotifyPlayer();
+  const { albums: cachedAlbums, collectionState, collectionError, collectionRetryAt } = useCollectionCache();
+  const [isActiveChapter, setIsActiveChapter] = useState(false);
+  const [now, setNow] = useState(Date.now);
+  const retrySeconds = Math.max(0, Math.ceil((collectionRetryAt - now) / 1000));
+
+  useEffect(() => { syncCollectionAuth(authenticated); }, [authenticated]);
+
+  useEffect(() => { setNow(Date.now()); }, [collectionRetryAt]);
+  useEffect(() => {
+    if (!retrySeconds) return;
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [retrySeconds]);
 
   useEffect(() => {
     return () => {
@@ -26,8 +41,8 @@ export function CrateChapter() {
     };
   }, [start]);
 
-  // Drive motion styling through DOM attributes; don't re-render all shelf
-  // spines each time a rail gesture starts or settles.
+  // Motion styling follows DOM attributes; settled activation also enables
+  // the shared collection request without fetching while the rail passes by.
   useEffect(() => {
     const railRoot = document.querySelector<HTMLElement>(
       "[data-rail-wrapper]",
@@ -42,6 +57,7 @@ export function CrateChapter() {
         "data-batea-animation-enabled",
         enabled ? "true" : "false",
       );
+      setIsActiveChapter((current) => current === enabled ? current : enabled);
     };
     sync();
     const observer = new MutationObserver(sync);
@@ -51,20 +67,20 @@ export function CrateChapter() {
     });
     return () => observer.disconnect();
   }, []);
+
+  useEffect(() => {
+    if (!isActiveChapter || authenticated !== true || cachedAlbums || collectionState !== "idle") return;
+    void loadCollection(authenticated)?.catch(() => undefined);
+  }, [isActiveChapter, authenticated, cachedAlbums, collectionState]);
+
   const albums = cachedAlbums ?? [];
-  const [loading] = useState(false);
-  const [rateLimitSeconds] = useState<number | null>(null);
-  const [quotaExceeded] = useState(false);
+  const loading = collectionState === "loading" || (collectionState === "idle" && !cachedAlbums && authenticated !== false);
   const [selected, setSelected] = useState<AlbumItem | null>(null);
   const [playErrorForAlbum, setPlayErrorForAlbum] = useState<{
     albumId: string;
     message: string;
   } | null>(null);
-  const [flight, setFlight] = useState<{
-    album: AlbumItem;
-    originRect: DOMRect;
-    attemptId: string;
-  } | null>(null);
+  const { flight, launch, onArrive, onDone } = useDiscPlaybackLaunch<AlbumItem>();
 
   const handleGrabStart = useCallback(() => {
     stop(dragLockTokenRef.current);
@@ -93,85 +109,20 @@ export function CrateChapter() {
     album: AlbumItem,
     originEl: HTMLElement,
     executePlayback: StartPlayExecution,
-    attemptId: string,
   ) => {
-    const sourceChapter = Number(document.documentElement.dataset.chapter ?? "0");
-
-    setPlayErrorForAlbum(null);
-    setFlight({
-      album,
-      originRect: originEl.getBoundingClientRect(),
-      attemptId,
+    return launch(album, originEl, executePlayback, {
+      onCaptured: () => { setPlayErrorForAlbum(null); setSelected(null); },
+      onRecover: (message) => { setPlayErrorForAlbum({ albumId: album.id, message }); setSelected(album); },
     });
-    setSelected(null);
-
-    // Playback executes while the disc is in transit. On rejection, cancel the
-    // transient flight, return to the source chapter, and restore modal feedback.
-    void executePlayback()
-      .then((result) => {
-        if (result.success) return;
-
-        window.dispatchEvent(
-          new CustomEvent("cdvicious:disc-flight-cancelled", {
-            detail: { attemptId },
-          }),
-        );
-        setFlight((current) => current?.attemptId === attemptId ? null : current);
-        setPlayErrorForAlbum({
-          albumId: album.id,
-          message: result.message ?? "Spotify no confirmó la reproducción. Podés intentarlo de nuevo.",
-        });
-        // Restore navigation before remounting the modal: its layout effect
-        // acquires a Lenis stop token, which would make scrollToChapter a no-op.
-        // The flight state is already cleared, so this frame runs after the disc
-        // has unmounted and before the recovery modal locks the rail again.
-        window.requestAnimationFrame(() => {
-          scrollToChapter(sourceChapter, 0);
-          setSelected(album);
-        });
-      })
-      .catch(() => {
-        window.dispatchEvent(
-          new CustomEvent("cdvicious:disc-flight-cancelled", {
-            detail: { attemptId },
-          }),
-        );
-        setFlight((current) => current?.attemptId === attemptId ? null : current);
-        setPlayErrorForAlbum({
-          albumId: album.id,
-          message: "No se pudo conectar con Spotify. Revisá tu conexión e intentá de nuevo.",
-        });
-        // Restore navigation before remounting the modal: its layout effect
-        // acquires a Lenis stop token, which would make scrollToChapter a no-op.
-        // The flight state is already cleared, so this frame runs after the disc
-        // has unmounted and before the recovery modal locks the rail again.
-        window.requestAnimationFrame(() => {
-          scrollToChapter(sourceChapter, 0);
-          setSelected(album);
-        });
-      });
-  }, [scrollToChapter]);
-
-  const handleFlightArrive = useCallback((attemptId: string) => {
-    window.dispatchEvent(
-      new CustomEvent("cdvicious:disc-flight-arrived", { detail: { attemptId } }),
-    );
-  }, []);
-
-  const handleFlightDone = useCallback((attemptId: string) => {
-    window.dispatchEvent(
-      new CustomEvent("cdvicious:disc-flight-done", { detail: { attemptId } }),
-    );
-    setFlight((current) => current?.attemptId === attemptId ? null : current);
-  }, []);
+  }, [launch]);
 
   const statusLabel =
-    quotaExceeded
-      ? "SPOTIFY QUOTA EXCEEDED"
-      : rateLimitSeconds !== null
-        ? "RATE LIMITED / RETRY IN " + rateLimitSeconds + "s"
-        : loading
+    collectionState === "error"
+      ? collectionError?.reason === "QUOTA_EXCEEDED" ? "SPOTIFY QUOTA EXCEEDED"
+        : retrySeconds > 0 ? "RATE LIMITED / RETRY IN " + retrySeconds + "s" : "ARCHIVO NO DISPONIBLE"
+      : loading
         ? "INDEXANDO..."
+        : authenticated === false && !cachedAlbums ? "CONECTÁ SPOTIFY"
         : albums.length + " DISCS";
 
   return (
@@ -188,10 +139,24 @@ export function CrateChapter() {
       </header>
 
       <div className={styles.shelfArea}>
-        {loading ? (
-          <div className={styles.emptyState}>CARGANDO ARCHIVO...</div>
+        {collectionState === "error" ? (
+          <div className={styles.emptyState} role="alert">
+            <div>
+              <p>{collectionError?.message}</p>
+              <button type="button" disabled={retrySeconds > 0 || authenticated !== true} onClick={() => {
+                setNow(Date.now());
+                void loadCollection(authenticated)?.catch(() => undefined);
+              }}>Reintentar archivo</button>
+              {collectionError?.status === 401 && <a href="/api/auth/login"> Conectar Spotify</a>}
+              {retrySeconds > 0 && <p>Reintento disponible en {retrySeconds} s.</p>}
+            </div>
+          </div>
+        ) : loading ? (
+          <div className={styles.emptyState} role="status">CARGANDO ARCHIVO...</div>
+        ) : authenticated === false && !cachedAlbums ? (
+          <div className={styles.emptyState} role="status"><p>Conectá Spotify para ver tus discos guardados. <a href="/api/auth/login">Conectar Spotify</a></p></div>
         ) : albums.length === 0 ? (
-          <div className={styles.emptyState}>ARCHIVO VACÍO</div>
+          <div className={styles.emptyState} role="status">ARCHIVO VACÍO</div>
         ) : (
           <CrateShelf
             albums={albums.slice(0, SHELF_COUNT)}
@@ -212,19 +177,19 @@ export function CrateChapter() {
               ? playErrorForAlbum.message
               : null
           }
-          onPlay={(originEl, executePlayback, attemptId) =>
-            handlePlay(selected, originEl, executePlayback, attemptId)
+          onPlay={(originEl, executePlayback) =>
+            handlePlay(selected, originEl, executePlayback)
           }
         />
       )}
 
       {flight && (
         <RailFlyingDisc
-          coverUrl={flight.album.images[0]?.url ?? ""}
-          originRect={flight.originRect}
-          attemptId={flight.attemptId}
-          onArrive={handleFlightArrive}
-          onDone={handleFlightDone}
+          key={flight.execution.attempt.attemptId}
+          origin={flight.origin}
+          execution={flight.execution}
+          onArrive={onArrive}
+          onDone={onDone}
         />
       )}
     </div>
