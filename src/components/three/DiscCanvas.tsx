@@ -1,10 +1,12 @@
 "use client";
 
-import { Canvas } from "@react-three/fiber";
-import { Suspense, useEffect, useState } from "react";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { Suspense, useEffect, useRef, useState } from "react";
 import type { SpotifyTrack } from "@/types/spotify";
 import { DiscMesh } from "./DiscMesh";
 import { Environment } from "@react-three/drei";
+import type { Group } from "three";
+import type { DiscDragOptions, DiscDragState } from "@/hooks/useDiscDrag";
 
 const FULL_DPR: [number, number] = [1, 2];
 // Fractional rail translations can move transformed bounds across an integer.
@@ -17,6 +19,26 @@ interface DiscCanvasProps {
   accentColor: string;
   renderEnabled?: boolean;
   isRailMoving?: boolean;
+  dragOptions?: DiscDragOptions;
+  onDiscFrame?: (group: Group, state: DiscDragState) => void;
+  onFirstFrame?: (canvas: HTMLCanvasElement) => void;
+  onContextAvailability?: (available: boolean) => void;
+}
+
+function FirstFrame({ onReady }: { onReady: (canvas: HTMLCanvasElement) => void }) {
+  const { gl } = useThree();
+  const completed = useRef(false);
+  const callback = useRef(onReady); callback.current = onReady;
+  useFrame(() => {
+    if (completed.current) return;
+    // R3F renders after useFrame subscribers. This microtask acknowledges the
+    // real draw, with the same Suspense boundary as the mesh and environment.
+    queueMicrotask(() => {
+      if (completed.current || gl.info.render.calls === 0) return;
+      completed.current = true; callback.current(gl.domElement);
+    });
+  });
+  return null;
 }
 
 export function DiscCanvas({
@@ -25,12 +47,17 @@ export function DiscCanvas({
   accentColor,
   renderEnabled = true,
   isRailMoving = false,
+  dragOptions,
+  onDiscFrame,
+  onFirstFrame,
+  onContextAvailability,
 }: DiscCanvasProps) {
   const [canvasElement, setCanvasElement] = useState<HTMLCanvasElement | null>(
     null,
   );
   const [documentVisible, setDocumentVisible] = useState(true);
   const [contextLost, setContextLost] = useState(false);
+  const [contextEpoch, setContextEpoch] = useState(0);
 
   // Visibility and WebGL context state are independent: a visible tab must not
   // resume rendering while its canvas still has a lost context.
@@ -61,6 +88,7 @@ export function DiscCanvas({
       // Prevent the browser's default permanent-loss behavior where supported.
       event.preventDefault();
       setContextLost(true);
+      onContextAvailability?.(false);
       console.warn(
         "[DiscCanvas] WebGL context lost; frameloop paused until restoration",
       );
@@ -68,6 +96,8 @@ export function DiscCanvas({
 
     const handleRestored = () => {
       setContextLost(false);
+      setContextEpoch(value => value + 1);
+      onContextAvailability?.(true);
       console.info("[DiscCanvas] WebGL context restored");
     };
 
@@ -81,7 +111,7 @@ export function DiscCanvas({
         handleRestored,
       );
     };
-  }, [canvasElement]);
+  }, [canvasElement, onContextAvailability]);
 
   return (
     <Canvas
@@ -102,6 +132,7 @@ export function DiscCanvas({
     >
       <ambientLight intensity={1.4} />
 
+      <Suspense fallback={null}>
       <Environment
         files="/hdri/studio_small_03_1k.hdr"
         environmentIntensity={0.35}
@@ -119,12 +150,14 @@ export function DiscCanvas({
         intensity={isPlaying ? 3.5 : 0.8}
       />
 
-      <Suspense fallback={null}>
         <DiscMesh
           track={track}
           isPlaying={isPlaying}
           accentColor={accentColor}
+          dragOptions={dragOptions}
+          onDiscFrame={onDiscFrame}
         />
+        {onFirstFrame && <FirstFrame key={contextEpoch} onReady={onFirstFrame} />}
       </Suspense>
     </Canvas>
   );

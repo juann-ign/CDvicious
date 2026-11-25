@@ -12,9 +12,8 @@ import {
 import { RailFlyingDisc } from "./RailFlyingDisc";
 import { CrateShelf } from "./CrateShelf";
 import type { AlbumItem } from "@/types/crate";
+import { bateaAlbums } from "@/lib/bateaAlbums";
 import styles from "./CrateChapter.module.css";
-
-const SHELF_COUNT = 18;
 
 export function CrateChapter() {
   const { stop, start } = useRailActions();
@@ -159,7 +158,7 @@ export function CrateChapter() {
           <div className={styles.emptyState} role="status">ARCHIVO VACÍO</div>
         ) : (
           <CrateShelf
-            albums={albums.slice(0, SHELF_COUNT)}
+            albums={bateaAlbums(albums)}
             onSelect={handleSelect}
             onGrabStart={handleGrabStart}
             onGrabEnd={handleGrabEnd}

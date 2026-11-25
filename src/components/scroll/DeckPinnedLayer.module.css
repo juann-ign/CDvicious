@@ -8,7 +8,9 @@
   height: var(--shell-content-height);
   pointer-events: none;
   perspective: 1600px;
-  overflow: hidden;
+  /* Preserve the reserved transport geometry without cutting the equipment's
+     floor shadow at the invisible footer's upper edge. */
+  overflow: visible;
   /* This opacity is driven every frame by Lenis scroll progress. A CSS
      * transition adds a second timing curve and makes the overlay lag input. */
   opacity: calc(1 - var(--pHideDeck));
@@ -102,6 +104,7 @@
   pointer-events: auto;
 }
 .globalPlayer[data-footer-visible="false"] { visibility: hidden; pointer-events: none; }
+.globalPlayer[data-prototype-player-active="true"] { opacity: 1; visibility: visible; pointer-events: auto; }
 
 /* Preserve the disc body inside the useful Deck height, including short windows. */
 .discHitArea {

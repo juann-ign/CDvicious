@@ -7,7 +7,7 @@ import * as THREE from "three";
 import gsap from "gsap";
 import type { Group, Mesh } from "three";
 import type { SpotifyTrack } from "@/types/spotify";
-import { useDiscDrag } from "@/hooks/useDiscDrag";
+import { useDiscDrag, type DiscDragOptions, type DiscDragState } from "@/hooks/useDiscDrag";
 import { DiscSheenMaterial } from "./DiscSheenMaterial";
 import "./DiscSheenMaterial";
 
@@ -15,6 +15,8 @@ interface DiscMeshProps {
   track: SpotifyTrack | null;
   isPlaying: boolean;
   accentColor: string;
+  dragOptions?: DiscDragOptions;
+  onDiscFrame?: (group: Group, state: DiscDragState) => void;
 }
 
 // Anatomia de un CD real, en unidades de escena. Mismas proporciones que un
@@ -29,13 +31,13 @@ const THICKNESS = 0.04;
 // presencia sutil y constante para el disco vacío.
 const IDLE_SHEEN_INTENSITY = 0.18;
 
-export function DiscMesh({ track, isPlaying, accentColor }: DiscMeshProps) {
+export function DiscMesh({ track, isPlaying, accentColor, dragOptions, onDiscFrame }: DiscMeshProps) {
   const groupRef = useRef<Group>(null!);
   const sheenRef = useRef<InstanceType<typeof DiscSheenMaterial>>(null);
   const laserRef = useRef<Mesh>(null);
   const previousTrackId = useRef<string | null>(null);
 
-  useDiscDrag(groupRef, Boolean(track), isPlaying);
+  const getDragState = useDiscDrag(groupRef, Boolean(track), isPlaying, dragOptions);
   const coverUrl = track?.album.images[0]?.url;
   const FALLBACK_COVER =
     "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGPQ0TUEAAETAIvi6xJZAAAAAElFTkSuQmCC";
@@ -69,6 +71,7 @@ export function DiscMesh({ track, isPlaying, accentColor }: DiscMeshProps) {
 
   useFrame((_, delta) => {
     if (sheenRef.current) sheenRef.current.uniforms.uTime.value += delta;
+    if (groupRef.current) onDiscFrame?.(groupRef.current, getDragState());
   });
 
   useEffect(() => {

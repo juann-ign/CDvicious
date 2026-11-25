@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSpotifyPlayer } from "@/components/SpotifyPlayerProvider";
 import { useDiscPlaybackLaunch } from "@/hooks/useDiscPlaybackLaunch";
+import { useInteractionPrototype } from "@/hooks/useInteractionPrototype";
 import {
   loadCollection,
   loadCollectionGenres,
@@ -14,6 +15,7 @@ import {
   type StartPlayExecution,
 } from "./JewelCaseDetailModal";
 import { JewelCaseFront } from "./JewelCaseFront";
+import { CollectionBateaTray } from "./CollectionBateaTray";
 import { ArtistExplorer } from "./ArtistExplorer";
 import { RailFlyingDisc } from "./RailFlyingDisc";
 import type { AlbumItem } from "@/types/crate";
@@ -25,6 +27,8 @@ export function CollectionChapter() {
   const [exploringArtist, setExploringArtist] = useState(false);
   const [artistExplorerVisited, setArtistExplorerVisited] = useState(false);
   const [trayOpen, setTrayOpen] = useState(false);
+  const lateralTray = useInteractionPrototype("collection-tray");
+  const [trayOverlay, setTrayOverlay] = useState(false);
   const { authenticated } = useSpotifyPlayer();
   const { albums: cachedAlbums, collectionState, collectionError, collectionRetryAt, genresState, genresError, genresRetryAt, genresResolvedArtists, genresTotalArtists } = useCollectionCache();
   const albums = useMemo(() => cachedAlbums ?? [], [cachedAlbums]);
@@ -52,6 +56,15 @@ export function CollectionChapter() {
   const [now, setNow] = useState(Date.now);
   const collectionWait = Math.max(0, Math.ceil((collectionRetryAt - now) / 1000));
   const genresWait = Math.max(0, Math.ceil((genresRetryAt - now) / 1000));
+
+  useEffect(() => {
+    if (!lateralTray) return;
+    const media = window.matchMedia("(max-width: 1100px)");
+    const update = () => setTrayOverlay(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, [lateralTray]);
 
   useEffect(() => {
     const grid = gridRef.current;
@@ -194,6 +207,27 @@ export function CollectionChapter() {
     setSelected(album);
   }, []);
 
+  // A tray selection must not replace the saved grid's resize/pagination anchor.
+  const handleTraySelect = useCallback((album: AlbumItem) => {
+    setPlayErrorForAlbum(null);
+    setSelected(album);
+  }, []);
+
+  const closeTray = useCallback(() => {
+    setTrayOpen(false);
+    requestAnimationFrame(() => trayButtonRef.current?.focus({ preventScroll: true }));
+  }, []);
+
+  const toggleLateralTray = () => {
+    if (!trayOpen && !pageItems.some((album) => album.id === anchorIdRef.current)) {
+      // Keep the first visible edition stable even when the user reached this
+      // page with pagination rather than focusing a case before opening Batea.
+      anchorIdRef.current = pageItems[0]?.id ?? null;
+    }
+    if (trayOpen) closeTray();
+    else setTrayOpen(true);
+  };
+
   const handlePlay = useCallback((
     album: AlbumItem,
     originEl: HTMLElement,
@@ -232,17 +266,22 @@ export function CollectionChapter() {
       data-collection-transition-lite="true"
       data-artist-exploring={exploringArtist}
     >
-      <div className={styles.collectionContent} hidden={exploringArtist}>
+      <div className={[styles.collectionContent, lateralTray ? styles.lateralTrayLayout : ""].filter(Boolean).join(" ")} hidden={exploringArtist} data-collection-tray-open={lateralTray && trayOpen} onKeyDown={(event) => {
+        if (!lateralTray || !trayOpen || selected || event.key !== "Escape" || event.defaultPrevented) return;
+        event.preventDefault();
+        closeTray();
+      }}>
+      <div className={styles.collectionMain} inert={lateralTray && trayOpen && trayOverlay ? true : undefined} aria-hidden={lateralTray && trayOpen && trayOverlay ? true : undefined}>
       <header className={styles.header}>
         <h2 className={styles.screenReaderTitle}>Tu colección</h2>
         <nav className={styles.sectionNavigation} aria-label="Colección y artistas">
           <button type="button" className={styles.sectionActive} aria-current="page">Tu colección</button>
           <button ref={artistButtonRef} type="button" onClick={() => { setArtistExplorerVisited(true); setExploringArtist(true); }}>Buscar artista</button>
-          <button ref={trayButtonRef} type="button" aria-label={trayOpen ? "Ocultar Batea en Colección" : "Mostrar Batea en Colección"} aria-expanded={trayOpen} aria-controls="collection-batea" onClick={() => setTrayOpen((open) => !open)}>Batea (prototipo)</button>
+          {!lateralTray && <button ref={trayButtonRef} type="button" aria-label={trayOpen ? "Ocultar Batea en Colección" : "Mostrar Batea en Colección"} aria-expanded={trayOpen} aria-controls="collection-batea" onClick={() => setTrayOpen((open) => !open)}>Batea (prototipo)</button>}
         </nav>
       </header>
 
-      {trayOpen && <section id="collection-batea" className={styles.trayPrototype} data-testid="collection-batea-prototype" aria-labelledby="collection-batea-title" onKeyDown={(event) => {
+      {!lateralTray && trayOpen && <section id="collection-batea" className={styles.trayPrototype} data-testid="collection-batea-prototype" aria-labelledby="collection-batea-title" onKeyDown={(event) => {
         if (event.key !== "Escape" || event.defaultPrevented) return;
         event.preventDefault();
         setTrayOpen(false);
@@ -334,6 +373,23 @@ export function CollectionChapter() {
         <span className={styles.pageLabel}>Página {safePage + 1} de {totalPages}</span>
         <button type="button" className={styles.pageButton} disabled={safePage >= totalPages - 1} onClick={() => setPage((current) => Math.min(totalPages - 1, current + 1))}>Siguiente</button>
       </footer>}
+      </div>
+      {lateralTray && <CollectionBateaTray
+        albums={albums}
+        open={trayOpen}
+        overlay={trayOverlay}
+        suspended={selected !== null}
+        authenticated={authenticated}
+        loading={loading}
+        error={collectionState === "error" ? collectionError?.message ?? "No se pudo cargar el archivo." : null}
+        needsAuthentication={collectionError?.status === 401}
+        retrySeconds={collectionWait}
+        toggleRef={trayButtonRef}
+        onToggle={toggleLateralTray}
+        onClose={closeTray}
+        onSelect={handleTraySelect}
+        onRetry={() => { setNow(Date.now()); void loadCollection(authenticated)?.catch(() => undefined); }}
+      />}
       </div>
       {artistExplorerVisited && <ArtistExplorer open={exploringArtist} active={isActiveChapter} onCollection={returnToCollection} />}
 

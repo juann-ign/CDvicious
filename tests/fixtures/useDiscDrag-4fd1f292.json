@@ -1,0 +1,7 @@
+{
+  "sourceCommit": "4fd1f29227ad0ef2a98530e9f50502505d815b8d",
+  "sourcePath": "src/hooks/useDiscDrag.ts",
+  "gitBlob": "74dee0f94c0e56648565800b1f4877d3eac8e6ef",
+  "sha256": "92e358874c7f824a609825c2226c1d746c610ab82deeb39779bb469188e07c88",
+  "fixture": "Exact historical Git blob, without header edits or normalized line endings. Execute as an independent reference in the VM equivalence tests."
+}

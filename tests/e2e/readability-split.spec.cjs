@@ -34,7 +34,7 @@ async function assertFits(page) {
   await expect.poll(() => lyricFaces(page).evaluateAll((nodes) => nodes.filter((node) => node.scrollHeight > node.clientHeight + 2).map((node) => ({ client: node.clientHeight, scroll: node.scrollHeight })))).toEqual([]);
 }
 
-test("Split normal: lectura, márgenes parejos y hoja desde el lomo mantienen los controles fuera del giro", async ({ page }) => {
+test("Split normal: lectura, márgenes parejos y hoja desde el lomo mantienen los controles fuera del giro", async ({ page }, testInfo) => {
   const source = await openMapa(page);
   await expect(toolbar(page)).toBeInViewport({ ratio: 1 });
   await expect(previous(page)).toBeDisabled();
@@ -53,14 +53,41 @@ test("Split normal: lectura, márgenes parejos y hoja desde el lomo mantienen lo
   await assertFits(page);
   await page.screenshot({ path: path.join(output, "split-1280x800.png"), animations: "disabled" });
   const controlsBefore = await toolbar(page).boundingBox();
+  // Capture the real sheet while its native animation is connected. A later
+  // CDP round trip may outlive the 640ms sheet and read empty computed styles
+  // from an ElementHandle removed by onAnimationEnd.
+  await page.evaluate(() => {
+    window.__readabilityTurningLeaf = null;
+    const spread = document.querySelector('[data-testid="lyrics-paper"]');
+    const capture = (event) => {
+      const node = event.target;
+      if (!(node instanceof HTMLElement) || node.dataset.testid !== "lyrics-turning-leaf") return;
+      const style = getComputedStyle(node);
+      window.__readabilityTurningLeaf = {
+        origin: style.transformOrigin,
+        preserve: style.transformStyle,
+        frames: node.getAnimations().flatMap((animation) => animation.effect.getKeyframes().map((frame) => frame.transform)),
+        hidden: node.getAttribute("aria-hidden"),
+        connected: node.isConnected,
+        animationStartAt: event.timeStamp,
+        sampledAt: performance.now(),
+        nativeEvent: event.isTrusted,
+        animationName: event.animationName,
+      };
+      spread.removeEventListener("animationstart", capture);
+    };
+    spread.addEventListener("animationstart", capture);
+  });
   await next(page).click();
   await expect(root(page)).toHaveAttribute("data-pagination-index", "2");
-  const leaf = await page.getByTestId("lyrics-turning-leaf").evaluate((node) => ({
-    origin: getComputedStyle(node).transformOrigin,
-    preserve: getComputedStyle(node).transformStyle,
-    frames: node.getAnimations().flatMap((animation) => animation.effect.getKeyframes().map((frame) => frame.transform)),
-    hidden: node.getAttribute("aria-hidden"),
-  }));
+  await expect.poll(() => page.evaluate(() => window.__readabilityTurningLeaf)).not.toBeNull();
+  const observation = await page.evaluate(() => ({ leaf: window.__readabilityTurningLeaf, evaluatedAt: performance.now() }));
+  const leaf = observation.leaf;
+  const observationPath = testInfo.outputPath("native-turning-leaf.json");
+  fs.mkdirSync(path.dirname(observationPath), { recursive: true });
+  fs.writeFileSync(observationPath, JSON.stringify(observation, null, 2) + "\n", "utf8");
+  await testInfo.attach("native-turning-leaf", { path: observationPath, contentType: "application/json" });
+  expect(leaf.connected).toBe(true);
   expect(leaf.origin.split(" ")[0]).toBe("0px");
   expect(leaf.preserve).toBe("preserve-3d");
   expect(leaf.frames).toContain("rotateY(-180deg)");

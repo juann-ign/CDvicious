@@ -1,0 +1,111 @@
+.latch {
+  position: absolute;
+  left: calc(610 * var(--u));
+  top: calc(170 * var(--u));
+  width: calc(90 * var(--u));
+  height: calc(115 * var(--u));
+  transform: translateZ(calc(24 * var(--u)));
+  pointer-events: none;
+}
+
+/* The return latch is a foreground control, outside the scaled machine. Keep
+   its own density so its handle travel and pointer travel remain identical. */
+.latch[data-latch-mode="dock"] {
+  --u: 1.2px;
+  left: auto;
+  top: auto;
+  right: 24px;
+  bottom: 14px;
+  z-index: 20;
+  transform: none;
+}
+
+.action {
+  appearance: none;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #233d2a;
+  font-family: var(--font-ui);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  pointer-events: auto;
+  transform-style: preserve-3d;
+}
+.action > * { pointer-events: none; }
+.latch[data-latch-dragging="true"] .action { cursor: grabbing; }
+.action:disabled { cursor: default; }
+.action:focus-visible { outline: calc(2 * var(--u)) solid #29482d; outline-offset: calc(4 * var(--u)); }
+
+.label {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  text-align: center;
+  font: calc(14 * var(--u))/1.1 var(--font-ui);
+  letter-spacing: calc(.5 * var(--u));
+  white-space: nowrap;
+}
+
+.slot {
+  position: absolute;
+  left: calc(35 * var(--u));
+  right: calc(35 * var(--u));
+  top: calc(20 * var(--u));
+  bottom: calc(8 * var(--u));
+  border: calc(2 * var(--u)) ridge #6c7c6b;
+  background: linear-gradient(90deg, #1e2b23, #425343 50%, #23352a);
+  box-shadow: inset calc(2 * var(--u)) 0 calc(3 * var(--u)) #101a1399, calc(1 * var(--u)) 0 #dce3d3;
+}
+
+.direction {
+  position: absolute;
+  top: calc(39 * var(--u));
+  left: calc(2 * var(--u));
+  width: 0;
+  height: 0;
+  border-left: calc(4 * var(--u)) solid transparent;
+  border-right: calc(4 * var(--u)) solid transparent;
+  border-bottom: calc(7 * var(--u)) solid #3c5440;
+}
+.latch[data-latch-mode="dock"] .direction {
+  top: calc(80 * var(--u));
+  border-bottom: 0;
+  border-top: calc(7 * var(--u)) solid #3c5440;
+}
+.signal { position: absolute; right: calc(3 * var(--u)); top: calc(24 * var(--u)); width: calc(3 * var(--u)); height: calc(9 * var(--u)); background: #738963; border: calc(1 * var(--u)) solid #4c6247; }
+.latch[data-latch-raised="true"] .signal { background: var(--color-phosphor-dim); }
+
+.handle {
+  position: absolute;
+  left: calc(11 * var(--u));
+  right: calc(11 * var(--u));
+  bottom: calc(8 * var(--u));
+  height: calc(28 * var(--u));
+  transform: translateY(calc(-60 * var(--u) * var(--latch-progress, 0))) translateZ(calc(6 * var(--u)));
+  border: calc(2 * var(--u)) ridge #b0bcaa;
+  background: linear-gradient(#e1e7da, #8d9e87 46%, #c2ceb6 52%, #a9b99d);
+  box-shadow: 0 calc(4 * var(--u)) calc(4 * var(--u)) #172b2280, inset 0 calc(1 * var(--u)) #f1f4e9;
+  transition: transform 200ms cubic-bezier(.2, .8, .25, 1);
+}
+.latch[data-latch-mode="dock"] .handle {
+  top: calc(20 * var(--u));
+  bottom: auto;
+  transform: translateY(calc(60 * var(--u) * var(--latch-progress, 0))) translateZ(calc(6 * var(--u)));
+}
+.grip { position: absolute; inset: calc(5 * var(--u)) calc(8 * var(--u)); border-top: calc(1 * var(--u)) solid #e1e7d7; background: repeating-linear-gradient(0deg, #61765d 0 calc(1 * var(--u)), #ced8c1 calc(1 * var(--u)) calc(3 * var(--u))); }
+.latch[data-latch-dragging="true"] .handle { transition: none; }
+.action:disabled .label { color: #50614e; }
+
+@media (prefers-reduced-motion: reduce) {
+  .handle { transition: none; }
+}
