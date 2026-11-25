@@ -54,15 +54,16 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 1280, height: 800
       const split = await measure();
       expect(split.sceneWidth).toBe(deck.sceneWidth);
       const approved = approvedSplit[`${viewport.width}x${viewport.height}`];
-      for (const [a, b] of [["left", "right"], ["top", "bottom"]]) {
-        expect(Math.abs((split[b] - split[a]) - .88 * (approved[b] - approved[a]))).toBeLessThan(2);
-        expect(Math.abs((split[a] + split[b] - approved[a] - approved[b]) / 2)).toBeLessThan(2);
-      }
+      const oldWidth = .88 * (approved.right - approved.left);
+      expect(split.right - split.left).toBeGreaterThan(oldWidth * .91);
+      expect(split.right - split.left).toBeLessThanOrEqual(oldWidth + 2);
+      expect(Math.abs((split.top + split.bottom - approved.top - approved.bottom) / 2)).toBeLessThan(2);
       const paper = await page.getByTestId("lyrics-booklet").boundingBox();
-      expect(Math.abs(paper.x - approved.paperLeft)).toBeLessThan(2);
-      expect(Math.abs(paper.y - approved.paperTop)).toBeLessThan(2);
-      expect(Math.abs(paper.width - approved.paperWidth)).toBeLessThan(2);
-      expect(Math.abs(paper.height - approved.paperHeight)).toBeLessThan(2);
+      expect(paper.width).toBeGreaterThan(approved.paperWidth * 1.01);
+      expect(paper.width).toBeLessThan(approved.paperWidth * 1.11);
+      expect(paper.height).toBeGreaterThan(approved.paperHeight);
+      expect(paper.height).toBeLessThan(approved.paperHeight * 1.12);
+      expect(split.right).toBeLessThan(paper.x - 8);
       await expect(page.getByTestId("lyrics-paper")).toBeInViewport({ ratio: 1 });
       for (const text of ["CDV / LINEAR COMPACT DISC", "PRECISION / DUAL SLIDE", "LEVEL", "CDV–01 / COMPACT DISC"]) {
         await expect(hardware(page).getByText(text, { exact: true })).not.toBeVisible();

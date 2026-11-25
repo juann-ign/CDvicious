@@ -81,14 +81,17 @@ test("Split normal: lectura compacta, clic en bordes y hojas alineadas durante e
       }),
     };
   });
-  const typography = { font: "17px", lineHeight: "19.125px", letterSpacing: "-0.1px" };
+  const typography = layout.visible[0];
+  expect(parseFloat(typography.font)).toBeCloseTo(17 + 1280 * .0018, 1);
+  expect(parseFloat(typography.lineHeight)).toBeCloseTo(parseFloat(typography.font) * 1.29, 1);
+  expect(typography.letterSpacing).toBe("-0.1px");
   expect(layout.visible).toEqual([typography, typography]);
   expect(layout.measured).toEqual([typography, typography, typography]);
-  expect(layout.padding).toEqual(["24px 26px 20px", "24px 26px 20px"]);
+  expect(layout.padding).toEqual(["25px 24px 24px", "25px 24px 24px"]);
   const [first, second] = await visiblePageStarts(page);
   expect(first.title).toBe("Mapa de azoteas");
   expect(first.top).toBeGreaterThan(second.top);
-  expect(second).toEqual({ top: 24, title: null });
+  expect(second).toEqual({ top: 25, title: null });
   expect(layout.edges.map(({ side }) => side)).toEqual(["left", "right"]);
   for (const edge of layout.edges) {
     expect(edge.widthRatio).toBeGreaterThan(0);
@@ -144,7 +147,7 @@ test("Split normal: lectura compacta, clic en bordes y hojas alineadas durante e
   await expect(root(page)).toHaveAttribute("data-pagination-index", "2");
   await expect.poll(() => page.evaluate(() => window.__readabilityTurningLeaves.length)).toBe(1);
   await expect(root(page)).toHaveAttribute("data-page-turn-state", "idle");
-  expect(await visiblePageStarts(page)).toEqual([{ top: 24, title: null }, { top: 24, title: null }]);
+  expect(await visiblePageStarts(page)).toEqual([{ top: 25, title: null }, { top: 25, title: null }]);
   await clickPageCenter(page, "left");
   await expect(root(page)).toHaveAttribute("data-pagination-index", "2");
   await expect(previous(page)).toBeEnabled();

@@ -107,14 +107,18 @@ test("front layout: Deck and Split retain their composition, readable contents a
         expect(equipmentWidth).toBeLessThanOrEqual(viewport.width * .60);
         expect(Math.abs((current.equipment.left + current.equipment.right) / 2 - viewport.width / 2)).toBeLessThan(2);
       } else {
-        // The stereo pair reserves equal margins around the same approved Split center.
-        for (const [a, b] of [["left", "right"], ["top", "bottom"]]) {
-          expect(Math.abs((current.equipment[b] - current.equipment[a]) - .88 * (approved.equipment[b] - approved.equipment[a]))).toBeLessThan(2);
-          expect(Math.abs((current.equipment[a] + current.equipment[b] - approved.equipment[a] - approved.equipment[b]) / 2)).toBeLessThan(2);
-        }
+        // Preserve the stereo composition while reserving a modestly larger paper.
+        const width = current.equipment.right - current.equipment.left;
+        const old = .88 * (approved.equipment.right - approved.equipment.left);
+        expect(width).toBeGreaterThan(old * .91);
+        expect(width).toBeLessThanOrEqual(old + 2);
+        expect(Math.abs((current.equipment.top + current.equipment.bottom - approved.equipment.top - approved.equipment.bottom) / 2)).toBeLessThan(2);
       }
       if (index === 1) {
-        for (const key of ["x", "y", "width", "height"]) expect(Math.abs(current.paper[key] - approved.paper[key])).toBeLessThan(2);
+        expect(current.paper.width).toBeGreaterThan(approved.paper.width * 1.01);
+        expect(current.paper.width).toBeLessThan(approved.paper.width * 1.11);
+        expect(current.paper.height).toBeGreaterThan(approved.paper.height);
+        expect(current.paper.height).toBeLessThan(approved.paper.height * 1.12);
         expect(current.equipment.right).toBeLessThan(current.paper.left);
         await expect(page.getByTestId("lyrics-paper")).toBeInViewport({ ratio: 1 });
       }

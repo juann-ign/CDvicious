@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
 import type { SpotifyTrack } from "@/types/spotify";
 import { useLyrics } from "@/hooks/useLyrics";
-import { lastLyricsSpread, lyricsPageOffset, lyricsSpreadForOffset, paginateLyricsText } from "@/lib/lyricsPagination";
+import { lastLyricsSpread, lyricsPageOffset, lyricsSpreadForOffset, paginateLyricsText, splitLyricsPageMargins } from "@/lib/lyricsPagination";
 import styles from "./LyricsBooklet.module.css";
 
 interface LyricsBookletProps {
@@ -18,6 +18,15 @@ interface LyricsBookletProps {
 
 type TurnDirection = "next" | "previous";
 type PageTurn = { id: number; identity: string; source: string; direction: TurnDirection; from: number; to: number };
+
+function LyricPageText({ text }: { text: string }) {
+  const { leading, body, trailing } = splitLyricsPageMargins(text);
+  return <>
+    {leading && <span hidden aria-hidden="true" data-lyric-boundary="leading">{leading}</span>}
+    {body}
+    {trailing && <span hidden aria-hidden="true" data-lyric-boundary="trailing">{trailing}</span>}
+  </>;
+}
 
 export function LyricsBooklet({ track, isOpen, onToggle, accentColor, showTab = true, active = true }: LyricsBookletProps) {
   const reading = useLyrics(track);
@@ -63,24 +72,29 @@ export function LyricsBooklet({ track, isOpen, onToggle, accentColor, showTab = 
     let cancelled = false;
     let version = 0;
     let frame: number | null = null;
-    const paginate = async () => {
+    const paginate = () => {
       const currentVersion = ++version;
-      await document.fonts?.ready;
-      if (cancelled || currentVersion !== version) return;
+      if (cancelled) return;
       // Only the first page has a header. Other pages can fill the regular
       // text area, measured on the slightly shorter right sheet.
-      const firstHeight = firstPageMeasure.clientHeight;
-      const regularHeight = secondPageMeasure.clientHeight;
-      const lineWidth = Math.min(firstPageMeasure.clientWidth, secondPageMeasure.clientWidth);
+      const firstStyle = getComputedStyle(firstPageMeasure);
+      const regularStyle = getComputedStyle(secondPageMeasure);
+      // Keep one pixel for fractional layout rounding and the narrowest of the
+      // physical sheets, then measure the whole wrapping text of each candidate.
+      const firstHeight = Math.min(firstPageMeasure.clientHeight, parseFloat(firstStyle.height)) - 1;
+      const regularHeight = Math.min(secondPageMeasure.clientHeight, parseFloat(regularStyle.height)) - 1;
+      const lineWidth = Math.min(firstPageMeasure.clientWidth, secondPageMeasure.clientWidth, parseFloat(firstStyle.width), parseFloat(regularStyle.width)) - 1;
       if (firstHeight <= 0 || regularHeight <= 0 || lineWidth <= 0) return;
       lineMeasure.style.width = `${lineWidth}px`;
       const line = document.createElement("div");
       lineMeasure.replaceChildren(line);
-      const measure = (text: string) => { line.textContent = text || "\u00a0"; return line.offsetHeight; };
-      measure("AgjpQ");
-      const inkOverflow = Math.max(0, line.scrollHeight - line.clientHeight);
-      const next = paginateLyricsText(lyrics, firstHeight - inkOverflow, regularHeight - inkOverflow, measure);
-      const canPaginate = next.length > 1 || measure(lyrics) + inkOverflow <= firstHeight;
+      const measure = (text: string) => {
+        line.textContent = text;
+        // The scroll extent includes the ink below the line box (descenders).
+        return Math.max(line.offsetHeight, line.scrollHeight);
+      };
+      const next = paginateLyricsText(lyrics, firstHeight, regularHeight, measure);
+      const canPaginate = next.length > 1 || measure(splitLyricsPageMargins(lyrics).body) <= firstHeight;
       if (cancelled || currentVersion !== version) return;
       const anchor = readingAnchor.current;
       const offset = anchor.identity === trackIdentity && anchor.source === lyrics ? anchor.offset : 0;
@@ -89,23 +103,34 @@ export function LyricsBooklet({ track, isOpen, onToggle, accentColor, showTab = 
       setCurrentPage(lyricsSpreadForOffset(next, offset));
     };
     const schedule = () => {
+      if (cancelled) return;
       version++;
       if (frame !== null) return;
-      frame = requestAnimationFrame(() => { frame = null; void paginate(); });
+      frame = requestAnimationFrame(() => { frame = null; paginate(); });
     };
-    void paginate();
+    // Readable lyrics must not wait for unrelated fonts in other chapters.
+    // Measure the current font and refresh after the relevant fonts settle.
+    const fonts = document.fonts;
+    fonts?.addEventListener("loadingdone", schedule);
+    fonts?.addEventListener("loadingerror", schedule);
+    paginate();
+    void fonts?.ready.then(schedule, schedule);
+    if (fonts?.status === "loading") {
+      const style = getComputedStyle(firstPageMeasure);
+      void fonts.load(`${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`, "AgjpQ").then(schedule, schedule);
+    }
     const observer = new ResizeObserver(schedule);
     observer.observe(spread);
     observer.observe(firstPageMeasure);
     observer.observe(secondPageMeasure);
     window.addEventListener("resize", schedule);
-    document.fonts?.addEventListener("loadingdone", schedule);
     return () => {
       cancelled = true; version++;
       if (frame !== null) cancelAnimationFrame(frame);
       observer.disconnect();
       window.removeEventListener("resize", schedule);
-      document.fonts?.removeEventListener("loadingdone", schedule);
+      fonts?.removeEventListener("loadingdone", schedule);
+      fonts?.removeEventListener("loadingerror", schedule);
     };
   }, [lyrics, trackIdentity, isOpen, active]);
 
@@ -116,7 +141,10 @@ export function LyricsBooklet({ track, isOpen, onToggle, accentColor, showTab = 
     if (!active || !isOpen || reading.loading || !measured || !lyrics) return;
     const target = Math.max(0, Math.min(lastSpread, safePage + (direction === "next" ? 2 : -2)));
     if (target === safePage) return;
-    readingAnchor.current = { identity: trackIdentity, source: lyrics, offset: lyricsPageOffset(pages, target) };
+    // Anchor the first visible verse, not a hidden boundary separator that
+    // could move onto the preceding page after a font change or resize.
+    const offset = lyricsPageOffset(pages, target) + splitLyricsPageMargins(pages[target] ?? "").leading.length;
+    readingAnchor.current = { identity: trackIdentity, source: lyrics, offset };
     // The reading state changes now. Animation only depicts the sheet and may
     // be interrupted; its completion can never select a page or a track.
     setCurrentPage(target);
@@ -149,7 +177,7 @@ export function LyricsBooklet({ track, isOpen, onToggle, accentColor, showTab = 
   const leafFace = (left: boolean, index: number, stationary = false) => (
     <div className={`${styles.bookletContent} ${stationary ? styles.stationaryPageCopy : ""}`} aria-hidden="true">
       {index === 0 && pageHeader(true)}
-      <div className={styles.turnText}>{pages[index] ?? ""}</div>
+      <div className={styles.turnText}><LyricPageText text={pages[index] ?? ""} /></div>
       {pageNumber(left, index)}
     </div>
   );
@@ -170,7 +198,7 @@ export function LyricsBooklet({ track, isOpen, onToggle, accentColor, showTab = 
             {safePage === 0 && pageHeader()}
             {statusText ? <div className={styles.bookletStatus} data-testid="lyrics-status" role={reading.status === "error" ? "alert" : "status"}>{statusText}
               {reading.status === "error" && <button type="button" disabled={reading.retryBlocked} onClick={reading.retry}>REINTENTAR</button>}
-            </div> : <div className={`${styles.bookletLyrics} ${!measured ? styles.lyricsFallback : ""}`} data-testid="lyrics-content" data-page-index={safePage}>{pages[safePage] ?? ""}</div>}
+            </div> : <div className={`${styles.bookletLyrics} ${!measured ? styles.lyricsFallback : ""}`} data-testid="lyrics-content" data-page-index={safePage}><LyricPageText text={pages[safePage] ?? ""} /></div>}
             {pageNumber(true, safePage)}
           </div>
           {turnNext && leafFace(true, activeTurn.from, true)}
@@ -179,7 +207,7 @@ export function LyricsBooklet({ track, isOpen, onToggle, accentColor, showTab = 
         </div>
         <div className={`${styles.bookletPageHalf} ${styles.bookletPageRight}`} data-booklet-page-half="right">
           <div className={styles.bookletContent} data-turn-receiving={turnPrevious || undefined}>
-            <div className={styles.bookletLyrics} data-testid="lyrics-content" data-page-index={safePage + 1}>{pages[safePage + 1] ?? ""}</div>
+            <div className={styles.bookletLyrics} data-testid="lyrics-content" data-page-index={safePage + 1}><LyricPageText text={pages[safePage + 1] ?? ""} /></div>
             {pageNumber(false, safePage + 1)}
           </div>
           {turnPrevious && leafFace(false, activeTurn.from + 1, true)}

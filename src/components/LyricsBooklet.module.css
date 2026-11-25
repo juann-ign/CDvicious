@@ -4,8 +4,8 @@
    ========================================================= */
 
 .bookletOuter {
-  --lyric-size: 17px;
-  --page-padding: 24px 26px 20px;
+  --lyric-size: clamp(19px, calc(17px + .18vw), 20.5px);
+  --page-padding: 25px 24px 24px;
   position: relative;
 
   width: 100%;
@@ -307,7 +307,7 @@
   opacity: 0;
   pointer-events: none;
 
-  transform: translate3d(0, 105px, 0) scale(0.96) rotateZ(-4deg) rotateX(1deg);
+  transform: translate3d(0, 105px, 0) scale(0.96) rotateZ(-3.2deg) rotateX(1deg);
 
   transition:
     transform var(--booklet-open-duration) cubic-bezier(0.22, 1, 0.36, 1),
@@ -326,7 +326,7 @@
   opacity: 1;
   pointer-events: auto;
 
-  transform: translate3d(0, 0, 0) scale(0.96) rotateZ(-4deg) rotateX(1deg);
+  transform: translate3d(0, 0, 0) scale(0.96) rotateZ(-3.2deg) rotateX(1deg);
 }
 
 /* =========================================================
@@ -757,7 +757,7 @@
 
   font-family: var(--font-ui);
 
-  font-size: var(--booklet-meta-size);
+  font-size: 16px;
 
   line-height: 1.1;
 
@@ -1076,7 +1076,8 @@
 .turnText {
   font-family: var(--font-editorial);
   font-size: var(--lyric-size);
-  line-height: 1.125;
+  font-weight: 500;
+  line-height: 1.29;
   letter-spacing: -0.1px;
 }
 

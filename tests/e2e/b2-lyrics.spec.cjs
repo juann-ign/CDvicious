@@ -53,6 +53,30 @@ test("HTTP 200 con whitespace muestra estado sin letra en lugar de páginas vac�
   await expect(booklet(page)).toContainText(/no.*letra|letra.*no.*disponible|sin letra/i);
 });
 
+test("la letra pagina mientras otra fuente sigue pendiente, y se ajusta al quedar lista", async ({ page }) => {
+  await page.addInitScript(() => {
+    const originalReady = document.fonts.ready;
+    let release;
+    const gate = new Promise(resolve => { release = resolve; });
+    window.__lyricFontReadyPending = true;
+    Object.defineProperty(document.fonts, "ready", { configurable: true, value: gate.then(() => originalReady) });
+    window.__releaseLyricFontReady = () => { window.__lyricFontReadyPending = false; release(); };
+  });
+  const lyrics = Array.from({ length: 40 }, (_, index) => `Verso ${index + 1}`).join("\n");
+  await page.route("**/api/lyrics?*", route => route.fulfill({ json: { lyrics } }));
+  await openRail(page); await go(page, "Split", 1);
+  const root = page.getByTestId("lyrics-booklet");
+  await expect(root).toHaveAttribute("data-pagination-state", "ready");
+  await expect(lyricFaces(page).first()).toContainText("Verso 1");
+  expect(await page.evaluate(() => window.__lyricFontReadyPending)).toBe(true);
+  const count = Number(await root.getAttribute("data-pagination-count"));
+  await page.addStyleTag({ content: '[data-testid="lyrics-booklet"] :is([class*="bookletLyrics"], [class*="bookletMeasureLyrics"], [class*="bookletLineMeasureSource"]) { line-height: 2.75 !important; }' });
+  await page.evaluate(() => window.__releaseLyricFontReady());
+  await expect.poll(async () => Number(await root.getAttribute("data-pagination-count"))).toBeGreaterThan(count);
+  await expect(root).toHaveAttribute("data-pagination-state", "ready");
+  await expect(lyricFaces(page).first()).toContainText("Verso 1");
+});
+
 test("pausa y reanudación conservan el texto y la página sin otra solicitud", async ({ page }) => {
   const lyrics = Array.from({ length: 70 }, (_, index) => `B2 VERSO ${String(index + 1).padStart(3, "0")} — texto de prueba.`).join("\n");
   await page.route("**/api/lyrics?*", (route) => route.fulfill({ json: { lyrics } }));
@@ -62,7 +86,7 @@ test("pausa y reanudación conservan el texto y la página sin otra solicitud", 
   await booklet(page).getByRole("button", { name: "Páginas siguientes", exact: true }).click();
   const before = await visibleLyrics(page);
   const count = http.filter((row) => row.type === "request").length;
-  const toggle = page.locator("[data-global-player]").getByRole("button", { name: "Play/Pause", exact: true });
+  const toggle = page.locator("[data-physical-deck]").getByRole("button", { name: "Pausar/reanudar equipo", exact: true });
   await toggle.click();
   await expect(page.getByTestId("deck-now-playing")).toHaveAttribute("data-is-playing", "false");
   expect(await visibleLyrics(page)).toBe(before);
@@ -79,7 +103,13 @@ async function collectPages(page) {
     // A measured page must fit its actual face; the full-text fallback is
     // intentionally scrollable and is tested separately in the zero fixture.
     await expect(page.getByTestId("lyrics-booklet")).toHaveAttribute("data-pagination-state", "ready");
-    await expect.poll(() => lyricFaces(page).evaluateAll((nodes) => nodes.map((node, index) => ({ index, clientHeight: node.clientHeight, scrollHeight: node.scrollHeight })).filter((item) => item.scrollHeight > item.clientHeight + 2))).toEqual([]);
+    await expect.poll(() => lyricFaces(page).evaluateAll((nodes) => nodes.map((node, index) => {
+      const visibleText = [...node.childNodes].filter(child => child.nodeType === Node.TEXT_NODE || !child.hidden).map(child => child.textContent).join("");
+      const boundaryMarkers = [...node.querySelectorAll('[data-lyric-boundary]')];
+      return { index, clientHeight: node.clientHeight, scrollHeight: node.scrollHeight,
+        leadingBlank: /^(?:[^\S\n]*\n)+/.test(visibleText), trailingBlank: /(?:\n[^\S\n]*)+$/.test(visibleText),
+        visibleBoundary: boundaryMarkers.some(marker => getComputedStyle(marker).display !== "none" || marker.getAttribute("aria-hidden") !== "true") };
+    }).filter(item => item.scrollHeight > item.clientHeight + 2 || item.leadingBlank || item.trailingBlank || item.visibleBoundary))).toEqual([]);
     const spread = await visibleLyrics(page);
     if (seen.has(spread)) throw new Error("La navegación repitió un spread sin avanzar");
     seen.add(spread); text.push(spread);
@@ -90,6 +120,17 @@ async function collectPages(page) {
   }
   throw new Error("El booklet no terminó después de 100 spreads");
 }
+
+test("las estrofas paginan con wrapping íntegro y sin blancos al iniciar una hoja", async ({ page }) => {
+  const lyrics = Array.from({ length: 16 }, (_, index) => `ESTROFA ${index + 1}\nUna señal cruza el cristal y vuelve al sur hasta que cae lentamente la noche.\nTodavía me acuerdo.`).join("\n\n\n");
+  await page.route("**/api/lyrics?*", route => route.fulfill({ json: { lyrics } }));
+  await openRail(page); await go(page, "Split", 1);
+  const root = page.getByTestId("lyrics-booklet");
+  await expect(root).toHaveAttribute("data-pagination-state", "ready");
+  expect(Number(await root.getAttribute("data-pagination-count"))).toBeGreaterThan(2);
+  expect(await lyricFaces(page).locator('[data-lyric-boundary="trailing"]').count()).toBeGreaterThan(0);
+  expect(await collectPages(page)).toBe(lyrics);
+});
 test("letra extensa y título largo conservan todos los versos al paginar y redimensionar", async ({ page }) => {
   const lyrics = Array.from({ length: 115 }, (_, index) => `B2 LINEA ${String(index + 1).padStart(3, "0")} — Una señal cruza el cristal y vuelve al sur.`).join("\n");
   await page.route("**/api/lyrics?*", (route) => route.fulfill({ json: { lyrics } }));

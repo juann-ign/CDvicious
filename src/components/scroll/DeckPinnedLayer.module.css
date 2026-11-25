@@ -63,18 +63,18 @@
   --booklet-height: calc(100% - 42px);
 
   position: absolute;
-  right: clamp(10px, calc(10px + (100vw - 1280px) * .05), 18px);
+  right: clamp(14px, calc(14px + (100vw - 1280px) * .05), 22px);
   top: 48%;
   z-index: 6;
-  width: min(900px, max(570px, 40vw));
-  height: min(calc(100% - 32px), clamp(330px, 25vw, 550px));
+  width: min(900px, max(590px, 42vw));
+  height: min(calc(100% - 32px), clamp(345px, 26.5vw, 575px));
 
   opacity: var(--pSplit);
   transform-origin: 100% 58%;
   backface-visibility: hidden;
   transform:
     translate3d(calc((1 - var(--pSplit)) * 28vw), -40%, 0)
-    rotateZ(-0.8deg)
+    rotateZ(-.65deg)
     scale(calc(0.98 + (0.02 * var(--pSplit))));
 
   will-change: transform, opacity;
@@ -83,7 +83,7 @@
 .layer[data-next-listen-open="true"] .bookletLayer {
   opacity: 0;
   visibility: hidden;
-  transform: translate3d(24px, -34%, 0) rotateZ(-.8deg) scale(.95);
+  transform: translate3d(24px, -34%, 0) rotateZ(-.65deg) scale(.95);
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -140,7 +140,7 @@
   }
 
   .bookletLayer {
-    transform: translate3d(0, -40%, 0) rotateZ(-0.8deg) scale(1);
+    transform: translate3d(0, -40%, 0) rotateZ(-.65deg) scale(1);
   }
 }
 
