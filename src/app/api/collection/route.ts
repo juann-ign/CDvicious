@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/session";
+import { getSession, getValidAccessToken } from "@/lib/session";
 import mockCollection from "@/mocks/collection.json";
 import { cached } from "@/lib/serverCache";
 import { isCollectionAlbum, normalizeCollectionAlbum, normalizeGenres } from "@/lib/collectionFilters";
@@ -17,7 +17,7 @@ const COLLECTION_GENRES_TTL_MS = 10 * 60 * 1000;
 
 type GenreResponse = {
   albums: AlbumItem[];
-  state: "complete" | "empty" | "partial" | "error";
+  state: "complete" | "empty" | "unavailable" | "partial" | "error";
   resolved: number;
   total: number;
   error?: SpotifyApiError;
@@ -172,6 +172,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "no_session" }, { status: 401 });
   }
 
+  const accessToken = session.isExpired ? await getValidAccessToken() : session.accessToken;
+  if (!accessToken) return NextResponse.json({ error: "no_session" }, { status: 401 });
+
   const identityHash = cacheKey(session.refreshToken, session.accessToken);
   const baseKey = collectionCacheKey(identityHash, "base");
 
@@ -180,7 +183,7 @@ export async function GET(request: NextRequest) {
       const allAlbums = await cached(
         baseKey,
         COLLECTION_BASE_TTL_MS,
-        () => fetchAllAlbums(session.accessToken),
+        () => fetchAllAlbums(accessToken),
       );
 
       return NextResponse.json(allAlbums, { headers: { "X-CDV-Genres-State": "not-requested" } });
@@ -191,7 +194,7 @@ export async function GET(request: NextRequest) {
     const allAlbums = await cached(
       baseKey,
       COLLECTION_BASE_TTL_MS,
-      () => fetchAllAlbums(session.accessToken),
+      () => fetchAllAlbums(accessToken),
     );
     const catalogHash = createHash("sha256").update(JSON.stringify(allAlbums)).digest("hex");
     const genresKey = `${collectionCacheKey(identityHash, "genres")}:coverage-v2:${catalogHash}`;
@@ -204,8 +207,9 @@ export async function GET(request: NextRequest) {
         );
 
         const fetched = await fetchArtistGenresDetailed(
-          session.accessToken,
+          accessToken,
           allArtistIds,
+          { refreshUnavailable: request.nextUrl.searchParams.get("retry") === "1" },
         );
 
         const albums: AlbumItem[] = allAlbums.map((album) => {
@@ -219,7 +223,7 @@ export async function GET(request: NextRequest) {
         const resolved = Object.keys(fetched.byArtist).length;
         const incomplete = fetched.unresolvedArtistIds.length > 0 || albums.some((album) => album.genreMetadata?.state === "unavailable");
         const result: GenreResponse = { albums, resolved, total: fetched.requestedArtistIds.length, error: fetched.error,
-          state: incomplete ? resolved ? "partial" : "error" : albums.some((album) => album.genres?.length) ? "complete" : "empty" };
+          state: incomplete ? resolved ? "partial" : !fetched.error && fetched.unavailableArtistIds?.length ? "unavailable" : "error" : albums.some((album) => album.genres?.length) ? "complete" : "empty" };
         if (incomplete) throw new IncompleteGenres(result);
         return result;
       },

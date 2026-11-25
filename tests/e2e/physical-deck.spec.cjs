@@ -178,14 +178,24 @@ test("physical-deck: reinsertar el mismo álbum deja un solo CD durante una conf
 test("physical-deck: Artista comparte la ficha, recupera el foco y abre la caja antes de tomar el CD", async ({ page }) => {
   await observe(page); await openRail(page); await go(page, "Colección", 3);
   await collection(page).getByRole("button", { name: "Buscar artista", exact: true }).click();
-  await page.getByRole("searchbox", { name: "Buscar artistas", exact: true }).fill("Vertice");
-  await collection(page).locator('[aria-label="Resultados de artistas"]').getByRole("button").first().click();
-  const scene = page.getByTestId("artist-disc-scene");
-  await scene.hover({ position: { x: 8, y: 28 } });
-  const album = scene.getByRole("button", { name: "Seleccionar Campo magnético", exact: true });
-  const selectedId = await album.getAttribute("data-album-id");
-  const source = scene.locator(`button[data-album-id="${selectedId}"]`);
-  await album.click();
+  await page.getByRole("combobox", { name: "Buscar artistas", exact: true }).fill("Vertice");
+  await page.getByRole("listbox", { name: "Resultados de artistas", exact: true }).getByRole("option").first().click();
+  const shelf = page.getByTestId("artist-discography");
+  const candidates = shelf.getByRole("button", { name: "Vértice Magnético — Campo magnético", exact: true });
+  await expect(candidates.first()).toBeAttached();
+  await shelf.locator("[data-batea-tray]").hover({ position: { x: 8, y: 8 } });
+  const visibleIndex = await candidates.evaluateAll((nodes) => {
+    const frame = nodes[0].closest('[class*="viewport"]').getBoundingClientRect();
+    return nodes.findIndex((node) => {
+      const box = node.getBoundingClientRect();
+      return box.left + box.width / 2 > frame.left + 4 && box.left + box.width / 2 < frame.right - 4;
+    });
+  });
+  expect(visibleIndex).toBeGreaterThanOrEqual(0);
+  const album = candidates.nth(visibleIndex);
+  const selectedId = await album.getAttribute("data-batea-album-id");
+  const source = album;
+  await source.click();
   await expect(detail(page).getByTestId("jewel-case-presentation")).toHaveAttribute("data-presentation", "closed");
   await detail(page).getByRole("button", { name: /Volver/i }).click();
   await expect(detail(page)).toHaveCount(0);
@@ -197,7 +207,7 @@ test("physical-deck: Artista comparte la ficha, recupera el foco y abre la caja 
   await expect(title(page)).toHaveText("Órbita de papel");
   expect(await page.evaluate(() => window.__deckReview.source)).not.toBeNull();
   await go(page, "Colección", 3);
-  await expect(source).toHaveAttribute("data-album-id", selectedId);
+  await expect(source).toHaveAttribute("data-batea-album-id", selectedId);
 });
 
 test("physical-deck: Batea comparte el mismo ejecutor y dispositivo confirmado", async ({ page }) => {

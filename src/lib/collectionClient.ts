@@ -5,7 +5,7 @@ import type { AlbumItem } from "@/types/crate";
 import { isCollectionAlbum, normalizeCollectionAlbum, normalizeGenres } from "./collectionFilters";
 
 type LoadState = "idle" | "loading" | "ready" | "empty" | "error";
-export type GenreLoadState = LoadState | "partial";
+export type GenreLoadState = LoadState | "partial" | "unavailable";
 export type CollectionSnapshot = {
   albums: AlbumItem[] | null;
   genresLoaded: boolean;
@@ -52,8 +52,8 @@ function errorMessage(status: number) {
   if (status === 429) return "Spotify limitó las consultas. Esperá antes de reintentar.";
   return "No se pudieron consultar los datos de Spotify. Podés reintentar.";
 }
-async function fetchCollection(includeGenres: boolean) {
-  const response = await fetch(`/api/collection?includeGenres=${includeGenres ? "1" : "0"}`, { cache: "no-store" });
+async function fetchCollection(includeGenres: boolean, retry = false) {
+  const response = await fetch(`/api/collection?includeGenres=${includeGenres ? "1" : "0"}${retry ? "&retry=1" : ""}`, { cache: "no-store" });
   const retryAt = retryTime(response.headers.get("Retry-After"));
   if (!response.ok) {
     const body = await response.json().catch(() => null) as { error?: string; reason?: string } | null;
@@ -65,7 +65,7 @@ async function fetchCollection(includeGenres: boolean) {
   const headerState = response.headers.get("X-CDV-Genres-State");
   const known = albums.filter((album) => album.genreMetadata?.state === "complete").length;
   const anyGenres = albums.some((album) => album.genres?.length);
-  const permitted = new Set(["not-requested", "complete", "empty", "partial", "error"]);
+  const permitted = new Set(["not-requested", "complete", "empty", "unavailable", "partial", "error"]);
   let state = headerState === null ? (known === albums.length ? anyGenres ? "complete" : "empty" : anyGenres ? "partial" : "error")
     : permitted.has(headerState) ? headerState : "error";
   if (state === "complete" && !anyGenres) state = "empty";
@@ -104,9 +104,9 @@ export function loadCollection(authenticated: boolean | null) {
   return promise;
 }
 
-export function loadCollectionGenres(authenticated: boolean | null) {
+export function loadCollectionGenres(authenticated: boolean | null, retry = false) {
   if (authenticated !== true) return null;
-  if (snapshot.genresLoaded && snapshot.albums) return Promise.resolve(snapshot.albums);
+  if (!retry && snapshot.genresLoaded && snapshot.albums) return Promise.resolve(snapshot.albums);
   if (genresPromise) return genresPromise;
   if (snapshot.genresRetryAt > Date.now()) return Promise.reject(snapshot.genresError);
   if (snapshot.albums?.length === 0) {
@@ -119,7 +119,7 @@ export function loadCollectionGenres(authenticated: boolean | null) {
   publish({ genresState: "loading", genresError: null });
   const promise = ensureBase.then(() => {
     if (generation !== cacheGeneration) throw new CollectionRequestError("La sesión cambió.");
-    return fetchCollection(true);
+    return fetchCollection(true, retry);
   }).then((result) => {
     if (result.state === "error" || result.state === "not-requested") throw new CollectionRequestError(errorMessage(result.status), result.status, undefined, result.retryAt);
     if (generation === cacheGeneration) {
@@ -134,8 +134,8 @@ export function loadCollectionGenres(authenticated: boolean | null) {
             ? normalizeGenres([...(album.genres ?? []), ...(metadata.genres ?? [])]) : metadata.genres };
       });
       const incomplete = albums.some((album) => !incoming.has(album.id));
-      const genresState: GenreLoadState = result.state === "partial" || incomplete ? "partial" : result.state === "empty" ? "empty" : "ready";
-      publish({ albums, genresState, genresLoaded: genresState === "ready" || genresState === "empty", genresResolvedArtists: result.resolved, genresTotalArtists: result.total,
+      const genresState: GenreLoadState = result.state === "partial" || incomplete ? "partial" : result.state === "unavailable" ? "unavailable" : result.state === "empty" ? "empty" : "ready";
+      publish({ albums, genresState, genresLoaded: genresState === "ready" || genresState === "empty" || genresState === "unavailable", genresResolvedArtists: result.resolved, genresTotalArtists: result.total,
         genresRetryAt: result.retryAt, genresError: genresState === "partial" ? new CollectionRequestError("La consulta de géneros está incompleta.", result.status, undefined, result.retryAt) : null });
     }
     return result.albums;

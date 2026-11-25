@@ -1,5 +1,5 @@
 import type { AlbumItem } from "@/types/crate";
-import { normalizeSearchText } from "./searchText";
+import { matchesSearchText } from "./searchText";
 
 export type CollectionFilterOption = { id: string; label: string; count: number };
 
@@ -77,9 +77,8 @@ export function collectionYears(albums: readonly AlbumItem[], decade = "all"): C
 }
 
 export function filterCollection(albums: readonly AlbumItem[], query: string, decade: string, genre: string, year = "all"): AlbumItem[] {
-  const term = normalizeSearchText(query);
   const normalizedGenre = normalizeGenres([genre])[0];
-  return albums.filter((album) => (!term || normalizeSearchText(album.name).includes(term) || album.artists.some((artist) => normalizeSearchText(artist.name).includes(term)))
+  return albums.filter((album) => matchesSearchText(query, album.name, ...album.artists.map((artist) => artist.name))
     && (decade === "all" || collectionDecade(album.release_date) === decade)
     && (year === "all" || collectionYear(album.release_date) === year)
     && (genre === "all" || normalizeGenres(album.genres).includes(normalizedGenre)));

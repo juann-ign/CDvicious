@@ -301,35 +301,53 @@ export interface ArtistGenresResult {
   byArtist: Record<string, string[]>;
   requestedArtistIds: string[];
   unresolvedArtistIds: string[];
+  unavailableArtistIds: string[];
   error?: SpotifyApiError;
 }
 
 const artistGenreCache = new Map<string, { genres: string[]; expiresAt: number }>();
+const unavailableArtistBatch = new Map<string, number>();
+const unavailableArtistGenres = new Map<string, number>();
 const ARTIST_GENRES_TTL_MS = 10 * 60 * 1000;
 const MAX_INDIVIDUAL_GENRE_REQUESTS = 50;
 
 export async function fetchArtistGenresDetailed(
   accessToken: string,
   artistIds: string[],
+  options: { individual?: boolean; refreshUnavailable?: boolean; signal?: AbortSignal } = {},
 ): Promise<ArtistGenresResult> {
   const unique = Array.from(new Set(artistIds)).filter(Boolean);
   const map: Record<string, string[]> = Object.create(null);
   const identity = createHash("sha256").update(accessToken).digest("hex");
   const keyFor = (id: string) => `${identity}:${id}`;
+  const unavailable = new Set<string>();
   for (const id of unique) {
     const entry = artistGenreCache.get(keyFor(id));
     if (entry && entry.expiresAt > Date.now()) map[id] = entry.genres;
     else if (entry) artistGenreCache.delete(keyFor(id));
+    const absentUntil = unavailableArtistGenres.get(keyFor(id)) ?? 0;
+    if (options.refreshUnavailable || absentUntil <= Date.now()) unavailableArtistGenres.delete(keyFor(id));
+    else if (!(id in map)) unavailable.add(id);
   }
-  const remaining = unique.filter((id) => !(id in map));
+  const remaining = unique.filter((id) => !(id in map) && !unavailable.has(id));
   let error: SpotifyApiError | undefined;
-  let individual = false;
+  let individual = options.individual === true || (unavailableArtistBatch.get(identity) ?? 0) > Date.now();
   let individualRequests = 0;
   const record = (artist: { id?: string; genres?: unknown[] } | null, requested: string[]) => {
-    if (!artist?.id || !requested.includes(artist.id) || !Array.isArray(artist.genres)) return;
+    if (!artist?.id || !requested.includes(artist.id)) return;
+    if (!Object.hasOwn(artist, "genres")) {
+      unavailable.add(artist.id);
+      unavailableArtistGenres.set(keyFor(artist.id), Date.now() + ARTIST_GENRES_TTL_MS);
+      return;
+    }
+    if (!Array.isArray(artist.genres) || !artist.genres.every((genre) => typeof genre === "string")) {
+      error ??= new SpotifyApiError("artist genre response is malformed", 502, "INVALID_ARTIST_RESPONSE");
+      return;
+    }
     const genres = normalizeGenres(artist.genres);
     map[artist.id] = genres;
     artistGenreCache.set(keyFor(artist.id), { genres, expiresAt: Date.now() + ARTIST_GENRES_TTL_MS });
+    unavailableArtistGenres.delete(keyFor(artist.id));
   };
   const failure = async (response: Response) => {
     const { reason } = parseSpotifyError(await response.text());
@@ -340,10 +358,13 @@ export async function fetchArtistGenresDetailed(
     const batch = remaining.slice(offset, offset + SPOTIFY_ARTISTS_BATCH);
     try {
       if (!individual) {
-        const response = await fetchSpotifyWebApi(accessToken, "GET /v1/artists", `${SPOTIFY_ARTISTS_URL}?ids=${batch.join(",")}`, { headers: { Authorization: `Bearer ${accessToken}` }, cache: "no-store" });
+        const response = await fetchSpotifyWebApi(accessToken, "GET /v1/artists", `${SPOTIFY_ARTISTS_URL}?ids=${batch.join(",")}`, { headers: { Authorization: `Bearer ${accessToken}` }, cache: "no-store", signal: options.signal });
         // Development mode no longer provides Get Several Artists. Only that
         // unsupported batch response enables a bounded individual fallback.
-        if (response.status === 403 || response.status === 404) individual = true;
+        if (response.status === 403 || response.status === 404) {
+          individual = true;
+          unavailableArtistBatch.set(identity, Date.now() + ARTIST_GENRES_TTL_MS);
+        }
         else if (!response.ok) { await failure(response); if (response.status === 401 || response.status === 429) break; continue; }
         else {
           const data = await response.json();
@@ -357,18 +378,19 @@ export async function fetchArtistGenresDetailed(
           break;
         }
         individualRequests++;
-        const response = await fetchSpotifyWebApi(accessToken, "GET /v1/artists/{id}", `${SPOTIFY_ARTISTS_URL}/${encodeURIComponent(id)}`, { headers: { Authorization: `Bearer ${accessToken}` }, cache: "no-store" });
+        const response = await fetchSpotifyWebApi(accessToken, "GET /v1/artists/{id}", `${SPOTIFY_ARTISTS_URL}/${encodeURIComponent(id)}`, { headers: { Authorization: `Bearer ${accessToken}` }, cache: "no-store", signal: options.signal });
         if (!response.ok) { await failure(response); if (response.status === 401 || response.status === 429) break; continue; }
         record(await response.json(), [id]);
       }
       if (individualRequests >= MAX_INDIVIDUAL_GENRE_REQUESTS || error?.status === 401 || error?.status === 429) break;
-    } catch {
+    } catch (cause) {
+      if (options.signal?.aborted) throw cause;
       error ??= new SpotifyApiError("artist genres could not be read", 502, "NETWORK_ERROR");
     }
   }
   const unresolvedArtistIds = unique.filter((id) => !(id in map));
-  if (unresolvedArtistIds.length && !error) error = new SpotifyApiError("artist genres missing from response", 502, "INCOMPLETE_COVERAGE");
-  return { byArtist: map, requestedArtistIds: unique, unresolvedArtistIds, error };
+  if (unresolvedArtistIds.some((id) => !unavailable.has(id)) && !error) error = new SpotifyApiError("artist genres missing from response", 502, "INCOMPLETE_COVERAGE");
+  return { byArtist: map, requestedArtistIds: unique, unresolvedArtistIds, unavailableArtistIds: [...unavailable], error };
 }
 
 // Retain the map contract for existing callers. Callers that can present partial
@@ -376,5 +398,6 @@ export async function fetchArtistGenresDetailed(
 export async function fetchArtistGenres(accessToken: string, artistIds: string[]): Promise<Record<string, string[]>> {
   const result = await fetchArtistGenresDetailed(accessToken, artistIds);
   if (result.error && !Object.keys(result.byArtist).length) throw result.error;
+  if (result.unavailableArtistIds.length && !Object.keys(result.byArtist).length) throw new SpotifyApiError("Spotify did not provide artist genres", 503, "GENRES_UNAVAILABLE");
   return result.byArtist;
 }

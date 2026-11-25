@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { useMarqueeBelt } from "@/hooks/useMarqueeBelt";
+import { isMarqueeChapterActive, useMarqueeBelt } from "@/hooks/useMarqueeBelt";
 import { JewelSpine } from "./JewelSpine";
 import { JewelFlyout } from "./JewelFlyout";
 import type { AlbumItem } from "@/types/crate";
@@ -12,6 +12,10 @@ interface CrateShelfProps {
   onSelect: (album: AlbumItem, origin: HTMLButtonElement) => void;
   onGrabStart?: () => void;
   onGrabEnd?: () => void;
+  active?: boolean;
+  chapterIndex?: number;
+  className?: string;
+  label?: string;
 }
 
 const COPIES = 3;
@@ -23,6 +27,10 @@ export function CrateShelf({
   onSelect,
   onGrabStart,
   onGrabEnd,
+  active = true,
+  chapterIndex = 2,
+  className,
+  label = "Páginas de la batea",
 }: CrateShelfProps) {
   const [hovering, setHovering] = useState(false);
   const [focused, setFocused] = useState(false);
@@ -50,13 +58,10 @@ export function CrateShelf({
     const railRoot = document.querySelector<HTMLElement>(
       "[data-rail-wrapper]",
     )?.parentElement;
-    if (!railRoot || !wrapRef.current) return;
+    if (!wrapRef.current) return;
 
     const sync = () => {
-      const enabled =
-        railRoot.dataset.chapter === "2" &&
-        railRoot.dataset.railMoving !== "true" &&
-        railRoot.dataset.albumDetailOpen !== "true";
+      const enabled = active && isMarqueeChapterActive(railRoot?.dataset, chapterIndex);
       wrapRef.current?.setAttribute(
         "data-belt-animation-enabled",
         enabled ? "true" : "false",
@@ -64,23 +69,25 @@ export function CrateShelf({
       if (!enabled) setHover((current) => (current === null ? current : null));
     };
     sync();
+    if (!railRoot) return;
     const observer = new MutationObserver(sync);
     observer.observe(railRoot, {
       attributes: true,
       attributeFilter: ["data-chapter", "data-rail-moving", "data-album-detail-open"],
     });
     return () => observer.disconnect();
-  }, []);
+  }, [active, chapterIndex, albums.length]);
 
   const pages = Math.max(1, Math.min(MAX_PAGES, albums.length));
 
   const { containerRef, trackRef, isDragging, page, goTo, stepPage } =
     useMarqueeBelt({
       speed: 60,
-      enabled: albums.length > 0,
+      enabled: active && albums.length > 0,
       paused: !driftEnabled || hovering || focused || albums.length === 0,
       length,
       pages,
+      chapterIndex,
       onGrabStart,
       onGrabEnd,
     });
@@ -90,8 +97,10 @@ export function CrateShelf({
   return (
     <div
       ref={wrapRef}
-      className={styles.wrap}
+      className={[styles.wrap, className].filter(Boolean).join(" ")}
       data-belt-animation-enabled="false"
+      data-shelf-chapter={chapterIndex}
+      inert={!active}
     >
       <div className={styles.toolbar}>
         <div className={styles.pageNav}>
@@ -176,7 +185,7 @@ export function CrateShelf({
       <div
         className={styles.dots}
         role="tablist"
-        aria-label="Páginas de la batea"
+        aria-label={label}
       >
         {Array.from({ length: pages }).map((_, p) => (
           <button
@@ -191,7 +200,7 @@ export function CrateShelf({
         ))}
       </div>
 
-      {hover && (
+      {hover && active && (
         <JewelFlyout
           title={hover.album.name}
           artist={hover.album.artists.map((a) => a.name).join(", ")}

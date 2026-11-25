@@ -1,6 +1,7 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
+const { createHash } = require("node:crypto");
 const path = require("node:path");
 const vm = require("node:vm");
 const ts = require("typescript");
@@ -289,6 +290,30 @@ test("el catálogo conserva los 18 álbumes previos, vacío, paginación y edici
   const edition = releases.find((album) => album.id === "demo-vertice-album-12");
   assert.notEqual(original.id, edition.id);
   assert.notEqual(original.release_date, edition.release_date);
+});
+
+test("cada edición demo de un artista tiene una portada distinta y conserva la del catálogo B2 por ID", () => {
+  const run = demoRuntime();
+  const collection = run.load("src/mocks/collection.json");
+  const catalog = run.load("src/mocks/artistCatalog.ts");
+  for (const { id } of catalog.mockArtists) {
+    const hashes = new Map();
+    for (const group of ["album", "single", "compilation"]) {
+      const releases = catalog.mockArtistReleases(id, group);
+      for (const [index, release] of releases.entries()) {
+        assert.equal(release.artworkSource, "demo");
+        assert.equal(release.images.length, index === 8 ? 0 : 1);
+        const image = release.images[0];
+        if (!image) continue;
+        const saved = collection.find((album) => album.id === release.id);
+        if (saved) assert.equal(image.url, saved.images[0].url);
+        const contents = fs.readFileSync(path.join(__dirname, "..", "public", image.url.slice(1)));
+        const hash = createHash("sha256").update(contents).digest("hex");
+        assert.equal(hashes.has(hash), false, `${release.id} repeats the artwork of ${hashes.get(hash)}`);
+        hashes.set(hash, release.id);
+      }
+    }
+  }
 });
 
 test("los filtros combinan búsqueda, género compartido y década con el catálogo demo normal", () => {

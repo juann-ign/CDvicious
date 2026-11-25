@@ -40,7 +40,7 @@
 .rear {
   position: absolute;
   inset: 0;
-  border: 2px solid #cbd9d1b3;
+  border: 2px solid var(--jewel-case-edge, #cbd9d1b3);
   border-radius: 3px;
 }
 
@@ -59,7 +59,7 @@
   content: "";
   position: absolute;
   inset: 1px;
-  border: 1px solid #eaf5ed55;
+  border: 1px solid var(--jewel-case-inner-edge, #eaf5ed55);
   background: linear-gradient(119deg, #edf8f047, transparent 23% 56%, #ecf7ed27 67%, transparent 74%);
 }
 
@@ -85,8 +85,8 @@
   inset: 0 100% 0 auto;
   width: var(--case-depth);
   overflow: hidden;
-  border: 1px solid #d5e4dbb8;
-  border-inline-color: #f0f8f4c9 #71897f;
+  border: 1px solid var(--jewel-case-spine-edge, #d5e4dbb8);
+  border-inline-color: var(--jewel-case-spine-sides, #f0f8f4c9 #71897f);
   border-radius: 2px;
   transform: rotateY(-90deg);
   transform-origin: right center;
@@ -101,7 +101,7 @@
   position: absolute;
   inset: 0 0 auto;
   height: var(--case-depth);
-  border: 1px solid #d4e0d5ad;
+  border: 1px solid var(--jewel-case-top-edge, #d4e0d5ad);
   transform-origin: top center;
   transform: rotateX(-90deg);
   background: linear-gradient(#bdccc1, #4c6658 60%, #a3b8ac);

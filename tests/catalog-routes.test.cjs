@@ -30,7 +30,7 @@ test("búsqueda de álbumes conserva array; artista es explícito y paginado", a
   const calls = [];
   const api = load("src/app/api/search/route.ts", {
     "next/server": next,
-    "@/lib/catalogServer": { CATALOG_PAGE_SIZE: 10, catalogOffset: (s) => Number(s ?? 0), nextCatalogOffset: () => 10, catalogRequest: async (path) => { calls.push(path); return { albums: { items: [{ id: "album" }] }, artists: { items: [{ id: "artist" }], total: 20, offset: 0, limit: 10 } }; } },
+    "@/lib/catalogServer": { CATALOG_PAGE_SIZE: 10, catalogOffset: (s) => Number(s ?? 0), nextCatalogOffset: () => 10, catalogRequest: async (path) => { calls.push(path); return { albums: { items: [{ id: "album" }] }, artists: { items: [{ id: "artist", name: "Example" }], total: 20, offset: 0, limit: 10 } }; } },
     "@/mocks/artistCatalog": {}, "@/mocks/collection.json": [],
   }, { process: { env: { NEXT_PUBLIC_SPOTIFY_MOCK: "0" } } });
   const albums = await (await api.GET(new Request("http://local/api/search?q=example"))).json();

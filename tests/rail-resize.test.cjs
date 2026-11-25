@@ -13,7 +13,7 @@ function settledCollection(run) {
   for (let index = 0; run.timers.size && index < 10; index++) run.idle();
   assert.equal(run.root.dataset.chapter, '3');
   assert.equal(run.root.dataset.railMoving, 'false');
-  assert.equal(run.lenis.scroll, 3840);
+  assert.equal(run.lenis.scroll, 3 * run.wrapper.clientWidth);
   assert.equal(run.state().source, null);
 }
 
@@ -43,6 +43,65 @@ test('settled Collection stays selected when CSS zoom narrows its viewport, incl
   assert.equal(run.lenis.calls.length, correctedCalls, 'Repeating an unchanged measurement must not issue another navigation.');
   run.cleanup();
 });
+
+test('browser maximum clamp during shrink is not mistaken for a native gesture from settled Collection', () => {
+  const run = harness();
+  run.resizeLayout(1440);
+  run.notifyResize();
+  settledCollection(run);
+  const before = run.lenis.calls.length;
+  const navigation = run.state();
+  const clock = run.lenis.times.slice();
+  run.resizeLayout(1000);
+  run.wrapper.scrollWidth = 5000;
+  // The browser clamps 4320 to the new 4000 maximum before either provider
+  // observer runs. Lenis's native handler reports that exact delta as velocity.
+  run.lenis.isScrolling = 'native';
+  run.lenis.velocity = 4000 - 4320;
+  run.emitScroll(4000);
+  run.notifyResize();
+  assert.equal(run.lenis.calls.length, before + 1);
+  assert.equal(run.lenis.calls.at(-1).target, 3000);
+  assert.equal(run.lenis.calls.at(-1).options.immediate, true);
+  assert.equal(run.lenis.scroll, 3000);
+  assert.equal(run.root.dataset.chapter, '3');
+  run.idle(); // The existing Lenis resize emission retains its ordinary idle gate.
+  assert.equal(run.root.dataset.railMoving, 'false');
+  assert.equal(run.content.children[4].dataset.chapterActive, 'false');
+  assert.deepEqual(run.state(), navigation);
+  assert.deepEqual(run.lenis.times, clock);
+  run.cleanup();
+});
+
+for (const input of ['touch', 'stop token', 'native non-clamp delta', 'native gesture already moving']) {
+  test(`browser-clamp correction does not take control from ${input}`, () => {
+    const run = harness();
+    run.resizeLayout(1440);
+    run.notifyResize();
+    settledCollection(run);
+    const token = Symbol('interaction owner');
+    if (input === 'touch') run.lenis.isTouching = true;
+    if (input === 'stop token') run.actions.stop(token);
+    if (input === 'native gesture already moving') {
+      run.lenis.isScrolling = 'native';
+      run.lenis.velocity = -20;
+      run.emitScroll(4300);
+    }
+    const before = run.lenis.calls.length;
+    const navigation = run.state();
+    run.resizeLayout(1000);
+    run.wrapper.scrollWidth = 5000;
+    run.lenis.isScrolling = 'native';
+    run.lenis.velocity = input === 'native non-clamp delta' ? 12 : input === 'native gesture already moving' ? -300 : -320;
+    run.emitScroll(4000);
+    run.notifyResize();
+    assert.equal(run.lenis.calls.length, before);
+    assert.deepEqual(run.state(), navigation);
+    if (input === 'touch') assert.equal(run.lenis.isTouching, true);
+    if (input === 'stop token') assert.equal(run.lenis.isStopped, true);
+    run.cleanup();
+  });
+}
 
 for (const owner of ['menu', 'flight']) {
   test(`resizing during ${owner} keeps the active operation and issues no replacement scroll`, () => {

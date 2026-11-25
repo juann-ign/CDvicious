@@ -7,6 +7,7 @@ export interface ArtistItem {
   images: AlbumItem["images"];
   genres?: string[];
   external_urls?: { spotify?: string };
+  matchedAlbum?: { id: string; name: string };
 }
 export interface ArtistRelease extends AlbumItem {
   album_group?: ReleaseGroup | "appears_on";

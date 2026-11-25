@@ -487,6 +487,9 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
 
     let measuredViewportWidth = Math.max(1, wrapper.clientWidth);
     let resizeAnchorIndex = getNearestChapterIndex(lenis.scroll);
+    let measuredScroll = lenis.scroll;
+    let measuredAnchorScroll = (content.children[resizeAnchorIndex] as HTMLElement | undefined)?.offsetLeft ?? 0;
+    let settledResizeClamp: number | null = null;
     const resizeObserver = new ResizeObserver(() => {
       const width = Math.max(1, wrapper.clientWidth);
       const changedWidth = width !== measuredViewportWidth;
@@ -497,7 +500,9 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
       // navigation. The RAF clock and its current owner remain untouched.
       const canAnchor = changedWidth && !snapInProgressRef.current &&
         stopTokensRef.current.size === 0 && !lenis.isTouching &&
-        (lenis.isScrolling === false || (lenis.isScrolling === "native" && lenis.velocity === 0));
+        (lenis.isScrolling === false || (lenis.isScrolling === "native" && lenis.velocity === 0) ||
+          settledResizeClamp !== null && Math.abs(lenis.scroll - settledResizeClamp) < 1 &&
+          root.dataset.railMoving === "false" && !snapAnchorRef.current && snapTimerRef.current === null);
       const chapter = content.children[detailAnchored ? detailChapter : resizeAnchorIndex] as HTMLElement | undefined;
       measuredViewportWidth = width;
       measureRail();
@@ -506,6 +511,10 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
         // The hidden rail follows the open page's source even while locked.
         lenis.scrollTo(chapter.offsetLeft, { immediate: true, force: detailAnchored });
       }
+      settledResizeClamp = null;
+      measuredScroll = lenis.scroll;
+      resizeAnchorIndex = getNearestChapterIndex(measuredScroll);
+      measuredAnchorScroll = (content.children[resizeAnchorIndex] as HTMLElement | undefined)?.offsetLeft ?? 0;
       updateRailProgress(lenis.scroll);
     });
 
@@ -515,7 +524,30 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
     const handleScroll = ({ scroll }: { scroll: number }) => {
       // Lenis has its own ResizeObserver. Its resize emission must not replace
       // the old chapter anchor before this observer has measured the new width.
-      if (wrapper.clientWidth === measuredViewportWidth) resizeAnchorIndex = getNearestChapterIndex(scroll);
+      const width = wrapper.clientWidth;
+      // A shrink can clamp a settled chapter's old pixel offset to the new
+      // browser maximum before ResizeObserver runs. Lenis labels that clamp
+      // native motion; only its exact geometry/delta signature is a resize.
+      if (width < measuredViewportWidth) {
+        const maximumScroll = Math.max(0, wrapper.scrollWidth - width);
+        if (measuredScroll > maximumScroll &&
+          Math.abs(measuredScroll - measuredAnchorScroll) < 1 && Math.abs(scroll - maximumScroll) < 1 &&
+          lenis.isScrolling === "native" && Math.abs(lenis.velocity - (scroll - measuredScroll)) < 1 &&
+          root.dataset.railMoving === "false" && !snapInProgressRef.current &&
+          stopTokensRef.current.size === 0 && !lenis.isTouching && !snapAnchorRef.current && snapTimerRef.current === null) {
+          settledResizeClamp = scroll;
+          return;
+        }
+      }
+      settledResizeClamp = null;
+      if (width === measuredViewportWidth) {
+        const anchorIndex = getNearestChapterIndex(scroll);
+        if (anchorIndex !== resizeAnchorIndex) {
+          resizeAnchorIndex = anchorIndex;
+          measuredAnchorScroll = (content.children[resizeAnchorIndex] as HTMLElement | undefined)?.offsetLeft ?? 0;
+        }
+        measuredScroll = scroll;
+      }
       markRailMoving();
       updateRailProgress(scroll);
     };

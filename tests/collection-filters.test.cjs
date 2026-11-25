@@ -32,18 +32,63 @@ test("catálogo vacío no inicia otra consulta de géneros", async () => {
   assert.equal(calls, 1); assert.equal(api.useCollectionCache().genresState, "empty");
 });
 
-test("capacidad medida encaja y resize conserva el índice orientador en una página válida", () => {
+test("la grilla compacta mide filas completas sin scroll y conserva el ancla al paginar", () => {
   const { collectionLayout, pageForAnchor } = load("src/lib/collectionLayout.ts");
-  for (const [width, height] of [[1400, 528], [1240, 424], [800, 300], [400, 190]]) {
+  // Frame widths already exclude the chapter's 24px inset on each side.
+  for (const [width, height, columns, rows] of [[1232, 490, 10, 3], [1392, 590, 11, 3], [1872, 760, 15, 4], [992, 420, 8, 2], [752, 350, 6, 2], [592, 340, 5, 2], [352, 350, 3, 2]]) {
     const layout = collectionLayout(width, height);
-    assert.ok(layout.capacity > 0);
-    assert.ok(layout.columns * layout.caseWidth + (layout.columns - 1) * 8 <= width);
-    if (layout.rows > 1) assert.ok(layout.rows * (layout.caseWidth / 1.08 + 62) + (layout.rows - 1) * 8 <= height);
+    assert.equal(layout.columns, columns);
+    assert.equal(layout.rows, rows);
+    assert.equal(layout.capacity, columns * rows);
+    assert.ok(layout.gap >= 20, "horizontal acrylic-case clearance is at least 20px");
+    assert.equal(layout.rowGap, 18);
+    assert.equal(layout.padding, 6, "padding is vertical; the frame already owns its side insets");
+    assert.ok(layout.columns * layout.caseWidth + (layout.columns - 1) * layout.gap <= width + .01, `columns fit ${width}`);
+    assert.ok((layout.columns + 1) * 100 + layout.columns * 20 > width, "column count is limited by readable cases, not an eight-column cap");
+    assert.ok(layout.rows * layout.cardHeight + (layout.rows - 1) * layout.rowGap + layout.padding * 2 <= height + .01, `complete rows fit ${height}`);
+    assert.ok(Math.abs(layout.cardHeight - (layout.caseWidth / 1.08 + 52)) < .01, "card footprint includes all metadata");
+    assert.ok(layout.caseWidth >= 100 && layout.caseWidth <= 118, "readable cases do not become tiny tiles or grow beyond the visual cap");
+    assert.ok((layout.rows + 1) * (100 / 1.08 + 52) + layout.rows * layout.rowGap + layout.padding * 2 > height, "another legible full row does not fit");
   }
-  assert.equal(collectionLayout(1400, 528).capacity, 16);
-  assert.equal(collectionLayout(1240, 424).capacity, 14);
-  assert.equal(pageForAnchor(2, 14, 16, 45), 1);
-  assert.equal(pageForAnchor(2, 14, 16, 3), 0);
+  assert.equal(collectionLayout(1232, 490).capacity, 30);
+  assert.equal(collectionLayout(1392, 590).capacity, 33);
+  assert.equal(collectionLayout(1872, 760).capacity, 60);
+  assert.equal(collectionLayout(1232, 1300).rows, 8, "eight full rows require the actual available height");
+  assert.equal(pageForAnchor(2, 12, 16, 45), 1);
+  assert.equal(pageForAnchor(2, 16, 12, 40), 2);
+  assert.equal(pageForAnchor(2, 12, 16, 3), 0);
+});
+
+test("menos altura disponible reduce filas y conserva el disco enfocado en una página válida", () => {
+  const { collectionLayout, pageForAnchor } = load("src/lib/collectionLayout.ts");
+  const original = collectionLayout(1232, 490);
+  const filtered = collectionLayout(1232, 430);
+  assert.equal(original.capacity, 30);
+  assert.equal(filtered.capacity, 20);
+  const anchor = 43;
+  const nextPage = pageForAnchor(1, original.capacity, filtered.capacity, 80, anchor);
+  assert.equal(nextPage, 2);
+  assert.ok(anchor >= nextPage * filtered.capacity && anchor < (nextPage + 1) * filtered.capacity);
+  assert.equal(pageForAnchor(nextPage, filtered.capacity, original.capacity, 80, anchor), 1);
+});
+
+test("si no entra una caja legible completa la capacidad es cero y el ancla sigue siendo segura", () => {
+  const { collectionLayout, pageForAnchor } = load("src/lib/collectionLayout.ts");
+  const oneCardFrameHeight = 100 / 1.08 + 52 + 12;
+  for (const [width, height] of [[1232, oneCardFrameHeight - .01], [99.99, 490], [0, 0], [Number.NaN, Number.POSITIVE_INFINITY]]) {
+    const value = collectionLayout(width, height);
+    assert.ok(Number.isFinite(value.caseWidth));
+    assert.ok(Number.isFinite(value.cardHeight));
+    assert.equal(value.rows, 0);
+    assert.equal(value.capacity, 0);
+  }
+  const exactFit = collectionLayout(100, oneCardFrameHeight + .01);
+  assert.equal(exactFit.columns, 1);
+  assert.equal(exactFit.rows, 1);
+  assert.equal(exactFit.capacity, 1);
+  assert.equal(exactFit.caseWidth, 100);
+  assert.equal(pageForAnchor(2, 30, 0, 80, 61), 0);
+  assert.equal(pageForAnchor(0, 0, 30, 80, 61), 2, "a preserved explicit anchor restores the right page after space returns");
 });
 function client(fetch) {
   return load("src/lib/collectionClient.ts", {
@@ -202,7 +247,7 @@ test("batch no disponible usa artistas individuales acotados, sin fallback para 
   const beforeRetry = urls.length;
   const next = await api.fetchArtistGenresDetailed("private-token", ids);
   assert.equal(next.unresolvedArtistIds.length, 0);
-  assert.equal(urls.length - beforeRetry, 4); // One unsupported batch, three unresolved artists.
+  assert.equal(urls.length - beforeRetry, 3); // The unsupported batch is remembered; only unresolved artists are retried.
   for (const status of [401, 429]) {
     const attempts = [];
     const blocked = spotify(async (url) => { attempts.push(url); return new Response("blocked", { status }); });

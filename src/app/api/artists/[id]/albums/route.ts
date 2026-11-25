@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { CATALOG_PAGE_SIZE, catalogOffset, catalogRequest, nextCatalogOffset } from "@/lib/catalogServer";
 import { mockArtistReleases } from "@/mocks/artistCatalog";
-import type { ReleaseGroup } from "@/types/artist";
+import type { ArtistRelease, ReleaseGroup } from "@/types/artist";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -18,7 +18,21 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   try {
     const data = await catalogRequest(`artists/${encodeURIComponent(id)}/albums?${new URLSearchParams({ include_groups: group, limit: String(CATALOG_PAGE_SIZE), offset: String(offset) })}`, "GET /v1/artists/:id/albums", request.signal);
     if (data instanceof Response) return data;
-    return NextResponse.json({ items: data.items, total: data.total, nextOffset: nextCatalogOffset(data) });
+    if (!Array.isArray(data?.items) || !Number.isSafeInteger(data.total) || data.total < 0) {
+      return NextResponse.json({ error: "INVALID_ALBUM_PAGE" }, { status: 502 });
+    }
+    const nextOffset = nextCatalogOffset(data);
+    if (nextOffset !== null && (!Number.isSafeInteger(nextOffset) || nextOffset <= offset)) {
+      return NextResponse.json({ error: "INVALID_ALBUM_PAGE" }, { status: 502 });
+    }
+    const items = new Map<string, ArtistRelease>();
+    for (const album of data.items as (ArtistRelease | null)[]) {
+      if (!album || typeof album.id !== "string" || !album.id || album.album_group === "appears_on" || items.has(album.id)) continue;
+      items.set(album.id, album);
+    }
+    // Keep edition dates, cover and artist credits as supplied; genre coverage
+    // is fetched by artist ID from its own endpoint, independently of pages.
+    return NextResponse.json({ items: [...items.values()], total: data.total, nextOffset });
   } catch {
     return NextResponse.json({ error: "NETWORK_ERROR" }, { status: 502 });
   }

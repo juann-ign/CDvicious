@@ -8,11 +8,16 @@ interface Options {
   paused?: boolean;
   length: number;
   pages?: number;
+  chapterIndex?: number;
   onGrabStart?: () => void;
   onGrabEnd?: () => void;
 }
 
 const DRAG_THRESHOLD_PX = 6;
+
+export function isMarqueeChapterActive(dataset: DOMStringMap | undefined, chapterIndex = 2) {
+  return !dataset || (dataset.chapter === String(chapterIndex) && dataset.railMoving !== "true" && dataset.albumDetailOpen !== "true");
+}
 
 const ring = (a: number, b: number, len: number) => {
   let d = (b - a) % len;
@@ -27,6 +32,7 @@ export function useMarqueeBelt({
   paused = false,
   length,
   pages = 1,
+  chapterIndex = 2,
   onGrabStart,
   onGrabEnd,
 }: Options) {
@@ -67,11 +73,7 @@ export function useMarqueeBelt({
     let disposed = false;
     let prev = performance.now();
 
-    const canAnimate = () =>
-      !railRoot ||
-      (railRoot.dataset.chapter === "2" &&
-        railRoot.dataset.railMoving !== "true" &&
-        railRoot.dataset.albumDetailOpen !== "true");
+    const canAnimate = () => isMarqueeChapterActive(railRoot?.dataset, chapterIndex);
 
     const stop = () => {
       if (raf !== null) {
@@ -146,7 +148,7 @@ export function useMarqueeBelt({
       stop();
       observer?.disconnect();
     };
-  }, [enabled, length]);
+  }, [enabled, length, chapterIndex]);
 
   const goTo = (p: number) => {
     const len = lenRef.current;
@@ -160,7 +162,7 @@ export function useMarqueeBelt({
 
   useEffect(() => {
     const el = containerRef.current;
-    if (!el) return;
+    if (!enabled || !el) return;
 
     let suppressNextClick = false;
     let suppressClickTimer: number | null = null;
@@ -280,11 +282,15 @@ export function useMarqueeBelt({
 
     return () => {
       // Release the drag-owned rail lock if this hook unmounts mid-gesture.
-      if (captured.current) {
-        captured.current = false;
-        dragging.current = false;
-        pointerId.current = null;
+      const wasCaptured = captured.current;
+      const currentPointerId = pointerId.current;
+      captured.current = false;
+      dragging.current = false;
+      pointerId.current = null;
+      setIsDragging(false);
+      if (wasCaptured) {
         onGrabEndRef.current?.();
+        if (currentPointerId !== null && el.hasPointerCapture?.(currentPointerId)) el.releasePointerCapture(currentPointerId);
       }
 
       el.removeEventListener("pointerdown", down);
@@ -295,7 +301,7 @@ export function useMarqueeBelt({
       window.removeEventListener("pointercancel", cancel);
       el.removeEventListener("lostpointercapture", lostCapture);
     };
-  }, []);
+  }, [enabled]);
 
   return { containerRef, trackRef, isDragging, page, goTo, stepPage };
 }

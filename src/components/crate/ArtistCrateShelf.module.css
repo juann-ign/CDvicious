@@ -1,0 +1,13 @@
+.artistWrap {
+  width: 100%; max-width: 1040px; margin-inline: auto; container-type: inline-size;
+  --jewel-case-edge: #e3e7e5d4;
+  --jewel-case-inner-edge: #f2f4f28a;
+  --jewel-case-spine-edge: #e7ebe7d9;
+  --jewel-case-spine-sides: #ffffffdf #a7b1ac;
+  --jewel-case-top-edge: #e2e7e2cf;
+}
+.artistWrap .artistStage { --case-size: clamp(150px, 20cqw, 208px); height: calc(var(--case-size) + 68px); }
+.artistWrap .artistViewport { overflow: clip; }
+.artistWrap .artistTrack { display: block; width: 100%; height: var(--case-size); transform: none; will-change: auto; }
+.slot { position: absolute; left: 0; bottom: 0; visibility: hidden; }
+.artistWrap button:disabled { opacity: .45; cursor: default; }
