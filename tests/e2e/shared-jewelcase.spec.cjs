@@ -1,14 +1,10 @@
 const { test, expect } = require("./support/qa-evidence.cjs");
-const { functionalFixture, go } = require("./support/b2-harness.cjs");
+const { functionalFixture, findArtistEdition, go } = require("./support/b2-harness.cjs");
 
 const collection = (page) => page.getByRole("region", { name: "La Colección", exact: true });
-const view = (page) => page.getByTestId("artist-discography");
-const scene = (page) => page.getByTestId("artist-disc-scene");
+const scene = (page) => page.getByTestId("artist-discography").locator("[data-artist-shelf]");
 const detail = (page) => page.getByTestId("album-detail-page");
 const presentation = (page) => page.getByTestId("jewel-case-presentation");
-const selected = (page) => page.getByTestId("artist-selected-case");
-const position = (page) => view(page).getByRole("slider", { name: "Posición en la discografía" });
-const nav = (page) => page.getByRole("button", { name: "Ir al capítulo Colección", exact: true });
 const collectionCard = (page) => collection(page).locator('[data-collection-album-id="mock-album-01"]').first();
 
 async function boot(page, path = "/") {
@@ -28,25 +24,13 @@ async function openCollection(page) {
 }
 async function openArtist(page) {
   await openCollection(page);
-  await collection(page).getByRole("button", { name: "Buscar artista", exact: true }).click();
-  await page.getByRole("searchbox", { name: "Buscar artistas", exact: true }).fill("Vertice");
-  await collection(page).locator('[aria-label="Resultados de artistas"]').getByRole("button").first().click();
-  await expect(scene(page)).toBeVisible();
-}
-async function releaseFocusAndPointer(page) {
-  await nav(page).focus();
-  await page.mouse.move(2, 2);
+  return findArtistEdition(page, "Vértice Magnético", "demo-vertice-album-0");
 }
 async function hingeAngle(page) {
   return presentation(page).getByTestId("jewel-case-hinge").evaluate((element) => {
     const matrix = new DOMMatrixReadOnly(getComputedStyle(element).transform);
     return Math.round(Math.atan2(-matrix.m13, matrix.m11) * 180 / Math.PI);
   });
-}
-async function uniqueEditionControls(page) {
-  const ids = await scene(page).locator("button[data-album-id]").evaluateAll((nodes) => nodes.map((node) => node.dataset.albumId));
-  expect(new Set(ids).size).toBe(ids.length);
-  expect(await scene(page).locator('[data-copy="true"] button').count()).toBe(0);
 }
 async function assertOpenCaseSides(page) {
   const tracks = await presentation(page).getByTestId("jewel-case-tracklist").boundingBox();
@@ -153,7 +137,7 @@ test.describe("shared-case: contratos de estado y geometría con fixture WebGL e
 
   test("Batea y la ficha de guardados conservan los filtros de Colección", async ({ page }) => {
     await openCollection(page);
-    const search = collection(page).getByRole("searchbox", { name: "Buscar artista o álbum", exact: true });
+    const search = page.getByRole("combobox", { name: "Buscar discos o artistas", exact: true });
     await search.fill("neon");
     const before = await collectionCard(page).getAttribute("data-collection-album-id");
     await go(page, "Batea", 2);
@@ -175,55 +159,6 @@ test.describe("shared-case: contratos de estado y geometría con fixture WebGL e
     expect(await collectionCard(page).getAttribute("data-collection-album-id")).toBe(before);
   });
 
-  test("reanudar desde el control fijo avanza sin retirar su foco; enfocar una caja pausa", async ({ page }) => {
-    await openArtist(page);
-    await releaseFocusAndPointer(page);
-    await expect(scene(page)).toHaveAttribute("data-drifting", "true");
-    await view(page).getByRole("button", { name: "PAUSAR RECORRIDO", exact: true }).click();
-    await expect(scene(page)).toHaveAttribute("data-drifting", "false");
-    const stopped = await scene(page).getAttribute("data-cycle-phase");
-    await page.waitForTimeout(200);
-    await expect(scene(page)).toHaveAttribute("data-cycle-phase", stopped);
-    await view(page).getByRole("button", { name: "REANUDAR RECORRIDO", exact: true }).click();
-    await expect(view(page).getByRole("button", { name: "PAUSAR RECORRIDO", exact: true })).toBeFocused();
-    await expect(scene(page)).toHaveAttribute("data-drifting", "true");
-    await expect.poll(() => scene(page).getAttribute("data-cycle-phase")).not.toBe(stopped);
-    await scene(page).locator('button[data-album-id][data-offset="0"]').focus();
-    await expect(scene(page)).toHaveAttribute("data-drifting", "false");
-  });
-
-  test("Tab no desplaza cajas fuera del clip; End, Enter y Escape conservan centro, ID y foco", async ({ page }) => {
-    const items = Array.from({ length: 31 }, (_, index) => ({
-      id: `tab-fixture-${index}`, name: `Edición de teclado ${index + 1}`, release_date: `${1990 + index}`,
-      artists: [{ id: "demo-vertice", name: "Vértice Magnético" }], images: [], uri: `spotify:album:tab-fixture-${index}`, album_group: "album",
-    }));
-    await page.route("**/api/artists/demo-vertice/albums?*", (route) => route.fulfill({ json: { items, total: items.length, nextOffset: null } }));
-    await openArtist(page);
-    await scene(page).focus();
-    for (let step = 0; step < 6; step++) {
-      await page.keyboard.press("Tab");
-      expect(await scene(page).evaluate((node) => node.scrollLeft)).toBe(0);
-      await expect(page.locator("html")).toHaveAttribute("data-chapter", "3");
-    }
-    await scene(page).focus();
-    await page.keyboard.press("End");
-    await expect(selected(page)).toHaveAttribute("data-album-id", "tab-fixture-30");
-    await expect(selected(page)).toBeFocused();
-    await expect.poll(async () => {
-      const box = await selected(page).boundingBox();
-      const frame = await scene(page).boundingBox();
-      return Math.abs(box.x + box.width / 2 - frame.x - frame.width / 2);
-    }).toBeLessThan(2);
-    await page.keyboard.press("Enter");
-    await expect(presentation(page)).toHaveAttribute("data-album-id", "tab-fixture-30");
-    await expect(presentation(page)).toHaveAttribute("data-presentation", "closed");
-    await page.keyboard.press("Escape");
-    await expect(detail(page)).toHaveCount(0);
-    await expect(scene(page)).toHaveAttribute("data-mode", "selected");
-    await expect(selected(page)).toBeFocused();
-    expect(await scene(page).evaluate((node) => node.scrollLeft)).toBe(0);
-  });
-
   test("hojas, CD y scroll nativo de pistas funcionan en la ficha a 1280×800 y 1280×600", async ({ page }) => {
     // Exercise a list that needs scrolling even in the taller case layout.
     const fixtureTracks = Array.from({ length: 64 }, (_, position) => ({
@@ -237,9 +172,8 @@ test.describe("shared-case: contratos de estado y geometría con fixture WebGL e
       playable: true,
     }));
     await page.route("**/api/album/demo-vertice-album-0/tracks", (route) => route.fulfill({ json: { tracks: fixtureTracks } }));
-    await openArtist(page);
-    await scene(page).hover({ position: { x: 8, y: 28 } });
-    await scene(page).getByRole("button", { name: "Seleccionar Campo magnético", exact: true }).click();
+    const source = await openArtist(page);
+    await source.click();
     await detail(page).getByRole("button", { name: "Abrir caja", exact: true }).click();
     await expect(presentation(page)).toHaveAttribute("data-presentation", "open");
     const list = presentation(page).getByRole("list", { name: "Lista de pistas", exact: true });
@@ -270,96 +204,39 @@ test.describe("shared-case: contratos de estado y geometría con fixture WebGL e
     }
   });
 
-  for (const count of [1, 3, 31]) {
-    test(`catálogo de ${count}: identidad, pausa con foco y ciclo continuo al cruzar la última edición`, async ({ page }) => {
-      const items = Array.from({ length: count }, (_, index) => ({
-        id: `case-fixture-${index}`, name: index === count - 1 ? "Un título extraordinariamente largo conserva todas sus palabras al recibir el foco" : `Edición ${index + 1}`,
-        artists: [{ id: "demo-vertice", name: "Vértice Magnético" }], images: [], uri: `spotify:album:case-fixture-${index}`,
-        release_date: `${1990 + index}-01-01`, album_group: "album",
-      }));
-      await page.route("**/api/artists/demo-vertice/albums?*", (route) => route.fulfill({ json: { items: [...items].reverse(), total: count, nextOffset: null } }));
-      await openArtist(page);
-      await expect(position(page)).toHaveAttribute("max", String(count));
-      await scene(page).focus();
-      await page.keyboard.press("End");
-      await expect(selected(page)).toHaveAttribute("data-album-id", `case-fixture-${count - 1}`);
-      await selected(page).focus();
-      await expect(scene(page)).toHaveAttribute("data-drifting", "false");
-      await expect(page.getByTestId("artist-full-title")).toContainText(items[count - 1].name);
-      await uniqueEditionControls(page);
-      await page.keyboard.press("Escape");
-      await expect(scene(page)).toHaveAttribute("data-mode", "browse");
-      await releaseFocusAndPointer(page);
-      if (count === 1) {
-        await expect(scene(page)).toHaveAttribute("data-drifting", "false");
-        await expect(position(page)).toHaveValue("1");
-      } else {
-        await expect(scene(page)).toHaveAttribute("data-drifting", "true");
-        const seam = await scene(page).evaluate(async (node, last) => {
-          const samples = [];
-          const started = performance.now();
-          let crossed = false;
-          while (performance.now() - started < 7000) {
-            await new Promise(requestAnimationFrame);
-            const control = node.querySelector('button[data-album-id="case-fixture-0"]');
-            if (!control) throw new Error("La edición pierde su control en el cruce");
-            const index = Number(node.dataset.cycleIndex);
-            samples.push({ index, left: control.getBoundingClientRect().left });
-            if (samples.some((sample) => sample.index === last) && index === 0) { crossed = true; break; }
-          }
-          return { crossed, maxJump: Math.max(0, ...samples.slice(1).map((sample, index) => Math.abs(sample.left - samples[index].left))) };
-        }, count - 1);
-        expect(seam.crossed).toBe(true);
-        expect(seam.maxJump).toBeLessThan(24);
-        await expect(position(page)).toHaveValue("1");
-        await uniqueEditionControls(page);
-        await scene(page).focus();
-        await expect(scene(page)).toHaveAttribute("data-drifting", "false");
-        const current = await position(page).inputValue();
-        const pausedPhase = await scene(page).getAttribute("data-cycle-phase");
-        await page.waitForTimeout(200);
-        await expect(position(page)).toHaveValue(current);
-        await expect(scene(page)).toHaveAttribute("data-cycle-phase", pausedPhase);
-        await releaseFocusAndPointer(page);
-        await expect(scene(page)).toHaveAttribute("data-drifting", "true");
-        await expect.poll(() => scene(page).getAttribute("data-cycle-phase")).not.toBe(pausedPhase);
-      }
-      await page.emulateMedia({ reducedMotion: "reduce" });
-      await expect(scene(page)).toHaveAttribute("data-drifting", "false");
-    });
-  }
+
 });
 
 test("shared-case: mock normal buscar artista, seleccionar, abrir la bisagra y reproducir una sola vez", async ({ page }) => {
   // Normal app: no catalog, tracks, lyrics, playback or WebGL interceptors.
   const requests = [];
   page.on("request", (request) => { if (new URL(request.url()).pathname === "/api/play") requests.push(request.postDataJSON()); });
-  await openArtist(page);
-  await scene(page).hover({ position: { x: 8, y: 28 } });
-  const source = scene(page).getByRole("button", { name: "Seleccionar Campo magnético", exact: true });
-  const id = await source.getAttribute("data-album-id");
+  const source = await openArtist(page);
+  const id = await source.getAttribute("data-batea-album-id");
   await source.click();
   await expect(detail(page)).toHaveAttribute("data-album-id", id);
+  await detail(page).getByRole("button", { name: "Volver", exact: true }).click();
+  await expect(source).toBeFocused();
+  await source.press("Enter");
   await expect(presentation(page)).toHaveAttribute("data-presentation", "closed");
   await detail(page).getByRole("button", { name: "Abrir caja", exact: true }).click();
   await expect(presentation(page)).toHaveAttribute("data-presentation", "open");
   expect(await hingeAngle(page)).toBe(-168);
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page.locator("[data-rail-ready]")).toHaveAttribute("data-album-detail-open", "true");
-  await expect(scene(page)).toBeHidden();
-  await expect(scene(page)).toHaveAttribute("data-drifting", "false");
+  await expect(page.locator("[data-rail-wrapper]")).toHaveAttribute("inert", "");
   const frame = await presentation(page).boundingBox();
   await assertOpenCaseSides(page);
   const rail = await page.locator("[data-global-player]").boundingBox();
   expect(frame.y + frame.height).toBeLessThanOrEqual(rail.y);
   await detail(page).getByRole("button", { name: "Reproducir Campo magnético", exact: true }).dblclick();
-  await expect(page.getByTestId("deck-now-playing")).toHaveAttribute("data-is-playing", "true");
   await expect(page.locator("html")).toHaveAttribute("data-chapter", "0", { timeout: 20000 });
+  await expect(page.getByTestId("deck-now-playing")).toHaveAttribute("data-is-playing", "true");
   await expect.poll(() => requests.length).toBe(1);
   expect(requests[0].uri).toBe(`spotify:album:${id}`);
   await go(page, "Colección", 3);
-  await expect(selected(page)).toHaveAttribute("data-album-id", id);
-  await expect(selected(page)).toBeFocused();
+  await expect(source).toHaveAttribute("data-batea-album-id", id);
+  await expect(page.getByRole("button", { name: "Ir al capítulo Colección", exact: true })).toBeFocused();
 });
 
 test("shared-case: mock normal abre, cierra y reproduce desde Colección con confirmación del álbum", async ({ page }) => {

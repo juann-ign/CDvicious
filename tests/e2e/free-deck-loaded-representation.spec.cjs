@@ -4,25 +4,20 @@ const {
   representationSnapshot, stopRepresentationProbe,
 } = require("./support/historical-disc-harness.cjs");
 
+const { findArtistEdition } = require("./support/b2-harness.cjs");
+
 test.use({ viewport: { width: 1440, height: 900 }, launchOptions: { args: ["--enable-webgl", "--ignore-gpu-blocklist", "--use-gl=angle"] } });
 const lift = (page) => page.getByRole("button", { name: "Elevar CD del equipo", exact: true });
 const dock = (page) => page.getByRole("button", { name: "Acoplar CD al equipo", exact: true });
 
 async function loadArtistCampo(page) {
   await go(page, "Colección", 3);
-  await collection(page).getByRole("button", { name: "Buscar artista", exact: true }).click();
-  await page.getByRole("searchbox", { name: "Buscar artistas", exact: true }).fill("Vertice");
-  const artist = collection(page).locator('[aria-label="Resultados de artistas"]').getByRole("button").filter({ hasText: "Vértice Magnético" });
-  await expect(artist).toHaveCount(1);
-  await artist.click();
-  const scene = page.getByTestId("artist-disc-scene");
-  await scene.hover({ position: { x: 8, y: 28 } });
-  await scene.getByRole("button", { name: "Seleccionar Campo magnético", exact: true }).click();
-  await expect(page.getByTestId("artist-selected-case")).toHaveAttribute("data-album-id", "demo-vertice-album-0");
-  await page.getByTestId("artist-selected-case").click();
+  const source = await findArtistEdition(page, "Vértice Magnético", "demo-vertice-album-0");
+  await source.click();
+  await page.getByTestId("album-detail-page").getByRole("button", { name: "Abrir caja", exact: true }).click();
   await expect(page.getByTestId("jewel-case-presentation")).toHaveAttribute("data-presentation", "open");
   await expect(page.getByTestId("jewel-case-presentation")).toHaveAttribute("data-album-id", "demo-vertice-album-0");
-  await page.getByTestId("artist-discography").getByRole("button", { name: "REPRODUCIR ÁLBUM", exact: true }).click();
+  await page.getByTestId("album-detail-page").getByRole("button", { name: "Reproducir Campo magnético", exact: true }).click();
 }
 
 async function loadCollectionNocturnal(page) {

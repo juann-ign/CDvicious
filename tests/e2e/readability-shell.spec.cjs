@@ -1,5 +1,4 @@
 const fs = require("node:fs");
-const path = require("node:path");
 const { test, expect, functionalFixture, openRail, go, installMock } = require("./support/b2-harness.cjs");
 
 const playerFront = (page) => page.locator('[data-hardware-front="player"]');
@@ -74,12 +73,9 @@ async function setMetadataState(page, state) {
 test.beforeEach(async ({ page }) => { await functionalFixture(page); });
 
 test.afterEach(async ({ page }, testInfo) => {
-  const directory = path.resolve(".qa/readability/shell-tests");
-  fs.mkdirSync(directory, { recursive: true });
-  const stem = testInfo.titlePath.slice(1).join("-").replace(/[^a-zA-Z0-9-]+/g, "-");
   const state = await playerGeometry(page).catch((error) => ({ error: error.message }));
   const record = { title: testInfo.title, status: testInfo.status, viewport: page.viewportSize(), state, fixture: "controlled metadata and WebGL functional fallback" };
-  fs.writeFileSync(path.join(directory, `${stem}.json`), JSON.stringify(record, null, 2));
+  fs.writeFileSync(testInfo.outputPath("shell.json"), JSON.stringify(record, null, 2));
   await testInfo.attach("readability-shell", { body: JSON.stringify(record, null, 2), contentType: "application/json" });
 });
 

@@ -3,8 +3,7 @@ name: Build
 on:
   push:
     branches:
-      - feature/epic-2-jewel-modal-mockup
-      - fix/spotify-stop-bleeding-mock
+      - main
   pull_request:
     branches:
       - main

@@ -1,5 +1,4 @@
 const fs = require("node:fs");
-const path = require("node:path");
 const { test, expect } = require("@playwright/test");
 
 const collection = (page) => page.getByRole("region", { name: "La Colección", exact: true });
@@ -74,13 +73,10 @@ async function saveEvidence(page, testInfo, extra = {}) {
       fontStatus: document.fonts.status,
     };
   }).catch((error) => ({ error: error.message }));
-  const directory = path.resolve(".qa/b2/evidence", process.env.B2_PHASE || "verification");
-  fs.mkdirSync(directory, { recursive: true });
-  const stem = testInfo.titlePath.slice(1).join("-").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9-]+/g, "-").slice(0, 150);
   const record = { title: testInfo.title, status: testInfo.status, expectedStatus: testInfo.expectedStatus, ...extra, state };
-  fs.writeFileSync(path.join(directory, `${stem}.json`), JSON.stringify(record, null, 2));
+  fs.writeFileSync(testInfo.outputPath("b2-state.json"), JSON.stringify(record, null, 2));
   await testInfo.attach("b2-state", { body: JSON.stringify(record, null, 2), contentType: "application/json" });
-  if (!page.isClosed()) await page.screenshot({ path: path.join(directory, `${stem}.png`), animations: "disabled" });
+  if (!page.isClosed()) await page.screenshot({ path: testInfo.outputPath("b2-state.png"), animations: "disabled" });
 }
 function observeHttp(page) {
   const rows = [];
@@ -93,4 +89,14 @@ function observeHttp(page) {
   });
   return rows;
 }
-module.exports = { test, expect, collection, booklet, lyricFaces, cards, functionalFixture, openRail, go, installMock, setTrack, visibleLyrics, saveEvidence, observeHttp };
+async function findArtistEdition(page, artistName, albumId) {
+  await page.getByRole("combobox", { name: "Buscar discos o artistas", exact: true }).fill(artistName);
+  await page.getByRole("option", { name: `Explorar artista ${artistName}`, exact: true }).click();
+  const shelf = page.getByTestId("artist-discography");
+  const box = shelf.locator(`button[data-batea-album-id="${albumId}"]`);
+  await expect(box).toBeAttached();
+  await shelf.locator("[data-batea-tray]").hover({ position: { x: 8, y: 8 } });
+  return box;
+}
+
+module.exports = { test, expect, collection, booklet, lyricFaces, cards, functionalFixture, openRail, go, findArtistEdition, installMock, setTrack, visibleLyrics, saveEvidence, observeHttp };

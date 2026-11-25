@@ -7,7 +7,6 @@ on:
     paths:
       - "src/**"
       - "tests/e2e/**"
-      - "docs/qa/**"
       - "playwright.config.cjs"
       - ".github/workflows/stab-01-browser-qa.yml"
       - "package.json"
@@ -50,18 +49,11 @@ jobs:
       - name: Build production app for browser QA
         run: npm run build
 
-      - name: Install pinned Playwright runner outside the application
-        run: |
-          mkdir -p /tmp/playwright-runner
-          npm install --prefix /tmp/playwright-runner --no-save @playwright/test@1.64.1
-          echo "NODE_PATH=/tmp/playwright-runner/node_modules" >> "$GITHUB_ENV"
-          echo "/tmp/playwright-runner/node_modules/.bin" >> "$GITHUB_PATH"
-
       - name: Install Chromium browser
-        run: playwright install chromium
+        run: npx --no-install playwright install chromium
 
       - name: Run browser QA matrix
-        run: playwright test
+        run: npm run test:e2e
 
       - name: Upload browser evidence on failure
         if: failure()

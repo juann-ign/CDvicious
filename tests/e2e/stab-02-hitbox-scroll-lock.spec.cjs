@@ -1,4 +1,5 @@
 const { test, expect } = require("@playwright/test");
+const { makeAlbum, coverage } = require("../fixtures/collection-filters.cjs");
 
 const RAIL_ENABLED = process.env.RAIL_FLAG === "1";
 const NAV_LABEL = "Navegación por capítulos";
@@ -266,6 +267,14 @@ test("hit-testing en Batea y Colección entrega el pointer al panel activo", asy
 
 test("búsqueda y filtros de Colección siguen accesibles con ventana baja y escala CSS 125%", async ({ page }) => {
   test.skip(!RAIL_ENABLED, "Requiere Colección en el rail desktop.");
+  const albums = [makeAlbum("zoom-neon", "2024", ["rock"], { name: "Neon Rooms" }),
+    ...Array.from({ length: 63 }, (_, index) => makeAlbum(`zoom-${index}`, "2012", ["rock"]))];
+  await page.route("**/api/collection?*", (route) => {
+    const enriched = new URL(route.request().url()).searchParams.get("includeGenres") === "1";
+    return route.fulfill({ json: albums.map((album) => ({ ...album, genres: enriched ? album.genres : [],
+      genreMetadata: enriched ? coverage("complete", 1, 1) : undefined })),
+      headers: { "X-CDV-Genres-State": enriched ? "complete" : "not-requested" } });
+  });
   // Mount and initialize the desktop rail at the standard viewport first.
   // Then reduce only the height: this test targets short-window layout, not
   // the unrelated dynamic-import/hydration timing of a cold page load.
@@ -277,10 +286,11 @@ test("búsqueda y filtros de Colección siguen accesibles con ventana baja y esc
   await goToChapter(page, "Colección", 3);
 
   const collection = panels(page).nth(3);
-  const search = collection.getByRole("searchbox", { name: "Buscar artista o álbum" });
+  const search = page.getByRole("combobox", { name: "Buscar discos o artistas", exact: true });
   const neonRooms = collection.getByRole("button", { name: /— Neon Rooms$/ });
   await expect(search).toBeVisible();
   await search.fill("Neon Rooms");
+  await search.press("Escape");
   await expect(neonRooms.first()).toBeVisible();
 
   const filter = collection.getByRole("combobox", { name: "Filtrar por década", exact: true });
@@ -297,19 +307,22 @@ test("búsqueda y filtros de Colección siguen accesibles con ventana baja y esc
   for (const name of ["Filtrar por género", "Filtrar por década", "Filtrar por año de edición"]) {
     await expect(collection.getByRole("combobox", { name, exact: true })).toBeInViewport({ ratio: 1 });
   }
-  const nextPage = page.getByRole("button", { name: "Siguiente", exact: true });
+  const gridFrame = collection.locator("[data-page-size]");
+  const pageSize = Number(await gridFrame.getAttribute("data-page-size"));
+  expect(pageSize).toBeGreaterThan(0);
+  const pages = Math.ceil(albums.length / pageSize);
+  const nextPage = collection.getByRole("button", { name: "Siguiente", exact: true });
   await expect(nextPage).toBeVisible();
   await expect(nextPage).toBeEnabled();
   await expect(nextPage).toBeInViewport({ ratio: 1 });
   await nextPage.click();
-  await expect(collection).toContainText("Página 2 de 4");
+  await expect(collection).toContainText(`Página 2 de ${pages}`);
   await expect(collection.getByRole("button", { name: "Anterior", exact: true })).toBeEnabled();
 
-  const gridFrame = collection.locator('[class*="gridFrame"]');
-  await expect.poll(() => gridFrame.evaluate((node) => node.scrollHeight > node.clientHeight + 1)).toBe(true);
-  await gridFrame.hover();
-  await page.mouse.wheel(0, 160);
-  await expect.poll(() => gridFrame.evaluate((node) => node.scrollTop)).toBeGreaterThan(0);
+  const visibleCards = gridFrame.locator("[data-collection-album-id]");
+  await expect(visibleCards.first()).toHaveAttribute("data-collection-album-id", albums[pageSize].id);
+  await expect.poll(() => gridFrame.evaluate((node) => node.scrollHeight <= node.clientHeight + 1)).toBe(true);
+  await expect(visibleCards.last()).toBeInViewport({ ratio: 1 });
   await expect(page.locator("html")).toHaveAttribute("data-chapter", "3");
   await expect.poll(() => collection.evaluate((node) => Math.abs(node.getBoundingClientRect().left))).toBeLessThan(2);
 
@@ -320,4 +333,7 @@ test("búsqueda y filtros de Colección siguen accesibles con ventana baja y esc
   await expect(filter).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(filter).toHaveValue("all");
+  await gridFrame.hover();
+  await page.mouse.wheel(0, 700);
+  await expect(page.locator("html")).toHaveAttribute("data-chapter", "4");
 });

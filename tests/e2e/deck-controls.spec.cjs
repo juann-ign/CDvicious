@@ -1,5 +1,5 @@
 const { test, expect } = require("./support/qa-evidence.cjs");
-const { openRail, go, installMock } = require("./support/b2-harness.cjs");
+const { openRail, go, findArtistEdition, installMock } = require("./support/b2-harness.cjs");
 
 // Normal mock APIs and normal desktop renderer. Only the named long-title
 // case injects metadata; no normal playback/volume case intercepts requests.
@@ -249,13 +249,9 @@ test("physical controls: normal Artist handoff confirms the selected edition onc
   const requests = await observeAttempt(page);
   await ready(page);
   await go(page, "Colección", 3);
-  await collection(page).getByRole("button", { name: "Buscar artista", exact: true }).click();
-  await page.getByRole("searchbox", { name: "Buscar artistas", exact: true }).fill("Vertice");
-  await collection(page).locator('[aria-label="Resultados de artistas"]').getByRole("button").first().click();
-  const scene = page.getByTestId("artist-disc-scene");
-  await scene.hover({ position: { x: 8, y: 28 } });
-  await scene.getByRole("button", { name: "Seleccionar Campo magnético", exact: true }).click();
-  await page.getByTestId("artist-discography").getByRole("button", { name: "REPRODUCIR ÁLBUM", exact: true }).dblclick();
+  const source = await findArtistEdition(page, "Vértice Magnético", "demo-vertice-album-0");
+  await source.click();
+  await page.getByTestId("album-detail-page").getByRole("button", { name: "Reproducir Campo magnético", exact: true }).dblclick();
   await assertAttempt(page, requests, "Órbita de papel");
   expect(requests[0].uri).toBe("spotify:album:demo-vertice-album-0");
   await physicalNext(page).click();

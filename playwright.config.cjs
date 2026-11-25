@@ -1,5 +1,6 @@
 const { defineConfig } = require("@playwright/test");
 
+const externalURL = process.env.CDV_TEST_BASE_URL;
 const railFlag = process.env.RAIL_FLAG ?? "1";
 
 module.exports = defineConfig({
@@ -17,11 +18,12 @@ module.exports = defineConfig({
   },
   reporter: process.env.QA_EVIDENCE === "1" ? [["list"], ["./tests/e2e/support/qa-reporter.cjs"]] : "list",
   outputDir: "test-results",
+  preserveOutput: process.env.QA_EVIDENCE === "1" ? "always" : "failures-only",
   use: {
     trace: process.env.QA_EVIDENCE === "1" ? "on" : "retain-on-failure",
     screenshot: "only-on-failure",
-    video: process.env.QA_EVIDENCE === "1" ? "on" : "retain-on-failure",
-    baseURL: "http://127.0.0.1:3002",
+    video: process.env.QA_EVIDENCE === "1" ? "on" : "off",
+    baseURL: externalURL || "http://127.0.0.1:3002",
     browserName: "chromium",
     channel: process.env.PLAYWRIGHT_CHANNEL || undefined,
     headless: true,
@@ -35,7 +37,7 @@ module.exports = defineConfig({
       ],
     },
   },
-  webServer: {
+  webServer: externalURL ? undefined : {
     command: "npm run start -- -H 127.0.0.1 -p 3002",
     url: "http://127.0.0.1:3002",
     reuseExistingServer: false,

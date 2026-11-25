@@ -1,12 +1,11 @@
 const fs = require("node:fs");
-const path = require("node:path");
 const { test, expect, collection, cards, functionalFixture, openRail, go } = require("./support/b2-harness.cjs");
 const { makeAlbum, coverage } = require("../fixtures/collection-filters.cjs");
 
 const genre = (page) => collection(page).getByRole("combobox", { name: "Filtrar por género", exact: true });
 const decade = (page) => collection(page).getByRole("combobox", { name: "Filtrar por década", exact: true });
 const year = (page) => collection(page).getByRole("combobox", { name: "Filtrar por año de edición", exact: true });
-const query = (page) => collection(page).getByRole("searchbox", { name: "Buscar artista o álbum", exact: true });
+const query = (page) => page.getByRole("combobox", { name: "Buscar discos o artistas", exact: true });
 const ids = (page) => cards(page).evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-collection-album-id")));
 async function openCollection(page) { await openRail(page); await go(page, "Colección", 3); await expect(cards(page).first()).toBeVisible(); }
 async function loadGenres(page) { await expect(genre(page).locator('option[value="electronic"], option[value="rock"]').first()).toHaveCount(1); }
@@ -19,19 +18,15 @@ test.afterEach(async ({ page }, testInfo) => {
     focus: document.activeElement?.getAttribute("aria-label") || document.activeElement?.textContent,
     text: document.querySelector('[aria-label="La Colección"]')?.textContent,
   }));
-  const directory = path.resolve(".qa/readability/collection-tests");
-  fs.mkdirSync(directory, { recursive: true });
-  const stem = testInfo.title.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]+/g, "-");
-  fs.writeFileSync(path.join(directory, `${stem}.json`), JSON.stringify({ status: testInfo.status, state }, null, 2));
-  await page.screenshot({ path: path.join(directory, `${stem}.png`), animations: "disabled" });
+  fs.writeFileSync(testInfo.outputPath("collection.json"), JSON.stringify({ status: testInfo.status, state }, null, 2));
+  await page.screenshot({ path: testInfo.outputPath("collection.png"), animations: "disabled" });
 });
 
 test("Colección normal: búsqueda sin tildes, cuatro filtros y chips removibles respetan la edición", async ({ page }) => {
   await openCollection(page);
   await expect(cards(page)).toHaveCount(14);
   await expect(collection(page).locator("header [role=status]")).toHaveCount(0);
-  await expect(collection(page).getByRole("button", { name: "Tu colección", exact: true })).toBeVisible();
-  await expect(collection(page).getByRole("button", { name: "Buscar artista", exact: true })).toBeVisible();
+  await expect(query(page)).toBeVisible();
   for (const viewport of [{ width: 1280, height: 800 }, { width: 1440, height: 900 }, { width: 1280, height: 800 }]) {
     await page.setViewportSize(viewport);
     await expect(cards(page)).toHaveCount(viewport.height <= 850 ? 14 : 16);
@@ -146,32 +141,4 @@ test("volver de una ficha conserva búsqueda, filtros, página y foco en el mism
   await expect(year(page)).toHaveValue("1994");
   await expect(restoredCard).toBeVisible();
   await expect(restoredCard).toBeFocused();
-});
-
-test("Artista normal: Vertice y Satelite mantienen nombres, resultados y foco al volver", async ({ page }) => {
-  let requests = 0;
-  page.on("request", (request) => { if (new URL(request.url()).pathname === "/api/search") requests++; });
-  await openCollection(page);
-  await query(page).fill("neon");
-  await collection(page).getByRole("button", { name: "Buscar artista", exact: true }).click();
-  const artistQuery = page.getByRole("searchbox", { name: "Buscar artistas", exact: true });
-  await artistQuery.fill("Vertice");
-  const results = collection(page).locator('[aria-label="Resultados de artistas"]');
-  await expect(results.getByRole("button").first()).toContainText("Vértice Magnético");
-  await results.getByRole("button").first().click();
-  const view = page.getByTestId("artist-discography");
-  await expect(view.locator("header [role=status]")).toContainText("27 LANZAMIENTOS");
-  await view.getByRole("button", { name: /VOLVER A RESULTADOS/ }).click();
-  await expect(artistQuery).toHaveValue("Vertice");
-  await expect(results.getByRole("button").first()).toBeFocused();
-  // Allow the existing 300ms debounce to elapse: returning to completed results
-  // must not refetch and unmount the button that just regained focus.
-  await page.waitForTimeout(450);
-  expect(requests).toBe(1);
-  await artistQuery.fill("Satelite");
-  await expect(results.getByRole("button").first()).toContainText("Satélite Sur");
-  await collection(page).getByRole("button", { name: /TU COLECCIÓN/ }).click();
-  await expect(query(page)).toHaveValue("neon");
-  await expect(cards(page)).toHaveCount(1);
-  await expect(collection(page).getByRole("button", { name: "Buscar artista", exact: true })).toBeFocused();
 });

@@ -221,14 +221,3 @@
 .foot { position: absolute; bottom: calc(-28 * var(--u)); width: calc(95 * var(--u)); height: calc(22 * var(--u)); transform: rotateX(-90deg) translateZ(calc(-128 * var(--u))); transform-origin: 50% 0; background: linear-gradient(#4b5e4c, #18291d); border: calc(2 * var(--u)) solid #78906f; box-shadow: 0 calc(4 * var(--u)) calc(6 * var(--u)) #112017a6; }
 .footLeft { left: 10%; }.footRight { right: 10%; }
 .airDisc { position: absolute; left: 50%; top: calc(8 * var(--u)); width: calc(270 * var(--u)); height: calc(270 * var(--u)); border-radius: 50%; transform: translateX(-50%) rotateX(-4deg) rotateY(-9deg); transform-style: preserve-3d; box-shadow: calc(3 * var(--u)) calc(4 * var(--u)) 0 #485f4f; }
-
-.gallery { min-height: 100dvh; box-sizing: border-box; padding: 22px 28px 0; background: radial-gradient(ellipse at 50% 32%, #aeb7b3, #67736f 68%, #53615b); color: #23382a; font-family: var(--font-ui); }
-.galleryHeader { max-width: 1200px; margin: 0 auto; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; }
-.galleryHeader h1 { margin: 0; font: 26px/1.2 var(--font-display); letter-spacing: 1px; }
-.galleryHeader p { margin: 8px 0 0; font: var(--text-control)/1.5 var(--font-ui); }
-.poseNav { display: flex; flex-wrap: wrap; gap: 8px; }
-.poseNav a { display: block; padding: 10px 14px; border: 1px solid #4f694d; border-radius: 0; background: var(--hardware-button); color: var(--color-phosphor); font: var(--text-control)/1.2 var(--font-ui); text-decoration: none; }
-.poseNav a[aria-current=page] { box-shadow: inset 0 0 0 1px var(--color-phosphor); }
-.poseNav a:focus-visible { outline: 2px solid var(--color-phosphor); outline-offset: 3px; }
-.galleryStage { width: min(100%, 1280px); height: min(660px, calc(100dvh - 125px)); min-height: 390px; margin: 10px auto 0; }
-.poseCaption { margin: 0 auto; max-width: 1100px; text-align: center; font: var(--text-control)/1.4 var(--font-ui); }

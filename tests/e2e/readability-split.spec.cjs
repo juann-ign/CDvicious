@@ -2,7 +2,6 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { test, expect, booklet, lyricFaces, functionalFixture, openRail, go, visibleLyrics } = require("./support/b2-harness.cjs");
 
-const output = path.resolve(".qa/readability/after");
 const root = (page) => page.getByTestId("lyrics-booklet");
 const paper = (page) => page.getByTestId("lyrics-paper");
 const pageStatus = (page) => page.getByTestId("lyrics-page-status");
@@ -11,7 +10,7 @@ const previous = (page) => paper(page).locator('[data-booklet-edge="previous"]')
 const nextTrack = (page) => page.locator("[data-physical-deck]").getByRole("button", { name: "Pista siguiente del equipo", exact: true });
 const previousTrack = (page) => page.locator("[data-physical-deck]").getByRole("button", { name: "Pista anterior del equipo", exact: true });
 
-test.beforeEach(async ({ page }) => { await functionalFixture(page); fs.mkdirSync(output, { recursive: true }); });
+test.beforeEach(async ({ page }) => { await functionalFixture(page); });
 
 async function openMapa(page) {
   await openRail(page);
@@ -102,7 +101,7 @@ test("Split normal: lectura compacta, clic en bordes y hojas alineadas durante e
   await clickPageCenter(page, "right");
   await expect(root(page)).toHaveAttribute("data-pagination-index", "0");
   await expect(root(page)).toHaveAttribute("data-page-turn-state", "idle");
-  await page.screenshot({ path: path.join(output, "split-1280x800.png"), animations: "disabled" });
+  await page.screenshot({ path: testInfo.outputPath("split-1280x800.png"), animations: "disabled" });
   const paperBefore = await paper(page).boundingBox();
   // Read both ends of the real CSS animation while the sheet is attached.
   // A later CDP round trip can miss it after onAnimationEnd removes the leaf.
@@ -189,7 +188,7 @@ test("Split normal: lectura compacta, clic en bordes y hojas alineadas durante e
   await assertEdgesInView(page);
 });
 
-test("Split normal: redimensionar conserva el verso y Deck no recibe foco del booklet oculto", async ({ page }) => {
+test("Split normal: redimensionar conserva el verso y Deck no recibe foco del booklet oculto", async ({ page }, testInfo) => {
   await openMapa(page);
   await next(page).click();
   await expect(root(page)).toHaveAttribute("data-page-turn-state", "idle");
@@ -210,7 +209,7 @@ test("Split normal: redimensionar conserva el verso y Deck no recibe foco del bo
   await expect(equipment).toBeVisible();
   await expect(equipment.locator("[data-deck-docked-disc]")).toBeVisible();
   await expect(equipment.locator("[data-deck-mechanism]")).toHaveAttribute("data-deck-static", "true");
-  await page.screenshot({ path: path.join(output, "split-1440x900.png"), animations: "disabled" });
+  await page.screenshot({ path: testInfo.outputPath("split-1440x900.png"), animations: "disabled" });
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   await expect.poll(() => visibleLyrics(page)).toContain(verse);

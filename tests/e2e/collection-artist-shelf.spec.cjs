@@ -115,6 +115,26 @@ test("one nav search accepts artist, album, and combined words and can replace t
   await expect(grid(page)).toHaveCount(1);
 });
 
+test("the artist shelf distinguishes a failed catalog from an empty discography and retries in place", async ({ page }) => {
+  let unavailable = true;
+  await page.route("**/api/artists/demo-empty/albums?*", (route) => unavailable
+    ? route.fulfill({ status: 503, json: { error: "catalog unavailable" } })
+    : route.fulfill({ json: { items: [], total: 0, nextOffset: null } }));
+  await openRail(page);
+  await go(page, "Colección", 3);
+  await query(page).fill("Archivo sin editar");
+  await suggestions(page).getByRole("option", { name: "Explorar artista Archivo sin editar", exact: true }).click();
+  const shelf = collection(page).getByTestId("artist-discography");
+  await expect(shelf).toHaveAttribute("data-artist-id", "demo-empty");
+  await expect(shelf.getByRole("alert")).toContainText("No se pudo cargar el catálogo.");
+  await expect(shelf.getByText("Este artista no tiene álbumes disponibles.")).toHaveCount(0);
+  unavailable = false;
+  await shelf.getByRole("button", { name: "Reintentar catálogo", exact: true }).click();
+  await expect(shelf.getByRole("status")).toHaveText("Este artista no tiene álbumes disponibles.");
+  await expect(shelf.getByRole("alert")).toHaveCount(0);
+  await expect(shelf).toHaveAttribute("data-artist-id", "demo-empty");
+});
+
 test("Colección can filter with genre matches verified through Spotify Search when metadata is unavailable", async ({ page }) => {
   await page.route("**/api/collection?*", async (route) => {
     const response = await route.fetch();

@@ -1,18 +1,9 @@
 const { test, expect } = require("./support/qa-evidence.cjs");
-const { openRail, go } = require("./support/b2-harness.cjs");
-const scene = (page) => page.getByTestId("artist-discography");
+const { openRail, go, findArtistEdition } = require("./support/b2-harness.cjs");
 const detail = (page) => page.getByTestId("album-detail-page");
 const presentation = (page) => page.getByTestId("jewel-case-presentation");
 // Explicit visual profile. All pre-existing regression options remain intact.
 test.use({ launchOptions: { args: ["--enable-webgl", "--ignore-gpu-blocklist", "--use-gl=angle"] } });
-async function openArtist(page) {
-  await openRail(page);
-  await go(page, "Colección", 3);
-  await page.getByRole("combobox", { name: "Buscar discos o artistas", exact: true }).fill("Vertice");
-  await page.getByRole("option", { name: "Explorar artista Vértice Magnético", exact: true }).click();
-  await expect(scene(page)).toBeVisible();
-}
-
 async function visibleTrackInk(page, testInfo, state = "rest") {
   const titles = presentation(page).getByTestId("jewel-case-tracklist").locator('[class*="trackTitle"]');
   await expect(titles.first()).toContainText("Órbita de papel");
@@ -47,10 +38,10 @@ test.describe("shared-case: interior visible en GPU normal", () => {
   // regression launch flags, assertion deadlines and retries are unchanged.
 
   test("la tapa abierta deja visibles los nombres de pistas, además de su DOM", async ({ page }, testInfo) => {
-    await openArtist(page);
-    const tray = scene(page).locator("[data-batea-tray]");
-    await tray.hover({ position: { x: 8, y: 28 } });
-    await tray.getByRole("button", { name: /Campo magnético/ }).click();
+    await openRail(page);
+    await go(page, "Colección", 3);
+    const source = await findArtistEdition(page, "Vértice Magnético", "demo-vertice-album-0");
+    await source.click();
     await expect(presentation(page)).toHaveAttribute("data-presentation", "closed");
     await detail(page).getByRole("button", { name: "Abrir caja", exact: true }).click();
     await expect(presentation(page)).toHaveAttribute("data-presentation", "open");

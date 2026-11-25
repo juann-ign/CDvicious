@@ -1,6 +1,5 @@
 const fs = require("node:fs");
-const path = require("node:path");
-const { test, expect, collection, cards, booklet, lyricFaces, functionalFixture, openRail, go, visibleLyrics } = require("./support/b2-harness.cjs");
+const { test, expect, collection, findArtistEdition, cards, booklet, lyricFaces, functionalFixture, openRail, go, visibleLyrics } = require("./support/b2-harness.cjs");
 
 // This suite uses the ordinary demo routes and player. No response interceptors,
 // test URL parameters, injected track snapshots or provider credentials.
@@ -50,17 +49,14 @@ test.afterEach(async ({ page }, testInfo) => {
     text: [...document.querySelectorAll('[data-rail-booklet] [data-testid="lyrics-content"]')].map((node) => node.textContent).join(""),
     collection: document.querySelector('[aria-label="La Colección"]')?.textContent,
   })).catch((error) => ({ error: error.message }));
-  const directory = path.resolve(".qa/b2-demo/after");
-  fs.mkdirSync(directory, { recursive: true });
-  const stem = testInfo.title.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9-]+/g, "-").slice(0, 140);
   const record = { title: testInfo.title, status: testInfo.status, http, providerRequests, state };
-  fs.writeFileSync(path.join(directory, `${stem}.json`), JSON.stringify(record, null, 2));
+  fs.writeFileSync(testInfo.outputPath("demo-session.json"), JSON.stringify(record, null, 2));
   await testInfo.attach("normal-demo-session", { body: JSON.stringify(record, null, 2), contentType: "application/json" });
-  if (!page.isClosed()) await page.screenshot({ path: path.join(directory, `${stem}.png`), animations: "disabled" });
+  if (!page.isClosed()) await page.screenshot({ path: testInfo.outputPath("demo-session.png"), animations: "disabled" });
 });
 
-const nextTrack = (page) => page.locator("[data-global-player]").getByRole("button", { name: "Next", exact: true });
-const previousTrack = (page) => page.locator("[data-global-player]").getByRole("button", { name: "Previous", exact: true });
+const nextTrack = (page) => page.getByRole("button", { name: "Pista siguiente del equipo", exact: true });
+const previousTrack = (page) => page.getByRole("button", { name: "Pista anterior del equipo", exact: true });
 const duration = (seconds) => `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
 const responseFor = (name) => http.findLast((row) => new URL(row.url).pathname === "/api/lyrics" && new URL(row.url).searchParams.get("title") === name && row.body);
 
@@ -154,15 +150,8 @@ test("mock normal: álbum, pista siguiente, cambio rápido, letra larga y estado
 test("mock normal: Explorar artista reproduce y avanza dentro del álbum elegido", async ({ page }) => {
   await openRail(page);
   await go(page, "Colección", 3);
-  await collection(page).getByRole("button", { name: "Buscar artista", exact: true }).click();
-  await page.getByRole("searchbox", { name: "Buscar artistas", exact: true }).fill("Vértice");
-  await collection(page).locator('[aria-label="Resultados de artistas"]').getByRole("button").first().click();
-  const view = page.getByTestId("artist-discography");
-  await expect(view.locator("header [role=status]")).toContainText("27 LANZAMIENTOS");
-  const scene = page.getByTestId("artist-disc-scene");
-  await scene.hover({ position: { x: 8, y: 28 } });
-  await expect(scene).toHaveAttribute("data-drifting", "false");
-  await scene.getByRole("button", { name: `Seleccionar ${CAMPO.name}`, exact: true }).click();
+  const source = await findArtistEdition(page, CAMPO.artist, CAMPO.id);
+  await source.click();
   const detail = page.getByTestId("album-detail-page");
   await expect(detail).toHaveAttribute("data-album-id", CAMPO.id);
   await expect(detail.getByTestId("jewel-case-presentation")).toHaveAttribute("data-presentation", "closed");
@@ -179,24 +168,31 @@ test("mock normal: Explorar artista reproduce y avanza dentro del álbum elegido
 test("mock normal: búsqueda, género compartido y década combinan el catálogo de sesión", async ({ page }) => {
   await openRail(page);
   await go(page, "Colección", 3);
-  await expect(cards(page)).toHaveCount(6);
-  await expect(collection(page).locator("header [role=status]")).toHaveText("21 discos");
-  await collection(page).getByRole("button", { name: "Cargar géneros", exact: true }).click();
+  const finder = page.getByRole("combobox", { name: "Buscar discos o artistas", exact: true });
   const genres = collection(page).locator('[aria-label="Filtrar por género"]');
   const decades = collection(page).locator('[aria-label="Filtrar por década"]');
+  await expect(cards(page).first()).toBeVisible();
+  const initialIds = await cards(page).evaluateAll((nodes) => nodes.map((node) => node.dataset.collectionAlbumId));
+  await expect(genres.locator('option[value="electronic"]')).toBeAttached();
   await genres.selectOption("electronic");
   await decades.selectOption("1990s");
   await expect(cards(page)).toHaveCount(2); // Vértice and Satélite share this genre.
-  await collection(page).getByRole("searchbox", { name: "Buscar artista o álbum", exact: true }).fill("Vértice");
+  await expect(cards(page).filter({ hasText: "Satélite Sur" })).toHaveCount(1);
+  await finder.fill("Vertice Campo magnetico");
+  await finder.press("Enter");
   await expect(cards(page)).toHaveCount(1);
   await expect(cards(page)).toHaveAccessibleName(`${CAMPO.artist} — ${CAMPO.name}`);
   await genres.selectOption("all");
   await expect(cards(page)).toHaveCount(1);
   await decades.selectOption("2020s");
+  await expect(cards(page)).toHaveCount(0);
+  await expect(collection(page).getByText("Sin resultados para estos filtros")).toBeVisible();
+  await finder.fill("Vertice Neon Rooms");
+  await finder.press("Enter");
   await expect(cards(page)).toHaveCount(1);
   await expect(cards(page)).toHaveAccessibleName(`${NEON.artist} — ${NEON.name}`);
   await collection(page).getByRole("button", { name: "Limpiar filtros", exact: true }).click();
-  await expect(cards(page)).toHaveCount(6);
-  await expect(collection(page).locator("header [role=status]")).toHaveText("21 discos");
+  await expect(finder).toHaveValue("");
+  await expect.poll(() => cards(page).evaluateAll((nodes) => nodes.map((node) => node.dataset.collectionAlbumId))).toEqual(initialIds);
   expect(providerRequests).toEqual([]);
 });

@@ -1,37 +1,28 @@
 # CDvicious
 
-Visualización del estado de reproducción de Spotify en un disco 3D.
+Reproductor de discos con Deck, Split con booklet, Batea, Colección y Mixtape. El buscador del nav abre fichas de álbumes o la discografía de un artista.
 
-## Setup local
+## Desarrollo local
 
-1. `npm install`
-2. Copiar `.env.local.example` a `.env.local` y completar credenciales
-   (registrar la app en https://developer.spotify.com/dashboard)
-3. `npm run dev`
-4. Abrir http://127.0.0.1:3002
+Instalá las dependencias del lockfile con `npm ci`. Elegí una configuración al preparar un checkout nuevo. Si ya tenés un `.env.local`, conservá sus credenciales y ajustá solo las variables que necesitás.
 
-## Desarrollo con mock
+| Modo | Plantilla para `.env.local` | Datos y reproducción |
+| --- | --- | --- |
+| Mock | `.env.local.mock.example` | Catálogo, letras y transporte simulados localmente |
+| Spotify | `.env.local.example` | Cuenta y dispositivo autorizados en Spotify |
 
-Para levantar el rail en escritorio sin credenciales ni llamadas a la API de Spotify:
+Para el modo Spotify, completá `SPOTIFY_CLIENT_ID` y `SPOTIFY_CLIENT_SECRET` en el servidor. Registrá el valor exacto de `SPOTIFY_REDIRECT_URI` en el Dashboard de tu aplicación. La plantilla usa `http://127.0.0.1:3002/api/auth/callback`.
 
-1. Copiar `.env.local.mock.example` a `.env.local`.
-   - PowerShell: `Copy-Item .env.local.mock.example .env.local`
-   - macOS/Linux: `cp .env.local.mock.example .env.local`
-2. Ejecutar `npm install` si todavía no se instalaron las dependencias.
-3. Ejecutar `npm run dev` y abrir http://127.0.0.1:3002.
+Ejecutá `npm run dev` y abrí [CDvicious local](http://127.0.0.1:3002). Los flags `NEXT_PUBLIC_SPOTIFY_MOCK` y `NEXT_PUBLIC_ENABLE_RAIL` se incorporan al compilar. Reiniciá el servidor de desarrollo o reconstruí producción después de cambiarlos. Para usar ambos modos a la vez, dales checkouts y puertos distintos para que cada uno tenga su propio `.next`.
 
-El ejemplo activa `NEXT_PUBLIC_ENABLE_RAIL=1` y
-`NEXT_PUBLIC_SPOTIFY_MOCK=1`. Reiniciar el servidor después de cambiar
-variables de entorno.
+## Verificación
 
-Con el modo mock activo, la colección, el perfil, el reproductor, el progreso,
-los controles de play/pausa, pista anterior/siguiente, volumen y letras funcionan
-con datos locales de demostración. Al reproducir un álbum, el reproductor
-simulado cambia a `DEMO TRACK 01` de ese álbum y mantiene el flujo de vuelo y
-acople del CD. Las letras son texto ficticio generado para probar la paginación
-del booklet. **No se reproduce audio real ni se realizan llamadas de playback a
-Spotify**; para validar sonido, SDK y permisos hay que usar OAuth real.
+- `npm test` comprueba los tipos. `npm run test:unit` ejecuta las pruebas de contratos y lógica.
+- `npm run build` genera el build de producción.
+- Para las pruebas de navegador, prepará un build mock, instalá Chromium con `npx playwright install chromium` y ejecutá `npm run test:e2e`. Por defecto el runner inicia el build en el puerto 3002.
+- Para probar un mock que ya esté levantado, definí `CDV_TEST_BASE_URL` con su URL, por ejemplo `http://127.0.0.1:3020`. Podés elegir una spec con `npm run test:e2e -- tests/e2e/nav-catalog-search.spec.cjs`.
+- Las trazas y capturas de pruebas fallidas quedan en `test-results/`. Para una revisión visual, usá `QA_EVIDENCE=1` al iniciar Playwright. Ese modo también graba video y conserva las corridas exitosas.
 
-Para OAuth real, usar `.env.local.example`, completar las credenciales y
-registrar exactamente `http://127.0.0.1:3002/api/auth/callback` como Redirect URI
-en el panel de Spotify.
+## Recorrido de prueba
+
+En Colección, abrí **Neon Rooms**, reproducí el álbum y pasá a Split. **Track listing** permite elegir *Mapa de azoteas* para probar una letra larga. En Batea podés recorrer los discos con el mouse o el teclado. Para verificar en Spotify la salida de audio, el dispositivo y los álbumes guardados, iniciá sesión desde el perfil.

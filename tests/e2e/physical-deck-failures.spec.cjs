@@ -87,7 +87,7 @@ async function contextState(page) {
   // The detail owns the screen. Read the hidden catalog's retained state
   // through its DOM identity rather than the visible accessibility tree.
   return page.locator('[aria-label="La Colección"]').evaluate((node) => ({
-    query: node.querySelector('[aria-label="Buscar artista o álbum"]')?.value,
+    query: node.ownerDocument.querySelector('[aria-label="Buscar discos o artistas"]').value,
     genre: node.querySelector('[aria-label="Filtrar por género"]')?.value,
     decade: node.querySelector('[aria-label="Filtrar por década"]')?.value,
     year: node.querySelector('[aria-label="Filtrar por año de edición"]')?.value,
@@ -113,13 +113,16 @@ async function prepare(page) {
   const prior = await page.evaluate(() => structuredClone(window.__b2Mock.getSnapshot().data));
   await go(page, "Colección", 3);
   await expect(collection(page).getByRole("combobox", { name: "Filtrar por género", exact: true }).locator('option[value="electronic"]')).toHaveCount(1);
-  await collection(page).getByRole("searchbox", { name: "Buscar artista o álbum", exact: true }).fill("Nocturnal");
+  const search = page.getByRole("combobox", { name: "Buscar discos o artistas", exact: true });
+  await search.fill("Nocturnal");
+  await search.press("Escape");
   await collection(page).getByRole("combobox", { name: "Filtrar por género", exact: true }).selectOption("electronic");
   await collection(page).getByRole("combobox", { name: "Filtrar por década", exact: true }).selectOption("2020s");
   await collection(page).getByRole("combobox", { name: "Filtrar por año de edición", exact: true }).selectOption("2023");
   const card = collection(page).locator(`[data-collection-album-id="${ALBUM_ID}"]`);
   await expect(card).toBeVisible();
   const context = await contextState(page);
+  expect(context.query).toBe("Nocturnal");
   await card.click();
   await expect(detail(page)).toBeVisible();
   await expect(presentation(page)).toHaveAttribute("data-presentation", "closed");

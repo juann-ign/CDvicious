@@ -35,7 +35,7 @@ async function fits(p){
  expect(result).toMatchObject({fits:true,facesFit:true,yearsVisible:true,footer:true,noOverflow:true,clip:true});
  return result;
 }
-test('metal: resting controls meet contrast and keyboard focus stays visible; album page uses metal around acrylic',async({page})=>{
+test('metal: resting controls meet contrast and keyboard focus stays visible; album page uses metal around acrylic',async({page},testInfo)=>{
  await open(page);
  const contrasts=await page.locator('[aria-label="Navegación por capítulos"] button, [class*="profileTrigger"] [class*="username"]').evaluateAll(nodes=>{
    const luminance=rgb=>rgb.slice(0,3).map(v=>v/255).map(v=>v<=0.04045?v/12.92:((v+0.055)/1.055)**2.4).reduce((n,v,i)=>n+v*[.2126,.7152,.0722][i],0);
@@ -48,7 +48,7 @@ test('metal: resting controls meet contrast and keyboard focus stays visible; al
  expect(await close.locator('[aria-hidden]').evaluate(n=>getComputedStyle(n).color)).toBe('rgb(32, 52, 42)');
  const releaseText=await page.getByTestId('album-detail-page').locator('aside[aria-hidden="false"] small, aside[aria-hidden="false"] strong').evaluateAll(nodes=>nodes.map(n=>({color:getComputedStyle(n).color,size:parseFloat(getComputedStyle(n).fontSize)})));
  expect(releaseText).toHaveLength(8);for(const label of releaseText){expect(['rgb(32, 52, 42)','rgb(53, 76, 60)']).toContain(label.color);expect(label.size).toBeGreaterThanOrEqual(14);}
- await page.screenshot({path:'.qa/metal/album-page-final.png'});await close.click();
+ await page.screenshot({path:testInfo.outputPath('album-page-final.png')});await close.click();
  for(const [name,index] of [['Batea',2],['Mixtape Lab',4]]){
    await go(page,name,index);
    const chapter=page.locator('[data-rail-wrapper] > div > section').nth(index);
@@ -59,7 +59,7 @@ test('metal: resting controls meet contrast and keyboard focus stays visible; al
      expect(await chapter.locator('h2').first().evaluate(n=>getComputedStyle(n).color)).toBe('rgb(32, 52, 42)');
    }
    await expect(page.getByTestId('deck-now-playing-track')).toBeVisible();
-   await page.screenshot({path:`.qa/metal/chapter-${index}-final.png`});
+   await page.screenshot({path:testInfo.outputPath(`chapter-${index}-final.png`)});
  }
 });
 test('metal: normal mock auto-enriches once, paginates and combines accent-insensitive filters',async({page},testInfo)=>{

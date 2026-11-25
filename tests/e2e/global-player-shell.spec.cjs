@@ -1,13 +1,12 @@
 const { test, expect } = require("@playwright/test");
 const fs = require("node:fs");
-const path = require("node:path");
+const { findArtistEdition } = require("./support/b2-harness.cjs");
 
 const sizes = [[1280, 800], [1440, 900], [1920, 1080], [1280, 600]];
 const chapters = ["Deck", "Split", "Batea", "Colección", "Mixtape Lab"];
 const panels = (page) => page.locator("[data-rail-wrapper] > div > section");
 const player = (page) => page.locator("[data-global-player]");
 const display = (page) => page.getByTestId("deck-now-playing");
-const evidence = path.resolve(".qa/global-player-shell");
 
 async function go(page, index) {
   await page.getByRole("button", { name: `Ir al capítulo ${chapters[index]}` }).click();
@@ -70,7 +69,6 @@ async function installMockFixture(page) {
 
 test.beforeEach(async ({ page }) => {
   test.skip(process.env.RAIL_FLAG !== "1", "Requires desktop rail and the local Spotify mock");
-  fs.mkdirSync(evidence, { recursive: true });
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await expect(page.locator('[data-rail-ready="true"]')).toBeVisible({ timeout: 90000 });
   await expect(player(page).getByRole("button", { name: "Play/Pause" })).toBeVisible();
@@ -79,7 +77,7 @@ test.beforeEach(async ({ page }) => {
 for (const [width, height] of sizes) {
   test.describe(`${width}x${height}`, () => {
     test.use({ viewport: { width, height } });
-    test("marco común, capítulos, discografía y geometría estable en todos los estados", async ({ page }) => {
+    test("marco común, capítulos, discografía y geometría estable en todos los estados", async ({ page }, testInfo) => {
       const prefix = `${width}x${height}`;
       const initial = await geometry(page);
       for (const index of [0, 1, 3, 2, 4]) {
@@ -89,7 +87,7 @@ for (const [width, height] of sizes) {
         if (index === 3) {
           const collection = panels(page).nth(3);
           await expect(collection.getByRole("button", { name: /— Neon Rooms$/ })).toBeVisible();
-          await expect(collection.getByRole("searchbox", { name: "Buscar artista o álbum" })).toBeInViewport({ ratio: 1 });
+          await expect(page.getByRole("combobox", { name: "Buscar discos o artistas" })).toBeInViewport({ ratio: 1 });
           await expect(collection.getByRole("button", { name: "Siguiente", exact: true })).toBeInViewport({ ratio: 1 });
           expect(await collection.locator('[class*="gridFrame"]').evaluate((node) => {
             const frame = node.getBoundingClientRect();
@@ -99,7 +97,7 @@ for (const [width, height] of sizes) {
             });
           })).toBe(true);
         }
-        await page.screenshot({ path: path.join(evidence, `${prefix}-${index}-${chapters[index]}.png`) });
+        await page.screenshot({ path: testInfo.outputPath(`${prefix}-${index}-${chapters[index]}.png`) });
       }
 
       // Transport remains live while the Deck itself is hidden/inert.
@@ -136,31 +134,25 @@ for (const [width, height] of sizes) {
         else await expect(title).toHaveText("Ventana de neón");
         await assertShell(page, width, height);
         expect(await geometry(page)).toEqual(initial);
-        await page.screenshot({ path: path.join(evidence, `${prefix}-state-${state}.png`) });
+        await page.screenshot({ path: testInfo.outputPath(`${prefix}-state-${state}.png`) });
       }
 
       await go(page, 3);
-      const collection = panels(page).nth(3);
-      await collection.getByRole("button", { name: "Buscar artista", exact: true }).click();
-      await page.getByRole("searchbox", { name: "Buscar artistas", exact: true }).fill("Vértice");
-      await page.locator('[aria-label="Resultados de artistas"]').getByRole("button").first().click();
+      const selected = await findArtistEdition(page, "Vértice Magnético", "demo-vertice-album-0");
       const discography = page.getByTestId("artist-discography");
-      await expect(discography.locator("header [role=status]")).toContainText("27 LANZAMIENTOS");
       await assertShell(page, width, height);
-      await discography.getByRole("button", { name: "SIGUIENTE ▷", exact: true }).click();
-      const scene = await page.getByTestId("artist-disc-scene").boundingBox();
-      const jewelcase = await page.getByTestId("artist-selected-case").boundingBox();
+      const scene = await discography.locator("[data-shelf-viewport]").boundingBox();
+      const jewelcase = await selected.boundingBox();
       expect(jewelcase.y).toBeGreaterThanOrEqual(scene.y - 1);
       expect(jewelcase.y + jewelcase.height).toBeLessThanOrEqual(scene.y + scene.height + 1);
-      await page.screenshot({ path: path.join(evidence, `${prefix}-discography.png`), animations: "disabled" });
-      const selected = page.getByTestId("artist-selected-case");
-      const albumId = await selected.getAttribute("data-album-id");
+      await page.screenshot({ path: testInfo.outputPath(`${prefix}-discography.png`), animations: "disabled" });
+      const albumId = await selected.getAttribute("data-batea-album-id");
       await selected.click();
       const detail = page.getByTestId("album-detail-page");
       await expect(detail).toHaveAttribute("data-album-id", albumId);
       await expect(page.getByRole("dialog")).toHaveCount(0);
       await expect(page.locator("[data-rail-ready]")).toHaveAttribute("data-album-detail-open", "true");
-      await expect(discography).toBeHidden();
+      await expect(page.locator("[data-rail-wrapper]")).toHaveAttribute("inert", "");
       const bounds = await detail.boundingBox();
       expect(bounds.y).toBeGreaterThanOrEqual(72);
       expect(bounds.y + bounds.height).toBeLessThanOrEqual(height - 128);
@@ -174,10 +166,10 @@ for (const [width, height] of sizes) {
       await expect(play).toBeInViewport({ ratio: 1 });
       await openCase.click();
       await expect(detail.getByTestId("jewel-case-presentation")).toHaveAttribute("data-presentation", "open");
-      await page.screenshot({ path: path.join(evidence, `${prefix}-album.png`), animations: "disabled" });
+      await page.screenshot({ path: testInfo.outputPath(`${prefix}-album.png`), animations: "disabled" });
       await page.keyboard.press("Escape");
       await expect(detail).toHaveCount(0);
-      await expect(selected).toHaveAttribute("data-album-id", albumId);
+      await expect(selected).toHaveAttribute("data-batea-album-id", albumId);
       await expect(selected).toBeFocused();
 
       await page.evaluate(() => {
@@ -196,7 +188,7 @@ for (const [width, height] of sizes) {
       await expect(page.getByTestId("deck-now-playing-track")).toHaveText("CARGANDO");
       await assertShell(page, width, height);
       expect(await geometry(page)).toEqual(initial);
-      await page.screenshot({ path: path.join(evidence, `${prefix}-flight.png`) });
+      await page.screenshot({ path: testInfo.outputPath(`${prefix}-flight.png`) });
       await expect.poll(() => page.evaluate(() => window.__shellFlights.filter((event) => event.stage === "playback-started").length), { timeout: 20000 }).toBe(1);
       await expect(page.locator("html")).toHaveAttribute("data-chapter", "0");
       await expect(page.getByTestId("rail-flying-disc")).toHaveCount(0);
@@ -212,7 +204,7 @@ for (const [width, height] of sizes) {
       await expect(display(page)).toHaveAttribute("data-is-playing", "true");
       await assertShell(page, width, height);
       expect(await geometry(page)).toEqual(initial);
-      fs.writeFileSync(path.join(evidence, `${prefix}-geometry.json`), JSON.stringify(initial, null, 2));
+      fs.writeFileSync(testInfo.outputPath(`${prefix}-geometry.json`), JSON.stringify(initial, null, 2));
     });
   });
 }
