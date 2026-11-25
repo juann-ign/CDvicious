@@ -1,5 +1,6 @@
 const { test, expect } = require("./support/qa-evidence.cjs");
 const { openRail, go, functionalFixture, installMock } = require("./support/b2-harness.cjs");
+const { startRepresentationProbe, stopRepresentationProbe, representationSnapshot } = require("./support/historical-disc-harness.cjs");
 
 // Normal desktop renderer. Only the two explicitly named fallback cases
 // override motion/WebGL; catalog, lyrics, playback and snapshots stay normal.
@@ -122,6 +123,56 @@ test("physical-deck: Colección conserva el CD real girado y reverso, carga una 
   await expect(hardware(page).locator("[data-deck-inserted-disc]")).toBeVisible();
   await expect(hardware(page).locator("[data-deck-inserted-disc] img")).toHaveCount(0);
   await expect(page.locator("[data-global-player]")).toHaveAttribute("data-dock-click", "played");
+});
+
+test("physical-deck: reinsertar el mismo álbum deja un solo CD durante una confirmación demorada", async ({ page }, testInfo) => {
+  const overlay = page.locator("[data-rail-overlay]");
+  await observe(page); await openRail(page); await installMock(page);
+  await (await fromCollection(page)).click();
+  await assertConfirmed(page, "Satélite Sur");
+
+  const playAgain = await fromCollection(page);
+  await openCase(page);
+  await page.evaluate(() => {
+    const player = window.__b2Mock.mockSpotifyPlayer;
+    const resume = player.resume;
+    // Let the SDK action succeed while its observation is still stale. The
+    // executor waits for a playing snapshot after the physical dock.
+    const pending = window.__delayedDeckSnapshot = {
+      accepted: false,
+      restore: () => { player.resume = resume; },
+      publish: () => resume.call(player),
+    };
+    player.resume = async () => { pending.accepted = true; };
+  });
+  await startRepresentationProbe(page, { includeFlight: true });
+  try {
+    await playAgain.click();
+    await expect(overlay).toHaveAttribute("data-playback-phase", "docked");
+    await expect.poll(() => page.evaluate(() => window.__delayedDeckSnapshot.accepted)).toBe(true);
+    await expect(flight(page)).toHaveCount(0);
+    await expect(overlay).toHaveAttribute("data-playback-phase", "docked");
+    await expect(title(page)).toHaveText("CARGANDO");
+    await expect(hardware(page).locator("[data-deck-mechanism]")).toHaveAttribute("data-disc-spinning", "false");
+
+    const proof = await stopRepresentationProbe(page);
+    const flying = proof.changes.filter(({ playbackPhase, flightPhase }) => playbackPhase === "loading" && flightPhase);
+    const seated = proof.changes.filter(({ playbackPhase }) => playbackPhase === "docked");
+    await testInfo.attach("delayed-dock-representations", { body: JSON.stringify({ flying, seated }, null, 2), contentType: "application/json" });
+    expect(flying.length).toBeGreaterThan(0);
+    expect(seated.some(({ flightPhase }) => flightPhase === "docked" || flightPhase === "closing")).toBe(true);
+    expect(flying.filter(({ visible }) => visible.length !== 1 || visible[0] !== "css:flight")).toEqual([]);
+    expect(seated.filter(({ visible }) => visible.length !== 1 || visible[0] === "css:flight")).toEqual([]);
+    expect((await representationSnapshot(page)).visible).toEqual(["css:inserted"]);
+
+    await page.evaluate(() => window.__delayedDeckSnapshot.publish());
+    await expect(overlay).toHaveAttribute("data-playback-phase", "confirmed");
+    await expect(title(page)).toHaveText("Antena del sur");
+    expect((await representationSnapshot(page)).visible).toEqual(["css:inserted"]);
+  } finally {
+    await stopRepresentationProbe(page);
+    await page.evaluate(() => window.__delayedDeckSnapshot.restore());
+  }
 });
 
 test("physical-deck: Artista comparte la ficha, recupera el foco y abre la caja antes de tomar el CD", async ({ page }) => {

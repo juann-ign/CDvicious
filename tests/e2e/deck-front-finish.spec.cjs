@@ -7,6 +7,7 @@ const { openRail, installMock, setTrack } = require("./support/b2-harness.cjs");
 test.use({ viewport: { width: 1440, height: 900 }, launchOptions: { args: ["--enable-webgl", "--ignore-gpu-blocklist", "--use-gl=angle"] } });
 
 const screen = (page) => hardware(page).getByRole("group", { name: "Pantalla del equipo", exact: true });
+const spectrum = (page) => screen(page).getByRole("img", { name: "Espectro simulado", exact: true });
 const toggle = (page) => hardware(page).getByRole("button", { name: "Pausar/reanudar equipo", exact: true });
 const lift = (page) => page.getByRole("button", { name: "Elevar CD del equipo", exact: true });
 const latch = (page) => page.locator("[data-deck-lift-latch]");
@@ -19,6 +20,7 @@ async function measure(page) {
     const rect = (node) => node?.getBoundingClientRect().toJSON() ?? null;
     const faces = [...document.querySelectorAll("[data-deck-surface]")].map((node) => node.getBoundingClientRect());
     const glass = document.querySelector("[data-deck-display-mirror]");
+    const transport = document.querySelector('[aria-label="Controles del equipo"]');
     const layer = document.querySelector("[data-rail-overlay]");
     return {
       viewport: { width: innerWidth, height: innerHeight }, chapter: document.documentElement.dataset.chapter,
@@ -26,9 +28,15 @@ async function measure(page) {
       equipment: { left: Math.min(...faces.map((box) => box.left)), right: Math.max(...faces.map((box) => box.right)),
         top: Math.min(...faces.map((box) => box.top)), bottom: Math.max(...faces.map((box) => box.bottom)) },
       front: rect(document.querySelector("[data-deck-front]")), glass: rect(glass),
+      metadata: rect(glass?.querySelector('[class*="metadata"]')),
       title: rect(glass?.querySelector("strong")), artist: rect(glass?.querySelector('[class*="artist"]')),
+      spectrum: rect(glass?.querySelector("[data-vfd-spectrum]")),
+      spectrumBands: glass?.querySelectorAll("[data-vfd-band]").length ?? 0,
+      progress: rect(glass?.querySelector('[class*="progressContainer"]')),
       times: rect(glass?.querySelector('[class*="progressTimes"]')),
-      controls: [...document.querySelectorAll('[aria-label="Controles del equipo"] button')].map((node) => ({
+      // Measure the gap on the face itself before perspective alters the rectangles.
+      controlClearance: transport.offsetTop - (glass.offsetTop + glass.offsetHeight),
+      controls: [...transport.querySelectorAll("button")].map((node) => ({
         label: node.getAttribute("aria-label"), rect: rect(node),
         hit: node.contains(document.elementFromPoint(node.getBoundingClientRect().x + node.getBoundingClientRect().width / 2,
           node.getBoundingClientRect().y + node.getBoundingClientRect().height / 2)),
@@ -45,6 +53,15 @@ function inside(inner, outer, allowance = 2) {
   expect(inner).not.toBeNull();
   for (const edge of ["left", "top"]) expect(inner[edge]).toBeGreaterThanOrEqual(outer[edge] - allowance);
   for (const edge of ["right", "bottom"]) expect(inner[edge]).toBeLessThanOrEqual(outer[edge] + allowance);
+}
+
+function assertVfdLayout(current) {
+  for (const contents of [current.metadata, current.title, current.artist, current.spectrum, current.progress, current.times]) {
+    inside(contents, current.glass);
+  }
+  expect(current.spectrum.left - current.metadata.right).toBeGreaterThanOrEqual(6);
+  expect(current.progress.left - current.spectrum.right).toBeGreaterThanOrEqual(6);
+  expect(current.spectrumBands).toBe(12);
 }
 
 async function hiddenFooter(page) {
@@ -67,6 +84,8 @@ test("front layout: Deck and Split retain their composition, readable contents a
       await go(page, chapter, index);
       if (index === 1) await expect(page.getByTestId("lyrics-booklet")).toHaveAttribute("data-pagination-state", "ready");
       await expect(screen(page).locator('[class*="progressTimes"] span')).toHaveCount(2);
+      await expect(spectrum(page)).toBeVisible();
+      await expect(screen(page).getByText("DEMO", { exact: true })).toHaveCount(0);
       const current = await measure(page);
       const name = `${stem}-${viewport.width}x${viewport.height}`;
       const size = `${viewport.width}x${viewport.height}`;
@@ -77,7 +96,8 @@ test("front layout: Deck and Split retain their composition, readable contents a
       expect(await deck(page).evaluate((node) => node === window.__finishPersistentDeck)).toBe(true);
       inside(current.equipment, current.region);
       inside(current.glass, current.front);
-      for (const contents of [current.title, current.artist, current.times]) inside(contents, current.glass);
+      assertVfdLayout(current);
+      expect(current.controlClearance).toBeGreaterThanOrEqual(12);
       expect(current.controls).toHaveLength(3);
       for (const control of current.controls) { inside(control.rect, current.front); expect(control.hit).toBe(true); }
       for (const edge of ["left", "right", "top", "bottom"]) expect(Math.abs(current.equipment[edge] - approved.equipment[edge])).toBeLessThan(2);
@@ -118,12 +138,14 @@ test("front normal mock: icon clicks issue one canonical transport step and Deck
     records.push({ state, times });
   }
   await coherent("Ventana de neón", 203);
+  await expect(spectrum(page)).toHaveAttribute("data-motion", "playing");
   await next().locator("svg").click();
   await coherent("Ascensor azul", 187);
   await toggle(page).locator("svg").click();
   await expect(page.getByTestId("deck-now-playing")).toHaveAttribute("data-is-playing", "false");
   await expect(toggle(page)).toHaveAttribute("aria-pressed", "false");
   await expect(screen(page).getByRole("status")).toHaveText("PAUSA");
+  await expect(spectrum(page)).toHaveAttribute("data-motion", "idle");
   const paused = await canonicalState(page);
   await go(page, "Split", 1);
   await coherent("Ascensor azul", 187);
@@ -132,6 +154,7 @@ test("front normal mock: icon clicks issue one canonical transport step and Deck
   await toggle(page).locator("svg").click();
   await expect(page.getByTestId("deck-now-playing")).toHaveAttribute("data-is-playing", "true");
   await expect(screen(page).getByRole("status")).toHaveCount(0);
+  await expect(spectrum(page)).toHaveAttribute("data-motion", "playing");
   await next().locator("svg").click();
   await coherent("Mapa de azoteas", 321);
   await previous().locator("svg").click();
@@ -180,7 +203,9 @@ test("front explicit confirmed-title fixture: Cargando sueños is a track, with 
   }));
   expect(clipped.overflow).toBe("ellipsis");
   expect(clipped.scroll).toBeGreaterThan(clipped.client);
-  await saveRecord(testInfo, "confirmed-long-title", { originalGlass, longGlass, clipped, title: longTitle });
+  const layout = await measure(page);
+  assertVfdLayout(layout);
+  await saveRecord(testInfo, "confirmed-long-title", { originalGlass, longGlass, clipped, layout, title: longTitle });
 });
 
 test("front latch normal mock: threshold, pointer loss, keyboard and resize restore the gesture and lift once without playback orders", async ({ page }, testInfo) => {

@@ -120,6 +120,7 @@ export function PhysicalDeck({ pose, albumName = "COMPACT DISC", artwork, status
     return () => { observer.disconnect(); scale.remove(); };
   }, [discVisual]);
   const style = { "--deck-lid-offset": lidOffset ?? (pose === "open" ? 135 : 0) } as CSSProperties;
+  const showAcceptedVisual = pose === "docked" && showDisc && Boolean(discVisual);
   const rotorStyle = { animation: staticMode ? "none" : undefined, animationPlayState: isPlaying && !lift.dragging && lift.phase === "docked" && pose === "docked" && !staticMode ? "running" : "paused" } as CSSProperties;
   return <div ref={viewportRef} className={[styles.viewport, className].filter(Boolean).join(" ")} data-physical-deck data-deck-render-density="2" data-deck-pose={pose} role={controls ? "group" : "img"} aria-label={`Reproductor de CD ${poseLabels[pose]}${pose === "wait" ? "" : `: ${albumName}`}`}>
     <div ref={placementRef} className={styles.placement} style={style} data-deck-mechanism data-disc-spinning={isPlaying && !lift.dragging && pose === "docked" && !staticMode} data-deck-static={staticMode}>
@@ -150,7 +151,7 @@ export function PhysicalDeck({ pose, albumName = "COMPACT DISC", artwork, status
           <div className={styles.dockedDisc} style={{ visibility: pose === "docked" && showDisc && !discVisual ? "visible" : "hidden" }} data-deck-docked-disc>
             <div key={albumName} className={styles.spinRotor} style={rotorStyle} data-physical-disc-rotor><DiscFace albumName={albumName} artwork={artwork} /></div>
           </div>
-          <div className={styles.acceptedVisualHost} style={{ visibility: pose === "docked" && showDisc && discVisual ? "visible" : "hidden" }} data-deck-inserted-disc><div key={visualGeneration.current} ref={acceptedRef} className={styles.spinRotor} style={rotorStyle} data-physical-disc-rotor /></div>
+          <div className={styles.acceptedVisualHost} style={{ visibility: showAcceptedVisual ? "visible" : "hidden", opacity: showAcceptedVisual ? 1 : 0 }} data-deck-inserted-disc><div key={visualGeneration.current} ref={acceptedRef} className={styles.spinRotor} style={rotorStyle} data-physical-disc-rotor /></div>
           </div>
           {liftEnabled && track && showDisc && track.album.id === albumId && <HistoricalFreeDisc key={track.album.id}
             track={track} accentColor={accentColor} isPlaying={isPlaying} reducedMotion={staticMode} phase={lift.phase}
@@ -159,9 +160,9 @@ export function PhysicalDeck({ pose, albumName = "COMPACT DISC", artwork, status
           <DiscCorners />
         </div>
         </div>
-        {liftEnabled && <DeckLiftLatch buttonRef={liftButtonRef} onActivate={lift.lift}
+        {liftEnabled && liftActive && <DeckLiftLatch buttonRef={liftButtonRef} onActivate={lift.lift}
           raised={lift.phase !== "docked"}
-          disabled={!liftActive || liftBusy || !showDisc || pose !== "docked" || lift.phase !== "docked" || historicalStatus === "loading"} />}
+          disabled={liftBusy || !showDisc || pose !== "docked" || lift.phase !== "docked" || historicalStatus === "loading"} />}
 
         <div className={`${styles.lid} ${styles.lidLeft}`} data-deck-lid="left">
           <div className={`${styles.lidSurface} ${styles.leftSurface}`} data-deck-surface aria-hidden="true"><span className={styles.topRailSlot} /><span className={styles.lidRim} /></div>
@@ -193,7 +194,7 @@ export function PhysicalDeck({ pose, albumName = "COMPACT DISC", artwork, status
     </div>
     <div ref={foregroundRef} className={styles.prototypeDiscHost} data-prototype-disc-host />
     {liftEnabled && lift.phase === "free" && (historicalStatus === "unavailable" || historicalStatus === "error") && <span className={styles.prototypeGestureHint} role="status">Vista estática · 3D no disponible</span>}
-    {liftEnabled && historicalStatus === "loading" && showDisc && <span className={styles.prototypeGestureHint} role="status">Preparando CD 3D…</span>}
+    {liftEnabled && liftActive && historicalStatus === "loading" && showDisc && !liftBusy && <span className={styles.prototypeGestureHint} role="status">Preparando CD 3D…</span>}
     {liftEnabled && lift.phase !== "docked" && <DeckLiftLatch mode="dock" onActivate={lift.recouple}
       raised={lift.phase === "aligning" || lift.phase === "lowering" || lift.phase === "closing"}
       disabled={lift.phase !== "free" || liftBusy || lift.dragging} />}

@@ -3,6 +3,7 @@
 import { getMockPlaybackAlbums, getMockTracks } from "@/mocks/demoCatalog";
 import type { AlbumItem } from "@/types/crate";
 import type { NowPlayingResponse } from "@/types/spotify";
+import type { TrackSelection } from "./canonicalPlayerControls";
 
 export interface MockSpotifyPlayer {
   togglePlay(): Promise<void>;
@@ -159,6 +160,16 @@ export function loadMockAlbum(album: AlbumItem) {
   trackIndex = 0;
 
   publish(createSnapshot(album, trackIndex, false, 0));
+}
+
+/** Start the requested provider position in the album that is already loaded. */
+export function playMockTrack({ albumId, trackId, position }: TrackSelection): boolean {
+  if (snapshot.data?.track?.album.id !== albumId) return false;
+  const index = MOCK_ALBUMS.findIndex((album) => album.id === albumId);
+  const album = MOCK_ALBUMS[index];
+  if (!album || getMockTracks(album)[position]?.id !== trackId) return false;
+  selectTrack(index, position, true);
+  return true;
 }
 
 export const mockSpotifyPlayer: MockSpotifyPlayer = {

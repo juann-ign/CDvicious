@@ -1,59 +1,48 @@
 .flyout {
   position: fixed;
   z-index: var(--z-modal);
-  width: 210px;
+  width: max-content;
+  max-width: min(560px, calc(100vw - 28px));
   pointer-events: none;
 }
 
-.stemDown,
-.stemUp {
-  display: block;
+.flyout::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: var(--flyout-pin, 50%);
   width: 1px;
-  height: 14px;
-  margin: 0 auto;
-  background: linear-gradient(180deg, var(--color-border), transparent);
+  height: 12px;
+  background: linear-gradient(#596861, transparent);
 }
 
-.stemUp {
-  background: linear-gradient(0deg, var(--color-border), transparent);
+.flyout[data-placement="below"]::after {
+  top: auto;
+  bottom: 100%;
+  background: linear-gradient(0deg, #596861, transparent);
 }
 
 .card {
   display: flex;
-  gap: var(--space-3);
-  padding: var(--space-2);
-  background: linear-gradient(
-    180deg,
-    var(--color-surface-raised),
-    var(--color-surface-dark)
-  );
-  border: var(--border-thin);
-  border-radius: var(--radius-xs);
-  box-shadow: var(--shadow-hardware);
+  gap: 14px;
+  padding: 10px 16px 10px 10px;
+  background: var(--material-silver);
+  border: 1px solid #748480;
+  border-top-color: #e7edea;
+  box-shadow: 0 8px 22px #19272460, inset 0 1px #eef2efb0;
 }
 
 .art {
   position: relative;
-  width: 64px;
-  height: 64px;
-  flex-shrink: 0;
+  flex: 0 0 66px;
+  height: 66px;
+  align-self: center;
   overflow: hidden;
-  border: 1px solid rgba(0, 0, 0, 0.7);
+  border: 1px solid #26332b;
 }
 
 .artImg {
   object-fit: cover;
-}
-
-.artGloss {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: linear-gradient(
-    115deg,
-    rgba(255, 255, 255, 0.28) 0%,
-    transparent 40%
-  );
 }
 
 .meta {
@@ -61,32 +50,28 @@
   flex-direction: column;
   justify-content: center;
   min-width: 0;
-  gap: 2px;
-}
-
-.artist {
-  font-family: var(--font-ui);
-  font-size: var(--text-xs);
-  letter-spacing: var(--tracking-wide);
-  color: var(--color-phosphor-dim);
-  text-transform: uppercase;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  gap: 5px;
 }
 
 .title {
-  font-family: var(--font-display);
-  font-size: var(--text-md);
-  color: var(--color-text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  margin: 0;
+  color: var(--metal-ink);
+  font: var(--text-3xl)/1.2 var(--font-ui);
+  overflow-wrap: anywhere;
+}
+
+.artist {
+  margin: 0;
+  color: #2f443b;
+  font: var(--text-xl)/1.25 var(--font-ui);
+  overflow-wrap: anywhere;
 }
 
 .year {
-  font-family: var(--font-ui);
-  font-size: var(--text-xs);
-  color: var(--color-text-muted);
+  align-self: flex-start;
+  padding: 2px 5px;
+  background: var(--hardware-button);
+  color: var(--color-phosphor);
+  font: var(--text-sm)/1.2 var(--font-ui);
   letter-spacing: var(--tracking-wide);
 }

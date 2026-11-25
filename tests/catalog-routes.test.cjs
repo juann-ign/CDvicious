@@ -54,3 +54,47 @@ test("discografía consulta por ID y grupo, con offset y límite 10; rechaza apa
   const invalid = await api.GET(new Request("http://local/api/artists/artist123/albums?group=appears_on"), { params: Promise.resolve({ id: "artist123" }) });
   assert.equal(invalid.status, 400);
 });
+
+test("la lista de álbum recorre todas las páginas y ordena discos sin perder offsets ni restricciones", async () => {
+  const calls = [];
+  const entry = (id, disc, number, extra = {}) => ({
+    id, uri: `spotify:track:${id}`, name: id, duration_ms: 182000,
+    disc_number: disc, track_number: number, ...extra,
+  });
+  const server = load("src/lib/catalogServer.ts", {
+    "next/server": next,
+    "./session": { getValidAccessToken: async () => "fake-token" },
+    "./spotify": { fetchSpotifyWebApi: async (_token, endpoint, url, options) => {
+      calls.push({ endpoint, url, signal: options.signal });
+      const offset = Number(new URL(url).searchParams.get("offset"));
+      if (offset === 0) return Response.json({ offset, limit: 50, next: "https://unrelated.example/next", items: [
+        entry("disc2-start", 2, 1),
+        entry("restricted", 1, 2, { restrictions: { reason: "market" } }),
+        entry("replacement", 1, 1, { linked_from: { id: "original" } }),
+        null,
+      ] });
+      assert.equal(offset, 50);
+      return Response.json({ offset, limit: 50, next: null, items: [entry("disc2-end", 2, 2)] });
+    } },
+  });
+  const api = load("src/app/api/album/[id]/tracks/route.ts", {
+    "next/server": next,
+    "@/lib/catalogServer": server,
+    "@/mocks/demoCatalog": {},
+  }, { process: { env: { NEXT_PUBLIC_SPOTIFY_MOCK: "0" } } });
+  const request = new Request("http://local/api/album/album123/tracks");
+  const response = await api.GET(request, { params: Promise.resolve({ id: "album123" }) });
+  assert.equal(response.status, 200);
+  const { tracks } = await response.json();
+  assert.deepEqual(tracks.map(({ id, disc_number, track_number, position, playable }) => [id, disc_number, track_number, position, playable]), [
+    ["replacement", 1, 1, 2, true], ["restricted", 1, 2, 1, false], [null, 1, 4, 3, false],
+    ["disc2-start", 2, 1, 0, true], ["disc2-end", 2, 2, 50, true],
+  ]);
+  assert.equal(tracks[0].linkedFromId, "original");
+  assert.equal(tracks[0].uri, "spotify:track:replacement");
+  assert.deepEqual(calls.map(({ url }) => url), [
+    "https://api.spotify.com/v1/albums/album123/tracks?limit=50&offset=0",
+    "https://api.spotify.com/v1/albums/album123/tracks?limit=50&offset=50",
+  ]);
+  assert.ok(calls.every(({ signal }) => signal === request.signal));
+});

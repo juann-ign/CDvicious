@@ -7,6 +7,7 @@ export interface ControlPlayer {
 }
 export interface ControlTarget { player: ControlPlayer; sdkDeviceId: string; deviceId: string }
 export interface PlayerCapabilities { volumeSupported: boolean; transportSupported: boolean; volume: number | null }
+export interface TrackSelection { albumId: string; trackId: string; position: number; linkedFromId?: string }
 export interface CanonicalControlState {
   deviceId: string | null;
   volume: number | null;
@@ -16,19 +17,24 @@ export interface CanonicalControlState {
   volumeError: string | null;
   canControl: boolean;
   transportPending: boolean;
+  pendingTrackId: string | null;
   transportError: string | null;
   blocked: boolean;
 }
-export const EMPTY_CONTROL_STATE: CanonicalControlState = Object.freeze({ deviceId: null, volume: null, volumeAvailable: false, volumeLoading: false, volumePending: false, volumeError: null, canControl: false, transportPending: false, transportError: null, blocked: false });
+export const EMPTY_CONTROL_STATE: CanonicalControlState = Object.freeze({ deviceId: null, volume: null, volumeAvailable: false, volumeLoading: false, volumePending: false, volumeError: null, canControl: false, transportPending: false, pendingTrackId: null, transportError: null, blocked: false });
 const clamp = (value: number) => Math.round(Math.max(0, Math.min(1, value)) * 100) / 100;
 const valid = (value: number | null): value is number => value !== null && Number.isFinite(value) && value >= 0 && value <= 1;
 
 /** Pure state machine: only the current target/revision can publish an answer. */
-export function createCanonicalPlayerControls(readCapabilities: (target: ControlTarget, signal: AbortSignal) => Promise<PlayerCapabilities>) {
+export function createCanonicalPlayerControls(
+  readCapabilities: (target: ControlTarget, signal: AbortSignal) => Promise<PlayerCapabilities>,
+  playTrack?: (target: ControlTarget, selection: TrackSelection, signal: AbortSignal) => Promise<void>,
+) {
   let state = EMPTY_CONTROL_STATE;
   let target: ControlTarget | null = null;
   let generation = 0, revision = 0, readSequence = 0;
   let reading: AbortController | null = null;
+  let trackRequest: AbortController | null = null;
   let queued: { target: ControlTarget; generation: number; revision: number; value: number } | null = null;
   let writing = false;
   let confirmedVolume: number | null = null;
@@ -93,13 +99,20 @@ export function createCanonicalPlayerControls(readCapabilities: (target: Control
   const configure = (next: ControlTarget | null) => {
     if (target?.player === next?.player && target?.deviceId === next?.deviceId && target?.sdkDeviceId === next?.sdkDeviceId) return;
     reading?.abort(); ++generation; ++revision; queued = null; target = next;
+    trackRequest?.abort(); trackRequest = null;
     confirmedVolume = null; previousVolume = null;
     publish({ ...EMPTY_CONTROL_STATE, deviceId: next?.deviceId ?? null, blocked: state.blocked });
     if (next) void refreshVolume();
   };
   const setBlocked = (blocked: boolean) => {
     if (state.blocked === blocked) return;
-    if (blocked) { ++revision; reading?.abort(); queued = null; publish({ blocked, volumePending: false, volumeLoading: false }); }
+    if (blocked) {
+      ++revision; reading?.abort(); queued = null;
+      const selectingTrack = !!trackRequest;
+      trackRequest?.abort(); trackRequest = null;
+      publish({ blocked, volumePending: false, volumeLoading: false,
+        ...(selectingTrack ? { transportPending: false, pendingTrackId: null } : {}) });
+    }
     else { publish({ blocked }); void refreshVolume(); }
   };
   const transport = async (action: "previousTrack" | "nextTrack" | "togglePlay") => {
@@ -110,8 +123,31 @@ export function createCanonicalPlayerControls(readCapabilities: (target: Control
     catch { if (epoch === generation) publish({ transportError: "El dispositivo no aceptó el control. Reintentá." }); }
     finally { if (epoch === generation) publish({ transportPending: false }); }
   };
+  const selectTrack = async (selection: TrackSelection) => {
+    if (!playTrack || !target || !state.canControl || state.blocked || state.transportPending) return false;
+    if (!selection.albumId || !selection.trackId || !Number.isSafeInteger(selection.position) || selection.position < 0) {
+      publish({ transportError: "La pista seleccionada no está disponible. Elegí otra." });
+      return false;
+    }
+    const owner = target, epoch = generation;
+    const request = trackRequest = new AbortController();
+    const current = () => generation === epoch && trackRequest === request && !request.signal.aborted;
+    publish({ transportPending: true, pendingTrackId: selection.trackId, transportError: null });
+    try {
+      await playTrack(owner, selection, request.signal);
+      return current();
+    } catch (error) {
+      if (current()) publish({ transportError: error instanceof Error ? error.message : "No se pudo reproducir la pista. Reintentá." });
+      return false;
+    } finally {
+      if (current()) {
+        trackRequest = null;
+        publish({ transportPending: false, pendingTrackId: null });
+      }
+    }
+  };
   return { getSnapshot: () => state, subscribe: (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener); }; },
-    configure, setBlocked, refreshVolume, setVolume,
+    configure, setBlocked, refreshVolume, setVolume, selectTrack,
     toggleMute: () => setVolume(state.volume === 0 ? previousVolume ?? 0.5 : 0),
     previous: () => transport("previousTrack"), next: () => transport("nextTrack"), toggle: () => transport("togglePlay") };
 }

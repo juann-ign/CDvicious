@@ -25,6 +25,7 @@ async function hiddenFooter(page) {
 }
 
 function unchangedDeck(current) {
+  expect(current.equipmentAngle).toBe(0);
   for (const edge of ["left", "right", "top", "bottom"]) expect(Math.abs(current.equipment[edge] - baseline.deck.equipment[edge])).toBeLessThan(1);
   for (const key of ["front", "glass", "target"]) for (const metric of ["x", "y", "width", "height"]) {
     expect(Math.abs(current[key][metric] - baseline.deck[key][metric])).toBeLessThan(1);
@@ -59,9 +60,9 @@ test("Split balance normal mock: equipment grows within the available width, bot
     await page.screenshot({ path: testInfo.outputPath(`${name}.png`), animations: "allow" });
     await saveRecord(testInfo, name, { current, previous, factor, playerRise, paperRise });
     records.push({ viewport, current, previous, factor, playerRise, paperRise });
-    // The approved adaptive composition targets +10% on notebook widths and
-    // up to +18% on 1440, bounded by the actual booklet and keyboard outline.
-    expect(factor).toBeGreaterThanOrEqual(1.08);
+    // Keep the larger Split player, with additional room at the left and
+    // enough separation for the actual paper and keyboard outline.
+    expect(factor).toBeGreaterThanOrEqual(1.05);
     expect(factor).toBeLessThanOrEqual(1.20);
     expect(playerRise).toBeGreaterThanOrEqual(40);
     expect(playerRise).toBeLessThanOrEqual(125);
@@ -72,6 +73,9 @@ test("Split balance normal mock: equipment grows within the available width, bot
     for (const [index, leaf] of current.leaves.entries()) for (const metric of ["width", "height"]) expect(Math.abs(leaf[metric] - previous.leaves[index][metric])).toBeLessThan(1);
     inside(current.equipment, current.region);
     inside(current.physicalBooklet, current.region);
+    expect(current.equipment.left - current.region.left).toBeGreaterThanOrEqual(viewport.width * .022 - 1);
+    expect(current.equipmentAngle).toBeGreaterThan(-3);
+    expect(current.equipmentAngle).toBeLessThan(-1);
     expect(current.physicalBooklet.left - current.equipment.right).toBeGreaterThanOrEqual(14);
     const focusPadding = parseFloat(current.focus.outlineWidth) + parseFloat(current.focus.outlineOffset);
     expect(current.focus.active).toBe(true); expect(current.focus.visible).toBe(true);

@@ -53,8 +53,8 @@ async function sampleMesh(page, durationMs) {
   }), durationMs);
 }
 
-async function startRepresentationProbe(page) {
-  await page.evaluate(() => {
+async function startRepresentationProbe(page, { includeFlight = false } = {}) {
+  await page.evaluate((includeFlight) => {
     // visibility may be restored by a descendant (including a frozen clone's
     // inline !important value). display:none and composited opacity cannot.
     window.__inspectHistoricalRepresentations = () => {
@@ -83,8 +83,10 @@ async function startRepresentationProbe(page) {
         if (["IMG", "SVG", "CANVAS"].includes(node.tagName) && !pseudo) return true;
         return colorPaints(value.color) && (pseudo ? !['""', "''"].includes(value.content) : [...node.childNodes].some((child) => child.nodeType === Node.TEXT_NODE && child.textContent.trim()));
       };
-      const sources = [...document.querySelectorAll("[data-deck-docked-disc], [data-deck-inserted-disc], [data-deck-air-disc]")].map((root) => {
-        const kind = root.hasAttribute("data-deck-inserted-disc") ? "inserted" : root.hasAttribute("data-deck-docked-disc") ? "docked" : "air";
+      const flightTestId = '[data-testid="rail-flying-disc"]';
+      const discSelectors = "[data-deck-docked-disc], [data-deck-inserted-disc], [data-deck-air-disc]";
+      const sources = [...document.querySelectorAll(includeFlight ? `${discSelectors}, ${flightTestId}` : discSelectors)].map((root) => {
+        const kind = root.hasAttribute("data-deck-inserted-disc") ? "inserted" : root.hasAttribute("data-deck-docked-disc") ? "docked" : root.matches(flightTestId) ? "flight" : "air";
         const surfaces = [];
         for (const [index, node] of [root, ...root.querySelectorAll("*")].entries()) {
           for (const pseudo of [null, "::before", "::after"]) {
@@ -123,11 +125,15 @@ async function startRepresentationProbe(page) {
         }
       }
       const row = { state, visible, targets, cssSurfaceCounts: sources.map((source) => ({ kind: source.kind, count: source.surfaces.length })) };
+      if (includeFlight) {
+        row.playbackPhase = document.querySelector("[data-rail-overlay]")?.dataset.playbackPhase;
+        row.flightPhase = document.querySelector('[data-testid="rail-flying-disc"]')?.dataset.flightPhase ?? null;
+      }
       if (JSON.stringify(row) !== JSON.stringify(result.changes.at(-1))) result.changes.push(row);
       window.__historicalRepresentationFrame = requestAnimationFrame(read);
     };
     read();
-  });
+  }, includeFlight);
 }
 
 async function representationSnapshot(page) {

@@ -112,6 +112,49 @@ test('mute restores the last measured nonzero volume and transport admits one pe
   await controls.previous(); await controls.next(); assert.deepEqual(port.transports, ['toggle', 'previous', 'next']);
 });
 
+test('direct selection shares the transport lane and clears pending after confirmation', async () => {
+  const port = player(), pending = deferred(), requests = [];
+  const controls = api().createCanonicalPlayerControls(readable, (owner, selection) => {
+    requests.push({ owner, selection }); return pending.promise;
+  });
+  controls.configure(target(port)); await settle();
+  const selection = { albumId: 'album-a', trackId: 'track-b', position: 1 };
+  const first = controls.selectTrack(selection);
+  assert.equal(controls.getSnapshot().pendingTrackId, 'track-b');
+  assert.equal(controls.getSnapshot().transportPending, true);
+  assert.equal(await controls.selectTrack({ ...selection, trackId: 'track-c', position: 2 }), false);
+  await controls.next();
+  assert.equal(requests.length, 1);
+  assert.deepEqual(port.transports, []);
+  assert.deepEqual(port.writes, []);
+  pending.resolve(); assert.equal(await first, true);
+  assert.equal(controls.getSnapshot().pendingTrackId, null);
+  assert.equal(controls.getSnapshot().transportPending, false);
+});
+
+test('device changes and album loads abort track selection and ignore late completion', async () => {
+  const firstRequest = deferred(), secondRequest = deferred(), requests = [];
+  const controls = api().createCanonicalPlayerControls(readable, (owner, selection, signal) => {
+    requests.push({ owner, selection, signal });
+    return requests.length === 1 ? firstRequest.promise : secondRequest.promise;
+  });
+  const selection = { albumId: 'album-a', trackId: 'track-b', position: 1 };
+  controls.configure(target(player(), 'old')); await settle();
+  const first = controls.selectTrack(selection);
+  controls.configure(target(player(), 'next')); await settle();
+  assert.equal(requests[0].signal.aborted, true);
+  const second = controls.selectTrack({ ...selection, trackId: 'track-c', position: 2 });
+  firstRequest.reject(new Error('Late previous provider response'));
+  assert.equal(await first, false);
+  assert.equal(controls.getSnapshot().pendingTrackId, 'track-c');
+  assert.equal(controls.getSnapshot().transportError, null);
+  controls.setBlocked(true);
+  assert.equal(requests[1].signal.aborted, true);
+  secondRequest.resolve(); assert.equal(await second, false);
+  assert.equal(controls.getSnapshot().transportPending, false);
+  assert.equal(controls.getSnapshot().pendingTrackId, null);
+});
+
 test('SDK command serialization lets prior UI writes settle before flight reads/mute/restore', async () => {
   const { serializedPlayerVolume } = load('src/lib/serializedPlayerVolume.ts');
   const raw = player(), wait = deferred();

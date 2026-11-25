@@ -16,6 +16,14 @@ export interface AlbumItem {
 }
 
 export interface AlbumTrack {
+  id: string | null;
+  uri: string | null;
   name: string;
   duration_ms: number;
+  track_number: number;
+  disc_number: number;
+  /** Zero-based position in the provider's album context. */
+  position: number;
+  playable: boolean;
+  linkedFromId?: string;
 }

@@ -9,6 +9,7 @@ const REFRESH_THROTTLE_MS = 1_000;
 type Snapshot = {
   data: NowPlayingResponse | null;
   error: boolean;
+  requestStartedAt?: number;
 };
 
 type RefreshSource = "poll" | "event" | "visibility";
@@ -153,6 +154,7 @@ const fetchNowPlaying = async (source: RefreshSource) => {
     setSnapshot({
       data: json,
       error: false,
+      requestStartedAt: startedAt,
     });
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") {

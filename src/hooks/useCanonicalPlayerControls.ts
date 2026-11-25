@@ -3,6 +3,7 @@
 import { useEffect, useSyncExternalStore } from "react";
 import { useSpotifyPlayer } from "@/components/SpotifyPlayerProvider";
 import { createCanonicalPlayerControls, EMPTY_CONTROL_STATE, type PlayerCapabilities } from "@/lib/canonicalPlayerControls";
+import { createDirectTrackPlayback, createTrackSelectionBaseline } from "@/lib/directTrackPlayback";
 import { getPlaybackState, subscribePlaybackState } from "@/lib/playbackSnapshotCoordinator";
 import * as mockStore from "@/lib/mockSpotifyStore";
 import * as liveStore from "@/lib/nowPlayingStore";
@@ -10,6 +11,37 @@ import * as liveStore from "@/lib/nowPlayingStore";
 const mock = process.env.NEXT_PUBLIC_SPOTIFY_MOCK === "1";
 const nowPlaying = mock ? mockStore : liveStore;
 let retryAt = 0;
+const readLiveTrackBaseline = createTrackSelectionBaseline(() => liveStore.getSnapshot().data, getPlaybackState);
+const playTrack = createDirectTrackPlayback({
+  readBaseline: mock ? undefined : readLiveTrackBaseline,
+  read: () => {
+    if (!mock) return liveStore.getSnapshot();
+    const { data } = mockStore.getSnapshot();
+    return { data, requestStartedAt: data?.sampledAt };
+  },
+  subscribe: nowPlaying.subscribe,
+  refresh: () => window.dispatchEvent(new Event("cdvicious:player_state_changed")),
+  async request(target, selection, signal) {
+    if (mock) {
+      if (!mockStore.playMockTrack(selection)) throw new Error("La pista no está disponible en este disco. Elegí otra.");
+      return;
+    }
+    let response: Response;
+    try {
+      response = await fetch("/api/play", {
+        method: "POST", headers: { "Content-Type": "application/json" }, signal,
+        body: JSON.stringify({ uri: `spotify:album:${selection.albumId}`, deviceId: target.deviceId, trackPosition: selection.position }),
+      });
+    } catch (error) {
+      if (signal.aborted) throw error;
+      throw new Error("No se pudo conectar con Spotify. Revisá tu conexión e intentá de nuevo.");
+    }
+    const body = await response.json().catch(() => null) as { success?: boolean; message?: unknown } | null;
+    if (!response.ok || body?.success !== true) {
+      throw new Error(typeof body?.message === "string" ? body.message : "Spotify no aceptó la pista seleccionada. Reintentá.");
+    }
+  },
+});
 const controller = createCanonicalPlayerControls(async (target, signal) => {
   if (mock) return { volumeSupported: true, transportSupported: true, volume: await target.player.getVolume() };
   if (Date.now() < retryAt) throw new Error("Device rate limit active");
@@ -31,7 +63,7 @@ const controller = createCanonicalPlayerControls(async (target, signal) => {
     finally { clearTimeout(timeout); }
   }
   return data;
-});
+}, playTrack);
 let leases = 0;
 let disconnectPlayback: (() => void) | null = null;
 let disconnectEvents: (() => void) | null = null;
@@ -48,8 +80,14 @@ export function useCanonicalPlayerControls() {
   useEffect(() => {
     leases++;
     if (!disconnectPlayback) {
-      const sync = () => controller.setBlocked(getPlaybackState().busy);
-      disconnectPlayback = subscribePlaybackState(sync); sync();
+      const sync = () => {
+        if (!mock) readLiveTrackBaseline();
+        controller.setBlocked(getPlaybackState().busy);
+      };
+      const stopHandoff = subscribePlaybackState(sync);
+      const stopObservation = mock ? null : liveStore.subscribe(readLiveTrackBaseline);
+      disconnectPlayback = () => { stopHandoff(); stopObservation?.(); };
+      sync();
       let refreshTimer: number | null = null;
       const refresh = () => {
         const current = controller.getSnapshot();
@@ -75,5 +113,5 @@ export function useCanonicalPlayerControls() {
   }, [player, isReady, deviceId, observedDeviceId]);
   return { ...state, setVolume: controller.setVolume, toggleMute: controller.toggleMute,
     previous: controller.previous, next: controller.next, toggle: controller.toggle,
-    refreshVolume: controller.refreshVolume };
+    refreshVolume: controller.refreshVolume, selectTrack: controller.selectTrack };
 }

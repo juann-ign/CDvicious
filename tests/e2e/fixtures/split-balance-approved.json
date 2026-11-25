@@ -1,12 +1,12 @@
 {
-  "basis": "Visual review of the taller Split equipment alongside the original-size paper. Deck poses retain the prior production measurements.",
+  "basis": "Measured tilted Split equipment alongside the original-size paper in the normal mock. Deck poses retain the prior production measurements.",
   "split": {
     "1440x900": {
       "equipment": {
-        "left": 15.999994277954102,
-        "right": 797.0716552734375,
-        "top": 245.53672790527344,
-        "bottom": 570.4633178710938
+        "left": 37.77395248413086,
+        "right": 793.28857421875,
+        "top": 240.7513427734375,
+        "bottom": 576.3843994140625
       },
       "paper": {
         "x": 824.262451171875,
@@ -23,10 +23,10 @@
     },
     "1280x800": {
       "equipment": {
-        "left": 8.000005722045898,
-        "right": 657.4400024414062,
-        "top": 224.91616821289062,
-        "bottom": 495.0838623046875
+        "left": 33.2021598815918,
+        "right": 658.3179321289062,
+        "top": 221.6177978515625,
+        "bottom": 499.3219299316406
       },
       "paper": {
         "x": 680.469482421875,
@@ -43,10 +43,10 @@
     },
     "1280x720": {
       "equipment": {
-        "left": 7.999997615814209,
-        "right": 657.4400024414062,
-        "top": 186.51617431640625,
-        "bottom": 456.683837890625
+        "left": 33.20215606689453,
+        "right": 658.31787109375,
+        "top": 183.21780395507812,
+        "bottom": 460.92193603515625
       },
       "paper": {
         "x": 680.469482421875,

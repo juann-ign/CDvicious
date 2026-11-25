@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, type CSSProperties } from "react";
+import type { CSSProperties } from "react";
 import styles from "./JewelSpine.module.css";
 
 interface JewelSpineProps {
@@ -10,7 +10,7 @@ interface JewelSpineProps {
   coverUrl: string;
   tilt: number;
   onSelect: (origin: HTMLButtonElement) => void;
-  onHover?: (rect: DOMRect | null) => void;
+  onHover?: (rect: DOMRect | null, anchor?: HTMLButtonElement) => void;
 }
 
 const DEMO_INKS = [
@@ -28,14 +28,12 @@ export function JewelSpine({
   onSelect,
   onHover,
 }: JewelSpineProps) {
-  const ref = useRef<HTMLButtonElement>(null);
   const numberedCover = process.env.NEXT_PUBLIC_SPOTIFY_MOCK === "1"
     ? coverUrl.match(/^\/images\/mock-albums\/(\d{2})\.png$/) : null;
   const ink = numberedCover ? DEMO_INKS[(Number(numberedCover[1]) - 1) % DEMO_INKS.length] : null;
 
   return (
     <button
-      ref={ref}
       type="button"
       className={styles.spine}
       style={{
@@ -44,9 +42,9 @@ export function JewelSpine({
         "--demo-ink": ink ? `linear-gradient(145deg, ${ink[0]}c9, ${ink[1]}a6)` : undefined,
       } as CSSProperties}
       onClick={(event) => onSelect(event.currentTarget)}
-      onPointerEnter={() => onHover?.(ref.current?.getBoundingClientRect() ?? null)}
+      onPointerEnter={(event) => onHover?.(event.currentTarget.getBoundingClientRect(), event.currentTarget)}
       onPointerLeave={() => onHover?.(null)}
-      onFocus={() => onHover?.(ref.current?.getBoundingClientRect() ?? null)}
+      onFocus={(event) => onHover?.(event.currentTarget.getBoundingClientRect(), event.currentTarget)}
       onBlur={() => onHover?.(null)}
       aria-label={`${artist} — ${title}`}
       title={title}
@@ -58,9 +56,7 @@ export function JewelSpine({
           <span className={styles.cover} />
           <span className={styles.hinge} />
         </span>
-        <span className={styles.spineFace}>
-          <span className={styles.labelText}>{title}</span>
-        </span>
+        <span className={styles.spineFace} />
         <span className={styles.topRim} />
       </span>
     </button>

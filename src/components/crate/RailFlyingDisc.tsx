@@ -46,7 +46,6 @@ export function RailFlyingDisc({ origin, execution, onArrive, onDone }: RailFlyi
     if (!surface || !visual) return;
     const replica = origin.visual.cloneNode(true) as HTMLElement;
     visual.replaceChildren(replica);
-    visual.style.visibility = "visible";
     const firstMatrix = quadToCssMatrix(origin.quad, origin.width, origin.height);
     if (firstMatrix) surface.style.transform = firstMatrix;
     surface.style.visibility = "visible";
@@ -115,13 +114,14 @@ export function RailFlyingDisc({ origin, execution, onArrive, onDone }: RailFlyi
       if (arrivedRef.current) return true;
       if (!execution.markDocked()) return false;
       arrivedRef.current = true;
+      // The frozen CD can override inherited visibility with its own inline
+      // styles. Detach the portal copy now, leaving its measured pose and lid
+      // clock in place until closing completes.
+      visual.replaceChildren();
       publishPhase("docked");
       window.dispatchEvent(new CustomEvent("cdvicious:disc-flight-arrived", { detail: { attemptId, origin, quad } }));
       window.dispatchEvent(new CustomEvent("cdvicious:disc-flight-playback-ready", { detail: { attemptId } }));
       onArriveRef.current();
-      // The persistent rotor now owns this exact captured visual. Retain only
-      // the mechanical closing clock; no second CD covers its first spin.
-      visual.style.visibility = "hidden";
       return true;
     };
     const paint = (now: number) => {

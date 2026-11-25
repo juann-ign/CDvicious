@@ -2,7 +2,8 @@
 
 import Image from "next/image";
 import { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type RefObject } from "react";
-import type { AlbumItem, AlbumTrack } from "@/types/crate";
+import type { AlbumItem } from "@/types/crate";
+import { useAlbumTracks } from "@/hooks/useAlbumTracks";
 import { useDiscSurfaceDrag } from "@/hooks/useDiscSurfaceDrag";
 import { RailContext } from "@/components/scroll/RailContext";
 import styles from "./JewelCasePresentation.case.module.css";
@@ -44,9 +45,7 @@ function fmt(ms: number) {
 }
 
 export function JewelCasePresentation({ album, open, onOpen, onClose, onClosed, onOpened, disabled = false, active = true, hideDisc = false, discRef, variant = "modal", artwork = "cover" }: JewelCasePresentationProps) {
-  const [tracks, setTracks] = useState<AlbumTrack[] | null>(null);
-  const [tracksError, setTracksError] = useState(false);
-  const [retry, setRetry] = useState(0);
+  const { tracks, loading, error: tracksError, retry: retryTracks } = useAlbumTracks(album.id);
   const [releaseMeta, setReleaseMeta] = useState<ReleaseMeta>({});
   const [isCaseOpen, setCaseOpen] = useState(false);
   const [reverse, setReverse] = useState(false);
@@ -75,15 +74,8 @@ export function JewelCasePresentation({ album, open, onOpen, onClose, onClosed, 
 
   useEffect(() => {
     const controller = new AbortController();
-    setTracks(null); setTracksError(false); setReverse(false); setInspecting(false);
+    setReverse(false); setInspecting(false);
     setReleaseMeta({ year: album.release_date?.slice(0, 4), label: album.label, format: "COMPACT DISC", tags: album.genres ?? [] });
-    void fetch(`/api/album/${encodeURIComponent(album.id)}/tracks`, { signal: controller.signal })
-      .then((response) => { if (!response.ok) throw new Error("tracks"); return response.json(); })
-      .then((data: { tracks?: AlbumTrack[] }) => {
-        if (!Array.isArray(data.tracks)) throw new Error("invalid tracks");
-        if (!controller.signal.aborted) setTracks(data.tracks);
-      })
-      .catch(() => { if (!controller.signal.aborted) { setTracks([]); setTracksError(true); } });
     if (process.env.NEXT_PUBLIC_SPOTIFY_MOCK !== "1") {
       const query = new URLSearchParams({ artist: album.artists.map((artist) => artist.name).join(", "), album: album.name });
       void fetch(`/api/album/${encodeURIComponent(album.id)}/release-meta?${query}`, { signal: controller.signal })
@@ -92,7 +84,7 @@ export function JewelCasePresentation({ album, open, onOpen, onClose, onClosed, 
         .catch(() => undefined);
     }
     return () => controller.abort();
-  }, [album.id, album.name, album.artists, album.release_date, album.label, album.genres, retry]);
+  }, [album.id, album.name, album.artists, album.release_date, album.label, album.genres]);
 
   useLayoutEffect(() => {
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -162,7 +154,6 @@ export function JewelCasePresentation({ album, open, onOpen, onClose, onClosed, 
   }, [release]);
   useEffect(() => { if (!active || disabled || !open) release(); }, [active, disabled, open, release]);
 
-  const loading = tracks === null;
   const denseTracklist = !loading && (tracks?.length ?? 0) > 14;
   const trackRows = Math.ceil((tracks?.length ?? 0) / 2);
   const coverUrl = artwork === "neutral" ? undefined : [...album.images].sort((a, b) => (b.width ?? 0) - (a.width ?? 0))[0]?.url;
@@ -328,11 +319,11 @@ export function JewelCasePresentation({ album, open, onOpen, onClose, onClosed, 
                         <li className={`${styles.trackRow} ${densityStyles.loadingRow}`}>LEYENDO TOC...</li>
                       )}
                       {!loading && !tracksError && tracks?.length === 0 && <li role="status">LISTA DE PISTAS NO DISPONIBLE</li>}
-                      {tracksError && <li className={presentation.trackError} role="status">No se pudo cargar la lista de pistas.<button type="button" onClick={() => setRetry((value) => value + 1)}>Reintentar pistas</button></li>}
+                      {tracksError && <li className={presentation.trackError} role="status">No se pudo cargar la lista de pistas.<button type="button" onClick={retryTracks}>Reintentar pistas</button></li>}
                       {!loading &&
                         tracks?.map((t, i) => (
                           <li
-                            key={`${t.name}-${i}`}
+                              key={t.position}
                             className={
                               denseTracklist
                                 ? densityStyles.trackRowDense

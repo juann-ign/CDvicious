@@ -21,14 +21,20 @@ export function usePhysicalDeckLayout(viewport: RefObject<HTMLDivElement | null>
           top: (Math.min(...bounds.map(r => r.top)) - projected.top) / ratioY,
           bottom: (Math.max(...bounds.map(r => r.bottom)) - projected.top) / ratioY };
       };
-      // Synchronous layout-only probes; restore the current mechanical value
-      // before paint. The flight remains the only owner of its animation clock.
+      // Probe the unrotated model and restore the active pose before paint.
+      // Axis-aligned frame bounds can then be normalized back to design pixels.
       const offset = body.style.getPropertyValue("--deck-lid-offset");
+      const rotation = body.style.getPropertyValue("--split-rotation");
       let closed: DeckBounds, open: DeckBounds;
       try {
+        body.style.setProperty("--split-rotation", "0deg");
         body.style.setProperty("--deck-lid-offset", "0"); closed = measure(false);
         body.style.setProperty("--deck-lid-offset", "135"); open = measure(true);
-      } finally { body.style.setProperty("--deck-lid-offset", offset || "0"); }
+      } finally {
+        body.style.setProperty("--deck-lid-offset", offset || "0");
+        if (rotation) body.style.setProperty("--split-rotation", rotation);
+        else body.style.removeProperty("--split-rotation");
+      }
       const w = frameRect.width, h = frameRect.height;
       // Measure the final Split pose, including leaves that extend beyond the
       // spread and the full keyboard-focus region. Restore before painting;
@@ -64,6 +70,7 @@ export function usePhysicalDeckLayout(viewport: RefObject<HTMLDivElement | null>
       }
       body.style.setProperty("--split-closed-sy", String(split.closed.scaleY));
       body.style.setProperty("--split-open-sy", String(split.open.scaleY));
+      body.style.setProperty("--split-rotation", `${split.rotation}deg`);
       frame.dataset.closedBounds = JSON.stringify(closed); frame.dataset.openBounds = JSON.stringify(open);
       frame.dataset.splitSlot = JSON.stringify(split.slot);
       frame.dataset.layoutMeasurements = String(Number(frame.dataset.layoutMeasurements ?? 0) + 1);

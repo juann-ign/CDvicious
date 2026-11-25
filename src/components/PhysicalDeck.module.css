@@ -81,6 +81,7 @@
   --open-s: calc(var(--deck-open-s, 1) + (var(--split-open-s, 1) - var(--deck-open-s, 1)) * var(--pSplit, 0));
   --open-sy: calc(var(--deck-open-s, 1) + (var(--split-open-sy, 1) - var(--deck-open-s, 1)) * var(--pSplit, 0));
   transform: translate3d(calc(var(--closed-x) + (var(--open-x) - var(--closed-x)) * var(--open-weight)), calc(var(--closed-y) + (var(--open-y) - var(--closed-y)) * var(--open-weight)), 0)
+    rotateZ(calc(var(--split-rotation, 0deg) * var(--pSplit, 0)))
     scale(calc((var(--closed-s) + (var(--open-s) - var(--closed-s)) * var(--open-weight)) / var(--deck-density)),
       calc((var(--closed-sy) + (var(--open-sy) - var(--closed-sy)) * var(--open-weight)) / var(--deck-density)));
   will-change: transform;

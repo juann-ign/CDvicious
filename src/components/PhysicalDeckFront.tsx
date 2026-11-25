@@ -41,20 +41,22 @@ export function PhysicalDeckFront({ title, artist, status, progressMs = null, du
   return <div className={styles.front} data-physical-deck-front-content data-front-state={state}>
     <div className={styles.display} data-deck-display-mirror role="group" aria-label="Pantalla del equipo" aria-busy={loading || pending}>
       <span className={styles.glass} aria-hidden="true" />
-      <div className={styles.heading}>
+      <div className={styles.metadata}>
         <strong className={styles.title} title={displayTitle}>{displayTitle}</strong>
-        {badge && <span className={styles.status} role="status" title={error || undefined}>{badge}</span>}
-        {process.env.NEXT_PUBLIC_SPOTIFY_MOCK === "1" && trackId && (
-          <VfdSpectrum trackKey={trackId} progressMs={progressMs}
-            isPlaying={isPlaying && !loading && !error} active={controlsActive} />
-        )}
-      </div>
-      <div className={styles.details}>
-        <span className={styles.artist} title={secondary || undefined}>{secondary}</span>
-        <div className={styles.progress}>
-          <ProgressBar progressMs={loading ? null : progressMs} durationMs={loading ? null : durationMs} isPlaying={isPlaying && !loading} />
+        <div className={styles.byline}>
+          <span className={styles.artist} title={secondary || undefined}>{secondary}</span>
+          {badge && <span className={styles.status} role="status" title={error || undefined}>{badge}</span>}
         </div>
       </div>
+      {trackId && (
+        <VfdSpectrum trackKey={trackId} progressMs={progressMs}
+          isPlaying={state === "playing"} active={controlsActive} />
+      )}
+      {!loading && durationMs != null && (
+        <div className={styles.progress}>
+          <ProgressBar progressMs={progressMs} durationMs={durationMs} isPlaying={isPlaying} />
+        </div>
+      )}
     </div>
 
     <span className={styles.lamp} data-active={isPlaying && !loading} aria-hidden="true" />

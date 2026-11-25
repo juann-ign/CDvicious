@@ -5,7 +5,6 @@
   justify-content: center;
 }
 
-
 .toolbar {
   display: flex;
   align-items: center;
@@ -21,12 +20,12 @@
 }
 
 .chevBtn {
-  width: 26px;
-  height: 26px;
+  width: 32px;
+  height: 30px;
   display: grid;
   place-items: center;
-  background: var(--color-surface);
-  border: var(--border-thin);
+  background: var(--hardware-button);
+  border: 1px solid #64706c;
   color: var(--color-text-secondary);
   cursor: pointer;
   font-family: var(--font-ui);
@@ -38,22 +37,16 @@
   color: var(--color-phosphor);
 }
 
-.pageLabel {
-  font-family: var(--font-ui);
-  font-size: var(--text-sm);
-  letter-spacing: var(--tracking-wide);
-  color: var(--color-text-muted);
-  min-width: 92px;
-  text-align: center;
-}
-
 .beltToggle {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: var(--space-2);
-  padding: var(--space-1) var(--space-3);
-  background: var(--color-surface);
-  border: var(--border-thin);
+  min-width: 55px;
+  height: 30px;
+  padding: 0 var(--space-2);
+  background: var(--hardware-button);
+  border: 1px solid #64706c;
   color: var(--color-text-secondary);
   font-family: var(--font-ui);
   font-size: var(--text-xs);
@@ -79,15 +72,18 @@
 
 .stage {
   --case-size: clamp(154px, 14vw, 220px);
+  --tray-wall: linear-gradient(180deg, #515a5d, #363e40 65%, #626c6d);
+  --tray-floor: linear-gradient(180deg, #626c6e, #969e9d);
+  --tray-edge-fade: #283235af;
   box-sizing: border-box;
   position: relative;
   user-select: none;
   -webkit-user-select: none;
   overflow: hidden;
   height: calc(var(--case-size) + 76px);
-  border: 4px ridge #bfcac1;
-  background: linear-gradient(#32463e, #172822 68%, #4b6054);
-  box-shadow: inset 0 7px 14px #101c16a8, 0 10px 22px #263a3633;
+  border: 4px ridge #c2cbca;
+  background: var(--tray-wall);
+  box-shadow: inset 0 7px 14px #19232588, 0 10px 22px #3140483d;
 }
 
 .stage::before,
@@ -100,18 +96,16 @@
 
 .stage::before {
   height: 52px;
-  border-top: 1px solid #c7d6c55e;
-  background:
-    repeating-linear-gradient(109deg, #526b5c 0 7px, #151f1c 8px 10px, #778e7e 11px 12px),
-    #3e5548;
-  box-shadow: inset 0 12px 15px #081b11a3;
+  border-top: 1px solid #d0dbdb52;
+  background: var(--tray-floor);
+  box-shadow: inset 0 10px 16px #222e3094;
 }
 
 .stage::after {
   z-index: 3;
   height: 12px;
-  border-top: 1px solid #dfebe1a8;
-  background: linear-gradient(#afc2b5, #577162 50%, #344c41);
+  border-top: 1px solid #eef3efc7;
+  background: linear-gradient(#c7cece, #899495 48%, #5c686a);
 }
 
 .viewport {
@@ -148,6 +142,25 @@
   align-items: flex-end;
 }
 
+/* Shift the acrylic only. The drag track retains its slot widths and focus order. */
+.viewport:not(.dragging) .copy > [data-batea-album-id]:has(+ [data-batea-album-id]:is(:hover, :focus-visible)),
+.viewport:not(.dragging) .copy:has(+ .copy > [data-batea-album-id]:first-child:is(:hover, :focus-visible)) > [data-batea-album-id]:last-child {
+  --case-shift: calc(var(--case-size) * -.15);
+}
+
+.viewport:not(.dragging) .copy > [data-batea-album-id]:is(:hover, :focus-visible) + [data-batea-album-id],
+.viewport:not(.dragging) .copy:has(> [data-batea-album-id]:last-child:is(:hover, :focus-visible)) + .copy > [data-batea-album-id]:first-child {
+  --case-shift: calc(var(--case-size) * .15);
+}
+
+.viewport:not(.dragging) .copy > [data-batea-album-id]:has(+ [data-batea-album-id] + [data-batea-album-id]:is(:hover, :focus-visible)) {
+  --case-shift: calc(var(--case-size) * -.07);
+}
+
+.viewport:not(.dragging) .copy > [data-batea-album-id]:is(:hover, :focus-visible) + [data-batea-album-id] + [data-batea-album-id] {
+  --case-shift: calc(var(--case-size) * .07);
+}
+
 .fadeLeft,
 .fadeRight {
   position: absolute;
@@ -160,12 +173,12 @@
 
 .fadeLeft {
   left: 0;
-  background: linear-gradient(90deg, #14201b, transparent);
+  background: linear-gradient(90deg, var(--tray-edge-fade), transparent);
 }
 
 .fadeRight {
   right: 0;
-  background: linear-gradient(270deg, #14201b, transparent);
+  background: linear-gradient(270deg, var(--tray-edge-fade), transparent);
 }
 
 .dots {

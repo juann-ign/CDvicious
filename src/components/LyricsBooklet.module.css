@@ -4,7 +4,7 @@
    ========================================================= */
 
 .bookletOuter {
-  --lyric-size: 16px;
+  --lyric-size: 17px;
   --page-padding: 24px 26px 20px;
   position: relative;
 
@@ -778,12 +778,6 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 
-  font-family: var(--font-editorial);
-
-  font-size: 16px;
-  line-height: 1;
-  letter-spacing: -0.1px;
-
   color: #4e4c4c;
 
   text-rendering: optimizeLegibility;
@@ -921,7 +915,7 @@
 
   .bookletOuter {
     --page-padding: 18px 16px 30px;
-    --lyric-size: var(--text-sm);
+    --lyric-size: calc(var(--text-sm) + 1px);
   }
 
   .bookletPageNumberLeft,
@@ -1027,12 +1021,6 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 
-  font-family: var(--font-editorial);
-
-  font-size: 16px;
-  line-height: 1;
-  letter-spacing: -0.1px;
-
   color: transparent;
 
   text-rendering: optimizeLegibility;
@@ -1061,12 +1049,6 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 
-  font-family: var(--font-editorial);
-
-  font-size: 16px;
-  line-height: 1;
-  letter-spacing: -0.1px;
-
   color: transparent;
 }
 
@@ -1086,7 +1068,6 @@
 .bookletStatus { min-height: 0; overflow: auto; color: #3d3a34; font: var(--text-control, 14px)/1.5 var(--font-ui); }
 .bookletStatus button { display: block; margin-top: 12px; padding: 8px 10px; border: 1px solid #6c765d; border-radius: 0; background: #26321f; color: #c5ef95; font: var(--text-control, 14px) var(--font-ui); cursor: pointer; }
 .bookletStatus button:disabled { opacity: .5; cursor: default; }
-.lyricsProvenance { position: absolute; bottom: 8px; right: 28px; font: 11px/1.2 var(--font-ui); color: #5a5b4c; }
 
 /* Shared metrics for paper, hidden measurement and the two turning faces. */
 .bookletLyrics,
@@ -1095,7 +1076,7 @@
 .turnText {
   font-family: var(--font-editorial);
   font-size: var(--lyric-size);
-  line-height: 1;
+  line-height: 1.125;
   letter-spacing: -0.1px;
 }
 

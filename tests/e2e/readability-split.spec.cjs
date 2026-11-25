@@ -55,6 +55,7 @@ function visiblePageStarts(page) {
 test("Split normal: lectura compacta, clic en bordes y hojas alineadas durante el giro", async ({ page }, testInfo) => {
   const source = await openMapa(page);
   await expect(page.getByTestId("lyrics-pagination-controls")).toHaveCount(0);
+  await expect(paper(page).getByText("DEMO · LETRA FICTICIA", { exact: true })).toHaveCount(0);
   await assertEdgesInView(page);
   await expect(previous(page)).toHaveAccessibleName("Páginas anteriores");
   await expect(next(page)).toHaveAccessibleName("Páginas siguientes");
@@ -80,9 +81,9 @@ test("Split normal: lectura compacta, clic en bordes y hojas alineadas durante e
       }),
     };
   });
-  const historical = { font: "16px", lineHeight: "16px", letterSpacing: "-0.1px" };
-  expect(layout.visible).toEqual([historical, historical]);
-  expect(layout.measured).toEqual([historical, historical, historical]);
+  const typography = { font: "17px", lineHeight: "19.125px", letterSpacing: "-0.1px" };
+  expect(layout.visible).toEqual([typography, typography]);
+  expect(layout.measured).toEqual([typography, typography, typography]);
   expect(layout.padding).toEqual(["24px 26px 20px", "24px 26px 20px"]);
   const [first, second] = await visiblePageStarts(page);
   expect(first.title).toBe("Mapa de azoteas");

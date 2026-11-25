@@ -26,7 +26,7 @@ function trackSeed(trackKey: string) {
   return hash >>> 0;
 }
 
-function demoPulse(seconds: number, seed: number) {
+function simulatedPulse(seconds: number, seed: number) {
   const beat = seconds * (90 + seed % 37) / 60;
   const phase = (seed % 100) / 100 * 2 * Math.PI;
   const phrase = (1 + Math.sin(beat * Math.PI / 4 + phase)) / 2;
@@ -41,7 +41,7 @@ function demoPulse(seconds: number, seed: number) {
   };
 }
 
-function demoLevel(position: number, pulse: ReturnType<typeof demoPulse>) {
+function simulatedLevel(position: number, pulse: ReturnType<typeof simulatedPulse>) {
   // Nearby bands share an envelope, with a small wave across the display.
   const base = position <= 0.5
     ? pulse.low + (pulse.middle - pulse.low) * position * 2
@@ -97,9 +97,9 @@ export function VfdSpectrum({ trackKey, progressMs, isPlaying, active }: VfdSpec
       frame = null;
     }
 
-    function reset(staticPulse?: ReturnType<typeof demoPulse>) {
+    function reset(staticPulse?: ReturnType<typeof simulatedPulse>) {
       for (const band of bands) {
-        band.level = staticPulse ? demoLevel(band.position, staticPulse) : 0;
+        band.level = staticPulse ? simulatedLevel(band.position, staticPulse) : 0;
         band.peak = 0;
         band.heldUntil = 0;
         draw(band);
@@ -115,9 +115,9 @@ export function VfdSpectrum({ trackKey, progressMs, isPlaying, active }: VfdSpec
       }
       lastDraw = now;
       const { playing, progress, sampledAt } = clock.current;
-      const pulse = playing ? demoPulse((progress + Math.max(0, now - sampledAt)) / 1000, seed) : null;
+      const pulse = playing ? simulatedPulse((progress + Math.max(0, now - sampledAt)) / 1000, seed) : null;
       for (const band of bands) {
-        const target = pulse ? demoLevel(band.position, pulse) : 0;
+        const target = pulse ? simulatedLevel(band.position, pulse) : 0;
         band.level = Math.max(target, band.level - delta / DECAY_MS);
         if (target >= band.peak && target > 0) {
           band.peak = target;
@@ -142,7 +142,7 @@ export function VfdSpectrum({ trackKey, progressMs, isPlaying, active }: VfdSpec
       if (motion.matches) {
         stop();
         if (root.dataset.motion !== "reduced" || reducedPlaying !== playing) {
-          reset(playing ? demoPulse(0.2, seed) : undefined);
+          reset(playing ? simulatedPulse(0.2, seed) : undefined);
           reducedPlaying = playing;
         }
         setMotion("reduced");
@@ -178,7 +178,6 @@ export function VfdSpectrum({ trackKey, progressMs, isPlaying, active }: VfdSpec
   }, [trackKey, progressMs, isPlaying, active]);
 
   return <div ref={rootRef} className={styles.spectrum} role="img" aria-label="Espectro simulado" data-vfd-spectrum>
-    <span className={styles.label} aria-hidden="true">DEMO</span>
     <div className={styles.bands} aria-hidden="true">
       {BANDS.map(band => <span key={band} className={styles.band} data-vfd-band>
         <span className={styles.fill} />

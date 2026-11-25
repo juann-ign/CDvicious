@@ -78,28 +78,12 @@ export function CrateChapter() {
     start(dragLockTokenRef.current);
   }, [start]);
 
-  const statusLabel =
-    collectionState === "error"
-      ? collectionError?.reason === "QUOTA_EXCEEDED" ? "SPOTIFY QUOTA EXCEEDED"
-        : retrySeconds > 0 ? "RATE LIMITED / RETRY IN " + retrySeconds + "s" : "ARCHIVO NO DISPONIBLE"
-      : loading
-        ? "INDEXANDO..."
-        : authenticated === false && !cachedAlbums ? "CONECTÁ SPOTIFY"
-        : albums.length + " DISCS";
-
   return (
     <div
       ref={chapterRef}
       className={styles.chapter}
       data-batea-animation-enabled="false"
     >
-      <header className={styles.header}>
-        <div>
-          <h2>LA BATEA</h2>
-        </div>
-        <span className={styles.status}>{statusLabel}</span>
-      </header>
-
       <div className={styles.shelfArea}>
         {collectionState === "error" ? (
           <div className={styles.emptyState} role="alert">
@@ -128,7 +112,6 @@ export function CrateChapter() {
           />
         )}
       </div>
-
     </div>
   );
 }

@@ -53,6 +53,7 @@ function hinge({ reduced = false } = {}) {
       if (name === "react/jsx-runtime") return { jsx, jsxs: jsx };
       if (name === "next/image") return { default: "img" };
       if (name.endsWith(".css")) return { default: new Proxy({}, { get: (_, key) => key }) };
+      if (name === "@/hooks/useAlbumTracks") return { useAlbumTracks: () => ({ tracks: [], loading: false, error: false, retry() {} }) };
       if (name.includes("useDiscSurfaceDrag")) return { useDiscSurfaceDrag: () => ({ rotation: 0, isDragging: false, cancel() {}, pointerHandlers: {} }) };
       if (name.includes("RailContext")) return { RailContext: Symbol("rail") };
       throw new Error(`Unexpected dependency: ${name}`);

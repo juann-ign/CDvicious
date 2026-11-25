@@ -30,7 +30,7 @@ export function CrateShelf({
   const [length, setLength] = useState(0);
   const [hover, setHover] = useState<{
     album: AlbumItem;
-    rect: DOMRect;
+    anchor: HTMLButtonElement;
   } | null>(null);
   const firstCopyRef = useRef<HTMLDivElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -103,10 +103,6 @@ export function CrateShelf({
           >
             ◄
           </button>
-          <span className={styles.pageLabel}>
-            PAGE {String(page + 1).padStart(2, "0")}/
-            {String(pages).padStart(2, "0")}
-          </span>
           <button
             type="button"
             className={styles.chevBtn}
@@ -121,17 +117,20 @@ export function CrateShelf({
           type="button"
           className={styles.beltToggle}
           onClick={() => setDriftEnabled((d) => !d)}
+          aria-label="Desplazamiento automático"
           aria-pressed={driftEnabled}
+          title={driftEnabled ? "Pausar la cinta" : "Reanudar la cinta"}
         >
           <span
             className={`${styles.beltDot} ${driftEnabled ? styles.beltDotOn : ""}`}
           />
-          {driftEnabled ? "BELT ON" : "BELT PAUSED"}
+          <span aria-hidden="true">{driftEnabled ? "Ⅱ" : "▶"}</span>
         </button>
       </div>
 
       <div
         className={styles.stage}
+        data-batea-tray
         onPointerEnter={() => setHovering(true)}
         onPointerLeave={() => {
           setHovering(false);
@@ -163,7 +162,7 @@ export function CrateShelf({
                     coverUrl={album.images[0]?.url || ""}
                     tilt={(i % 5 - 2) * 0.8}
                     onSelect={(origin) => onSelect(album, origin)}
-                    onHover={(rect) => setHover(rect ? { album, rect } : null)}
+                    onHover={(rect, anchor) => setHover(rect && anchor ? { album, anchor } : null)}
                   />
                 ))}
               </div>
@@ -198,7 +197,7 @@ export function CrateShelf({
           artist={hover.album.artists.map((a) => a.name).join(", ")}
           coverUrl={hover.album.images[0]?.url || ""}
           year={hover.album.release_date?.slice(0, 4)}
-          rect={hover.rect}
+          anchor={hover.anchor}
         />
       )}
     </div>

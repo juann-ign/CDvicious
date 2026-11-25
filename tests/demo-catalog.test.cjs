@@ -92,6 +92,27 @@ test("siguiente y anterior conservan el álbum de Explorar artista que no perten
   assert.equal(store.getSnapshot().data.isPlaying, true);
 });
 
+test("elegir una pista demo valida su identidad y conserva el orden del disco cargado", async () => {
+  const run = demoRuntime();
+  const catalog = run.load("src/mocks/demoCatalog.ts");
+  const album = catalog.getMockAlbum("mock-album-01");
+  const tracks = catalog.getMockTracks(album);
+  const store = run.load("src/lib/mockSpotifyStore.ts");
+  store.loadMockAlbum(album);
+  const selection = { albumId: album.id, trackId: tracks[4].id, position: 4 };
+  const prior = store.getSnapshot();
+  assert.equal(store.playMockTrack({ ...selection, position: 3 }), false);
+  assert.equal(store.playMockTrack({ ...selection, albumId: "mock-album-02" }), false);
+  assert.equal(store.getSnapshot(), prior);
+  assert.equal(store.playMockTrack(selection), true);
+  assert.equal(store.getSnapshot().data.track.id, tracks[4].id);
+  assert.equal(store.getSnapshot().data.progressMs, 0);
+  assert.equal(store.getSnapshot().data.isPlaying, true);
+  await store.mockSpotifyPlayer.nextTrack();
+  assert.equal(store.getSnapshot().data.track.id, tracks[5].id);
+  assert.equal(store.getSnapshot().data.track.album.id, album.id);
+});
+
 const listeningAlbums = [
   ["mock-album-01", "demo-vertice"],
   ["demo-vertice-album-0", "demo-vertice"],
@@ -146,6 +167,10 @@ test("tracklist y Now Playing usan los mismos IDs, orden, duración y metadatos 
       const current = store.getSnapshot().data;
       assert.equal(track.id, `mock-track-${id}-${index + 1}`);
       assert.equal(track.track_number, index + 1);
+      assert.equal(track.disc_number, 1);
+      assert.equal(track.position, index);
+      assert.equal(track.uri, `spotify:track:${track.id}`);
+      assert.equal(track.playable, true);
       assert.equal(seen.has(track.id), false);
       seen.add(track.id);
       assert.equal(current.track.id, track.id);

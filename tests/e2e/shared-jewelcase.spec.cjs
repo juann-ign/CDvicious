@@ -14,7 +14,12 @@ const collectionCard = (page) => collection(page).locator('[data-collection-albu
 async function boot(page, path = "/") {
   await page.goto(path, { waitUntil: "domcontentloaded" });
   await expect(page.locator('[data-rail-ready="true"]')).toBeVisible({ timeout: 90000 });
-  await expect(page.getByTestId("deck-now-playing-track")).toBeVisible();
+  const chapter = Number(await page.locator("html").getAttribute("data-chapter"));
+  if (chapter <= 1) {
+    await expect(page.getByRole("button", { name: "Pausar/reanudar equipo", exact: true })).toBeEnabled();
+  } else {
+    await expect(page.getByTestId("deck-now-playing-track")).toBeVisible();
+  }
 }
 async function openCollection(page) {
   await boot(page);
@@ -220,16 +225,29 @@ test.describe("shared-case: contratos de estado y geometría con fixture WebGL e
   });
 
   test("hojas, CD y scroll nativo de pistas funcionan en la ficha a 1280×800 y 1280×600", async ({ page }) => {
+    // Exercise a list that needs scrolling even in the taller case layout.
+    const fixtureTracks = Array.from({ length: 64 }, (_, position) => ({
+      id: `scroll-track-${position + 1}`,
+      uri: `spotify:track:scroll-track-${position + 1}`,
+      name: `Pista de la edición larga ${position + 1}`,
+      duration_ms: 182000,
+      disc_number: Math.floor(position / 32) + 1,
+      track_number: position % 32 + 1,
+      position,
+      playable: true,
+    }));
+    await page.route("**/api/album/demo-vertice-album-0/tracks", (route) => route.fulfill({ json: { tracks: fixtureTracks } }));
     await openArtist(page);
     await scene(page).hover({ position: { x: 8, y: 28 } });
     await scene(page).getByRole("button", { name: "Seleccionar Campo magnético", exact: true }).click();
     await detail(page).getByRole("button", { name: "Abrir caja", exact: true }).click();
     await expect(presentation(page)).toHaveAttribute("data-presentation", "open");
+    const list = presentation(page).getByRole("list", { name: "Lista de pistas", exact: true });
+    await expect(list.locator("li")).toHaveCount(fixtureTracks.length);
     for (const height of [800, 600]) {
       await page.setViewportSize({ width: 1280, height });
       await presentation(page).getByTestId("jewel-case-tracklist").scrollIntoViewIfNeeded();
       await assertOpenCaseSides(page);
-      const list = presentation(page).getByRole("list", { name: "Lista de pistas", exact: true });
       expect(await list.evaluate((node) => node.scrollHeight > node.clientHeight)).toBe(true);
       await list.focus();
       await page.keyboard.press("Home");

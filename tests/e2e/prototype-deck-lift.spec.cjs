@@ -3,6 +3,7 @@ const {
   observeRequests, canonicalState, observeArrival, expectOneArrival, saveRecord,
   threeCanvas, meshPose, expectActualWebGL, sampleMesh, startRepresentationProbe, finishRepresentationProbe, beginHistoricalDrag,
 } = require("./support/historical-disc-harness.cjs");
+const { openRail } = require("./support/b2-harness.cjs");
 
 test.use({ viewport: { width: 1440, height: 900 }, launchOptions: { args: ["--enable-webgl", "--ignore-gpu-blocklist", "--use-gl=angle"] } });
 
@@ -12,15 +13,17 @@ const lift = (page) => page.getByRole("button", { name: "Elevar CD del equipo", 
 const dock = (page) => page.getByRole("button", { name: "Acoplar CD al equipo", exact: true });
 const footer = (page) => page.locator("[data-global-player]");
 
-test("prototype gates: the normal app has neither lift controls nor the lateral tray", async ({ page }) => {
-  await page.goto("/", { waitUntil: "domcontentloaded" });
-  await expect(page.locator('[data-rail-ready="true"]')).toBeVisible({ timeout: 90000 });
-  await expect(page.locator('button[aria-label="Elevar CD del equipo"]')).toHaveCount(0);
+test("Deck exposes the lift in normal navigation without opening the archived lateral tray", async ({ page }) => {
+  await openRail(page);
+  await go(page, "Deck", 0);
+  await expect(lift(page)).toBeEnabled();
   await expect(page.locator('[data-prototype-disc="true"]')).toHaveCount(0);
+  await go(page, "Split", 1);
+  await expect(lift(page)).toHaveCount(0);
   await go(page, "Colección", 3);
   await expect(grid(page)).toBeVisible();
   await expect(collection(page).locator("[data-batea-overlay]")).toHaveCount(0);
-  await expect(collection(page).getByRole("button", { name: "Mostrar Batea en Colección", exact: true })).toHaveText("Batea (prototipo)");
+  await expect(collection(page).getByRole("button", { name: "Mostrar Batea en Colección", exact: true })).toHaveCount(0);
 });
 
 async function rememberDisc(page) {
@@ -71,9 +74,10 @@ async function finishProbe(page, testInfo, name, extra = {}) {
   await saveRecord(testInfo, name, { ...extra, probe });
 }
 
-test("P1 normal: one persistent CD lifts, follows native drag and docks without playback orders or a progress reset", async ({ page }, testInfo) => {
+test("Deck normal: one persistent CD lifts, follows native drag and docks without playback orders or a progress reset", async ({ page }, testInfo) => {
   const requests = observeRequests(page);
-  await bootPrototype(page, "deck-lift");
+  await openRail(page);
+  await go(page, "Deck", 0);
   await expect(lift(page)).toBeEnabled();
   await rememberDisc(page);
   const before = await canonicalState(page);

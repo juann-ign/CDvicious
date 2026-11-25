@@ -16,12 +16,16 @@ const closed = { left: 168, top: 216, right: 1112, bottom: 556 };
 const open = { left: 8, top: 0, right: 1272, bottom: 556 };
 const viewports = [[1440, 900], [1280, 800], [1280, 720]];
 const close = (actual, expected) => assert.ok(Math.abs(actual - expected) < 1e-7, `${actual} != ${expected}`);
-const project = (bounds, fit) => ({
-  left: bounds.left * fit.scale + fit.x,
-  right: bounds.right * fit.scale + fit.x,
-  top: bounds.top * (fit.scaleY ?? fit.scale) + fit.y,
-  bottom: bounds.bottom * (fit.scaleY ?? fit.scale) + fit.y,
-});
+const project = (bounds, fit, rotation = 0) => {
+  const radians = rotation * Math.PI / 180, cos = Math.cos(radians), sin = Math.sin(radians);
+  const corners = [bounds.left, bounds.right].flatMap(left =>
+    [bounds.top, bounds.bottom].map(top => {
+      const x = left * fit.scale, y = top * (fit.scaleY ?? fit.scale);
+      return { x: fit.x + x * cos - y * sin, y: fit.y + x * sin + y * cos };
+    }));
+  return { left: Math.min(...corners.map(({ x }) => x)), right: Math.max(...corners.map(({ x }) => x)),
+    top: Math.min(...corners.map(({ y }) => y)), bottom: Math.max(...corners.map(({ y }) => y)) };
+};
 function assertInside(rect, slot) {
   assert.ok(rect.left >= slot.left - 1e-7, `Left edge ${rect.left} outside ${slot.left}`);
   assert.ok(rect.right <= slot.right + 1e-7, `Right edge ${rect.right} outside ${slot.right}`);
@@ -75,32 +79,32 @@ test("fit may enlarge a roomy Deck and uses the tighter dimension rather than cl
   close(project(bounds, widthLimited).right - project(bounds, widthLimited).left, 150);
 });
 
-test("Split increases the closed player from10to18percent within the actual two-leaf booklet boundary", () => {
+test("Split insets and tilts both poses within the actual two-leaf booklet boundary", () => {
   // Booklet boundaries are measured unions of both leaves and outer focus.
   for (const [width, windowHeight, bookletLeft] of [[1440, 900, 821.084], [1280, 800, 677.457], [1280, 720, 677.457]]) {
     const height = windowHeight - 72 - 128;
     const result = fitSplitDeck(closed, open, { width, height, bookletLeft });
-    const visible = project(closed, result.closed), opened = project(open, result.open);
+    const visible = project(closed, result.closed, result.rotation), opened = project(open, result.open, result.rotation);
     const oldWidth = width * .48 - 24, growth = (visible.right - visible.left) / oldWidth;
-    assert.ok(growth >= 1.10 - 1e-7 && growth <= 1.18 + 1e-7, `Unexpected growth ${growth}`);
-    assert.ok(growth < 1.20);
+    assert.ok(growth >= 1.07 && growth <= 1.18 + 1e-7, `Unexpected growth ${growth}`);
+    assert.ok(result.rotation < -1 && result.rotation > -3);
     assertInside(visible, result.slot); assertInside(opened, result.slot);
     close(visible.bottom, opened.bottom);
     close((visible.top + visible.bottom) / 2, height * .48);
     assert.ok(visible.bottom - visible.top >= (closed.bottom - closed.top) * result.closed.scale * 1.15);
     close(result.slot.centerY, height * .48);
     assert.ok(result.slot.right + result.slot.gap <= bookletLeft + 1e-7);
-    close(result.slot.left, width === 1440 ? 16 : 8);
+    close(result.slot.left, width * .022);
     close(result.slot.gap, width === 1440 ? 24 : 16);
     assert.ok(visible.top >= 24 && opened.top >= 24);
     assert.ok(visible.bottom <= height - 24 && opened.bottom <= height - 24);
   }
 });
 
-test("Split interpolates margins, gap and growth only between1280and1440", () => {
-  for (const [width, margin, gap, growth] of [[1200, 8, 16, 1.10], [1280, 8, 16, 1.10], [1360, 12, 20, 1.14], [1440, 16, 24, 1.18], [1600, 16, 24, 1.18]]) {
+test("Split reserves a proportional left margin and caps the width target", () => {
+  for (const [width, margin, gap, growth] of [[1000, 24, 16, 1.10], [1280, 28.16, 16, 1.10], [1360, 29.92, 20, 1.14], [1440, 31.68, 24, 1.18], [1920, 40, 24, 1.18]]) {
     const result = fitSplitDeck(closed, open, { width, height: 700, bookletLeft: width - 24 });
-    const visible = project(closed, result.closed);
+    const visible = project(closed, result.closed, result.rotation);
     close(result.slot.left, margin); close(result.slot.gap, gap);
     close((visible.right - visible.left) / (width * .48 - 24), growth);
   }
@@ -109,11 +113,11 @@ test("Split interpolates margins, gap and growth only between1280and1440", () =>
 test("a narrow booklet slot limits both poses, including below fitDeck's minimum scale", () => {
   for (const bookletLeft of [480, 180, 64, 20]) {
     const result = fitSplitDeck(closed, open, { width: 1280, height: 520, bookletLeft });
-    assertInside(project(closed, result.closed), result.slot);
-    assertInside(project(open, result.open), result.slot);
+    assertInside(project(closed, result.closed, result.rotation), result.slot);
+    assertInside(project(open, result.open, result.rotation), result.slot);
     assert.ok(result.slot.right + result.slot.gap <= bookletLeft + 1e-7);
     assert.ok(result.slot.right > result.slot.left);
-    close(project(closed, result.closed).bottom, project(open, result.open).bottom);
+    close(project(closed, result.closed, result.rotation).bottom, project(open, result.open, result.rotation).bottom);
   }
 });
 
@@ -122,7 +126,7 @@ test("Split fits actual silhouettes independently of their transparent scene off
   const translatedOpen = { left: open.left + 207, right: open.right + 207, top: open.top - 155, bottom: open.bottom - 155 };
   const original = fitSplitDeck(closed, open, { width: 1440, height: 700, bookletLeft: 821.084 });
   const shifted = fitSplitDeck(translatedClosed, translatedOpen, { width: 1440, height: 700, bookletLeft: 821.084 });
-  for (const [before, after] of [[project(closed, original.closed), project(translatedClosed, shifted.closed)], [project(open, original.open), project(translatedOpen, shifted.open)]]) {
+  for (const [before, after] of [[project(closed, original.closed, original.rotation), project(translatedClosed, shifted.closed, shifted.rotation)], [project(open, original.open, original.rotation), project(translatedOpen, shifted.open, shifted.rotation)]]) {
     for (const edge of ["left", "right", "top", "bottom"]) close(before[edge], after[edge]);
   }
 });
@@ -132,8 +136,8 @@ test("Split uses a conservative booklet fallback and clamps vertical extremes wi
   assert.ok(fallback.slot.right + fallback.slot.gap <= 1280 * .54 + 1e-7);
   for (const height of [40, 100, 200, 2000]) {
     const result = fitSplitDeck(closed, open, { width: 1280, height, bookletLeft: 677.457 });
-    assertInside(project(closed, result.closed), result.slot);
-    assertInside(project(open, result.open), result.slot);
+    assertInside(project(closed, result.closed, result.rotation), result.slot);
+    assertInside(project(open, result.open, result.rotation), result.slot);
     assert.ok(result.slot.top >= 0 && result.slot.bottom <= height);
   }
   for (const bounds of [{ ...closed, left: NaN }, { ...closed, right: closed.left }, { ...closed, bottom: Infinity }]) {

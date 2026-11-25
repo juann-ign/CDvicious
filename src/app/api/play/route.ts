@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { clearSession, getValidAccessToken } from "@/lib/session";
+import { fetchSpotifyWebApi } from "@/lib/spotify";
 
 type PlayRequest = {
   uri?: unknown;
   deviceId?: unknown;
+  trackPosition?: unknown;
 };
 
 function playError(
@@ -41,7 +43,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const { uri, deviceId } = body;
+  const { uri, deviceId, trackPosition } = body;
 
   if (
     typeof uri !== "string" ||
@@ -54,6 +56,12 @@ export async function POST(request: Request) {
       "No se detectó un dispositivo Spotify activo. Abrí Spotify e intentá de nuevo.",
       400,
     );
+  }
+
+  const trackJump = trackPosition !== undefined;
+  if (trackJump && (typeof trackPosition !== "number" || !Number.isSafeInteger(trackPosition) || trackPosition < 0 ||
+    !/^spotify:album:[A-Za-z0-9]{22}$/.test(uri) || deviceId.length > 512)) {
+    return playError("INVALID_TRACK_POSITION", "La pista seleccionada no está disponible. Elegí otra.", 400);
   }
 
   if (process.env.NEXT_PUBLIC_SPOTIFY_MOCK === "1") {
@@ -85,17 +93,19 @@ export async function POST(request: Request) {
   let response: Response;
 
   try {
-    response = await fetch(
-      `https://api.spotify.com/v1/me/player/play?device_id=${encodeURIComponent(deviceId)}`,
-      {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ context_uri: uri }),
+    const endpoint = `https://api.spotify.com/v1/me/player/play?device_id=${encodeURIComponent(deviceId)}`;
+    const init: RequestInit = {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
       },
-    );
+      body: JSON.stringify(trackJump
+        ? { context_uri: uri, offset: { position: trackPosition }, position_ms: 0 }
+        : { context_uri: uri }),
+    };
+    response = trackJump ? await fetchSpotifyWebApi(accessToken, "PUT /v1/me/player/play", endpoint, { ...init, signal: request.signal })
+      : await fetch(endpoint, init);
   } catch {
     return playError(
       "SPOTIFY_UNAVAILABLE",
@@ -121,7 +131,8 @@ export async function POST(request: Request) {
   if (response.status === 403) {
     return playError(
       "SPOTIFY_PLAY_FORBIDDEN",
-      "Spotify no permitió reproducir este álbum. Verificá tu cuenta y los permisos de reproducción.",
+      trackJump ? "Spotify no permitió reproducir esta pista. Verificá tu cuenta y los permisos de reproducción."
+        : "Spotify no permitió reproducir este álbum. Verificá tu cuenta y los permisos de reproducción.",
       403,
     );
   }
@@ -147,7 +158,8 @@ export async function POST(request: Request) {
 
   return playError(
     "SPOTIFY_PLAY_FAILED",
-    "Spotify no confirmó la reproducción. No se inició el vuelo; podés intentarlo de nuevo.",
+    trackJump ? "Spotify no aceptó la pista seleccionada. Podés intentarlo de nuevo."
+      : "Spotify no confirmó la reproducción. No se inició el vuelo; podés intentarlo de nuevo.",
     502,
   );
 }

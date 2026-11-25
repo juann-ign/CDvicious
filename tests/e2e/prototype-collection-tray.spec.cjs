@@ -1,6 +1,7 @@
 const {
   test, expect, go, bootPrototype, collection, observeRequests, saveRecord,
 } = require("./support/prototype-harness.cjs");
+const mockCollection = require("../../src/mocks/collection.json");
 
 test.use({ viewport: { width: 1440, height: 900 }, launchOptions: { args: ["--enable-webgl", "--ignore-gpu-blocklist", "--use-gl=angle"] } });
 
@@ -13,9 +14,9 @@ test("Batea normal: archived drawer stays hidden, angled jewel cases open the al
   await go(page, "Batea", 2);
 
   const crate = page.getByRole("region", { name: "La Batea", exact: true });
-  const shelf = page.locator("[data-belt-animation-enabled]");
-  const stage = crate.locator('[class*="stage"]').first();
-  const cases = page.locator("button[data-batea-album-id]");
+  const shelf = page.locator("[data-batea-animation-enabled] [data-belt-animation-enabled]");
+  const stage = crate.locator("[data-batea-tray]");
+  const cases = shelf.locator("button[data-batea-album-id]");
   const position = () => shelf.locator('[class*="track"]').evaluate((node) => node.style.transform);
   await expect(shelf).toHaveAttribute("data-belt-animation-enabled", "true");
   await expect(cases.first()).toBeAttached();
@@ -42,7 +43,9 @@ test("Batea normal: archived drawer stays hidden, angled jewel cases open the al
   });
   expect(visible).toHaveLength(3);
   for (const album of visible) {
-    expect(album.label).toBe(album.album);
+    expect(album.label.trim()).toBe("");
+    const fixture = mockCollection.find(({ id }) => id === album.id);
+    await expect(cases.nth(album.index)).toHaveAccessibleName(`${fixture.artists.map(({ name }) => name).join(", ")} — ${fixture.name}`);
     expect(album.width).toBeGreaterThan(150);
     expect(album.width).toBe(album.height);
     expect(album.angle).toMatch(/^matrix3d\(/);
@@ -53,6 +56,29 @@ test("Batea normal: archived drawer stays hidden, angled jewel cases open the al
 
   const selected = visible[1];
   const source = cases.nth(selected.index);
+  const casePose = () => cases.evaluateAll((nodes, index) => nodes.slice(index - 1, index + 2).map((button) => {
+    const slot = button.getBoundingClientRect();
+    const acrylic = button.querySelector(":scope > [aria-hidden]").getBoundingClientRect();
+    return { slotX: slot.left, center: (acrylic.left + acrylic.right) / 2, width: acrylic.width };
+  }), selected.index);
+  const resting = await casePose();
+  await source.hover();
+  const flyout = page.locator("[data-batea-flyout]");
+  await expect(flyout).toBeVisible();
+  const album = mockCollection.find(({ id }) => id === selected.id);
+  await expect(flyout.getByText(album.name, { exact: true })).toBeVisible();
+  await expect(flyout.getByText(album.artists.map(({ name }) => name).join(", "), { exact: true })).toBeVisible();
+  await expect(flyout.locator("time")).toHaveText(album.release_date.slice(0, 4));
+  await expect.poll(async () => {
+    const pose = await casePose();
+    return pose[1].width - resting[1].width;
+  }).toBeGreaterThan(20);
+  const hovered = await casePose();
+  expect(hovered.map(({ slotX }) => slotX)).toEqual(resting.map(({ slotX }) => slotX));
+  expect(hovered[0].center).toBeLessThan(resting[0].center - 5);
+  expect(hovered[2].center).toBeGreaterThan(resting[2].center + 5);
+  await page.screenshot({ path: testInfo.outputPath("Batea-ficha-1440x900.png") });
+
   await source.focus();
   await expect(source).toBeFocused();
   await page.keyboard.press("Enter");
@@ -78,5 +104,5 @@ test("Batea normal: archived drawer stays hidden, angled jewel cases open the al
   await page.mouse.move(0, 0);
   await expect.poll(position).not.toBe(returnedPosition);
   expect(requests.play).toHaveLength(0);
-  await saveRecord(testInfo, "batea-cases-detail-and-focus", { visible, selected, pausedPosition, returnedPosition, resumed: await position() });
+  await saveRecord(testInfo, "batea-cases-detail-and-focus", { visible, selected, resting, hovered, pausedPosition, returnedPosition, resumed: await position() });
 });

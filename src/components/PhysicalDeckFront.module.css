@@ -8,10 +8,13 @@
 .display {
   position: absolute;
   left: calc(156 * var(--u));
-  top: calc(14 * var(--u));
+  top: calc((14 - 3 * var(--pSplit, 0)) * var(--u));
   width: calc(610 * var(--u));
   height: calc(77 * var(--u));
   box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: calc(18 * var(--u));
   padding: calc(6 * var(--u)) calc(13 * var(--u));
   border: calc(4 * var(--u)) ridge #56634f;
   background: var(--hardware-front);
@@ -28,17 +31,16 @@
   pointer-events: none;
 }
 
-.heading {
-  display: flex;
-  align-items: center;
-  gap: calc(14 * var(--u));
+.metadata {
+  display: grid;
+  align-content: center;
+  gap: calc(4 * var(--u));
+  flex: 1 1 0;
   min-width: 0;
-  height: calc(29 * var(--u));
 }
 
 .title {
   display: block;
-  flex: 1 1 auto;
   min-width: 0;
   margin: 0;
   overflow: hidden;
@@ -50,22 +52,22 @@
   text-shadow: none;
 }
 
+.byline {
+  display: flex;
+  align-items: baseline;
+  gap: calc(9 * var(--u));
+  min-width: 0;
+}
+
 .status {
   flex: 0 0 auto;
   max-width: calc(100 * var(--u));
   overflow: hidden;
   white-space: nowrap;
+  padding-inline-start: calc(9 * var(--u));
+  border-inline-start: calc(1 * var(--u)) solid #a9bc7e42;
   color: var(--color-phosphor-dim);
   font: calc(14 * var(--u))/1 var(--font-ui);
-}
-
-.details {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) calc(180 * var(--u));
-  gap: calc(20 * var(--u));
-  align-items: center;
-  min-width: 0;
-  height: calc(25 * var(--u));
 }
 
 .artist {
@@ -78,9 +80,12 @@
   text-shadow: none;
 }
 
-.progress { min-width: 0; }
+.progress {
+  flex: 0 0 calc(156 * var(--u));
+  min-width: 0;
+}
 .progress > div { width: 100%; margin: 0; gap: calc(5 * var(--u)); }
-.progress > div > div:first-child { display: flex; height: calc(5 * var(--u)); gap: calc(2 * var(--u)); }
+.progress > div > div:first-child { display: flex; height: calc(5 * var(--u)); gap: calc(1.55 * var(--u)); }
 .progress > div > div:first-child > div { box-shadow: none; }
 .progress [class*="progressBlockActive"] { background: var(--color-phosphor-dim); box-shadow: none; }
 .progress > div > div:last-child {
@@ -94,7 +99,7 @@
 .transport {
   position: absolute;
   left: calc(536 * var(--u));
-  bottom: calc(10 * var(--u));
+  bottom: calc((10 - 4 * var(--pSplit, 0)) * var(--u));
   display: flex;
   align-items: center;
   gap: calc(10 * var(--u));

@@ -146,12 +146,10 @@ export function LyricsBooklet({ track, isOpen, onToggle, accentColor, showTab = 
       {String(index + 1).padStart(2, "0")}
     </span>
   );
-  const provenance = reading.provenance.provider === "demo" && <span className={styles.lyricsProvenance}>DEMO · LETRA FICTICIA</span>;
   const leafFace = (left: boolean, index: number, stationary = false) => (
     <div className={`${styles.bookletContent} ${stationary ? styles.stationaryPageCopy : ""}`} aria-hidden="true">
       {index === 0 && pageHeader(true)}
       <div className={styles.turnText}>{pages[index] ?? ""}</div>
-      {!left && provenance}
       {pageNumber(left, index)}
     </div>
   );
@@ -182,7 +180,6 @@ export function LyricsBooklet({ track, isOpen, onToggle, accentColor, showTab = 
         <div className={`${styles.bookletPageHalf} ${styles.bookletPageRight}`} data-booklet-page-half="right">
           <div className={styles.bookletContent} data-turn-receiving={turnPrevious || undefined}>
             <div className={styles.bookletLyrics} data-testid="lyrics-content" data-page-index={safePage + 1}>{pages[safePage + 1] ?? ""}</div>
-            {provenance}
             {pageNumber(false, safePage + 1)}
           </div>
           {turnPrevious && leafFace(false, activeTurn.from + 1, true)}

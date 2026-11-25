@@ -1,28 +1,16 @@
 .spectrum {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: center;
-  gap: calc(8 * var(--u));
-  flex: 0 0 calc(180 * var(--u));
-  padding-inline-start: calc(8 * var(--u));
-  border-inline-start: calc(1 * var(--u)) solid #a9bc7e2b;
-  box-sizing: border-box;
-}
-
-.label {
-  color: color-mix(in srgb, var(--color-phosphor-dim) 72%, #a9b398);
-  font: calc(12 * var(--u))/1 var(--font-ui);
-  letter-spacing: calc(.65 * var(--u));
+  flex: 0 0 calc(104 * var(--u));
+  min-width: 0;
 }
 
 .bands {
-  --segment: calc(4.5 * var(--u));
+  --segment: calc(5.25 * var(--u));
   --segment-gap: calc(1.35 * var(--u));
   --peak-size: calc(1.85 * var(--u));
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
-  gap: calc(3.1 * var(--u));
-  height: calc(27 * var(--u));
+  gap: calc(2.15 * var(--u));
+  height: calc(6 * var(--segment));
 }
 
 .band {

@@ -5,6 +5,8 @@ import type { NowPlayingResponse } from "@/types/spotify";
 import { PhysicalDeck } from "@/components/PhysicalDeck";
 import { NowPlayingCard } from "@/components/NowPlayingCard";
 import { LyricsBooklet } from "@/components/LyricsBooklet";
+import { DeckTrackSelector } from "@/components/DeckTrackSelector";
+import { DeckNextDiscs } from "@/components/crate/DeckNextDiscs";
 import { useNowPlaying } from "@/hooks/useNowPlaying";
 import { getEmptyPlaybackState, getPlaybackState, subscribePlaybackState } from "@/lib/playbackSnapshotCoordinator";
 import { supportsDiscFlightMotion, type DiscFlightOrigin } from "@/lib/discFlightGeometry";
@@ -14,14 +16,12 @@ import { useSpotifyPlayer } from "@/components/SpotifyPlayerProvider";
 import { useRailNavigation } from "./RailContext";
 import styles from "./DeckPinnedLayer.module.css";
 import { useCanonicalPlayerControls } from "@/hooks/useCanonicalPlayerControls";
-import { useInteractionPrototype } from "@/hooks/useInteractionPrototype";
 import type { DeckLiftPhase } from "@/lib/deckLiftPrototype";
 
 export function DeckPinnedLayer() {
   const { authenticated } = useSpotifyPlayer();
   const controls = useCanonicalPlayerControls();
   const { activeChapterIndex } = useRailNavigation();
-  const liftEnabled = useInteractionPrototype("deck-lift");
   const [liftPhase, setLiftPhase] = useState<DeckLiftPhase>("docked");
   const layerRef = useRef<HTMLDivElement>(null);
   const [deckHidden, setDeckHidden] = useState(false);
@@ -60,7 +60,7 @@ export function DeckPinnedLayer() {
   const showDisc = playback.phase === "docked" || !loading && Boolean(visibleData?.track);
   const accentColor = useDominantColor(artwork) ?? "#1DB954";
   const registerTarget = useCallback((node: HTMLDivElement | null) => { discRegistry.discTarget = node; }, []);
-  const prototypePlayerActive = liftEnabled && liftPhase !== "docked";
+  const prototypePlayerActive = liftPhase !== "docked";
   const footerVisible = activeChapterIndex > 1 || prototypePlayerActive;
 
   useEffect(() => {
@@ -133,7 +133,7 @@ export function DeckPinnedLayer() {
             progressMs={loading ? null : visibleData?.progressMs ?? null}
             durationMs={loading ? null : visibleData?.durationMs ?? null}
             staticMode={staticMode} discTargetRef={registerTarget} controls={controls} controlsActive={!deckHidden && activeChapterIndex <= 1}
-            albumId={discAlbumId} liftEnabled={liftEnabled} liftActive={!deckHidden && activeChapterIndex === 0}
+            albumId={discAlbumId} liftEnabled liftActive={!deckHidden && activeChapterIndex === 0}
             track={visibleData?.track ?? null} accentColor={accentColor}
             liftBusy={playback.busy} onLiftPhaseChange={setLiftPhase}
             discVisual={dockVisual?.albumId === discAlbumId ? dockVisual : null} />
@@ -148,6 +148,10 @@ export function DeckPinnedLayer() {
           onToggle={() => undefined} accentColor={accentColor} showTab={false} />
       </div>}
     </div>
+    <DeckTrackSelector enabled={activeChapterIndex <= 1 && !deckHidden && !footerVisible && !playback.busy}
+      track={visibleData?.track ?? null} controls={controls} />
+    <DeckNextDiscs enabled={activeChapterIndex === 0 && !deckHidden && !footerVisible && !playback.busy}
+      authenticated={authenticated} currentAlbumId={discAlbumId} />
     <footer className={styles.globalPlayer} aria-label="Reproductor global" data-global-player data-dock-click={playback.dockClick}
       data-footer-visible={footerVisible} data-prototype-player-active={prototypePlayerActive} aria-hidden={!footerVisible} inert={!footerVisible}>
       <NowPlayingCard global track={visibleData?.track ?? null} isPlaying={isPlaying} error={error}

@@ -23,7 +23,7 @@
   inset: 0 auto auto calc(50% + 4px);
   width: var(--case-size);
   height: var(--case-size);
-  transform: translateX(-50%) perspective(680px) rotateX(-6deg) rotateY(64deg) rotateZ(calc(-3deg + var(--tilt)));
+  transform: translateX(calc(-50% + var(--case-shift, 0px))) perspective(680px) rotateX(-6deg) rotateY(64deg) rotateZ(calc(-3deg + var(--tilt)));
   transform-style: preserve-3d;
   transition: transform var(--transition-mechanical);
   pointer-events: none;
@@ -33,7 +33,7 @@
 .spine:focus-visible { z-index: 2; }
 
 .spine:is(:hover, :focus-visible) .case {
-  transform: translate(-50%, -8px) perspective(680px) rotateX(-5deg) rotateY(56deg) rotateZ(calc(-2deg + var(--tilt)));
+  transform: translate(-50%, -10px) perspective(680px) rotateX(-5deg) rotateY(46deg) rotateZ(calc(-2deg + var(--tilt)));
 }
 
 .front,
@@ -83,10 +83,7 @@
 .spineFace {
   position: absolute;
   inset: 0 100% 0 auto;
-  display: grid;
-  place-items: center;
   width: var(--case-depth);
-  padding-block: 8px;
   overflow: hidden;
   border: 1px solid #d5e4dbb8;
   border-inline-color: #f0f8f4c9 #71897f;
@@ -98,19 +95,6 @@
   background-position: center, center, 36% center;
   background-size: 100% 100%, 100% 100%, var(--case-size) var(--case-size);
   box-shadow: inset 2px 0 #effbef35, inset -2px 0 #182724a1;
-}
-
-.labelText {
-  display: block;
-  max-height: 100%;
-  writing-mode: vertical-rl;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  color: #edf5e8;
-  font: 600 clamp(10px, .86vw, 13px)/1 var(--font-ui);
-  letter-spacing: .04em;
-  text-shadow: 1px 1px 2px #081511;
 }
 
 .topRim {

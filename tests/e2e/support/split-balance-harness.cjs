@@ -12,6 +12,7 @@ async function measureSplit(page) {
     const focus = document.querySelector('[role="region"][aria-label="Booklet de letras"]');
     const footer = document.querySelector("[data-global-player]");
     const glass = deck.querySelector("[data-deck-display-mirror]");
+    const matrix = new DOMMatrix(getComputedStyle(deck.querySelector("[data-deck-mechanism]")).transform);
     const hit = (node) => {
       const box = node.getBoundingClientRect();
       return node.contains(document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2));
@@ -20,6 +21,7 @@ async function measureSplit(page) {
       viewport: { width: innerWidth, height: innerHeight }, chapter: document.documentElement.dataset.chapter,
       nav: rect(document.querySelector("[data-shell-header]")), region: rect(document.querySelector("[data-rail-overlay]")),
       equipment: union(faces), front: rect(deck.querySelector("[data-deck-front]")), glass: rect(glass),
+      equipmentAngle: Math.atan2(matrix.b, matrix.a) * 180 / Math.PI,
       title: rect(glass.querySelector("strong")), artist: rect(glass.querySelector('[class*="artist"]')), times: rect(glass.querySelector('[class*="progressTimes"]')),
       target: rect(deck.querySelector("[data-deck-disc-target]")),
       scene: { clientWidth: deck.querySelector("[data-deck-design-frame]").clientWidth, clientHeight: deck.querySelector("[data-deck-design-frame]").clientHeight },
