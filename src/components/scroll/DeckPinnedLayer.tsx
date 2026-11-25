@@ -75,6 +75,7 @@ export function DeckPinnedLayer() {
   const listenAvailable = authenticated === true && activeChapterIndex <= 1 && !deckHidden && !playback.busy && liftPhase === "docked";
   const listenOpen = listenAvailable && listenChapter === activeChapterIndex;
   const placement = activeChapterIndex === 1 ? "split" : "deck";
+  const speakersVisible = activeChapterIndex <= 1 && !deckHidden && !playback.busy;
 
   const closeListen = useCallback((restoreFocus = false) => {
     setListenChapter(null);
@@ -276,6 +277,7 @@ export function DeckPinnedLayer() {
             progressMs={loading ? null : visibleData?.progressMs ?? null}
             durationMs={loading ? null : visibleData?.durationMs ?? null}
             staticMode={staticMode} discTargetRef={registerTarget} controls={controls} controlsActive={!deckHidden && activeChapterIndex <= 1}
+            speakersEnabled speakersVisible={speakersVisible} speakersActive={speakersVisible && documentVisible}
             albumId={discAlbumId} liftEnabled liftActive={!deckHidden && activeChapterIndex <= 1} liftChapter={placement}
             track={visibleData?.track ?? null} accentColor={accentColor}
             liftBusy={playback.busy || listenOpen || listenMotion} onLiftPhaseChange={setLiftPhase}

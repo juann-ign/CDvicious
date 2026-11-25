@@ -40,6 +40,7 @@
   user-select: none;
   cursor: grab;
   clip-path: circle(50%);
+  outline: none;
 }
 .prototypeDiscHost > [data-disc-dragging="true"] { cursor: grabbing; }
 .prototypeDiscHost > [data-disc-representation="three"] { clip-path: none; }
@@ -57,7 +58,7 @@
 .viewport[data-disc-state="free"] .discTarget[data-disc-representation="three"][data-disc-dragging="true"] .historicalCanvas { cursor: grabbing; }
 .prototypeDiscHost > [data-historical-disc-status="unavailable"],
 .prototypeDiscHost > [data-historical-disc-status="error"] { cursor: default; }
-.prototypeDiscHost > [data-prototype-disc="true"]:focus-visible {
+.viewport[data-disc-state="free"] .prototypeDiscHost > [data-prototype-disc="true"][data-disc-focus-input="keyboard"]:focus {
   border-radius: 50%;
   outline: 2px solid #29482d;
   outline-offset: 6px;

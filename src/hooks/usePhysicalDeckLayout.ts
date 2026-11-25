@@ -1,6 +1,6 @@
 "use client";
 import { useLayoutEffect, type RefObject } from "react";
-import { fitDeck, fitListeningDeck, fitSplitDeck, type DeckBounds } from "@/lib/physicalDeckLayout";
+import { fitDeck, fitListeningStereoDeck, fitSplitDeck, fitSplitStereoDeck, fitStereoDeck, type DeckBounds } from "@/lib/physicalDeckLayout";
 
 /** Measure only on actual resize/content mounting, never on rail progress. */
 export function usePhysicalDeckLayout(viewport: RefObject<HTMLDivElement | null>, placement: RefObject<HTMLDivElement | null>, scene: RefObject<HTMLDivElement | null>, identity: string) {
@@ -57,15 +57,17 @@ export function usePhysicalDeckLayout(viewport: RefObject<HTMLDivElement | null>
           else booklet.style.removeProperty("--pSplit");
         }
       }
-      // The approved Deck camera stays unchanged; Split gets its own measured
-      // slot and a shared, higher centre with the unchanged-size booklet.
-      const deckWidth = w * .80;
-      const deckClosed = fitDeck(closed, deckWidth, h - 128, w / 2, h - 64);
-      const deckCenter = h * .55;
-      const deckBottom = deckCenter + (closed.bottom - closed.top) * deckClosed.scale / 2;
-      const split = fitSplitDeck(closed, open, { width: w, height: h, bookletLeft });
-      const fits = { "deck-closed": fitDeck(closed, deckWidth, h - 128, w / 2, deckBottom),
-        "deck-open": fitDeck(open, w - 64, h - 96, w / 2, h - 64),
+      // Deck composes the stereo front from its actual metal silhouette. Split
+      // retains its own measured slot and the unchanged-size booklet.
+      const stereo = fitStereoDeck(closed, open, w, h);
+      const splitFrame = { width: w, height: h, bookletLeft };
+      const splitStereo = fitSplitStereoDeck(closed, open, splitFrame);
+      const split = overlay ? splitStereo : fitSplitDeck(closed, open, splitFrame);
+      // Standalone pose previews do not have the stereo overlay.
+      const preview = !overlay ? fitDeck(closed, w * .80, h - 128, w / 2, h - 64) : null;
+      const previewBottom = preview ? h * .55 + (closed.bottom - closed.top) * preview.scale / 2 : 0;
+      const fits = { "deck-closed": preview ? fitDeck(closed, w * .80, h - 128, w / 2, previewBottom) : stereo.closed,
+        "deck-open": preview ? fitDeck(open, w - 64, h - 96, w / 2, h - 64) : stereo.open,
         "split-closed": split.closed,
         "split-open": split.open };
       for (const [name, fit] of Object.entries(fits)) {
@@ -75,7 +77,13 @@ export function usePhysicalDeckLayout(viewport: RefObject<HTMLDivElement | null>
       body.style.setProperty("--split-open-sy", String(split.open.scaleY));
       body.style.setProperty("--split-rotation", `${split.rotation}deg`);
       if (overlay) {
-        const listening = fitListeningDeck(closed, w, h);
+        const listening = fitListeningStereoDeck(closed, w, h);
+        for (const [name, pair] of [["deck", stereo.speakers], ["split", splitStereo.speakers], ["listen", listening.speakers]] as const) {
+          frame.style.setProperty(`--speaker-${name}-height`, `${pair.height}px`);
+          frame.style.setProperty(`--speaker-${name}-left-x`, `${pair.leftX}px`);
+          frame.style.setProperty(`--speaker-${name}-right-x`, `${pair.rightX}px`);
+          frame.style.setProperty(`--speaker-${name}-top`, `${pair.top}px`);
+        }
         body.style.setProperty("--listen-x", `${listening.x}px`);
         body.style.setProperty("--listen-y", `${listening.y}px`);
         body.style.setProperty("--listen-scale", String(listening.scale));
@@ -89,6 +97,7 @@ export function usePhysicalDeckLayout(viewport: RefObject<HTMLDivElement | null>
       }
       frame.dataset.closedBounds = JSON.stringify(closed); frame.dataset.openBounds = JSON.stringify(open);
       frame.dataset.splitSlot = JSON.stringify(split.slot);
+      frame.dataset.stereoLayout = JSON.stringify({ ...stereo, split: splitStereo });
       frame.dataset.layoutMeasurements = String(Number(frame.dataset.layoutMeasurements ?? 0) + 1);
     };
     update();

@@ -85,12 +85,24 @@ async function expectDocked(page) {
   await expect(page.getByTestId("rail-flying-disc")).toHaveCount(0);
 }
 
-async function liftDisc(page) {
-  await lift(page).click();
+async function expectDiscFocus(page, input) {
+  // Programmatic focus after a pointer lift is needed for subsequent keyboard
+  // navigation, but must not paint a detached ring around the free 3D disc.
+  await expect(elevated(page)).toBeFocused();
+  await expect(elevated(page)).toHaveAttribute("data-disc-focus-input", input);
+  await expect(elevated(page)).toHaveCSS("outline-style", input === "pointer" ? "none" : "solid");
+}
+
+async function liftDisc(page, input = "pointer") {
+  if (input === "keyboard") {
+    await lift(page).focus();
+    await page.keyboard.press("Enter");
+  } else await lift(page).click();
   await expect(page.locator("[data-physical-deck]")).toHaveAttribute("data-disc-state", "free");
   await expect(elevated(page)).toBeVisible();
   await expectActualWebGL(page);
   await expectSameDisc(page);
+  await expectDiscFocus(page, input);
   await expect(footer(page)).toBeVisible();
   await expect.poll(() => footer(page).evaluate((node) => Number(getComputedStyle(node).opacity))).toBeGreaterThan(.95);
 }
@@ -127,8 +139,10 @@ test("Deck normal: one persistent CD lifts, follows native drag and docks withou
   await expect(page.locator("[data-physical-deck]")).toHaveAttribute("data-disc-state", "free");
   await expectActualWebGL(page);
   await expectSameDisc(page);
+  await expectDiscFocus(page, "pointer");
   const neutral = await poseRotation(page);
   await startDrag(page);
+  await expectDiscFocus(page, "pointer");
   const heldPhase = (await meshPose(page)).elapsed;
   const heldSamples = await sampleMesh(page, 100);
   expect(heldSamples.every((sample) => sample.dragging && Math.abs(sample.elapsed - heldPhase) < 1e-6)).toBe(true);
@@ -161,11 +175,12 @@ test("P1 normal: paused track stays paused through keyboard inspection and Escap
   await expect(page.getByTestId("deck-now-playing")).toHaveAttribute("data-is-playing", "false");
   await rememberDisc(page);
   const before = await canonicalState(page);
-  await liftDisc(page);
+  await liftDisc(page, "keyboard");
   await elevated(page).focus();
   const neutral = await poseRotation(page);
   const pausedNativePhase = (await meshPose(page)).elapsed;
   await page.keyboard.down("ArrowRight");
+  await expectDiscFocus(page, "keyboard");
   await expect.poll(() => poseRotation(page)).not.toEqual(neutral);
   const rotated = await poseRotation(page);
   await page.keyboard.up("ArrowRight");

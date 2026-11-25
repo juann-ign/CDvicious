@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { simulatedPlaybackSeconds, simulatedPulse } from "@/lib/simulatedAudio";
+import type { SimulatedAudioClockRef } from "@/hooks/useSimulatedAudioClock";
 import styles from "./VfdSpectrum.module.css";
 
 interface VfdSpectrumProps {
@@ -8,6 +10,7 @@ interface VfdSpectrumProps {
   progressMs: number | null;
   isPlaying: boolean;
   active: boolean;
+  clock: SimulatedAudioClockRef;
 }
 
 const BAND_COUNT = 12;
@@ -18,29 +21,6 @@ const PEAK_HOLD_MS = 450;
 const PEAK_DECAY_MS = 420;
 const BANDS = Array.from({ length: BAND_COUNT }, (_, index) => index);
 
-function trackSeed(trackKey: string) {
-  let hash = 2166136261;
-  for (let index = 0; index < trackKey.length; index++) {
-    hash = Math.imul(hash ^ trackKey.charCodeAt(index), 16777619);
-  }
-  return hash >>> 0;
-}
-
-function simulatedPulse(seconds: number, seed: number) {
-  const beat = seconds * (90 + seed % 37) / 60;
-  const phase = (seed % 100) / 100 * 2 * Math.PI;
-  const phrase = (1 + Math.sin(beat * Math.PI / 4 + phase)) / 2;
-  const kick = Math.exp(-(beat % 1) * 8);
-  const snare = Math.floor(beat) % 2 === 1 ? Math.exp(-(beat % 1) * 6) : 0;
-  const hats = Math.exp(-(beat * 2 % 1) * 8);
-  return {
-    low: 0.26 + 0.17 * phrase + 0.51 * kick,
-    middle: 0.22 + 0.17 * phrase + 0.16 * kick + 0.27 * snare,
-    high: 0.10 + 0.10 * phrase + 0.27 * hats + 0.17 * snare,
-    phase: beat * Math.PI / 3 + phase,
-  };
-}
-
 function simulatedLevel(position: number, pulse: ReturnType<typeof simulatedPulse>) {
   // Nearby bands share an envelope, with a small wave across the display.
   const base = position <= 0.5
@@ -50,9 +30,9 @@ function simulatedLevel(position: number, pulse: ReturnType<typeof simulatedPuls
   return Math.max(0, Math.min(1, base + ripple));
 }
 
-export function VfdSpectrum({ trackKey, progressMs, isPlaying, active }: VfdSpectrumProps) {
+export function VfdSpectrum({ trackKey, progressMs, isPlaying, active, clock }: VfdSpectrumProps) {
   const rootRef = useRef<HTMLDivElement>(null);
-  const clock = useRef({ progress: 0, sampledAt: 0, playing: false });
+  const playingRef = useRef(isPlaying);
   const refreshRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
@@ -68,11 +48,13 @@ export function VfdSpectrum({ trackKey, progressMs, isPlaying, active }: VfdSpec
       drawnLevel: -1,
       drawnPeak: -1,
     }));
-    const seed = trackSeed(trackKey);
+    const seed = clock.current.seed;
     const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
     let frame: number | null = null;
     let lastDraw = 0;
     let reducedPlaying: boolean | null = null;
+
+    const playingTrack = () => playingRef.current && clock.current.playing && clock.current.trackKey === trackKey;
 
     function setMotion(state: "idle" | "reduced" | "playing" | "decaying") {
       if (root.dataset.motion !== state) root.dataset.motion = state;
@@ -114,8 +96,7 @@ export function VfdSpectrum({ trackKey, progressMs, isPlaying, active }: VfdSpec
         return;
       }
       lastDraw = now;
-      const { playing, progress, sampledAt } = clock.current;
-      const pulse = playing ? simulatedPulse((progress + Math.max(0, now - sampledAt)) / 1000, seed) : null;
+      const pulse = playingTrack() ? simulatedPulse(simulatedPlaybackSeconds(clock.current, now), seed) : null;
       for (const band of bands) {
         const target = pulse ? simulatedLevel(band.position, pulse) : 0;
         band.level = Math.max(target, band.level - delta / DECAY_MS);
@@ -138,7 +119,7 @@ export function VfdSpectrum({ trackKey, progressMs, isPlaying, active }: VfdSpec
         setMotion("idle");
         return;
       }
-      const { playing } = clock.current;
+      const playing = playingTrack();
       if (motion.matches) {
         stop();
         if (root.dataset.motion !== "reduced" || reducedPlaying !== playing) {
@@ -169,13 +150,12 @@ export function VfdSpectrum({ trackKey, progressMs, isPlaying, active }: VfdSpec
       document.removeEventListener("visibilitychange", onVisibilityOrMotion);
       motion.removeEventListener("change", onVisibilityOrMotion);
     };
-  }, [trackKey, active]);
+  }, [trackKey, active, clock]);
 
   useEffect(() => {
-    const progress = progressMs !== null && Number.isFinite(progressMs) ? Math.max(0, progressMs) : 0;
-    clock.current = { progress, sampledAt: performance.now(), playing: isPlaying };
+    playingRef.current = isPlaying;
     refreshRef.current?.();
-  }, [trackKey, progressMs, isPlaying, active]);
+  }, [trackKey, progressMs, isPlaying, active, clock]);
 
   return <div ref={rootRef} className={styles.spectrum} role="img" aria-label="Espectro simulado" data-vfd-spectrum>
     <div className={styles.bands} aria-hidden="true">

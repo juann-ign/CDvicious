@@ -1,6 +1,7 @@
-﻿"use client";
+"use client";
 import { useCallback, useContext, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { RailContext } from "@/components/scroll/RailContext";
+import { fitRetreatedStereoDeck } from "@/lib/physicalDeckLayout";
 import { interpolateDiscQuad, quadToCssMatrix, readDiscQuad, translateDiscQuad, type DiscQuad } from "@/lib/discFlightGeometry";
 import { airAboveDock, createDeckLiftTimeline, draggedDiscOrientation, foregroundDiscQuad, retreatedDeckTransform, returnedDiscOrientation, sampleLiftedDisc, splitDeckLiftLayout, type DeckLiftPhase, type DeckLiftSample, type DeckLiftSlot, type DiscOrientation } from "@/lib/deckLiftPrototype";
 
@@ -32,6 +33,18 @@ export function useDeckLiftPrototype(refs: LiftRefs, options: LiftOptions) {
     const clock = timeline.current;
     let raf: number | null = null, returnRaf: number | null = null, focusRaf: number | null = null, geometryRaf: number | null = null;
     let mounted = true, portal = false;
+    // A programmatic focus transfer can activate :focus-visible even after a
+    // mouse click on the latch, because the latch is disabled during the lift.
+    // Track the user's modality locally while retaining the CD's real focus.
+    let focusInput: "keyboard" | "pointer" = "keyboard";
+    const setFocusInput = (value: typeof focusInput) => {
+      focusInput = value;
+      if (portal) disc.dataset.discFocusInput = value;
+    };
+    const pointerInput = () => setFocusInput("pointer");
+    const keyboardInput = (event: KeyboardEvent) => {
+      if (!event.metaKey && !event.altKey && !event.ctrlKey && !["Shift", "Control", "Alt", "Meta"].includes(event.key)) setFocusInput("keyboard");
+    };
     const railRoot = frame.closest("[data-rail-overlay]")?.parentElement?.querySelector<HTMLElement>("[data-rail-ready]")
       ?? document.querySelector<HTMLElement>("[data-rail-ready]");
     const railWrapper = railRoot?.querySelector<HTMLElement>("[data-rail-wrapper]");
@@ -90,6 +103,7 @@ export function useDeckLiftPrototype(refs: LiftRefs, options: LiftOptions) {
       design.style.setProperty("--prototype-scene-x", `${mix(deck.x, split.x) * amount}px`);
       design.style.setProperty("--prototype-scene-y", `${mix(deck.y, split.y) * amount}px`);
       design.style.setProperty("--prototype-scene-scale", String(1 + (mix(deck.scale, split.scale) - 1) * amount));
+      frame.style.setProperty("--speaker-lift-progress", String(amount));
     };
 
     const measureSplitSlot = (bounds: DOMRect): DeckLiftSlot => {
@@ -138,11 +152,36 @@ export function useDeckLiftPrototype(refs: LiftRefs, options: LiftOptions) {
           if (!surfaces.length || !designBounds.width) return null;
           const left = Math.min(...surfaces.map(rect => rect.left)), right = Math.max(...surfaces.map(rect => rect.right));
           const top = Math.min(...surfaces.map(rect => rect.top)), bottom = Math.max(...surfaces.map(rect => rect.bottom));
-          if (progress === 0) return retreatedDeckTransform(bounds, designBounds, { left, right, top, bottom }, density);
           const transform = getComputedStyle(body).transform;
           const matrix = transform === "none" ? new DOMMatrixReadOnly() : new DOMMatrixReadOnly(transform);
           const basis = { origin: { x: bounds.left + matrix.m41, y: bounds.top + matrix.m42 }, xx: matrix.m11, xy: matrix.m12, yx: matrix.m21, yy: matrix.m22 };
-          return retreatedDeckTransform(bounds, designBounds, { left, right, top, bottom }, density, { progress, slot: splitSlot, basis });
+          const retreat = retreatedDeckTransform(bounds, designBounds, { left, right, top, bottom }, density,
+            progress ? { progress, slot: splitSlot, basis } : undefined);
+          // The same measured surface/camera drives the cabinets and the free CD.
+          // Express the resulting metal silhouette in viewport-local coordinates.
+          const x = basis.origin.x + basis.xx * retreat.x + basis.yx * retreat.y - bounds.left;
+          const y = basis.origin.y + basis.xy * retreat.x + basis.yy * retreat.y - bounds.top;
+          const player = { left: x + (left - basis.origin.x) * retreat.scale, right: x + (right - basis.origin.x) * retreat.scale,
+            top: y + (top - basis.origin.y) * retreat.scale, bottom: y + (bottom - basis.origin.y) * retreat.scale };
+          const foreground = progress ? splitLayout.disc : foregroundDiscQuad(bounds);
+          const region = { left: progress ? splitLayout.equipment.left - bounds.left : Math.min(40, bounds.width * .05),
+            right: progress ? splitLayout.equipment.right - bounds.left : bounds.width - Math.min(40, bounds.width * .05),
+            top: progress ? splitSlot.top - bounds.top : Math.min(24, bounds.height * .035),
+            bottom: foreground.tl.y - bounds.top - 12 };
+          const stereo = fitRetreatedStereoDeck(player, region, Boolean(progress));
+          const name = progress ? "free-split" : "free-deck", pair = stereo.speakers;
+          frame.style.setProperty(`--speaker-${name}-height`, `${pair.height}px`);
+          frame.style.setProperty(`--speaker-${name}-left-x`, `${pair.leftX}px`);
+          frame.style.setProperty(`--speaker-${name}-right-x`, `${pair.rightX}px`);
+          frame.style.setProperty(`--speaker-${name}-top`, `${pair.top}px`);
+          const determinant = basis.xx * basis.yy - basis.xy * basis.yx;
+          if (stereo.scale === 1 || Math.abs(determinant) < 1e-12) return retreat;
+          // Shrink only if necessary and preserve the camera's center and lower
+          // edge, so neither the settled disc nor the latch moves.
+          const dx = (1 - stereo.scale) * retreat.scale * ((left + right) / 2 - basis.origin.x);
+          const dy = (1 - stereo.scale) * retreat.scale * (bottom - basis.origin.y);
+          return { scale: retreat.scale * stereo.scale, x: retreat.x + (basis.yy * dx - basis.yx * dy) / determinant,
+            y: retreat.y + (-basis.xy * dx + basis.xx * dy) / determinant };
         };
         const deck = measure(0), split = measure(1);
         if (!deck || !split) return false;
@@ -178,14 +217,14 @@ export function useDeckLiftPrototype(refs: LiftRefs, options: LiftOptions) {
     const detach = (quad: DiscQuad) => {
       if (portal) return;
       savedStyle = disc.style.cssText;
-      savedAttributes = ["role", "aria-hidden", "aria-label", "tabindex", "title", "data-prototype-disc"].map(name => [name, disc.getAttribute(name)]);
+      savedAttributes = ["role", "aria-hidden", "aria-label", "tabindex", "title", "data-prototype-disc", "data-disc-focus-input"].map(name => [name, disc.getAttribute(name)]);
       const width = disc.clientWidth, height = disc.clientHeight;
       portalWidth = width; portalHeight = height;
       overlay.append(disc); portal = true;
       Object.assign(disc.style, { position: "absolute", left: "0px", top: "0px", width: `${width}px`, height: `${height}px`, margin: "0px", transformOrigin: "0 0", pointerEvents: "none" });
       disc.setAttribute("role", "group"); disc.setAttribute("aria-hidden", "false"); disc.setAttribute("aria-label", "CD elevado");
       disc.setAttribute("title", "Arrastrá para orientar el CD. Al soltar vuelve suavemente. Flechas para orientar; Escape para acoplar.");
-      disc.dataset.prototypeDisc = "true"; setDrag(false); setReturn(false); paint(quad);
+      disc.dataset.prototypeDisc = "true"; disc.dataset.discFocusInput = focusInput; setDrag(false); setReturn(false); paint(quad);
     };
     const releaseDrag = () => {
       const current = drag; if (!current) return;
@@ -207,6 +246,7 @@ export function useDeckLiftPrototype(refs: LiftRefs, options: LiftOptions) {
       body.style.setProperty("--deck-lid-offset", savedLid);
       for (const name of ["--prototype-scene-x", "--prototype-scene-y", "--prototype-scene-scale"]) design.style.removeProperty(name);
       frame.style.removeProperty("--split-lift-right"); frame.style.removeProperty("--split-lift-bottom");
+      frame.style.removeProperty("--speaker-lift-progress");
       delete frame.dataset.splitLiftSlot;
       currentQuad = null; sourceQuad = null; geometry = null;
       lastFreeProgress = NaN; portalWidth = 0; portalHeight = 0;
@@ -342,6 +382,7 @@ export function useDeckLiftPrototype(refs: LiftRefs, options: LiftOptions) {
     disc.addEventListener("pointerdown", pointerdown); disc.addEventListener("pointermove", pointermove);
     disc.addEventListener("pointerup", pointerend); disc.addEventListener("pointercancel", pointerend); disc.addEventListener("lostpointercapture", pointerend);
     disc.addEventListener("keydown", keydown); disc.addEventListener("keyup", keyup); disc.addEventListener("wheel", wheel, { passive: false }); disc.addEventListener("blur", blur);
+    window.addEventListener("pointerdown", pointerInput, true); window.addEventListener("keydown", keyboardInput, true);
     window.addEventListener("keydown", escape, true); window.addEventListener("cdvicious:disc-flight-started", started); window.addEventListener("blur", blur);
     document.addEventListener("visibilitychange", hidden); reduced.addEventListener("change", motion);
     const observer = new ResizeObserver(resize); observer.observe(frame);
@@ -375,6 +416,7 @@ export function useDeckLiftPrototype(refs: LiftRefs, options: LiftOptions) {
       disc.removeEventListener("pointerdown", pointerdown); disc.removeEventListener("pointermove", pointermove);
       disc.removeEventListener("pointerup", pointerend); disc.removeEventListener("pointercancel", pointerend); disc.removeEventListener("lostpointercapture", pointerend);
       disc.removeEventListener("keydown", keydown); disc.removeEventListener("keyup", keyup); disc.removeEventListener("wheel", wheel); disc.removeEventListener("blur", blur);
+      window.removeEventListener("pointerdown", pointerInput, true); window.removeEventListener("keydown", keyboardInput, true);
       window.removeEventListener("keydown", escape, true); window.removeEventListener("cdvicious:disc-flight-started", started); window.removeEventListener("blur", blur);
       document.removeEventListener("visibilitychange", hidden); reduced.removeEventListener("change", motion);
     };

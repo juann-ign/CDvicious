@@ -26,7 +26,7 @@ async function expectFooterHidden(page) {
 }
 
 // Root-reviewed poses implement the new raised Split composition. Keep the
-// original 2px tolerance, physical silhouette and unchanged Deck guards.
+// original 2px tolerance; Split keeps its center and paper, fitting the stereo pair.
 const approvedSplit = Object.fromEntries(Object.entries(require("./fixtures/split-balance-approved.json").split).map(([size, pose]) => [size, {
   ...pose.equipment, paperLeft: pose.booklet.x, paperTop: pose.booklet.y,
   paperWidth: pose.booklet.width, paperHeight: pose.booklet.height,
@@ -44,8 +44,8 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 1280, height: 800
           sceneWidth: deck.querySelector("[data-deck-design-frame]").clientWidth };
       });
       const deck = await measure();
-      expect(deck.right - deck.left).toBeGreaterThanOrEqual(viewport.width * 0.65);
-      expect(deck.right - deck.left).toBeLessThanOrEqual(viewport.width * 0.85);
+      expect(deck.right - deck.left).toBeGreaterThanOrEqual(viewport.width * 0.56);
+      expect(deck.right - deck.left).toBeLessThanOrEqual(viewport.width * 0.60);
       await expectFooterHidden(page);
       await hardware(page).evaluate((node) => { window.__approvedPersistentDeck = node; });
       await go(page, "Split", 1);
@@ -54,7 +54,10 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 1280, height: 800
       const split = await measure();
       expect(split.sceneWidth).toBe(deck.sceneWidth);
       const approved = approvedSplit[`${viewport.width}x${viewport.height}`];
-      for (const edge of ["left", "right", "top", "bottom"]) expect(Math.abs(split[edge] - approved[edge])).toBeLessThan(2);
+      for (const [a, b] of [["left", "right"], ["top", "bottom"]]) {
+        expect(Math.abs((split[b] - split[a]) - .88 * (approved[b] - approved[a]))).toBeLessThan(2);
+        expect(Math.abs((split[a] + split[b] - approved[a] - approved[b]) / 2)).toBeLessThan(2);
+      }
       const paper = await page.getByTestId("lyrics-booklet").boundingBox();
       expect(Math.abs(paper.x - approved.paperLeft)).toBeLessThan(2);
       expect(Math.abs(paper.y - approved.paperTop)).toBeLessThan(2);

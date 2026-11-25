@@ -9,6 +9,8 @@ import { usePhysicalDeckLayout } from "@/hooks/usePhysicalDeckLayout";
 import { PhysicalVolumeKnob } from "./PhysicalVolumeKnob";
 import { PhysicalDeckFront } from "./PhysicalDeckFront";
 import { DeckLiftLatch } from "./DeckLiftLatch";
+import { DeckSpeakers } from "./DeckSpeakers";
+import { useSimulatedAudioClock } from "@/hooks/useSimulatedAudioClock";
 import type { useCanonicalPlayerControls } from "@/hooks/useCanonicalPlayerControls";
 import { useDeckLiftPrototype } from "@/hooks/useDeckLiftPrototype";
 import type { DeckLiftPhase } from "@/lib/deckLiftPrototype";
@@ -45,6 +47,9 @@ export interface PhysicalDeckProps {
   track?: SpotifyTrack | null;
   accentColor?: string;
   loading?: boolean;
+  speakersEnabled?: boolean;
+  speakersVisible?: boolean;
+  speakersActive?: boolean;
 }
 
 const poseLabels: Record<PhysicalDeckPose, string> = {
@@ -80,7 +85,9 @@ function DiscFace({ albumName, artwork }: { albumName: string; artwork?: string 
  * 0 closes the halves; 135 exposes the mechanism. The destination plane stays
  * dimensioned when its visual disc is hidden, for a later geometric handoff.
  */
-export function PhysicalDeck({ pose, albumName = "COMPACT DISC", artwork, statusText, displayTitle, artistText, progressMs = null, durationMs = null, showDisc = true, lidOffset, isPlaying = false, staticMode = false, discVisual, className, discTargetRef, controls, controlsActive = true, albumId, liftEnabled = false, liftActive = false, liftChapter = "deck", liftBusy = false, onLiftPhaseChange, track, accentColor = "#1DB954", loading = false }: PhysicalDeckProps) {
+export function PhysicalDeck({ pose, albumName = "COMPACT DISC", artwork, statusText, displayTitle, artistText, progressMs = null, durationMs = null, showDisc = true, lidOffset, isPlaying = false, staticMode = false, discVisual, className, discTargetRef, controls, controlsActive = true, albumId, liftEnabled = false, liftActive = false, liftChapter = "deck", liftBusy = false, onLiftPhaseChange, track, accentColor = "#1DB954", loading = false, speakersEnabled = false, speakersVisible = false, speakersActive = false }: PhysicalDeckProps) {
+  const signalPlaying = isPlaying && !loading && pose !== "wait";
+  const simulationClock = useSimulatedAudioClock(track?.id, progressMs, signalPlaying);
   const viewportRef = useRef<HTMLDivElement>(null);
   const placementRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<HTMLDivElement>(null);
@@ -124,6 +131,8 @@ export function PhysicalDeck({ pose, albumName = "COMPACT DISC", artwork, status
   const showAcceptedVisual = pose === "docked" && showDisc && Boolean(discVisual);
   const rotorStyle = { animation: staticMode ? "none" : undefined, animationPlayState: isPlaying && !lift.dragging && lift.phase === "docked" && pose === "docked" && !staticMode ? "running" : "paused" } as CSSProperties;
   return <div ref={viewportRef} className={[styles.viewport, className].filter(Boolean).join(" ")} data-physical-deck data-deck-render-density="2" data-deck-pose={pose} data-lift-chapter={liftChapter} role={controls ? "group" : "img"} aria-label={`Reproductor de CD ${poseLabels[pose]}${pose === "wait" ? "" : `: ${albumName}`}`}>
+    {speakersEnabled && <DeckSpeakers playing={signalPlaying} active={speakersActive} visible={speakersVisible}
+      trackKey={track?.id} clock={simulationClock} volume={controls?.volumeAvailable ? controls.volume : null} />}
     <div ref={placementRef} className={styles.placement} style={style} data-deck-mechanism data-disc-spinning={isPlaying && !lift.dragging && pose === "docked" && !staticMode} data-deck-static={staticMode}>
     <div ref={sceneRef} className={styles.scene} data-deck-design-frame>
       <div className={styles.floorShadow} aria-hidden="true" />
@@ -182,7 +191,7 @@ export function PhysicalDeck({ pose, albumName = "COMPACT DISC", artwork, status
           <PhysicalDeckFront title={displayTitle ?? (pose === "wait" ? "CDVICIOUS" : albumName)}
             artist={artistText} status={statusText} pose={pose} isPlaying={isPlaying} loading={loading}
             progressMs={progressMs} durationMs={durationMs} controls={controls} controlsActive={controlsActive}
-            trackId={track?.id} />
+            trackId={track?.id} simulationClock={simulationClock} />
         </div>
         <span className={`${styles.foot} ${styles.footLeft}`} data-deck-surface /><span className={`${styles.foot} ${styles.footRight}`} data-deck-surface />
       </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import type { useCanonicalPlayerControls } from "@/hooks/useCanonicalPlayerControls";
+import type { SimulatedAudioClockRef } from "@/hooks/useSimulatedAudioClock";
 import { ProgressBar } from "./ProgressBar";
 import { VfdSpectrum } from "./VfdSpectrum";
 import styles from "./PhysicalDeckFront.module.css";
@@ -17,6 +18,7 @@ export interface PhysicalDeckFrontProps {
   pose: "wait" | "open" | "docked";
   loading?: boolean;
   trackId?: string;
+  simulationClock: SimulatedAudioClockRef;
 }
 
 function TransportIcon({ direction }: { direction: "previous" | "next" }) {
@@ -28,7 +30,7 @@ function TransportIcon({ direction }: { direction: "previous" | "next" }) {
 
 /** Faceplate content only: the caller retains the approved physical surface,
  * knob and canonical playback state. All coordinates inherit its --u density. */
-export function PhysicalDeckFront({ title, artist, status, progressMs = null, durationMs = null, isPlaying = false, controls, controlsActive = true, pose, loading = false, trackId }: PhysicalDeckFrontProps) {
+export function PhysicalDeckFront({ title, artist, status, progressMs = null, durationMs = null, isPlaying = false, controls, controlsActive = true, pose, loading = false, trackId, simulationClock }: PhysicalDeckFrontProps) {
   const displayTitle = title?.trim() || (pose === "wait" ? "CDVICIOUS" : "COMPACT DISC");
   const pending = Boolean(controls?.transportPending);
   const reported = status?.trim() ?? "";
@@ -50,7 +52,7 @@ export function PhysicalDeckFront({ title, artist, status, progressMs = null, du
       </div>
       {trackId && (
         <VfdSpectrum trackKey={trackId} progressMs={progressMs}
-          isPlaying={state === "playing"} active={controlsActive} />
+          isPlaying={state === "playing"} active={controlsActive} clock={simulationClock} />
       )}
       {!loading && durationMs != null && (
         <div className={styles.progress}>

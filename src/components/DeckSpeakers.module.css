@@ -1,0 +1,227 @@
+.speakers {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 1;
+  visibility: visible;
+  --speaker-cone-low: 0;
+  --speaker-cone-mid: 0;
+
+  /* One pair follows the exact rail and lift clocks. No independent transition,
+     remount or extra animation loop when the player retreats or changes chapter. */
+  --speaker-normal-height: calc(var(--speaker-deck-height, 0px) + (var(--speaker-split-height, 0px) - var(--speaker-deck-height, 0px)) * var(--pSplit, 0));
+  --speaker-normal-left-x: calc(var(--speaker-deck-left-x, 0px) + (var(--speaker-split-left-x, 0px) - var(--speaker-deck-left-x, 0px)) * var(--pSplit, 0));
+  --speaker-normal-right-x: calc(var(--speaker-deck-right-x, 100%) + (var(--speaker-split-right-x, 100%) - var(--speaker-deck-right-x, 100%)) * var(--pSplit, 0));
+  --speaker-normal-top: calc(var(--speaker-deck-top, 0px) + (var(--speaker-split-top, 0px) - var(--speaker-deck-top, 0px)) * var(--pSplit, 0));
+  --speaker-retreat-height: calc(var(--speaker-free-deck-height, var(--speaker-deck-height, 0px)) + (var(--speaker-free-split-height, var(--speaker-split-height, 0px)) - var(--speaker-free-deck-height, var(--speaker-deck-height, 0px))) * var(--pSplit, 0));
+  --speaker-retreat-left-x: calc(var(--speaker-free-deck-left-x, var(--speaker-deck-left-x, 0px)) + (var(--speaker-free-split-left-x, var(--speaker-split-left-x, 0px)) - var(--speaker-free-deck-left-x, var(--speaker-deck-left-x, 0px))) * var(--pSplit, 0));
+  --speaker-retreat-right-x: calc(var(--speaker-free-deck-right-x, var(--speaker-deck-right-x, 100%)) + (var(--speaker-free-split-right-x, var(--speaker-split-right-x, 100%)) - var(--speaker-free-deck-right-x, var(--speaker-deck-right-x, 100%))) * var(--pSplit, 0));
+  --speaker-retreat-top: calc(var(--speaker-free-deck-top, var(--speaker-deck-top, 0px)) + (var(--speaker-free-split-top, var(--speaker-split-top, 0px)) - var(--speaker-free-deck-top, var(--speaker-deck-top, 0px))) * var(--pSplit, 0));
+  --speaker-height: calc(var(--speaker-normal-height) + (var(--speaker-retreat-height) - var(--speaker-normal-height)) * var(--speaker-lift-progress, 0));
+  --speaker-left-x: calc(var(--speaker-normal-left-x) + (var(--speaker-retreat-left-x) - var(--speaker-normal-left-x)) * var(--speaker-lift-progress, 0));
+  --speaker-right-x: calc(var(--speaker-normal-right-x) + (var(--speaker-retreat-right-x) - var(--speaker-normal-right-x)) * var(--speaker-lift-progress, 0));
+  --speaker-top: calc(var(--speaker-normal-top) + (var(--speaker-retreat-top) - var(--speaker-normal-top)) * var(--speaker-lift-progress, 0));
+}
+
+/* Next Listen shares a centered equipment pose in both chapters. Match the
+   equipment's existing 520ms timing so the same pair moves as part of the rig. */
+:global([data-next-listen-open="true"]) .speakers {
+  --speaker-height: var(--speaker-listen-height, 0px);
+  --speaker-left-x: var(--speaker-listen-left-x, 0px);
+  --speaker-right-x: var(--speaker-listen-right-x, 100%);
+  --speaker-top: var(--speaker-listen-top, 0px);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :global([data-rail-moving="false"] [data-next-listen-motion="true"]) .speaker {
+    transition: top 520ms cubic-bezier(.24, .7, .23, 1),
+      left 520ms cubic-bezier(.24, .7, .23, 1),
+      width 520ms cubic-bezier(.24, .7, .23, 1),
+      height 520ms cubic-bezier(.24, .7, .23, 1);
+  }
+}
+
+/* The outer overlay owns chapter fading; only leaving the listening views
+   fades the pair locally. */
+.pair {
+  position: absolute;
+  inset: 0;
+  opacity: 1;
+  transition: opacity 180ms ease;
+}
+
+.speakers[data-speakers-visible="false"] { visibility: hidden; transition: visibility 0s 180ms; }
+.speakers[data-speakers-visible="false"] .pair { opacity: 0; }
+
+.speaker {
+  --cabinet-height: var(--speaker-height, 0px);
+  --edge: clamp(1px, calc(var(--cabinet-height) * .005), 2px);
+  --frame: clamp(2px, calc(var(--cabinet-height) * .0105), 4px);
+  --brushed: repeating-linear-gradient(0deg, #ffffff12 0 1px, transparent 1px 3px);
+  position: absolute;
+  top: var(--speaker-top, 0px);
+  width: calc(var(--cabinet-height) * .48);
+  height: var(--cabinet-height);
+  transform: translateX(-50%);
+}
+
+.speaker[data-speaker-side="left"] { left: var(--speaker-left-x, 0px); }
+.speaker[data-speaker-side="right"] { left: var(--speaker-right-x, 100%); --speaker-response: .91; }
+
+/* The visible .48H-wide silhouette projects a narrow upright front and a
+   deeper side plane, turned slightly toward the center of the stereo. */
+.frontPlane, .sidePlane, .topPlane { position: absolute; box-sizing: border-box; }
+
+.floorShadow {
+  position: absolute;
+  bottom: -2.2%;
+  left: 1%;
+  width: 98%;
+  height: 7%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, #1c262b66, #26313220 58%, transparent 80%);
+  filter: blur(3px);
+}
+
+.sidePlane {
+  top: 0;
+  bottom: 0;
+  width: 32%;
+  background:
+    var(--brushed),
+    linear-gradient(0deg, #64746a60, transparent 18% 82%, #edf2e566 100%),
+    linear-gradient(90deg, #d0d9ce 0 1px, #aab7ad 2px, #b5c0b6 12%, #94a398 88%, #748378);
+  clip-path: polygon(0 0, 100% 7%, 100% 100%, 0 93%);
+}
+
+.speaker[data-speaker-side="left"] .sidePlane { left: 0; }
+.speaker[data-speaker-side="right"] .sidePlane {
+  right: 0;
+  background:
+    var(--brushed),
+    linear-gradient(0deg, #58636060, transparent 15% 85%, #e5ebe333 100%),
+    linear-gradient(90deg, #6d7b71, #87958b 9%, #9fab9f 84%, #809185 calc(100% - 1px), #b9c6ba);
+  clip-path: polygon(0 7%, 100% 0, 100% 93%, 0 100%);
+}
+
+.topPlane {
+  inset: 0 0 auto;
+  height: 7.3%;
+  background:
+    repeating-linear-gradient(95deg, #f0f5ee0e 0 1px, transparent 1px 4px),
+    linear-gradient(180deg, #929f95, #a9b5a9 80%, #dce4d9 100%);
+  clip-path: polygon(0 0, 68% 0, 100% 100%, 32% 100%);
+}
+
+.speaker[data-speaker-side="right"] .topPlane {
+  clip-path: polygon(32% 0, 100% 0, 68% 100%, 0 100%);
+}
+
+.frontPlane {
+  top: 7%;
+  bottom: 0;
+  width: 68%;
+  padding: var(--frame);
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) minmax(0, .32fr) minmax(0, 1fr);
+  gap: var(--frame);
+  border: var(--edge) solid #71817a;
+  border-top-color: #d7ded7;
+  border-bottom-color: #596b62;
+  background: var(--brushed), linear-gradient(105deg, #d4dcd5, #a8b3ac 38%, #d9dfd9 72%, #8e9c94);
+  box-shadow: inset 0 0 0 1px #ecf0e875;
+}
+
+.speaker[data-speaker-side="left"] .frontPlane { right: 0; }
+.speaker[data-speaker-side="right"] .frontPlane { left: 0; }
+
+.panel {
+  --excursion: calc(var(--speaker-cone-low) * var(--speaker-response, 1));
+  position: relative;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid #18201e;
+  background: radial-gradient(ellipse at 50% 46%, #313937, #1a201e 72%, #101614);
+  box-shadow: inset 0 0 4px #0009;
+}
+
+.panel[data-speaker-panel="woofer-upper"] { --excursion: calc(var(--speaker-cone-mid) * var(--speaker-response, 1)); }
+.panel[data-speaker-panel="tweeter"] { --excursion: 0; }
+
+.driver, .surround, .diaphragm, .dustCap { border-radius: 50%; box-sizing: border-box; }
+.driver {
+  position: relative;
+  width: 85%;
+  aspect-ratio: 1;
+  background: #171e1c;
+  border: 1px solid #48514e;
+  box-shadow: 0 0 2px #090e0c;
+}
+
+.panel[data-speaker-panel="tweeter"] .driver { width: 26%; }
+
+.surround {
+  position: absolute;
+  inset: 4%;
+  background: radial-gradient(circle, #151b19 69%, #111816 75%, #333b38 83%, #202825 91%, #141917 100%);
+}
+
+.diaphragm {
+  position: absolute;
+  inset: 12%;
+  background: radial-gradient(circle, #151b19 10%, #29312e 32%, #45504b 57%, #343e39 73%, #111a17 100%);
+  transform: scale(calc(1 + var(--excursion, 0) * .12));
+}
+
+.diaphragm::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 39% 34%, #9aaca04a, transparent 66%);
+  opacity: clamp(0, calc(.28 + var(--excursion, 0) * .48), .88);
+}
+
+.dustCap {
+  position: absolute;
+  inset: 29%;
+  background: radial-gradient(circle at 36% 28%, #747e76, #424b45 47%, #27312b 72%, #111815 100%);
+  box-shadow: 0 0 2px #0b100e;
+  transform: scale(calc(1 + var(--excursion, 0) * .20));
+}
+
+/* Extra change in the convex dust cap reads as depth through the fixed cloth. */
+.dustCap::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 28%, #a2afa460, transparent 66%);
+  opacity: clamp(0, calc(.15 + var(--excursion, 0) * .70), .85);
+}
+
+.panel[data-speaker-panel="tweeter"] .diaphragm { inset: 18%; }
+.panel[data-speaker-panel="tweeter"] .dustCap { inset: 20%; }
+
+/* A fixed cloth layer hides the driver outlines without hiding their slight
+   excursion. The grain is painted once; only the diaphragm, dust cap and their sheen move. */
+.mesh {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 50%, transparent 28%, #10161385 48%, #141b18a6 66%),
+    linear-gradient(135deg, #3d45412b, #151a187d 75%);
+  background-size: 2.4px 2.4px, 100% 100%;
+  box-shadow: inset 0 0 5px #0b100ec9;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .speakers[data-speakers-visible="false"] { transition: none; }
+  .pair { transition: none; }
+  .diaphragm, .dustCap { transform: none; }
+  .diaphragm::after { opacity: .28; }
+  .dustCap::after { opacity: .15; }
+}

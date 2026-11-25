@@ -1,4 +1,4 @@
-const { test, expect, go, observeRequests } = require("./support/prototype-harness.cjs");
+const { test, expect, go, observeRequests, physicalToggle } = require("./support/prototype-harness.cjs");
 const { openRail } = require("./support/b2-harness.cjs");
 
 test.use({ launchOptions: { args: ["--enable-webgl", "--ignore-gpu-blocklist", "--use-gl=angle"] } });
@@ -18,7 +18,10 @@ async function geometry(page) {
     const right = Math.max(...surfaces.map((rect) => rect.right));
     const shelf = layer.querySelector("[data-next-listen-panel]").getBoundingClientRect();
     const footer = document.querySelector("[data-global-player]").getBoundingClientRect();
-    return { top, bottom, left, right, shelfLeft: shelf.left, shelfRight: shelf.right, shelfTop: shelf.top, shelfBottom: shelf.bottom, footerTop: footer.top };
+    const rect = selector => document.querySelector(selector).getBoundingClientRect().toJSON();
+    return { top, bottom, left, right, shelfLeft: shelf.left, shelfRight: shelf.right, shelfTop: shelf.top, shelfBottom: shelf.bottom, footerTop: footer.top,
+      leftSpeaker: rect('[data-speaker-side="left"]'), rightSpeaker: rect('[data-speaker-side="right"]'),
+      stage: layer.getBoundingClientRect().toJSON(), listing: rect('[data-track-listing-placement] button'), next: rect('[data-deck-next-discs] button') };
   });
 }
 
@@ -43,6 +46,24 @@ async function expectAligned(page) {
   expect(Math.abs(g.right - g.shelfRight)).toBeLessThan(2);
   expect(g.shelfTop - g.bottom).toBeGreaterThan(35);
   expect(g.shelfBottom).toBeLessThanOrEqual(g.footerTop + 1);
+  const pair = page.locator("[data-deck-speakers]");
+  await expect(pair).toHaveAttribute("data-speakers-visible", "true");
+  await expect(pair.locator("[data-speaker-side]")).toHaveCount(2);
+  const { leftSpeaker: l, rightSpeaker: r } = g;
+  expect(l.height).toBeGreaterThan(60);
+  expect(l.height).toBeCloseTo(r.height, 1);
+  expect(Math.abs(l.x + l.width / 2 + r.x + r.width / 2 - g.stage.width)).toBeLessThan(2);
+  expect(l.left).toBeGreaterThanOrEqual(g.stage.left + 16);
+  expect(r.right).toBeLessThanOrEqual(g.stage.right - 16);
+  expect(l.top).toBeGreaterThanOrEqual(g.stage.top);
+  expect(l.bottom).toBeLessThan(g.shelfTop - 12);
+  expect(r.bottom).toBeLessThan(g.shelfTop - 12);
+  expect(l.right - g.left).toBeGreaterThan(l.width * .2);
+  expect(g.right - r.left).toBeGreaterThan(r.width * .2);
+  expect(l.right - g.left).toBeLessThan(l.width * .75);
+  expect(g.right - r.left).toBeLessThan(r.width * .75);
+  const disjoint = (a, b) => a.right + 4 <= b.left || b.right + 4 <= a.left || a.bottom + 4 <= b.top || b.bottom + 4 <= a.top;
+  expect(disjoint(l, g.listing) && disjoint(r, g.next)).toBe(true);
   return g;
 }
 
@@ -160,4 +181,32 @@ test("Next listen fits a short Split, keeps the playing track and returns to the
   await go(page, "Split", 1);
   await expect(toggle(page)).toHaveAttribute("aria-expanded", "false");
   expect(requests.play).toHaveLength(0);
+});
+
+// Full-screen normal motion, with no mock interceptors: the same pair follows
+// both entries into Next Listen and never competes with the browsing shelf.
+test("Next listen stereo stays with the equipment from Deck and Split, and pauses with playback", async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await openRail(page);
+  const pair = page.locator("[data-deck-speakers]");
+  await pair.evaluate(node => { window.__nextListenSpeakers = node; });
+  for (const [chapter, index] of [["Deck", 0], ["Split", 1]]) {
+    await go(page, chapter, index);
+    const before = await pair.locator('[data-speaker-side="left"]').boundingBox();
+    await openListeningView(page, index);
+    await expectAligned(page);
+    expect(await pair.evaluate(node => node === window.__nextListenSpeakers)).toBe(true);
+    await expect(pair).toHaveAttribute("data-speaker-motion", "playing");
+    await page.screenshot({ path: testInfo.outputPath(`Next-listen-${chapter}-1920x1080.png`) });
+    await physicalToggle(page).click();
+    await expect(pair).toHaveAttribute("data-speaker-motion", "idle");
+    await expect.poll(() => pair.locator('[data-speaker-cone^="woofer"]').evaluateAll(nodes => nodes.every(node => new DOMMatrixReadOnly(getComputedStyle(node).transform).a === 1))).toBe(true);
+    await physicalToggle(page).click();
+    await expect(pair).toHaveAttribute("data-speaker-motion", "playing");
+    await toggle(page).click();
+    await expect(shelf(page)).toBeHidden();
+    await expect(overlay(page)).toHaveAttribute("data-next-listen-motion", "false");
+    const after = await pair.locator('[data-speaker-side="left"]').boundingBox();
+    for (const key of ["x", "y", "width", "height"]) expect(Math.abs(after[key] - before[key])).toBeLessThan(2);
+  }
 });

@@ -100,7 +100,19 @@ test("front layout: Deck and Split retain their composition, readable contents a
       expect(current.controlClearance).toBeGreaterThanOrEqual(12);
       expect(current.controls).toHaveLength(3);
       for (const control of current.controls) { inside(control.rect, current.front); expect(control.hit).toBe(true); }
-      for (const edge of ["left", "right", "top", "bottom"]) expect(Math.abs(current.equipment[edge] - approved.equipment[edge])).toBeLessThan(2);
+      if (index === 0) {
+        // The stereo composition deliberately replaces the old Deck pose.
+        const equipmentWidth = current.equipment.right - current.equipment.left;
+        expect(equipmentWidth).toBeGreaterThanOrEqual(viewport.width * .56);
+        expect(equipmentWidth).toBeLessThanOrEqual(viewport.width * .60);
+        expect(Math.abs((current.equipment.left + current.equipment.right) / 2 - viewport.width / 2)).toBeLessThan(2);
+      } else {
+        // The stereo pair reserves equal margins around the same approved Split center.
+        for (const [a, b] of [["left", "right"], ["top", "bottom"]]) {
+          expect(Math.abs((current.equipment[b] - current.equipment[a]) - .88 * (approved.equipment[b] - approved.equipment[a]))).toBeLessThan(2);
+          expect(Math.abs((current.equipment[a] + current.equipment[b] - approved.equipment[a] - approved.equipment[b]) / 2)).toBeLessThan(2);
+        }
+      }
       if (index === 1) {
         for (const key of ["x", "y", "width", "height"]) expect(Math.abs(current.paper[key] - approved.paper[key])).toBeLessThan(2);
         expect(current.equipment.right).toBeLessThan(current.paper.left);
