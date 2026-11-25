@@ -7,7 +7,7 @@
     "label": "CDvicious Demo Label",
     "images": [
       {
-        "url": "https://placehold.co/600x600/111111/ffffff.png?text=01",
+        "url": "/images/mock-albums/01.png",
         "width": 600,
         "height": 600
       }
@@ -31,7 +31,7 @@
     "label": "CDvicious Demo Label",
     "images": [
       {
-        "url": "https://placehold.co/600x600/111111/ffffff.png?text=02",
+        "url": "/images/mock-albums/02.png",
         "width": 600,
         "height": 600
       }
@@ -55,7 +55,7 @@
     "label": "CDvicious Demo Label",
     "images": [
       {
-        "url": "https://placehold.co/600x600/111111/ffffff.png?text=03",
+        "url": "/images/mock-albums/03.png",
         "width": 600,
         "height": 600
       }
@@ -79,7 +79,7 @@
     "label": "CDvicious Demo Label",
     "images": [
       {
-        "url": "https://placehold.co/600x600/111111/ffffff.png?text=04",
+        "url": "/images/mock-albums/04.png",
         "width": 600,
         "height": 600
       }
@@ -103,7 +103,7 @@
     "label": "CDvicious Demo Label",
     "images": [
       {
-        "url": "https://placehold.co/600x600/111111/ffffff.png?text=05",
+        "url": "/images/mock-albums/05.png",
         "width": 600,
         "height": 600
       }
@@ -127,7 +127,7 @@
     "label": "CDvicious Demo Label",
     "images": [
       {
-        "url": "https://placehold.co/600x600/111111/ffffff.png?text=06",
+        "url": "/images/mock-albums/06.png",
         "width": 600,
         "height": 600
       }
@@ -151,7 +151,7 @@
     "label": "CDvicious Demo Label",
     "images": [
       {
-        "url": "https://placehold.co/600x600/111111/ffffff.png?text=07",
+        "url": "/images/mock-albums/07.png",
         "width": 600,
         "height": 600
       }
@@ -175,7 +175,7 @@
     "label": "CDvicious Demo Label",
     "images": [
       {
-        "url": "https://placehold.co/600x600/111111/ffffff.png?text=08",
+        "url": "/images/mock-albums/08.png",
         "width": 600,
         "height": 600
       }
@@ -199,7 +199,7 @@
     "label": "CDvicious Demo Label",
     "images": [
       {
-        "url": "https://placehold.co/600x600/111111/ffffff.png?text=09",
+        "url": "/images/mock-albums/09.png",
         "width": 600,
         "height": 600
       }
@@ -223,7 +223,7 @@
     "label": "CDvicious Demo Label",
     "images": [
       {
-        "url": "https://placehold.co/600x600/111111/ffffff.png?text=10",
+        "url": "/images/mock-albums/10.png",
         "width": 600,
         "height": 600
       }
@@ -247,7 +247,7 @@
     "label": "CDvicious Demo Label",
     "images": [
       {
-        "url": "https://placehold.co/600x600/111111/ffffff.png?text=11",
+        "url": "/images/mock-albums/11.png",
         "width": 600,
         "height": 600
       }
@@ -271,7 +271,7 @@
     "label": "CDvicious Demo Label",
     "images": [
       {
-        "url": "https://placehold.co/600x600/111111/ffffff.png?text=12",
+        "url": "/images/mock-albums/12.png",
         "width": 600,
         "height": 600
       }
@@ -295,7 +295,7 @@
     "label": "CDvicious Demo Label",
     "images": [
       {
-        "url": "https://placehold.co/600x600/111111/ffffff.png?text=13",
+        "url": "/images/mock-albums/13.png",
         "width": 600,
         "height": 600
       }
@@ -319,7 +319,7 @@
     "label": "CDvicious Demo Label",
     "images": [
       {
-        "url": "https://placehold.co/600x600/111111/ffffff.png?text=14",
+        "url": "/images/mock-albums/14.png",
         "width": 600,
         "height": 600
       }
@@ -343,7 +343,7 @@
     "label": "CDvicious Demo Label",
     "images": [
       {
-        "url": "https://placehold.co/600x600/111111/ffffff.png?text=15",
+        "url": "/images/mock-albums/15.png",
         "width": 600,
         "height": 600
       }
@@ -367,7 +367,7 @@
     "label": "CDvicious Demo Label",
     "images": [
       {
-        "url": "https://placehold.co/600x600/111111/ffffff.png?text=16",
+        "url": "/images/mock-albums/16.png",
         "width": 600,
         "height": 600
       }
@@ -391,7 +391,7 @@
     "label": "CDvicious Demo Label",
     "images": [
       {
-        "url": "https://placehold.co/600x600/111111/ffffff.png?text=17",
+        "url": "/images/mock-albums/17.png",
         "width": 600,
         "height": 600
       }
@@ -415,7 +415,7 @@
     "label": "CDvicious Demo Label",
     "images": [
       {
-        "url": "https://placehold.co/600x600/111111/ffffff.png?text=18",
+        "url": "/images/mock-albums/18.png",
         "width": 600,
         "height": 600
       }
