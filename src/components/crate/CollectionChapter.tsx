@@ -13,7 +13,7 @@ import {
 import { useAlbumDetailActions } from "./AlbumDetailNavigation";
 import { JewelCaseFront } from "./JewelCaseFront";
 import { useCatalogNavigation } from "./CatalogNavigation";
-import { ArtistCrateShelf } from "./ArtistCrateShelf";
+import { CrateShelf } from "./CrateShelf";
 import { GenreVerification, type VerifiedGenre } from "./GenreVerification";
 import type { AlbumItem } from "@/types/crate";
 import type { ArtistItem } from "@/types/artist";
@@ -423,7 +423,7 @@ export function CollectionChapter() {
           {artistCatalog.error.status === 401 && <a href="/api/auth/login"> Conectar Spotify</a>}
         </div>}
         {artistCatalog.loading && <p className={styles.artistNotice} role="status">Cargando discos…</p>}
-        {filteredArtist.length > 0 && artist && catalogHasOrder ? <ArtistCrateShelf key={artist.id}
+        {filteredArtist.length > 0 && artist && catalogHasOrder ? <CrateShelf key={artist.id} mode="ordered" startAt="center"
           albums={filteredArtist} chapterIndex={3} active={authenticated === true} label="Páginas de los discos del artista"
           onSelect={openAlbum} onGrabStart={grabArtistShelf} onGrabEnd={releaseArtistShelf} />
           : !artistCatalog.loading && !artistCatalog.error && <div className={styles.emptyState} role="status">

@@ -6,9 +6,10 @@
   left: 50%;
   width: var(--listen-width, 70%);
   --jewel-shelf-case-size: var(--listen-case-size, 142px);
-  --jewel-shelf-headroom: 48px;
-  --jewel-shelf-track-bottom: 25px;
-  --jewel-shelf-ground-opacity: .48;
+  --jewel-shelf-headroom: var(--listen-headroom, 92px);
+  --jewel-shelf-track-bottom: var(--listen-track-bottom, 54px);
+  --jewel-shelf-floor-depth: var(--listen-floor-depth, 70px);
+  --jewel-shelf-padding: var(--listen-padding, 6px);
   z-index: 5;
   opacity: 0;
   visibility: hidden;

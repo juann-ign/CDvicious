@@ -159,13 +159,14 @@ test("cambiar ancho conserva la posición relativa del ID y volver a pocos recen
 });
 
 test("el componente real renderiza un solo JewelSpine por ID, también si la fuente repite un registro", () => {
-  const { ArtistCrateShelf } = load("src/components/crate/ArtistCrateShelf.tsx");
+  const { CrateShelf } = load("src/components/crate/CrateShelf.tsx");
   for (const count of [1, 3, 8, 40]) {
     const albums = Array.from({ length: count }, (_, index) => ({ id: `edition-${index}`, name: `Edición ${index}`, artists: [{ id: "artist", name: "Artista" }], images: [], uri: `spotify:album:edition-${index}` }));
-    const html = renderToStaticMarkup(React.createElement(ArtistCrateShelf, { albums: [...albums, albums[0]], onSelect() {} }));
+    const html = renderToStaticMarkup(React.createElement(CrateShelf, { mode: "ordered", albums: [...albums, albums[0]], onSelect() {} }));
     const ids = [...html.matchAll(/data-batea-album-id="([^"]+)"/g)].map((match) => match[1]);
     assert.equal(ids.length, count, html.slice(0, 1800));
     assert.equal(new Set(ids).size, count);
+    assert.deepEqual(ids, albums.map(({ id }) => id));
     if (count <= 3) {
       assert.equal(html.includes('aria-label="Desplazamiento automático"'), false);
       assert.equal(html.includes('aria-label="Página anterior"'), false);
@@ -174,15 +175,18 @@ test("el componente real renderiza un solo JewelSpine por ID, también si la fue
   }
 });
 
-test("Batea, Artista y Next listen comparten todas las caras y el molde de la caja", () => {
+test("Batea, Artista y Next listen comparten el marco metálico, la presentación y el molde de cada caja", () => {
   const { CrateShelf } = load("src/components/crate/CrateShelf.tsx");
-  const { ArtistCrateShelf } = load("src/components/crate/ArtistCrateShelf.tsx");
   const albums = Array.from({ length: 3 }, (_, index) => ({ id: `edition-${index}`, name: `Disco ${index}`, artists: [{ id: "artist", name: "Artista" }], images: [], uri: `spotify:album:edition-${index}` }));
   const props = { albums, onSelect() {} };
   const main = renderToStaticMarkup(React.createElement(CrateShelf, props));
-  const artist = renderToStaticMarkup(React.createElement(ArtistCrateShelf, props));
-  const listening = renderToStaticMarkup(React.createElement(ArtistCrateShelf, { ...props, startAt: "leading", chapterIndex: 0 }));
+  const artist = renderToStaticMarkup(React.createElement(CrateShelf, { ...props, mode: "ordered", startAt: "center" }));
+  const listening = renderToStaticMarkup(React.createElement(CrateShelf, { ...props, mode: "ordered", startAt: "leading", chapterIndex: 0 }));
   for (const [html, count] of [[main, 9], [artist, albums.length], [listening, albums.length]]) {
+    assert.match(html, /data-shelf-presentation="metal"/);
+    assert.match(html, /class="stage metalRack"/);
+    assert.equal((html.match(/data-shelf-viewport=/g) ?? []).length, 1);
+    assert.equal((html.match(/data-shelf-track=/g) ?? []).length, 1);
     assert.equal((html.match(/data-batea-album-id=/g) ?? []).length, count);
     assert.equal((html.match(/data-jewel-material="shared"/g) ?? []).length, count);
     assert.equal((html.match(/data-jewel-detail="booklet-mold"/g) ?? []).length, count);

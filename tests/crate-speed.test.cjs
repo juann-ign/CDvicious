@@ -19,6 +19,7 @@ function load(file) {
       speeds.push(options.speed);
       return { containerRef: React.createRef(), trackRef: React.createRef(), isDragging: false, page: 0, goTo() {}, stepPage() {} };
     } };
+    if (name.endsWith('useArtistShelfLayout')) return { useArtistShelfLayout: () => { throw new Error('A loop shelf must only instantiate the marquee model'); } };
     if (name.endsWith('RailContext')) return { useRailActions: () => ({ stop() {}, start() {} }) };
     if (name.endsWith('SpotifyPlayerProvider')) return { useSpotifyPlayer: () => ({ authenticated: true }) };
     if (name.endsWith('collectionClient')) return { useCollectionCache: () => ({ albums, collectionState: 'ready', collectionRetryAt: 0 }), syncCollectionAuth() {}, loadCollection() {} };

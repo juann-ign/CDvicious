@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { isMarqueeChapterActive } from "./useMarqueeBelt";
+import { isMarqueeChapterActive, useShelfPointerDrag } from "./useMarqueeBelt";
 import { ARTIST_SHELF_INITIAL_HOLD_MS, ARTIST_SHELF_SPEED, LISTENING_SHELF_SPEED, artistShelfEntryComplete, artistShelfInitialOffset, artistShelfLayout, artistShelfOffsetFor, artistShelfPosition, rebaseArtistShelf, wrapArtistShelf, type ArtistShelfLayout } from "@/lib/artistShelfLayout";
 
 interface Options {
@@ -30,13 +30,11 @@ export function useArtistShelfLayout(options: Options) {
   const keyboardId = useRef<string | null>(null);
   const emphasisId = useRef<string | null>(null);
   const focused = useRef(false);
-  const gesture = useRef<{ id: number; startX: number; lastX: number; captured: boolean } | null>(null);
   const reduced = useRef(false);
   const target = useRef<number | null>(null);
   const initialHoldRemaining = useRef(ARTIST_SHELF_INITIAL_HOLD_MS);
   const syncRef = useRef<() => void>(() => undefined);
   const paintRef = useRef<() => void>(() => undefined);
-  const [isDragging, setIsDragging] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [layout, setLayout] = useState<ArtistShelfLayout>(() => artistShelfLayout(0, 0, 0, 0));
   const [page, setPage] = useState(0);
@@ -44,6 +42,25 @@ export function useArtistShelfLayout(options: Options) {
   const pages = layout.fit ? 1 : Math.max(1, Math.min(6, options.ids.length));
   const pagesRef = useRef(pages);
   pagesRef.current = pages;
+
+  const { gesture, isDragging } = useShelfPointerDrag(containerRef, {
+    enabled: options.active && options.ids.length > 0 && !layout.fit,
+    chapterIndex: options.chapterIndex ?? 3,
+    lifecycleKey: idsKey,
+    onPress: () => { target.current = null; syncRef.current(); },
+    onDelta: (distance) => {
+      const model = layoutRef.current;
+      if (!model || model.fit) return;
+      offset.current -= distance;
+      initialHoldRemaining.current = 0;
+      if (entry.current && (artistShelfEntryComplete(offset.current, model) || (distance > 0 && offset.current < artistShelfInitialOffset(model)))) entry.current = false;
+      if (!entry.current) offset.current = wrapArtistShelf(offset.current, model.length);
+      paintRef.current();
+    },
+    onRelease: () => syncRef.current(),
+    onGrabStart: options.onGrabStart,
+    onGrabEnd: options.onGrabEnd,
+  });
 
   const paint = () => {
     const current = layoutRef.current;
@@ -136,24 +153,9 @@ export function useArtistShelfLayout(options: Options) {
     let frame: number | null = null;
     let priorTime = performance.now();
     let disposed = false;
-    let suppressClick = false;
-    let suppressTimer = 0;
     const active = () => optionsRef.current.active && isMarqueeChapterActive(railRoot?.dataset, optionsRef.current.chapterIndex ?? 3) && !document.hidden;
     const autoEligible = () => active() && !layoutRef.current?.fit && !optionsRef.current.paused && !focused.current && !gesture.current && !reduced.current;
     const stopFrame = () => { if (frame !== null) cancelAnimationFrame(frame); frame = null; };
-    const endGesture = (cancelled = false) => {
-      const current = gesture.current;
-      if (!current) return;
-      gesture.current = null;
-      setIsDragging(false);
-      if (current.captured) {
-        optionsRef.current.onGrabEnd?.();
-        suppressClick = true;
-        window.clearTimeout(suppressTimer);
-        suppressTimer = window.setTimeout(() => { suppressClick = false; }, cancelled ? 500 : 0);
-        if (viewport.hasPointerCapture(current.id)) viewport.releasePointerCapture(current.id);
-      }
-    };
     const tick = (now: number) => {
       frame = null;
       if (disposed || !active()) return;
@@ -182,7 +184,6 @@ export function useArtistShelfLayout(options: Options) {
     const sync = () => {
       if (disposed) return;
       const canUse = active();
-      if (!canUse) endGesture(true);
       const eligible = autoEligible();
       const holding = initialHoldRemaining.current > 0 && !layoutRef.current?.fit;
       const drifting = eligible && !holding;
@@ -218,6 +219,7 @@ export function useArtistShelfLayout(options: Options) {
     const keydown = (event: KeyboardEvent) => {
       if (!active() || !["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
       event.preventDefault(); event.stopPropagation();
+      if (gesture.current) return;
       const id = (event.target as HTMLElement).closest<HTMLButtonElement>("button[data-batea-album-id]")?.dataset.bateaAlbumId;
       const index = Math.max(0, slots.current.findIndex((slot) => slot.id === (id ?? keyboardId.current)));
       focusEdition(event.key === "Home" ? 0 : event.key === "End" ? slots.current.length - 1 : Math.max(0, Math.min(slots.current.length - 1, index + (event.key === "ArrowLeft" ? -1 : 1))));
@@ -239,70 +241,29 @@ export function useArtistShelfLayout(options: Options) {
       paintRef.current();
       sync();
     };
-    const down = (event: PointerEvent) => {
-      if (!active() || layoutRef.current?.fit || event.button !== 0 || gesture.current) return;
-      window.clearTimeout(suppressTimer); suppressClick = false;
-      gesture.current = { id: event.pointerId, startX: event.clientX, lastX: event.clientX, captured: false };
-      target.current = null;
-      sync();
-    };
-    const move = (event: PointerEvent) => {
-      const current = gesture.current;
-      if (!current || current.id !== event.pointerId) return;
-      if (!current.captured && Math.abs(event.clientX - current.startX) > 6) {
-        current.captured = true;
-        setIsDragging(true);
-        optionsRef.current.onGrabStart?.();
-        viewport.setPointerCapture(current.id);
-      }
-      if (!current.captured) return;
-      const model = layoutRef.current;
-      if (model) {
-        offset.current -= event.clientX - current.lastX;
-        if (entry.current && artistShelfEntryComplete(offset.current, model)) entry.current = false;
-        if (!entry.current) offset.current = wrapArtistShelf(offset.current, model.length);
-      }
-      current.lastX = event.clientX;
-      paintRef.current();
-    };
-    const up = (event: PointerEvent) => { if (gesture.current?.id === event.pointerId) { endGesture(); sync(); } };
-    const cancel = (event: PointerEvent) => { if (gesture.current?.id === event.pointerId) { endGesture(true); sync(); } };
-    const click = (event: MouseEvent) => {
-      if (!suppressClick) return;
-      suppressClick = false;
-      event.preventDefault(); event.stopPropagation(); event.stopImmediatePropagation();
-    };
     const visibility = () => sync();
     const motion = () => { reduced.current = media.matches; setReducedMotion(media.matches); target.current = null; sync(); };
     viewport.addEventListener("keydown", keydown);
     viewport.addEventListener("focusin", focusin);
     viewport.addEventListener("focusout", focusout);
-    viewport.addEventListener("pointerdown", down);
-    viewport.addEventListener("lostpointercapture", cancel);
-    viewport.addEventListener("click", click, true);
-    window.addEventListener("pointermove", move);
-    window.addEventListener("pointerup", up);
-    window.addEventListener("pointercancel", cancel);
     document.addEventListener("visibilitychange", visibility);
     media.addEventListener("change", motion);
     const observer = railRoot ? new MutationObserver(sync) : null;
     observer?.observe(railRoot!, { attributes: true, attributeFilter: ["data-chapter", "data-rail-moving", "data-album-detail-open"] });
     paintRef.current(); sync();
     return () => {
-      disposed = true; stopFrame(); endGesture(true); window.clearTimeout(suppressTimer);
+      disposed = true; stopFrame();
       syncRef.current = () => undefined;
       viewport.removeEventListener("keydown", keydown); viewport.removeEventListener("focusin", focusin); viewport.removeEventListener("focusout", focusout);
-      viewport.removeEventListener("pointerdown", down); viewport.removeEventListener("lostpointercapture", cancel); viewport.removeEventListener("click", click, true);
-      window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); window.removeEventListener("pointercancel", cancel);
       document.removeEventListener("visibilitychange", visibility); media.removeEventListener("change", motion); observer?.disconnect();
     };
-  }, [idsKey]);
+  }, [idsKey, gesture]);
 
   useEffect(() => { syncRef.current(); }, [options.active, options.paused, options.chapterIndex]);
 
   const goTo = (next: number) => {
     const current = layoutRef.current;
-    if (!current || current.fit) return;
+    if (!current || current.fit || gesture.current) return;
     const index = Math.max(0, Math.min(pagesRef.current - 1, next));
     entry.current = false;
     offset.current = wrapArtistShelf(offset.current, current.length);

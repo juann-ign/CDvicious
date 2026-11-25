@@ -34,6 +34,7 @@ async function openListeningView(page, chapter) {
   await expect(page.locator("html")).toHaveAttribute("data-chapter", String(chapter));
   await expect(page.locator("[data-rail-ready]")).toHaveAttribute("data-rail-moving", "false");
   await expect(preferredAlbum(page)).toBeVisible();
+  await expect(shelf(page).locator('[data-shelf-presentation="metal"]')).toBeVisible();
 }
 
 async function expectAligned(page) {
@@ -43,6 +44,35 @@ async function expectAligned(page) {
   expect(g.shelfTop - g.bottom).toBeGreaterThan(35);
   expect(g.shelfBottom).toBeLessThanOrEqual(g.footerTop + 1);
   return g;
+}
+
+async function dragListeningRack(page) {
+  const rack = shelf(page).locator('[data-shelf-presentation="metal"]');
+  const viewport = rack.locator('[data-shelf-viewport]');
+  const auto = rack.getByRole("button", { name: "Desplazamiento automático" });
+  if (await auto.isEnabled() && await auto.getAttribute("aria-pressed") === "true") await auto.click();
+  const read = async () => Number(await rack.getAttribute("data-artist-cycle-offset"));
+  const length = Number(await rack.getAttribute("data-artist-cycle-length"));
+  const difference = (from, to) => ((to - from + length / 2) % length + length) % length - length / 2;
+  const bounds = await viewport.boundingBox();
+  const center = bounds.x + bounds.width / 2;
+  for (const [y, dx] of [[bounds.y + 12, -80], [bounds.y + bounds.height - 14, 80]]) {
+    await page.mouse.move(center, y);
+    expect(await viewport.evaluate((node, point) => document.elementFromPoint(...point) === node, [center, y])).toBe(true);
+    const before = await read();
+    await page.mouse.down();
+    await page.mouse.move(center + dx, y, { steps: 6 });
+    await expect(viewport).toHaveClass(/dragging/);
+    const moved = await read();
+    expect(difference(before, moved)).toBeCloseTo(-dx, 0);
+    await page.waitForTimeout(220);
+    expect(await read()).toBe(moved);
+    await page.mouse.up();
+    await expect(viewport).not.toHaveClass(/dragging/);
+    expect(await read()).toBe(moved);
+    await expect(page.getByTestId("album-detail-page")).toHaveCount(0);
+    await expect(page.locator("[data-rail-ready]")).toHaveAttribute("data-rail-moving", "false");
+  }
 }
 
 test("Next listen opens the saved Batea below the same Deck, restores focus and plays through the shared album page", async ({ page }) => {
@@ -60,6 +90,8 @@ test("Next listen opens the saved Batea below the same Deck, restores focus and 
   expect(cases.length).toBeGreaterThan(3);
   expect(new Set(cases).size).toBe(cases.length);
   expect(cases).not.toContain("mock-album-01");
+
+  await dragListeningRack(page);
 
   const album = preferredAlbum(page);
   const albumId = await album.getAttribute("data-batea-album-id");
@@ -105,6 +137,7 @@ test("Next listen fits a short Split, keeps the playing track and returns to the
   await expect(booklet).toBeHidden();
   expect(await overlay(page).locator("[data-deck-mechanism]").evaluate((node) => getComputedStyle(node).transitionDuration)).toBe("0s");
   await expectAligned(page);
+  await dragListeningRack(page);
   await page.setViewportSize({ width: 1440, height: 900 });
   await expect.poll(async () => {
     const g = await geometry(page);

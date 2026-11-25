@@ -64,7 +64,7 @@ async function observeIntroduction(page) {
       if (state.complete) return;
       const first = root.querySelector('[data-artist-slot="artist-cycle-0"]');
       if (!first) return;
-      const viewport = first.closest('[class*="artistViewport"]');
+      const viewport = first.closest('[data-shelf-viewport]');
       const boxes = [...first.firstElementChild.firstElementChild.children].map((node) => node.getBoundingClientRect());
       const frame = viewport.getBoundingClientRect();
       const leadingEmpty = [...root.querySelectorAll('[data-artist-slot]')].every((slot) =>
@@ -82,6 +82,7 @@ async function observeIntroduction(page) {
 test("artist shelf: eight editions use one DOM node each and re-enter only outside the clip after the complete order", async ({ page }, testInfo) => {
   await observeIntroduction(page);
   await openFixtureArtist(page, 8);
+  await expect(shelf(page)).toHaveAttribute("data-shelf-presentation", "metal");
   await expect(shelf(page)).toHaveAttribute("data-artist-drifting", "true");
   await expect.poll(() => page.evaluate(() => window.__artistIntroduction.complete)).toBe(true);
   const introduction = await page.evaluate(() => window.__artistIntroduction);
@@ -93,7 +94,7 @@ test("artist shelf: eight editions use one DOM node each and re-enter only outsi
   expect(introduction.changes[0].at - introduction.first.at).toBeGreaterThanOrEqual(950);
   expect(introduction.changes[0].hold).toBe("false");
   const result = await shelf(page).evaluate((root) => new Promise((resolve) => {
-    const viewport = root.querySelector('[class*="artistViewport"]');
+    const viewport = root.querySelector('[data-shelf-viewport]');
     const controls = [...root.querySelectorAll("button[data-batea-album-id]")];
     const first = controls.find((node) => node.dataset.bateaAlbumId === "artist-cycle-0");
     const visual = first.querySelector('[class*="case"]');
@@ -150,14 +151,21 @@ test("artist shelf: eight editions use one DOM node each and re-enter only outsi
   await expect(shelf(page)).toHaveAttribute("data-artist-drifting", "true");
 
   // Use the empty floor beneath the cases so dragging cannot open a detail.
-  const viewport = shelf(page).locator('[class*="artistViewport"]');
+  const viewport = shelf(page).locator('[data-shelf-viewport]');
   const box = await viewport.boundingBox();
   await page.mouse.move(box.x + box.width / 2, box.y + box.height - 23);
-  const beforeDrag = await shelf(page).getAttribute("data-artist-cycle-offset");
+  const beforeDrag = Number(await shelf(page).getAttribute("data-artist-cycle-offset"));
+  const length = Number(await shelf(page).getAttribute("data-artist-cycle-length"));
   await page.mouse.down(); await page.mouse.move(box.x + box.width / 2 - 85, box.y + box.height - 23, { steps: 6 });
   await expect(shelf(page)).toHaveAttribute("data-artist-drifting", "false");
-  expect(await shelf(page).getAttribute("data-artist-cycle-offset")).not.toBe(beforeDrag);
+  await expect(viewport).toHaveClass(/dragging/);
+  const moved = Number(await shelf(page).getAttribute("data-artist-cycle-offset"));
+  expect(((moved - beforeDrag) % length + length) % length).toBeCloseTo(85, 0);
+  await page.waitForTimeout(220);
+  expect(Number(await shelf(page).getAttribute("data-artist-cycle-offset"))).toBe(moved);
   await page.mouse.up();
+  await expect(viewport).not.toHaveClass(/dragging/);
+  expect(Number(await shelf(page).getAttribute("data-artist-cycle-offset"))).toBe(moved);
   await expect(page.getByTestId("album-detail-page")).toHaveCount(0);
   await navigation(page).focus(); await page.mouse.move(2, 2);
   await expect(shelf(page)).toHaveAttribute("data-artist-drifting", "true");
@@ -167,7 +175,7 @@ test("artist shelf: paginated catalog starts on the oldest edition and preserves
   await observeIntroduction(page);
   const geometry = () => edition(page, 0).evaluate((node) => {
     const slot = node.closest("[data-artist-slot]");
-    const viewport = node.closest('[class*="artistViewport"]');
+    const viewport = node.closest('[data-shelf-viewport]');
     return { x: slot.getBoundingClientRect().left - viewport.getBoundingClientRect().left, width: viewport.clientWidth };
   });
   await openFixtureArtist(page, 40, async () => {
@@ -242,7 +250,7 @@ test("artist shelf: forty paginated editions stay unique with reduced motion and
   await expect(source).toBeFocused();
   expect(await source.evaluate((node) => node === window.__artistCycleSource)).toBe(true);
   expect(await shelf(page).getAttribute("data-artist-cycle-offset")).toBe(original.offset);
-  expect(await source.evaluate((node) => node.closest('[class*="artistViewport"]').scrollLeft)).toBe(0);
+  expect(await source.evaluate((node) => node.closest('[data-shelf-viewport]').scrollLeft)).toBe(0);
   await page.keyboard.press("Home");
   await expect(edition(page, 0)).toBeFocused();
   await expect(edition(page, 0)).toBeInViewport();

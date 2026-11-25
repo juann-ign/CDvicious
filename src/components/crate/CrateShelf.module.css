@@ -5,6 +5,13 @@
   justify-content: center;
 }
 
+.orderedWrap {
+  width: 100%;
+  max-width: 1160px;
+  margin-inline: auto;
+  container-type: inline-size;
+}
+
 .toolbar {
   display: flex;
   align-items: center;
@@ -58,6 +65,12 @@
   border-color: var(--color-phosphor);
 }
 
+.chevBtn:disabled,
+.beltToggle:disabled {
+  opacity: .45;
+  cursor: default;
+}
+
 .beltDot {
   width: 6px;
   height: 6px;
@@ -71,20 +84,38 @@
 }
 
 .stage {
-  --case-size: clamp(154px, 14vw, 220px);
-  --tray-wall: linear-gradient(180deg, #37443f, #4c5a56 30%, #55645e 82%, #5b6b64);
-  --tray-floor: linear-gradient(180deg, #63736b, #778780 64%, #9caea5);
-  --tray-edge-fade: #2c393476;
+  --case-size: var(--jewel-shelf-case-size, clamp(154px, 14vw, 220px));
   box-sizing: border-box;
   position: relative;
   user-select: none;
   -webkit-user-select: none;
   overflow: hidden;
-  height: calc(var(--case-size) + 100px);
-  border: 1px solid #9aada4;
+  border: 1px solid transparent;
   border-radius: 2px;
-  background: var(--tray-wall);
-  box-shadow: inset 0 1px #edf7ee80, inset 0 6px 14px #23352e69, 0 9px 20px #2d453832;
+}
+
+.orderedWrap .stage {
+  --case-size: var(--jewel-shelf-case-size, clamp(160px, 20cqw, 232px));
+}
+
+/* An open steel rack behind the moving cases. The tubes and supports are
+   painted on the fixed stage, so they never move or intercept a case. */
+.metalRack {
+  --rack-padding-block: var(--jewel-shelf-padding, clamp(14px, 2vh, 20px));
+  --rack-headroom: var(--jewel-shelf-headroom, 92px);
+  --rack-track-bottom: var(--jewel-shelf-track-bottom, 52px);
+  --rack-floor: calc(var(--jewel-shelf-floor-depth, 68px) + var(--rack-padding-block));
+  --rack-frame: 8px;
+  --rack-lip: 11px;
+  --rack-back-height: calc(100% - var(--rack-floor));
+  --rack-tube: linear-gradient(180deg, #71847b, #c4d0c9 23%, #a9b8b0 42%, #85988e 74%, #6b8175);
+  --rack-frame-stops: #e1e9e4, #9caea4 20%, #cdd9d2 32%, #acbcb2 64%, #80968a 86%, #61796c;
+  height: calc(var(--case-size) + var(--rack-headroom) + 2 * var(--rack-padding-block));
+  background:
+    var(--rack-tube) 0 calc(100% - var(--rack-floor)) / 100% 4px no-repeat,
+    repeating-linear-gradient(90deg, transparent 0 40px, #657a6f70 40px 41px, #d2ded590 41px 42px, #879c9080 42px 43px, transparent 43px 60px) 0 0 / 100% var(--rack-back-height) no-repeat,
+    linear-gradient(180deg, #c6d1ca32, #859b8e38) 0 0 / 100% var(--rack-back-height) no-repeat;
+  box-shadow: 0 9px 15px -10px #273c3270;
 }
 
 .stage::before,
@@ -95,18 +126,29 @@
   pointer-events: none;
 }
 
-.stage::before {
-  height: 62px;
-  border-top: 1px solid #b7c8bf38;
-  background: var(--tray-floor);
-  box-shadow: inset 0 5px 13px #35463e3d;
+.metalRack::before {
+  height: var(--rack-floor);
+  border-top: 2px solid #aab8b0;
+  background:
+    linear-gradient(180deg, #31483c38, transparent 35%, #eaf0ed20 92%),
+    repeating-linear-gradient(139deg, transparent 0 36px, #293e3824 36px 38px, #e7eee954 38px 39px, transparent 39px 53px),
+    linear-gradient(180deg, #94a49b, #b3c0b8 88%, #c9d4ce);
+  box-shadow: inset 0 4px 8px #24332f2b;
 }
 
 .stage::after {
   z-index: 3;
-  height: 8px;
-  border-top: 1px solid #ecf4e6a6;
-  background: linear-gradient(180deg, #c1d0c7, #8fa398 70%, #70887a);
+}
+
+.metalRack::after {
+  inset: 0;
+  background:
+    radial-gradient(circle at 12px calc(100% - var(--rack-lip) / 2), #607368 0 1px, #c4d1c9 1.3px 2.6px, #81968a 2.8px 3.3px, transparent 3.5px),
+    radial-gradient(circle at calc(100% - 12px) calc(100% - var(--rack-lip) / 2), #607368 0 1px, #c4d1c9 1.3px 2.6px, #81968a 2.8px 3.3px, transparent 3.5px),
+    linear-gradient(180deg, var(--rack-frame-stops)) top / 100% var(--rack-frame) no-repeat,
+    linear-gradient(180deg, var(--rack-frame-stops)) bottom / 100% var(--rack-lip) no-repeat,
+    linear-gradient(90deg, var(--rack-frame-stops)) left / var(--rack-frame) 100% no-repeat,
+    linear-gradient(270deg, var(--rack-frame-stops)) right / var(--rack-frame) 100% no-repeat;
 }
 
 .viewport {
@@ -119,6 +161,16 @@
   -webkit-user-drag: none;
 }
 
+.orderedWrap .viewport {
+  overflow: clip;
+}
+
+.orderedWrap[data-artist-shelf-layout="static"] .viewport,
+.orderedWrap[data-artist-shelf-layout="static"] .viewport:active {
+  cursor: default;
+}
+
+.metalRack .viewport:active,
 .viewport.dragging {
   cursor: grabbing;
 }
@@ -136,6 +188,30 @@
   justify-content: center;
   align-items: flex-end;
   gap: 8px;
+}
+
+.metalRack .track {
+  bottom: calc(var(--rack-track-bottom) + var(--rack-padding-block));
+}
+
+.orderedTrack {
+  display: block;
+  width: 100%;
+  height: var(--case-size);
+  will-change: auto;
+}
+
+.slot {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  visibility: hidden;
+}
+
+@media (max-height: 700px) {
+  .metalRack {
+    --rack-padding-block: var(--jewel-shelf-padding, clamp(6px, calc(10vh - 54px), 16px));
+  }
 }
 
 .copy {
@@ -165,21 +241,21 @@
 .fadeLeft,
 .fadeRight {
   position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 40px;
+  top: var(--rack-frame);
+  bottom: var(--rack-lip);
+  width: 28px;
   pointer-events: none;
   z-index: 2;
 }
 
 .fadeLeft {
   left: 0;
-  background: linear-gradient(90deg, var(--tray-edge-fade), transparent);
+  background: linear-gradient(90deg, #283b3430, transparent 80%);
 }
 
 .fadeRight {
   right: 0;
-  background: linear-gradient(270deg, var(--tray-edge-fade), transparent);
+  background: linear-gradient(270deg, #283b3430, transparent 80%);
 }
 
 .dots {

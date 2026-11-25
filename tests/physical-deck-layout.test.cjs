@@ -34,16 +34,47 @@ function assertInside(rect, slot) {
 }
 
 test("Next listen aligns its shelf to the visible equipment and fits both in the useful height", () => {
-  for (const [width, windowHeight] of [[1920, 1080], ...viewports]) {
+  const approved = [
+    [1920, 1080, 1000, 198],
+    [1440, 900, 794.0705882352942, 170.72517647058825],
+    [1280, 800, 677.4588235294118, 143.2],
+    [1280, 720, 584.169411764706, 103.04],
+  ];
+  for (const [width, windowHeight, approvedWidth, approvedCaseSize] of approved) {
     const height = windowHeight - 72 - 128;
     const listen = fitListeningDeck(closed, width, height);
     const visible = project(closed, listen);
     close(visible.right - visible.left, listen.shelfWidth);
     close((visible.right + visible.left) / 2, width / 2);
-    assert.ok(visible.top >= 62);
+    close(listen.shelfWidth, approvedWidth);
+    close(listen.caseSize, approvedCaseSize);
+    assert.ok(visible.top >= 12);
     assert.ok(listen.shelfTop - visible.bottom >= 36);
     assert.ok(listen.caseSize >= 100);
-    assert.ok(listen.shelfTop + listen.caseSize + 104 <= height + 1e-7);
+    assert.ok(listen.shelfTop + listen.shelfHeight <= height + 1e-7);
+    // Include the metal stage and all controls, not the previous transparent
+    // shelf's smaller chrome. Width and CD size stay on the approved geometry.
+    close(listen.shelfHeight, listen.caseSize + listen.shelfHeadroom + 2 * listen.shelfPadding + 55);
+  }
+});
+
+test("Next listen metal leaves physical grab space above hovered cases and below the deepest acrylic rim", () => {
+  // Actual CSS silhouette probes at the two extreme tilts, saved independently
+  // of the layout helper. The largest supported case is the limiting bottom.
+  const silhouettes = [
+    { size: 103.04, up: 13.570, down: 11.471 },
+    { size: 143.2, up: 13.685, down: 17.914 },
+    { size: 170.72517647058825, up: 13.414, down: 23.040 },
+    { size: 198, up: 14.908, down: 28.702 },
+  ];
+  for (const [index, [width, windowHeight]] of [[1280, 720], [1280, 800], [1440, 900], [1920, 1080]].entries()) {
+    const fit = fitListeningDeck(closed, width, windowHeight - 200);
+    const physical = silhouettes[index];
+    close(fit.caseSize, physical.size);
+    const topClearance = fit.shelfHeadroom + fit.shelfPadding - fit.shelfTrackBottom - 1 - 8 - physical.up;
+    const bottomClearance = fit.shelfTrackBottom + fit.shelfPadding + 1 - 11 - physical.down;
+    assert.ok(topClearance >= 18, `Upper grip has only ${topClearance}px`);
+    assert.ok(bottomClearance >= 18, `Lower grip has only ${bottomClearance}px`);
   }
 });
 

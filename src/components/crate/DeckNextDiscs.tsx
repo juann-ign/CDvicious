@@ -5,7 +5,7 @@ import { useRailActions } from "@/components/scroll/RailContext";
 import { bateaAlbums } from "@/lib/bateaAlbums";
 import { loadCollection, useCollectionCache } from "@/lib/collectionClient";
 import { useAlbumDetailActions } from "./AlbumDetailNavigation";
-import { ArtistCrateShelf } from "./ArtistCrateShelf";
+import { CrateShelf } from "./CrateShelf";
 import control from "@/components/DeckTrackSelector.module.css";
 import styles from "./DeckNextDiscs.module.css";
 
@@ -74,7 +74,7 @@ export function DeckNextDiscs({ open, mounted, panelId, chapterIndex, currentAlb
 
   return <section className={styles.shelf} aria-label="Discos guardados para seguir escuchando" id={panelId}
     aria-hidden={!open} inert={!open} data-next-listen-panel data-open={open} data-lenis-prevent>
-    {mounted && (discs.length ? <ArtistCrateShelf albums={discs} startAt="leading" onSelect={openAlbum}
+    {mounted && (discs.length ? <CrateShelf albums={discs} mode="ordered" startAt="leading" onSelect={openAlbum}
       active={open} chapterIndex={chapterIndex} onGrabStart={grab} onGrabEnd={release} label="Páginas de Next listen" />
       : collectionState === "error" ? <div className={styles.message} role="alert">
         <p>{collectionError?.message ?? "No se pudieron cargar tus discos."}</p>

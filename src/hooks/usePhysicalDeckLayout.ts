@@ -82,6 +82,10 @@ export function usePhysicalDeckLayout(viewport: RefObject<HTMLDivElement | null>
         overlay.style.setProperty("--listen-width", `${listening.shelfWidth}px`);
         overlay.style.setProperty("--listen-top", `${listening.shelfTop}px`);
         overlay.style.setProperty("--listen-case-size", `${listening.caseSize}px`);
+        overlay.style.setProperty("--listen-headroom", `${listening.shelfHeadroom}px`);
+        overlay.style.setProperty("--listen-track-bottom", `${listening.shelfTrackBottom}px`);
+        overlay.style.setProperty("--listen-floor-depth", `${listening.shelfFloorDepth}px`);
+        overlay.style.setProperty("--listen-padding", `${listening.shelfPadding}px`);
       }
       frame.dataset.closedBounds = JSON.stringify(closed); frame.dataset.openBounds = JSON.stringify(open);
       frame.dataset.splitSlot = JSON.stringify(split.slot);
