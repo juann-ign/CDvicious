@@ -15,6 +15,12 @@
   perspective-origin: 18% 72%;
 }
 
+.bookletRegion {
+  position: absolute;
+  inset: 0;
+  outline-offset: 4px;
+}
+
 /* =========================================================
    CLOSED COVER
    ========================================================= */
@@ -272,7 +278,7 @@
   position: absolute;
 
   left: 0;
-  bottom: 0;
+  bottom: 52px;
 
   width: var(--booklet-width);
   height: var(--booklet-height);
@@ -701,7 +707,7 @@
   width: 100%;
   height: 100%;
 
-  padding: 24px 26px 20px;
+  padding: 24px 28px 28px;
 
   display: flex;
   flex-direction: column;
@@ -712,13 +718,17 @@
 .bookletHeader {
   flex-shrink: 0;
 
-  margin-bottom: 13px;
-  padding-bottom: 9px;
+  height: 52px;
+  min-height: 52px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  overflow: hidden;
 
   border-bottom: 1px solid rgba(61, 57, 51, 0.22);
 }
 
-.bookletHeader h4 {
+.bookletHeader h4,
+.turnTitle {
   margin: 0;
 
   font-family: var(--font-display);
@@ -730,6 +740,9 @@
   letter-spacing: -0.2px;
 
   color: #000;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .bookletHeader span {
@@ -744,14 +757,18 @@
   line-height: 1.1;
 
   color: #666057;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .bookletHeaderPlaceholder {
   flex-shrink: 0;
 
-  height: 43px;
+  height: 52px;
+  min-height: 52px;
 
-  margin-bottom: 13px;
+  margin-bottom: 12px;
 }
 
 /* =========================================================
@@ -1043,7 +1060,7 @@
   width: 100%;
   height: 100%;
 
-  padding: 24px 26px 20px;
+  padding: 24px 28px 28px;
 
   display: flex;
   flex-direction: column;
@@ -1134,9 +1151,91 @@
 
 /* A successful response stays readable before a hidden surface can be measured. */
 .lyricsFallback { overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; }
-.bookletHeader { max-height: 38%; overflow: auto; }
-.bookletHeader h4 { overflow-wrap: anywhere; }
-.bookletStatus { min-height: 0; overflow: auto; color: #4e4c4c; font: 11px/1.5 var(--font-ui); }
-.bookletStatus button { display: block; margin-top: 12px; padding: 6px 9px; border: 1px solid #6c765d; border-radius: 0; background: #26321f; color: #c5ef95; font: 10px var(--font-ui); cursor: pointer; }
+.bookletStatus { min-height: 0; overflow: auto; color: #3d3a34; font: var(--text-control, 14px)/1.5 var(--font-ui); }
+.bookletStatus button { display: block; margin-top: 12px; padding: 8px 10px; border: 1px solid #6c765d; border-radius: 0; background: #26321f; color: #c5ef95; font: var(--text-control, 14px) var(--font-ui); cursor: pointer; }
 .bookletStatus button:disabled { opacity: .5; cursor: default; }
-.lyricsProvenance { position: absolute; bottom: 5px; right: 20px; font: 7px var(--font-ui); color: #6b6d5d; }
+.lyricsProvenance { position: absolute; bottom: 8px; right: 28px; font: 11px/1.2 var(--font-ui); color: #5a5b4c; }
+
+/* Shared metrics for paper, hidden measurement and the two turning faces. */
+.bookletLyrics,
+.bookletMeasureLyrics,
+.bookletLineMeasureSource,
+.turnText {
+  font-family: var(--font-editorial);
+  font-size: var(--text-reading, 18px);
+  line-height: 1.38;
+  letter-spacing: 0;
+}
+
+.turnText {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: #39362f;
+}
+
+.bookletLyrics { color: #39362f; }
+
+.bookletToolbar {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  z-index: 45;
+  width: var(--booklet-width);
+  height: 40px;
+  display: grid;
+  grid-template-columns: minmax(96px, 1fr) auto minmax(96px, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 3px 6px;
+  border: 1px solid #6c7471;
+  border-radius: 0;
+  background: var(--material-silver, linear-gradient(115deg, #bcc4c2, #9eaaa8 45%, #c4ccca));
+  box-shadow: inset 0 1px #f1f4ed8a, 0 2px 4px #0004;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.isOpen .bookletToolbar { opacity: 1; pointer-events: auto; }
+
+.bookletToolbar button {
+  min-width: 0;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--color-vfd-border);
+  border-top-color: var(--color-phosphor-dim);
+  border-radius: 0;
+  background: var(--color-vfd-bg);
+  color: var(--color-phosphor);
+  font: var(--text-control, 14px)/1.2 var(--font-ui);
+  cursor: pointer;
+}
+
+.bookletToolbar button:disabled { color: #636c59; cursor: default; }
+.bookletToolbar button:focus-visible { outline: 2px solid var(--color-phosphor); outline-offset: 2px; }
+.bookletToolbar span { color: #202b25; white-space: nowrap; font: var(--text-control, 14px)/1.2 var(--font-ui); }
+
+/* This sheet turns around the binding. Static reading faces and the toolbar
+   never inherit its transform; completion only removes this visual duplicate. */
+.turningLeaf {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  z-index: 20;
+  transform-style: preserve-3d;
+  pointer-events: none;
+  animation-duration: 640ms;
+  animation-timing-function: cubic-bezier(.28, .08, .25, 1);
+  animation-fill-mode: both;
+}
+
+.turningNext { left: 54%; width: 52%; transform-origin: left center; animation-name: leafNext; }
+.turningPrevious { left: 0; width: 54%; transform-origin: right center; animation-name: leafPrevious; }
+.turnFront,
+.turnBack { position: absolute; inset: 0; backface-visibility: hidden; box-shadow: 0 3px 14px #0004; }
+.turnBack { transform: rotateY(180deg); }
+@keyframes leafNext { from { transform: rotateY(0); } to { transform: rotateY(-180deg); } }
+@keyframes leafPrevious { from { transform: rotateY(0); } to { transform: rotateY(180deg); } }
+@media (prefers-reduced-motion: reduce) { .turningLeaf { display: none; animation: none; } }

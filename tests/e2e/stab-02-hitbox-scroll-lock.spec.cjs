@@ -291,13 +291,27 @@ test("búsqueda y filtros de Colección siguen accesibles con ventana baja y esc
 
   // CSS zoom scales layout but does not operate the browser chrome zoom control.
   await page.evaluate(() => { document.documentElement.style.zoom = "125%"; });
+  await expect.poll(() => collection.evaluate((node) => Math.abs(node.getBoundingClientRect().left))).toBeLessThan(2);
+  await expect(page.locator("html")).toHaveAttribute("data-chapter", "3");
   await expect(search).toBeVisible();
+  for (const name of ["Filtrar por género", "Filtrar por década", "Filtrar por año de edición"]) {
+    await expect(collection.getByRole("combobox", { name, exact: true })).toBeInViewport({ ratio: 1 });
+  }
   const nextPage = page.getByRole("button", { name: "Siguiente", exact: true });
   await expect(nextPage).toBeVisible();
   await expect(nextPage).toBeEnabled();
+  await expect(nextPage).toBeInViewport({ ratio: 1 });
   await nextPage.click();
   await expect(collection).toContainText("Página 2 de 4");
   await expect(collection.getByRole("button", { name: "Anterior", exact: true })).toBeEnabled();
+
+  const gridFrame = collection.locator('[class*="gridFrame"]');
+  await expect.poll(() => gridFrame.evaluate((node) => node.scrollHeight > node.clientHeight + 1)).toBe(true);
+  await gridFrame.hover();
+  await page.mouse.wheel(0, 160);
+  await expect.poll(() => gridFrame.evaluate((node) => node.scrollTop)).toBeGreaterThan(0);
+  await expect(page.locator("html")).toHaveAttribute("data-chapter", "3");
+  await expect.poll(() => collection.evaluate((node) => Math.abs(node.getBoundingClientRect().left))).toBeLessThan(2);
 
   const box = await filter.boundingBox();
   expect(box).not.toBeNull();

@@ -318,7 +318,12 @@ export function CollectionChapter() {
         <button type="button" className={styles.clearFilters} onClick={clearFilters}>Limpiar filtros</button>
       </div>}
 
-      <div className={styles.gridFrame} data-page-size={pageSize}>
+      <div className={styles.gridFrame} data-page-size={pageSize} onWheelCapture={(event) => {
+        const frame = event.currentTarget;
+        // Only a genuinely overflowing grid owns vertical wheel input. A
+        // regular Collection page keeps the rail's existing chapter gesture.
+        if (Math.abs(event.deltaY) > Math.abs(event.deltaX) && frame.scrollHeight > frame.clientHeight + 1) event.stopPropagation();
+      }}>
         {collectionState === "error" ? (
           <div className={styles.emptyState} role="alert"><div>{collectionError?.message}<div className={styles.recoveryActions}><button type="button" onClick={() => { setNow(Date.now()); void loadCollection(authenticated)?.catch(() => undefined); }} disabled={collectionWait > 0}>Reintentar colección</button>{collectionError?.status === 401 && <a href="/api/auth/login">Conectar Spotify</a>}</div>{collectionWait > 0 && <p>Reintento disponible en {collectionWait} s.</p>}</div></div>
         ) : loading ? (

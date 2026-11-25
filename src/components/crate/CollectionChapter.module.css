@@ -39,8 +39,8 @@
 .activeFilters button { min-width: 0; min-height: 30px; max-width: 260px; padding: 5px 10px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; border: 1px solid #68785f; border-radius: 0; background: #d4dcd0; color: #263c1d; font: var(--text-control, 14px)/1.2 var(--font-ui); cursor: pointer; }
 .activeFilters button span { margin-left: 8px; }
 .activeFilters .clearFilters { background: #263120; color: var(--color-phosphor); }
-.gridFrame { container-type: size; flex: 1 1 auto; min-height: 0; overflow: hidden; padding: 0; background: none; border: 0; }
-.grid { --rows: 2; --case-width: min(calc((100cqw - 76px) / 6), calc((100cqh - 26px) / 2 - 60px)); display: grid; grid-template-columns: repeat(6, minmax(0, var(--case-width))); grid-template-rows: repeat(2, minmax(0, 1fr)); justify-content: center; align-items: center; justify-items: center; width: 100%; height: 100%; gap: 10px 12px; padding: 8px; }
+.gridFrame { container-type: size; flex: 1 1 auto; min-height: 0; overflow-x: hidden; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #627357 transparent; padding: 0; background: none; border: 0; }
+.grid { --rows: 2; --case-width: min(calc((100cqw - 76px) / 6), max(100px, calc((100cqh - 26px) / 2 - 60px))); display: grid; grid-template-columns: repeat(6, minmax(0, var(--case-width))); grid-template-rows: repeat(2, minmax(0, 1fr)); justify-content: center; align-items: center; justify-items: center; width: 100%; height: 100%; min-height: calc(var(--rows) * (var(--case-width) / 1.08 + 61px) + (var(--rows) - 1) * 10px + 16px); gap: 10px 12px; padding: 8px; }
 .grid > * { width: 100%; min-width: 0; }
 .emptyState { display: grid; place-items: center; width: 100%; height: 100%; text-align: center; font: var(--text-reading, 17px)/1.5 var(--font-ui); color: #35432f; }
 .recoveryActions { display: flex; justify-content: center; align-items: center; gap: 14px; margin-top: 15px; }
@@ -54,7 +54,7 @@
   .chapter[data-artist-exploring=true] { padding-block: 12px; }
   .header { margin-bottom: 8px; }
   .toolbar { margin-bottom: 8px; }
-  .grid { --case-width: min(calc((100cqw - 76px) / 6), calc(100cqh - 74px)); grid-template-rows: minmax(0, 1fr); }
+  .grid { --rows: 1; --case-width: min(calc((100cqw - 76px) / 6), max(100px, calc(100cqh - 74px))); grid-template-rows: minmax(0, 1fr); }
 }
 @media (max-width: 1100px) {
   .chapter { padding-inline: 20px; }

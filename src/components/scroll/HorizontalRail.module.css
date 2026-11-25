@@ -5,8 +5,8 @@
   grid-template-columns: 1fr minmax(320px, 720px) 1fr;
   grid-template-rows: minmax(0, 1fr);
   align-items: center;
-  width: 100vw;
-  min-width: 100vw;
+  width: 100cqw;
+  min-width: 100cqw;
   height: 100%;
   min-height: 0;
   padding: 16px 4vw;

@@ -39,3 +39,19 @@ export function paginateLyricsText(text: string, firstHeight: number, pageHeight
 export function lastLyricsSpread(pageCount: number): number {
   return Math.max(0, Math.floor((pageCount - 1) / 2) * 2);
 }
+
+/** Source offsets survive a change in font metrics or page dimensions. */
+export function lyricsPageOffset(pages: string[], pageIndex: number): number {
+  return pages.slice(0, Math.max(0, Math.floor(pageIndex))).reduce((length, page) => length + page.length, 0);
+}
+
+/** Keep the source character in view, including when it moves to a right face. */
+export function lyricsSpreadForOffset(pages: string[], sourceOffset: number): number {
+  const offset = Math.max(0, Number.isFinite(sourceOffset) ? Math.floor(sourceOffset) : 0);
+  let end = 0;
+  for (let index = 0; index < pages.length; index++) {
+    end += pages[index].length;
+    if (offset < end) return Math.floor(index / 2) * 2;
+  }
+  return lastLyricsSpread(pages.length);
+}

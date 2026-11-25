@@ -488,8 +488,24 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
     measureRail();
     updateRailProgress(lenis.scroll);
 
+    let measuredViewportWidth = Math.max(1, wrapper.clientWidth);
+    let resizeAnchorIndex = getNearestChapterIndex(lenis.scroll);
     const resizeObserver = new ResizeObserver(() => {
+      const width = Math.max(1, wrapper.clientWidth);
+      const changedWidth = width !== measuredViewportWidth;
+      // Layout can change its logical width under browser/CSS zoom. Keep a
+      // settled chapter in view without replacing a gesture, lock or timed
+      // navigation. The RAF clock and its current owner remain untouched.
+      const canAnchor = changedWidth && !snapInProgressRef.current &&
+        stopTokensRef.current.size === 0 && !lenis.isTouching &&
+        (lenis.isScrolling === false || (lenis.isScrolling === "native" && lenis.velocity === 0));
+      const chapter = content.children[resizeAnchorIndex] as HTMLElement | undefined;
+      measuredViewportWidth = width;
       measureRail();
+      if (canAnchor && chapter) {
+        lenis.resize();
+        lenis.scrollTo(chapter.offsetLeft, { immediate: true });
+      }
       updateRailProgress(lenis.scroll);
     });
 
@@ -497,6 +513,9 @@ export function RailProvider({ children, overlay, navigation }: RailProviderProp
     resizeObserver.observe(content);
 
     const handleScroll = ({ scroll }: { scroll: number }) => {
+      // Lenis has its own ResizeObserver. Its resize emission must not replace
+      // the old chapter anchor before this observer has measured the new width.
+      if (wrapper.clientWidth === measuredViewportWidth) resizeAnchorIndex = getNearestChapterIndex(scroll);
       markRailMoving();
       updateRailProgress(scroll);
     };

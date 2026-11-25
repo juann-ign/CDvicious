@@ -86,11 +86,15 @@ for (const [width, height] of [[1280, 800], [1440, 900]]) {
       const material = await page.evaluate(() => {
         const nav = document.querySelector('[data-hardware-front="navigation"]');
         const front = document.querySelector('[data-hardware-front="player"]');
+        const navBox = nav.getBoundingClientRect();
         const silver = getComputedStyle(front.parentElement).backgroundImage;
         return {
           silver, headerSilver: getComputedStyle(nav.parentElement).backgroundImage,
           bezel: getComputedStyle(front).backgroundImage, navBezel: getComputedStyle(nav).backgroundImage,
-          controls: [...nav.querySelectorAll("button")].map((button) => ({ size: parseFloat(getComputedStyle(button).fontSize), radius: getComputedStyle(button).borderRadius, contained: nav.contains(button) })),
+          controls: [...nav.querySelectorAll("button")].map((button) => {
+            const box = button.getBoundingClientRect();
+            return { size: parseFloat(getComputedStyle(button).fontSize), radius: getComputedStyle(button).borderRadius, contained: box.left >= navBox.left - 1 && box.right <= navBox.right + 1 && box.top >= navBox.top - 1 && box.bottom <= navBox.bottom + 1 };
+          }),
         };
       });
       expect(material.silver).not.toBe("none");

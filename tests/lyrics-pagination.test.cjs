@@ -6,7 +6,7 @@ const ts = require("typescript");
 const moduleUnderTest = { exports: {} };
 const source = ts.transpileModule(fs.readFileSync("src/lib/lyricsPagination.ts", "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
 vm.runInNewContext(source, { module: moduleUnderTest, exports: moduleUnderTest.exports });
-const { paginateLyricsText, lastLyricsSpread } = moduleUnderTest.exports;
+const { paginateLyricsText, lastLyricsSpread, lyricsPageOffset, lyricsSpreadForOffset } = moduleUnderTest.exports;
 const measure = (text) => Math.max(1, Math.ceil(text.length / 20)) * 16;
 
 test("páginas impares se recorren por spreads sin duplicar ni saltar líneas", () => {
@@ -40,4 +40,16 @@ test("una línea más alta que una página se divide sin perder palabras, espaci
 test("medidas cero o menores que una línea conservan el texto completo para fallback scrollable", () => {
   const text = "FIRST\n\nSECOND\nTHIRD";
   for (const sizes of [[0, 0], [0, 96], [8, 96], [32, 0]]) assert.equal(paginateLyricsText(text, ...sizes, measure).join(""), text);
+});
+
+test("al redimensionar el verso de lectura sigue visible aunque cambie de cara o de spread", () => {
+  const before = ["VERSO UNO\n", "VERSO DOS\n", "VERSO TRES\n", "VERSO CUATRO\n", "VERSO CINCO\n", "VERSO SEIS"];
+  const anchor = lyricsPageOffset(before, 4);
+  const wider = ["VERSO UNO\nVERSO DOS\nVERSO TRES\n", "VERSO CUATRO\nVERSO CINCO\n", "VERSO SEIS"];
+  const after = lyricsSpreadForOffset(wider, anchor);
+  assert.equal(after, 0); // The verse moved from the third spread to its right face.
+  assert.equal(wider.slice(after, after + 2).join("").includes("VERSO CINCO"), true);
+  assert.equal(lyricsSpreadForOffset(before, anchor), 4);
+  assert.equal(lyricsSpreadForOffset(wider, Number.MAX_SAFE_INTEGER), 2);
+  assert.equal(lyricsSpreadForOffset([], anchor), 0);
 });

@@ -6,7 +6,7 @@ const ts = require('typescript');
 // regressions separately deliver trusted middle-button and touch input.
 function harness({ animate = false, reducedMotion = false, initialTime = 1000 } = {}) {
   const refs = [], effects = [], timers = new Map(), frames = new Map();
-  const listeners = new Map();
+  const listeners = new Map(), scrollListeners = new Set(), resizeObservers = [];
   let nextId = 0, instance, now = initialTime;
   // Use the installed Lenis Animate and raf implementations, rather than a
   // second implementation of its duration/lerp math or first-time semantics.
@@ -15,6 +15,8 @@ function harness({ animate = false, reducedMotion = false, initialTime = 1000 } 
   const Animate = vm.runInNewContext(lenisSource.slice(0, animateEnd) + '; Animate;');
   const rafStart = lenisSource.indexOf('raf = (time) => {');
   const consumeFrame = vm.runInNewContext('(function(time) {' + lenisSource.slice(lenisSource.indexOf('{', rafStart) + 1, lenisSource.indexOf('\n\t};', rafStart)) + '\n})');
+  const resizeStart = lenisSource.indexOf('\n\tresize() {');
+  const consumeResize = vm.runInNewContext('(function() {' + lenisSource.slice(lenisSource.indexOf('{', resizeStart) + 1, lenisSource.indexOf('\n\t}', resizeStart)) + '\n})');
   const loadClock = () => {
     const module = { exports: {} };
     vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/components/scroll/railAnimationClock.ts', 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, {module, exports: module.exports});
@@ -25,8 +27,9 @@ function harness({ animate = false, reducedMotion = false, initialTime = 1000 } 
   wrapper.clientWidth = 1280;
   content.children = Array.from({ length: 5 }, (_, index) => ({ ...element(), offsetLeft: index * 1280, offsetWidth: 1280 }));
   class Lenis {
-    constructor(options) { instance = this; this.options = options; this.scroll = 0; this.targetScroll = 0; this.isScrolling = false; this.isStopped = false; this.velocity = 0; this.isTouching = false; this.calls = []; this.times = []; this.animate = animate ? new Animate() : { isRunning: false }; }
-    on() {} off() {}
+    constructor(options) { instance = this; this.options = options; this.scroll = 0; this.targetScroll = 0; this.isScrolling = false; this.isStopped = false; this.velocity = 0; this.isTouching = false; this.calls = []; this.times = []; this.dimensions = { resize() {} }; this.animate = animate ? new Animate() : { isRunning: false }; }
+    on(name, callback) { if (name === 'scroll') scrollListeners.add(callback); }
+    off(name, callback) { if (name === 'scroll') scrollListeners.delete(callback); }
     scrollTo(target, options) {
       this.calls.push({ target, options });
       if (options.immediate || target === this.targetScroll) { this.scroll = this.targetScroll = target; this.isScrolling = false; this.animate.isRunning = false; options.onComplete?.(); return; }
@@ -37,6 +40,9 @@ function harness({ animate = false, reducedMotion = false, initialTime = 1000 } 
       } });
     }
     raf(time) { this.times.push(time); if (animate) consumeFrame.call(this, time); }
+    get actualScroll() { return this.scroll; }
+    resize() { consumeResize.call(this); }
+    emit() { for (const callback of scrollListeners) callback({ scroll: this.scroll }); }
     stop() { this.isStopped = true; this.isScrolling = false; this.animate.isRunning = false; }
     start() { this.isStopped = false; }
     destroy() { this.destroyed = true; }
@@ -64,7 +70,11 @@ function harness({ animate = false, reducedMotion = false, initialTime = 1000 } 
     cancelAnimationFrame: id => frames.delete(id),
   };
   vm.runInNewContext(javascript, { module, exports: module.exports, document, window, performance: {now: () => now},
-    ResizeObserver: class { observe() {} disconnect() {} },
+    ResizeObserver: class {
+      constructor(callback) { this.callback = callback; this.nodes = new Set(); this.disconnected = false; resizeObservers.push(this); }
+      observe(node) { this.nodes.add(node); }
+      disconnect() { this.disconnected = true; this.nodes.clear(); }
+    },
     require: name => name === 'react' ? React : name === 'react/jsx-runtime' ? { jsx, jsxs: jsx } : name === 'lenis' ? { default: Lenis } : name === './railAnimationClock' ? loadClock() : { default: {} },
   }, { filename });
   const tree = module.exports.RailProvider({ children: null });
@@ -76,7 +86,17 @@ function harness({ animate = false, reducedMotion = false, initialTime = 1000 } 
   const idle = () => { const [id, callback] = timers.entries().next().value; timers.delete(id); callback(); };
   const interrupt = scrolling => { instance.animate.isRunning = false; instance.isScrolling = scrolling; instance.velocity = 0; };
   const visibility = (value, time) => { now = time; document.visibilityState = value; listeners.get('visibilitychange')?.(); };
-  return { actions, lenis: instance, state, frame, idle, interrupt, root, timers, frames, listeners, visibility, setNow: time => { now = time; }, cleanup };
+  // Explicit events let resize regressions model Lenis's own observer firing
+  // before the provider observer. Existing clock tests retain manual lifecycle
+  // control: scrollTo/raf do not gain automatic events or different timers.
+  const emitScroll = (scroll = instance.scroll) => { instance.scroll = scroll; for (const callback of scrollListeners) callback({ scroll }); };
+  const resizeLayout = width => {
+    wrapper.clientWidth = width;
+    content.children.forEach((child, index) => { child.offsetLeft = index * width; child.offsetWidth = width; });
+    // CSS zoom changes clientWidth while window.innerWidth stays 1280.
+  };
+  const notifyResize = () => { for (const observer of resizeObservers) if (!observer.disconnected) observer.callback([...observer.nodes].map(target => ({ target }))); };
+  return { actions, lenis: instance, state, frame, idle, interrupt, root, wrapper, content, timers, frames, listeners, visibility, emitScroll, resizeLayout, notifyResize, setNow: time => { now = time; }, cleanup };
 }
 
 module.exports = { harness };

@@ -1,10 +1,12 @@
 .root {
   --pSplit: 0;
   --pHideDeck: 0;
+  --shell-content-height: calc(100cqh - var(--shell-nav-height) - var(--shell-player-height));
   position: fixed;
   inset: 0;
-  width: 100vw;
-  height: 100dvh;
+  width: auto;
+  height: auto;
+  container-type: size;
   z-index: 0;
 }
 
