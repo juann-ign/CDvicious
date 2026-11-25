@@ -8,26 +8,43 @@ export async function GET(request: NextRequest) {
   const state = searchParams.get("state");
   const storedState = request.cookies.get("sp_oauth_state")?.value;
 
-  const baseUrl = process.env.APP_URL!;
+  // APP_URL is optional. Prefer the configured OAuth origin because Next's
+  // dev server can normalize 127.0.0.1 to localhost, splitting session cookies.
+  const homeUrl = new URL("/", process.env.APP_URL?.trim()
+    || process.env.SPOTIFY_REDIRECT_URI?.trim() || request.nextUrl.origin);
+  const redirectHome = (error?: string) => {
+    const target = new URL(homeUrl);
+    if (error) target.searchParams.set("auth_error", error);
+    const response = NextResponse.redirect(target);
+    response.cookies.delete("sp_oauth_state");
+    return response;
+  };
 
   if (!code || !state || state !== storedState) {
-    return NextResponse.redirect(`${baseUrl}/?auth_error=invalid_state`);
+    return redirectHome("invalid_state");
+  }
+
+  let tokens: Awaited<ReturnType<typeof exchangeCodeForTokens>>;
+  try {
+    tokens = await exchangeCodeForTokens(code);
+  } catch (error) {
+    // Report only the HTTP status, never codes, tokens, credentials or bodies.
+    const status = error instanceof Error
+      ? /^spotify token exchange failed: (\d{3})$/.exec(error.message)?.[1]
+      : undefined;
+    console.error("[Spotify OAuth] Falló el intercambio de código.", { status: status ?? "unavailable" });
+    return redirectHome("token_exchange_failed");
   }
 
   try {
-    const tokens = await exchangeCodeForTokens(code);
     await setSession({
       accessToken: tokens.access_token,
       refreshToken: tokens.refresh_token,
       expiresIn: tokens.expires_in,
     });
-
-    const response = NextResponse.redirect(baseUrl);
-    response.cookies.delete("sp_oauth_state");
-    return response;
   } catch {
-    return NextResponse.redirect(
-      `${baseUrl}/?auth_error=token_exchange_failed`,
-    );
+    console.error("[Spotify OAuth] No se pudo guardar la sesión.");
+    return redirectHome("session_failed");
   }
+  return redirectHome();
 }
