@@ -12,6 +12,39 @@ function load(path, dependencies = {}, globals = {}) {
   return module.exports;
 }
 const plain = (value) => JSON.parse(JSON.stringify(value));
+
+test("enriquecimiento conserva catálogo, orden y edición actuales por ID", async () => {
+  const original = [makeAlbum("a", "2024"), makeAlbum("b", "1994")];
+  const api = client(async (url) => url.includes("includeGenres=0") ? Response.json(original) : Response.json([
+    makeAlbum("foreign", "1970", ["wrong"]), makeAlbum("a", "1970", ["rock"], { genreMetadata: { state: "complete" } }),
+  ], { headers: { "X-CDV-Genres-State": "complete" } }));
+  await api.loadCollection(true); await api.loadCollectionGenres(true);
+  const snapshot = api.useCollectionCache();
+  assert.deepEqual(plain(snapshot.albums.map(a => [a.id, a.release_date])), [["a", "2024"], ["b", "1994"]]);
+  assert.deepEqual(plain(snapshot.albums[0].genres), ["rock"]);
+  assert.equal(snapshot.genresState, "partial");
+});
+
+test("catálogo vacío no inicia otra consulta de géneros", async () => {
+  let calls = 0;
+  const api = client(async () => { calls++; return Response.json([]); });
+  await api.loadCollection(true); await api.loadCollectionGenres(true);
+  assert.equal(calls, 1); assert.equal(api.useCollectionCache().genresState, "empty");
+});
+
+test("capacidad medida encaja y resize conserva el índice orientador en una página válida", () => {
+  const { collectionLayout, pageForAnchor } = load("src/lib/collectionLayout.ts");
+  for (const [width, height] of [[1400, 528], [1240, 424], [800, 300], [400, 190]]) {
+    const layout = collectionLayout(width, height);
+    assert.ok(layout.capacity > 0);
+    assert.ok(layout.columns * layout.caseWidth + (layout.columns - 1) * 8 <= width);
+    if (layout.rows > 1) assert.ok(layout.rows * (layout.caseWidth / 1.08 + 62) + (layout.rows - 1) * 8 <= height);
+  }
+  assert.equal(collectionLayout(1400, 528).capacity, 16);
+  assert.equal(collectionLayout(1240, 424).capacity, 14);
+  assert.equal(pageForAnchor(2, 14, 16, 45), 1);
+  assert.equal(pageForAnchor(2, 14, 16, 3), 0);
+});
 function client(fetch) {
   return load("src/lib/collectionClient.ts", {
     react: { useSyncExternalStore: (_subscribe, getSnapshot) => getSnapshot() },
@@ -192,7 +225,7 @@ test("wrapper legacy conserva los géneros obtenidos ante fallo parcial", async 
   assert.deepEqual(plain(await api.fetchArtistGenres("private-token", ["a", "b", "c"])), { a: ["rock"], b: [] });
 });
 
-function collectionRoute({ fetchAlbums, detailed, mock = false }) {
+function collectionRoute({ fetchAlbums, detailed, mock = false, expireBase = false }) {
   class SpotifyApiError extends Error {
     constructor(message, status, reason, retryAfter) { super(message); Object.assign(this, { status, reason, retryAfter }); }
   }
@@ -203,11 +236,24 @@ function collectionRoute({ fetchAlbums, detailed, mock = false }) {
     "@/lib/session": { getSession: async () => ({ accessToken: "private-token" }) },
     "@/mocks/collection.json": { default: require("../src/mocks/collection.json") },
     "@/lib/collectionFilters": load("src/lib/collectionFilters.ts"),
-    "@/lib/serverCache": { cached: async (key, _ttl, loader) => { if (cache.has(key)) return cache.get(key); const result = await loader(); cache.set(key, result); return result; } },
+    "@/lib/serverCache": { cached: async (key, _ttl, loader) => { if (expireBase && key.startsWith("collection:base:")) return loader(); if (cache.has(key)) return cache.get(key); const result = await loader(); cache.set(key, result); return result; } },
     "@/lib/spotify": { SpotifyApiError, fetchSpotifyWebApi: fetchAlbums, fetchArtistGenresDetailed: detailed },
   }, { process: { env: { NEXT_PUBLIC_SPOTIFY_MOCK: mock ? "1" : "0" } } });
 }
 const collectionRequest = (genres) => ({ nextUrl: new URL(`http://local/api/collection?includeGenres=${genres ? "1" : "0"}`) });
+
+test("enriquecimiento cacheado no devuelve el catálogo anterior al vencer la caché base", async () => {
+  let current = [makeAlbum("old", "1994")];
+  const api = collectionRoute({ expireBase: true,
+    fetchAlbums: async () => Response.json({ items: current.map(album => ({ album })), next: null }),
+    detailed: async (_token, ids) => ({ byArtist: Object.fromEntries(ids.map(id => [id, ["rock"]])), requestedArtistIds: ids, unresolvedArtistIds: [] }),
+  });
+  assert.equal((await (await api.GET(collectionRequest(true))).json())[0].id, "old");
+  current = [makeAlbum("new", "2024")];
+  const result = await (await api.GET(collectionRequest(true))).json();
+  assert.deepEqual(plain(result.map(album => album.id)), ["new"]);
+  assert.equal(result[0].release_date, "2024");
+});
 
 test("API mantiene array, fuente por álbum y cobertura parcial no cacheada que se recupera", async () => {
   let genreCalls = 0;

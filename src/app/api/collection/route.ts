@@ -186,17 +186,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(allAlbums, { headers: { "X-CDV-Genres-State": "not-requested" } });
     }
 
-    const genresKey = collectionCacheKey(identityHash, "genres") + ":coverage-v1";
+    // The base catalog expires sooner than enrichment. Resolve it before the
+    // genre cache lookup so a changed library cannot receive an older array.
+    const allAlbums = await cached(
+      baseKey,
+      COLLECTION_BASE_TTL_MS,
+      () => fetchAllAlbums(session.accessToken),
+    );
+    const catalogHash = createHash("sha256").update(JSON.stringify(allAlbums)).digest("hex");
+    const genresKey = `${collectionCacheKey(identityHash, "genres")}:coverage-v2:${catalogHash}`;
     const withGenres = await cached(
       genresKey,
       COLLECTION_GENRES_TTL_MS,
       async () => {
-        const allAlbums = await cached(
-          baseKey,
-          COLLECTION_BASE_TTL_MS,
-          () => fetchAllAlbums(session.accessToken),
-        );
-
         const allArtistIds = allAlbums.flatMap((album) =>
           album.artists.map((artist) => artist.id),
         );

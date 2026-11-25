@@ -75,6 +75,12 @@
   transform: translateY(0) scale(1);
 }
 
+/* Only the surrounding chrome changes; the shared acrylic case keeps its material. */
+.scrim { background: #263a2e26; backdrop-filter: blur(3px); }
+.sheet { background: var(--material-shell); border: 1px solid var(--metal-edge); box-shadow: 0 14px 38px #24392c55, inset 0 1px #e8efe155; }
+.sheet::after { border: 0; box-shadow: none; }
+.sheet .title, .sheet .artist, .sheet .eyebrow { color: var(--metal-ink); }
+
 .header {
   position: relative;
   z-index: 5;

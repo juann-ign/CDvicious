@@ -169,7 +169,7 @@
   padding: 0 0 10px;
   margin: 0 0 2px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  color: var(--color-phosphor);
+  color: var(--metal-ink);
   font-family: var(--font-ui);
   font-size: 12px;
   line-height: 1;
@@ -178,8 +178,8 @@
 }
 
 .closedMetaHeader span:last-child {
-  color: var(--color-text-muted);
-  font-size: 10px;
+  color: var(--metal-secondary);
+  font-size: 14px;
   letter-spacing: 1.2px;
 }
 
@@ -210,9 +210,9 @@
 .closedMetaGrid small {
   display: block;
   margin: 0 0 6px;
-  color: rgba(232, 240, 245, 0.5);
+  color: var(--metal-secondary);
   font-family: var(--font-ui);
-  font-size: 10px;
+  font-size: 14px;
   line-height: 1;
   letter-spacing: 1.6px;
   text-transform: uppercase;
@@ -225,9 +225,9 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: rgba(232, 240, 245, 0.94);
+  color: var(--metal-ink);
   font-family: var(--font-ui);
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.05;
   letter-spacing: 1.15px;
   font-weight: 500;
@@ -247,10 +247,10 @@
 .closedMetaTags span {
   padding: 4px 7px;
   border: 1px solid rgba(148, 255, 0, 0.24);
-  color: var(--color-phosphor-dim);
-  background: rgba(148, 255, 0, 0.035);
+  color: var(--metal-ink);
+  background: var(--metal-control);
   font-family: var(--font-ui);
-  font-size: 10px;
+  font-size: 14px;
   line-height: 1;
   letter-spacing: 1px;
   text-transform: uppercase;

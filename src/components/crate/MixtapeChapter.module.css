@@ -30,7 +30,7 @@
   font-size: clamp(38px, 5vw, 76px);
   line-height: 0.88;
   letter-spacing: var(--tracking-display);
-  color: var(--color-text);
+  color: var(--metal-ink);
   text-shadow: 0 0 18px rgba(137, 233, 0, 0.08);
 }
 
@@ -45,7 +45,7 @@
 
 .status {
   padding-bottom: 5px;
-  color: var(--color-phosphor);
+  color: var(--metal-ink);
 }
 
 .lab {

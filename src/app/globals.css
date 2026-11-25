@@ -14,14 +14,7 @@
 
 html,
 body {
-  background-color: var(--color-bg);
-  background-image:
-    radial-gradient(
-      circle at 50% 10%,
-      rgba(210, 220, 235, 0.35) 0%,
-      transparent 55%
-    ),
-    linear-gradient(135deg, #626c7a 0%, #3a4049 100%);
+  background: var(--material-shell);
   background-attachment: fixed;
   height: 100%;
   color: var(--color-text);

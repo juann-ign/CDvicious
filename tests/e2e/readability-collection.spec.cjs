@@ -9,7 +9,7 @@ const year = (page) => collection(page).getByRole("combobox", { name: "Filtrar p
 const query = (page) => collection(page).getByRole("searchbox", { name: "Buscar artista o álbum", exact: true });
 const ids = (page) => cards(page).evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-collection-album-id")));
 async function openCollection(page) { await openRail(page); await go(page, "Colección", 3); await expect(cards(page).first()).toBeVisible(); }
-async function loadGenres(page) { await collection(page).getByRole("button", { name: "Cargar géneros", exact: true }).click(); await expect(genre(page).locator('option[value="electronic"], option[value="rock"]').first()).toHaveCount(1); }
+async function loadGenres(page) { await expect(genre(page).locator('option[value="electronic"], option[value="rock"]').first()).toHaveCount(1); }
 
 test.beforeEach(async ({ page }) => { await functionalFixture(page); });
 test.afterEach(async ({ page }, testInfo) => {
@@ -28,20 +28,20 @@ test.afterEach(async ({ page }, testInfo) => {
 
 test("Colección normal: búsqueda sin tildes, cuatro filtros y chips removibles respetan la edición", async ({ page }) => {
   await openCollection(page);
-  await expect(cards(page)).toHaveCount(6);
-  await expect(collection(page).locator("header [role=status]")).toHaveText("21 discos");
+  await expect(cards(page)).toHaveCount(14);
+  await expect(collection(page).locator("header [role=status]")).toHaveCount(0);
   await expect(collection(page).getByRole("button", { name: "Tu colección", exact: true })).toBeVisible();
   await expect(collection(page).getByRole("button", { name: "Buscar artista", exact: true })).toBeVisible();
   for (const viewport of [{ width: 1280, height: 800 }, { width: 1440, height: 900 }, { width: 1280, height: 800 }]) {
     await page.setViewportSize(viewport);
-    await expect(cards(page)).toHaveCount(viewport.height <= 850 ? 6 : 12);
+    await expect(cards(page)).toHaveCount(viewport.height <= 850 ? 14 : 16);
     const geometry = await collection(page).evaluate((node) => {
       const frame = node.querySelector('[class*="gridFrame"]').getBoundingClientRect();
       const faces = [...node.querySelectorAll('[data-collection-album-id] [class*="caseFace"]')].map((face) => face.getBoundingClientRect());
       const firstRow = faces.filter((face) => Math.abs(face.y - faces[0].y) < 2);
       return { width: faces[0].width, gaps: firstRow.slice(1).map((face, index) => face.x - firstRow[index].right), withinFrame: faces.every((face) => face.top >= frame.top && face.bottom <= frame.bottom) };
     });
-    expect(geometry.width).toBeGreaterThanOrEqual(160);
+    expect(geometry.width).toBeGreaterThanOrEqual(148);
     expect(geometry.gaps.every((gap) => gap >= 8 && gap <= 16)).toBe(true);
     expect(geometry.withinFrame).toBe(true);
   }
@@ -76,8 +76,8 @@ test("Colección normal: búsqueda sin tildes, cuatro filtros y chips removibles
   await expect(collection(page).getByRole("status").filter({ hasText: "Sin resultados para estos filtros" })).toBeVisible();
   await expect(cards(page)).toHaveCount(0);
   await collection(page).getByRole("button", { name: "Limpiar filtros", exact: true }).click();
-  await expect(cards(page)).toHaveCount(6);
-  await expect(collection(page)).toContainText("Página 1 de 4");
+  await expect(cards(page)).toHaveCount(14);
+  await expect(collection(page)).toContainText("Página 1 de 2");
   await expect(collection(page).locator('[aria-label="Filtros activos"]')).toHaveCount(0);
 });
 
@@ -94,7 +94,8 @@ test("volver de una ficha conserva búsqueda, filtros, página y foco en el mism
   await decade(page).selectOption("1990s");
   await year(page).selectOption("1994");
   await collection(page).getByRole("button", { name: "Siguiente", exact: true }).click();
-  await expect(collection(page)).toContainText("Página 2 de 7");
+  const pages = Math.ceil(albums.length / Number(await collection(page).locator('[data-page-size]').getAttribute('data-page-size')));
+  await expect(collection(page)).toContainText(`Página 2 de ${pages}`);
   const before = await ids(page);
   const chosen = cards(page).nth(3);
   const chosenId = await chosen.getAttribute("data-collection-album-id");
@@ -106,7 +107,7 @@ test("volver de una ficha conserva búsqueda, filtros, página y foco en el mism
   await expect(genre(page)).toHaveValue("rock");
   await expect(decade(page)).toHaveValue("1990s");
   await expect(year(page)).toHaveValue("1994");
-  await expect(collection(page)).toContainText("Página 2 de 7");
+  await expect(collection(page)).toContainText(`Página 2 de ${pages}`);
   expect(await ids(page)).toEqual(before);
   await expect(collection(page).locator(`[data-collection-album-id="${chosenId}"]`)).toBeFocused();
 });

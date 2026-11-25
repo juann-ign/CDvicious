@@ -19,6 +19,7 @@ import { RailFlyingDisc } from "./RailFlyingDisc";
 import type { AlbumItem } from "@/types/crate";
 import { collectionDecades, collectionGenres, collectionYears, filterCollection } from "@/lib/collectionFilters";
 import styles from "./CollectionChapter.module.css";
+import { collectionLayout, pageForAnchor } from "@/lib/collectionLayout";
 
 export function CollectionChapter() {
   const [exploringArtist, setExploringArtist] = useState(false);
@@ -36,6 +37,9 @@ export function CollectionChapter() {
   const [year, setYear] = useState("all");
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(12);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const paginationRef = useRef({ page: 0, pageSize: 12, count: 0, anchorIndex: 0 });
+  const anchorIdRef = useRef<string | null>(null);
   const artistButtonRef = useRef<HTMLButtonElement>(null);
   const trayButtonRef = useRef<HTMLButtonElement>(null);
   const [selected, setSelected] = useState<AlbumItem | null>(null);
@@ -50,19 +54,25 @@ export function CollectionChapter() {
   const genresWait = Math.max(0, Math.ceil((genresRetryAt - now) / 1000));
 
   useEffect(() => {
-    const compact = window.matchMedia("(max-height: 850px)");
-    let previousSize = 12;
+    const grid = gridRef.current;
+    if (!grid) return;
     const resize = () => {
-      const nextSize = compact.matches ? 6 : 12;
-      if (previousSize === nextSize) return;
-      const before = previousSize;
-      previousSize = nextSize;
-      setPage((current) => Math.floor(current * before / nextSize));
-      setPageSize(nextSize);
+      if (grid.clientWidth < 1 || grid.clientHeight < 1) return;
+      const layout = collectionLayout(grid.clientWidth, grid.clientHeight);
+      grid.style.setProperty("--collection-columns", String(layout.columns));
+      grid.style.setProperty("--collection-rows", String(layout.rows));
+      grid.style.setProperty("--collection-case-width", `${layout.caseWidth}px`);
+      const previous = paginationRef.current;
+      if (layout.capacity === previous.pageSize) return;
+      const nextPage = pageForAnchor(previous.page, previous.pageSize, layout.capacity, previous.count, previous.anchorIndex);
+      paginationRef.current = { ...previous, page: nextPage, pageSize: layout.capacity };
+      setPage(nextPage);
+      setPageSize(layout.capacity);
     };
+    const observer = new ResizeObserver(resize);
+    observer.observe(grid);
     resize();
-    compact.addEventListener("change", resize);
-    return () => compact.removeEventListener("change", resize);
+    return () => observer.disconnect();
   }, []);
 
   useEffect(() => { setNow(Date.now()); }, [collectionRetryAt, genresRetryAt]);
@@ -150,6 +160,14 @@ export function CollectionChapter() {
     void loadCollectionGenres(authenticated)?.catch(() => undefined);
   }, [authenticated, loadingGenres, genresWait]);
 
+  // Metadata enrichment never blocks the album grid or depends on a button.
+  // The shared cache deduplicates requests and rejects stale auth generations.
+  useEffect(() => {
+    if (authenticated === true && cachedAlbums && genresState === "idle") {
+      void loadCollectionGenres(authenticated)?.catch(() => undefined);
+    }
+  }, [authenticated, cachedAlbums, genresState]);
+
   // Options describe the full saved collection, before search and pagination.
   const decades = useMemo(() => collectionDecades(albums), [albums]);
   const topGenres = useMemo(() => collectionGenres(albums), [albums]);
@@ -162,12 +180,16 @@ export function CollectionChapter() {
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage = Math.min(page, totalPages - 1);
+  const anchorIndex = filtered.findIndex((album) => album.id === anchorIdRef.current);
+  paginationRef.current = { page: safePage, pageSize, count: filtered.length,
+    anchorIndex: anchorIndex >= safePage * pageSize && anchorIndex < (safePage + 1) * pageSize ? anchorIndex : safePage * pageSize };
   const pageItems = filtered.slice(
     safePage * pageSize,
     safePage * pageSize + pageSize,
   );
 
   const handleSelect = useCallback((album: AlbumItem) => {
+    anchorIdRef.current = album.id;
     setPlayErrorForAlbum(null);
     setSelected(album);
   }, []);
@@ -218,9 +240,6 @@ export function CollectionChapter() {
           <button ref={artistButtonRef} type="button" onClick={() => { setArtistExplorerVisited(true); setExploringArtist(true); }}>Buscar artista</button>
           <button ref={trayButtonRef} type="button" aria-label={trayOpen ? "Ocultar Batea en Colección" : "Mostrar Batea en Colección"} aria-expanded={trayOpen} aria-controls="collection-batea" onClick={() => setTrayOpen((open) => !open)}>Batea (prototipo)</button>
         </nav>
-        <span className={styles.meta} role="status" aria-live="polite">
-          {collectionState === "error" ? "Colección no disponible" : loading ? "Cargando colección…" : `${filtered.length} ${filtered.length === 1 ? "disco" : "discos"}`}
-        </span>
       </header>
 
       {trayOpen && <section id="collection-batea" className={styles.trayPrototype} data-testid="collection-batea-prototype" aria-labelledby="collection-batea-title" onKeyDown={(event) => {
@@ -250,6 +269,7 @@ export function CollectionChapter() {
           <span>Género del artista</span>
           <select value={genre} onChange={(event) => setGenre(event.target.value)} aria-label="Filtrar por género">
             <option value="all">Todos</option>
+            {genre !== "all" && !topGenres.some((item) => item.id === genre) && <option value={genre}>{genre} (seleccionado)</option>}
             {topGenres.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
           </select>
         </label>
@@ -265,9 +285,6 @@ export function CollectionChapter() {
             {years.map((item) => <option key={item.id} value={item.id}>{item.id === "all" ? "Todos" : item.label}</option>)}
           </select>
         </label>
-        {(genresState === "idle" || loadingGenres || genresState === "partial" || genresState === "error") && <button type="button" className={styles.loadGenres} onClick={handleLoadGenres} disabled={loadingGenres || genresWait > 0 || !albums.length}>
-          {loadingGenres ? "Cargando géneros…" : genresState === "idle" ? "Cargar géneros" : "Reintentar géneros"}
-        </button>}
       </div>
 
       {loadingGenres && <p className={styles.filterStatus} role="status">Consultando géneros de los artistas…</p>}
@@ -275,6 +292,7 @@ export function CollectionChapter() {
       {genresState === "partial" && <p className={styles.filterStatus} role="status">Géneros parciales · {genresResolvedArtists} de {genresTotalArtists} artistas consultados. Podés filtrar con los datos disponibles.</p>}
       {genresState === "error" && <p className={styles.filterStatus} role="alert">Géneros del artista: {genresError?.message}{genresError?.status === 401 && <a href="/api/auth/login"> Conectar Spotify</a>}</p>}
       {genresWait > 0 && <p className={styles.filterStatus} role="status">Reintento disponible en {genresWait} s.</p>}
+      {(genresState === "partial" || genresState === "error") && <button type="button" className={styles.retryGenres} onClick={handleLoadGenres} disabled={genresWait > 0 || !albums.length}>Reintentar géneros</button>}
 
       {(query || decade !== "all" || genre !== "all" || year !== "all") && <div className={styles.activeFilters} aria-label="Filtros activos">
         {query && <button type="button" aria-label={`Quitar búsqueda: ${query}`} onClick={() => setQuery("")}>Búsqueda: {query} <span aria-hidden="true">×</span></button>}
@@ -284,7 +302,13 @@ export function CollectionChapter() {
         <button type="button" className={styles.clearFilters} onClick={clearFilters}>Limpiar filtros</button>
       </div>}
 
-      <div className={styles.gridFrame} data-page-size={pageSize} onWheelCapture={(event) => {
+      <div ref={gridRef} className={styles.gridFrame} data-page-size={pageSize} onFocusCapture={(event) => {
+        const card = (event.target as HTMLElement).closest<HTMLElement>("[data-collection-album-id]");
+        if (!card) return;
+        anchorIdRef.current = card.dataset.collectionAlbumId ?? null;
+        const index = filtered.findIndex((album) => album.id === anchorIdRef.current);
+        if (index >= 0) paginationRef.current.anchorIndex = index;
+      }} onWheelCapture={(event) => {
         const frame = event.currentTarget;
         // Only a genuinely overflowing grid owns vertical wheel input. A
         // regular Collection page keeps the rail's existing chapter gesture.

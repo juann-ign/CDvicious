@@ -114,6 +114,11 @@
   --content-max-width: 1500px;
   --vfd-max-width: 620px;
   --material-silver: repeating-linear-gradient(0deg, #ffffff08 0 1px, #374b4205 1px 3px), linear-gradient(115deg, #bcc4c2, #9eaaa8 45%, #c4ccca 72%, #adb7b9);
+  --material-shell: var(--material-silver);
+  --metal-ink: #20342a;
+  --metal-secondary: #354c3c;
+  --metal-control: linear-gradient(180deg, #bbc5bc, #95a397 62%, #aab7ac);
+  --metal-edge: #637769;
   --hardware-front: linear-gradient(180deg, #202522, var(--color-vfd-bg) 34%, #151916);
   --hardware-button: linear-gradient(180deg, #343b36, #1d221f 64%, #171b18);
   --hardware-inset: inset 0 2px 5px #0009, inset 0 -1px #e5eee31c;

@@ -19,6 +19,7 @@
   height: 100%;
   min-height: 0;
 }
+.panelChapter { padding: 0; }
 
 .panelChapter > .chapterContent > div {
   box-sizing: border-box;

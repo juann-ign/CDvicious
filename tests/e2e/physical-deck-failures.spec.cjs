@@ -108,7 +108,7 @@ async function prepare(page) {
   await expect(display(page)).toHaveAttribute("data-is-playing", "false");
   const prior = await page.evaluate(() => structuredClone(window.__b2Mock.getSnapshot().data));
   await go(page, "Colección", 3);
-  await collection(page).getByRole("button", { name: "Cargar géneros", exact: true }).click();
+  await expect(collection(page).getByRole("combobox", { name: "Filtrar por género", exact: true }).locator('option[value="electronic"]')).toHaveCount(1);
   await collection(page).getByRole("searchbox", { name: "Buscar artista o álbum", exact: true }).fill("Nocturnal");
   await collection(page).getByRole("combobox", { name: "Filtrar por género", exact: true }).selectOption("electronic");
   await collection(page).getByRole("combobox", { name: "Filtrar por década", exact: true }).selectOption("2020s");

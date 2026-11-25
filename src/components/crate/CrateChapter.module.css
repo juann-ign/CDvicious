@@ -25,7 +25,7 @@
   font-size: clamp(34px, 5vw, 72px);
   line-height: 0.9;
   letter-spacing: var(--tracking-display);
-  color: var(--color-text);
+  color: var(--metal-ink);
 }
 
 .status {
@@ -33,7 +33,7 @@
   font-family: var(--font-ui);
   font-size: var(--text-sm);
   letter-spacing: var(--tracking-wide);
-  color: var(--color-phosphor);
+  color: var(--metal-ink);
 }
 
 .shelfArea {

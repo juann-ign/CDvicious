@@ -93,6 +93,7 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
 }
 
+
 /* =========================================================
    AVATAR
    ========================================================= */
@@ -179,3 +180,11 @@
   background: var(--color-surface);
   color: var(--color-phosphor);
 }
+
+/* Account access is machined into the same metal front as chapter controls. */
+.profileConnect, .profileTrigger { background: var(--metal-control); color: var(--metal-ink); border: 1px solid var(--metal-edge); border-radius: 0; box-shadow: inset 0 1px #e1e8dd55, 0 2px 3px #23362a33; }
+.username { color: var(--metal-ink); }
+.menu { background: var(--material-shell); border-radius: 0; box-shadow: 0 6px 18px #23362a44; }
+.menu button { color: var(--metal-ink); }
+.menu button:hover { background: #273c2d; }
+.profileConnect:focus-visible, .profileTrigger:focus-visible, .menu button:focus-visible { outline: 2px solid var(--metal-ink); outline-offset: 3px; }

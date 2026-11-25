@@ -43,7 +43,7 @@ export function JewelCaseFront({
       {presentation === "collection" && <span className={styles.details}>
         <strong title={album.name}>{album.name}</strong>
         <span title={artist}>{artist}</span>
-        <small title={[edition, ...(album.genres ?? [])].join(" · ")}>{edition}{album.genres?.[0] ? ` · ${album.genres[0]}` : ""}</small>
+        <small title={`${edition}${album.genres?.length ? ` · Géneros del artista: ${album.genres.join(", ")}` : ""}`}>{edition}{album.genres?.[0] ? ` · ${album.genres[0]} (artista)` : ""}</small>
       </span>}
     </button>
   );

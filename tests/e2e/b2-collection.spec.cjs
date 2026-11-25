@@ -13,7 +13,7 @@ async function intercept(page, albums, enriched) {
   await page.route("**/api/collection?*", (route) => new URL(route.request().url()).searchParams.get("includeGenres") === "1" ? enriched(route) : route.fulfill({ json: albums.map((album) => ({ ...album, genres: [], genreMetadata: undefined })), headers: headers("not-requested", 0, albums.length) }));
 }
 async function openCollection(page) { await openRail(page); await go(page, "Colección", 3); await expect(cards(page).first()).toBeVisible(); }
-async function loadGenres(page) { await collection(page).getByRole("button", { name: "Cargar géneros", exact: true }).click(); }
+async function loadGenres(page) { await expect(collection(page).getByRole("button", { name: "Cargar géneros", exact: true })).toHaveCount(0); }
 
 test("géneros vacíos explican TODOS sin presentar una carga completa como catálogo de géneros", async ({ page }) => {
   const albums = small();
@@ -38,9 +38,12 @@ test("cobertura parcial conserva álbumes, avisa y permite completar géneros al
   await expect(genreStatus(page)).toContainText(/parcial|incomplet/i);
   await expect(cards(page)).toHaveCount(3);
   await expect(genreRow(page).locator('option[value="jazz"]')).toHaveText("JAZZ");
+  await genreRow(page).selectOption("jazz");
+  await expect(cards(page)).toHaveCount(1);
   await collection(page).getByRole("button", { name: "Reintentar géneros", exact: true }).click();
   await expect(genreRow(page).locator('option[value="ambient"]')).toHaveText("AMBIENT");
-  await expect(cards(page)).toHaveCount(3);
+  await expect(genreRow(page)).toHaveValue("jazz");
+  await expect(cards(page)).toHaveCount(1);
   expect(requests).toBe(2);
 });
 
@@ -62,7 +65,11 @@ test("HTTP 200 con álbum inválido se informa sin crash y permite recuperar la 
   page.on("pageerror", (error) => errors.push(error.message));
   const albums = small();
   let requests = 0;
-  await page.route("**/api/collection?*", (route) => route.fulfill({ status: 200, json: ++requests === 1 ? [{}] : albums.map((album) => ({ ...album, genres: [] })), headers: headers("not-requested", 0, 3) }));
+  await page.route("**/api/collection?*", (route) => {
+    const enriched = route.request().url().includes("includeGenres=1");
+    if (enriched) return route.fulfill({ json: albums.map((album) => ({ ...album, genres: [], genreMetadata: coverage("complete", 1, 1) })), headers: headers("empty", 3, 3) });
+    return route.fulfill({ status: 200, json: ++requests === 1 ? [{}] : albums.map((album) => ({ ...album, genres: [] })), headers: headers("not-requested", 0, 3) });
+  });
   await openRail(page); await go(page, "Colección", 3);
   await expect(collection(page).getByRole("alert")).toContainText("La respuesta de la colección no es válida");
   await expect(cards(page)).toHaveCount(0);
@@ -94,7 +101,7 @@ test("décadas y géneros son globales; búsqueda, década y género se combinan
   for (const label of ["1970s", "1990s", "2010s", "2020s", "SIN FECHA"]) await expect(decadeRow(page).getByRole("option", { name: label, exact: true })).toHaveCount(1);
   await expect(genreRow(page).locator('option[value="krautrock"]')).toHaveText("KRAUTROCK");
   await collection(page).getByRole("button", { name: "Siguiente", exact: true }).click();
-  await expect(collection(page)).toContainText("Página 2 de 8");
+  await expect(collection(page)).toContainText("Página 2 de 4");
   await collection(page).getByRole("searchbox", { name: "Buscar artista o álbum", exact: true }).fill("Radar");
   await expect(collection(page).getByRole("button", { name: "Siguiente", exact: true })).toHaveCount(0);
   await expect(decadeRow(page).getByRole("option", { name: "1970s", exact: true })).toHaveCount(1);
@@ -117,9 +124,9 @@ test("décadas y géneros son globales; búsqueda, década y género se combinan
   await expect(genreRow(page).locator('option[value="krautrock"]')).toHaveText("KRAUTROCK");
   await collection(page).getByRole("button", { name: "Limpiar filtros", exact: true }).click();
   await expect(collection(page).getByRole("searchbox", { name: "Buscar artista o álbum", exact: true })).toHaveValue("");
-  await expect(cards(page)).toHaveCount(6);
-  await expect(collection(page)).toContainText("Página 1 de 8");
-  await expect(collection(page).locator("header [role=status]")).toHaveText("44 discos");
+  await expect(cards(page)).toHaveCount(14);
+  await expect(collection(page)).toContainText("Página 1 de 4");
+  await expect(collection(page).locator("header [role=status]")).toHaveCount(0);
   await collection(page).getByRole("searchbox", { name: "Buscar artista o álbum", exact: true }).fill("");
   await genreRow(page).selectOption("all");
   await decadeRow(page).selectOption("unknown");
