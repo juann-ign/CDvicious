@@ -8,8 +8,7 @@ async function measureSplit(page) {
       top: Math.min(...boxes.map((box) => box.top)), bottom: Math.max(...boxes.map((box) => box.bottom)) });
     const deck = document.querySelector("[data-physical-deck]");
     const faces = [...deck.querySelectorAll("[data-deck-surface]")].map(rect);
-    const leaves = [...document.querySelectorAll('[data-testid="lyrics-paper"] > [class*="bookletPageHalf"]')].map(rect);
-    const pagination = rect(document.querySelector('[data-testid="lyrics-pagination-controls"]'));
+    const leaves = [...document.querySelectorAll('[data-testid="lyrics-paper"] > [data-booklet-page-half]')].map(rect);
     const focus = document.querySelector('[role="region"][aria-label="Booklet de letras"]');
     const footer = document.querySelector("[data-global-player]");
     const glass = deck.querySelector("[data-deck-display-mirror]");
@@ -25,7 +24,7 @@ async function measureSplit(page) {
       target: rect(deck.querySelector("[data-deck-disc-target]")),
       scene: { clientWidth: deck.querySelector("[data-deck-design-frame]").clientWidth, clientHeight: deck.querySelector("[data-deck-design-frame]").clientHeight },
       booklet: rect(document.querySelector('[data-testid="lyrics-booklet"]')), paper: rect(document.querySelector('[data-testid="lyrics-paper"]')),
-      leaves, pagination, bookletFocus: rect(focus), physicalBooklet: union([...leaves, pagination, rect(focus)]),
+      leaves, bookletFocus: rect(focus), physicalBooklet: union([...leaves, rect(focus)]),
       focus: { active: document.activeElement === focus, visible: focus.matches(":focus-visible"), outlineWidth: getComputedStyle(focus).outlineWidth, outlineOffset: getComputedStyle(focus).outlineOffset },
       controls: [...deck.querySelectorAll('[aria-label="Controles del equipo"] button')].map((node) => ({ label: node.getAttribute("aria-label"), rect: rect(node), hit: hit(node) })),
       knob: { rect: rect(deck.querySelector('[aria-label="Volumen del equipo"]')), hit: hit(deck.querySelector('[aria-label="Volumen del equipo"]')) },

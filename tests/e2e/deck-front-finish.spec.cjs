@@ -84,7 +84,7 @@ test("front layout: Deck and Split retain their composition, readable contents a
       if (index === 1) {
         for (const key of ["x", "y", "width", "height"]) expect(Math.abs(current.paper[key] - approved.paper[key])).toBeLessThan(2);
         expect(current.equipment.right).toBeLessThan(current.paper.left);
-        await expect(page.getByTestId("lyrics-pagination-controls")).toBeInViewport({ ratio: 1 });
+        await expect(page.getByTestId("lyrics-paper")).toBeInViewport({ ratio: 1 });
       }
       await hiddenFooter(page);
       expect(current.footer.height).toBe(128);

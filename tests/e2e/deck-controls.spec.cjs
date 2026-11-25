@@ -69,7 +69,7 @@ async function assertFits(page, split = false) {
     const equipmentCenter = (bounds.top + bounds.bottom) / 2;
     const paperCenter = (measurement.paper.top + measurement.paper.bottom) / 2;
     expect(Math.abs(equipmentCenter - paperCenter)).toBeLessThan(50);
-    await expect(page.getByTestId("lyrics-pagination-controls")).toBeInViewport();
+    await expect(page.getByTestId("lyrics-paper")).toBeInViewport();
   }
   return measurement;
 }

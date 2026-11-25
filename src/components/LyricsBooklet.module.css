@@ -4,6 +4,8 @@
    ========================================================= */
 
 .bookletOuter {
+  --lyric-size: 16px;
+  --page-padding: 24px 26px 20px;
   position: relative;
 
   width: 100%;
@@ -275,6 +277,14 @@
    ========================================================= */
 
 .bookletPageSpread {
+  --booklet-left-width: 54%;
+  --booklet-right-width: 52%;
+  --booklet-right-recess: 1px;
+  --booklet-left-pose: perspective(1100px) rotateY(3deg) rotateZ(-0.2deg)
+    translateX(2px) translateY(0px) translateZ(4px);
+  --booklet-right-pose: perspective(1100px) rotateY(-7deg) rotateZ(0.35deg)
+    translateX(-10px) translateY(0px) translateZ(0px);
+
   position: absolute;
 
   left: 0;
@@ -288,7 +298,7 @@
   /*
    * The actual physical faces overlap slightly.
    */
-  grid-template-columns: 54% 52%;
+  grid-template-columns: var(--booklet-left-width) var(--booklet-right-width);
 
   transform-origin: 10% 100%;
 
@@ -555,8 +565,7 @@
 
   transform-origin: right center;
 
-  transform: perspective(1100px) rotateY(3deg) rotateZ(-0.2deg) translateX(2px)
-    translateZ(4px);
+  transform: var(--booklet-left-pose);
 
   box-shadow:
     -8px 14px 25px rgba(0, 0, 0, 0.25),
@@ -578,14 +587,13 @@
    * the binding so both faces read as one physical booklet.
    */
   margin-top: 0px;
-  margin-bottom: 1px;
+  margin-bottom: var(--booklet-right-recess);
 
   border-radius: 1px 3px 3px 1px;
 
   transform-origin: left center;
 
-  transform: perspective(1100px) rotateY(-7deg) rotateZ(0.35deg)
-    translateX(-10px) translateY(0px) translateZ(-0px);
+  transform: var(--booklet-right-pose);
 
   box-shadow:
     9px 11px 22px rgba(0, 0, 0, 0.18),
@@ -707,7 +715,7 @@
   width: 100%;
   height: 100%;
 
-  padding: 24px 28px 28px;
+  padding: var(--page-padding);
 
   display: flex;
   flex-direction: column;
@@ -718,11 +726,10 @@
 .bookletHeader {
   flex-shrink: 0;
 
-  height: 52px;
-  min-height: 52px;
-  margin-bottom: 12px;
-  padding-bottom: 8px;
-  overflow: hidden;
+  max-height: 38%;
+  margin-bottom: 13px;
+  padding-bottom: 9px;
+  overflow: auto;
 
   border-bottom: 1px solid rgba(61, 57, 51, 0.22);
 }
@@ -740,9 +747,7 @@
   letter-spacing: -0.2px;
 
   color: #000;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .bookletHeader span {
@@ -757,18 +762,6 @@
   line-height: 1.1;
 
   color: #666057;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.bookletHeaderPlaceholder {
-  flex-shrink: 0;
-
-  height: 52px;
-  min-height: 52px;
-
-  margin-bottom: 12px;
 }
 
 /* =========================================================
@@ -825,7 +818,7 @@
 }
 
 .bookletPageNumberRight {
-  right: -8px;
+  right: 12px;
 }
 
 /* =========================================================
@@ -834,95 +827,47 @@
 
 .bookletEdgeButton {
   position: absolute;
-
-  top: 50%;
-
-  z-index: 35;
-
-  width: 32px;
-  height: 74px;
-
-  display: grid;
-  place-items: center;
-
+  inset-block: 0;
+  z-index: 10;
+  width: clamp(16px, 11%, 26px);
   padding: 0;
-
-  cursor: pointer;
-
   appearance: none;
-
   border: 0;
-
-  background: transparent;
-
-  font-family: var(--font-ui);
-  font-size: 28px;
-  font-weight: 400;
-
-  color: rgba(35, 33, 30, 0.18);
-
-  transform: translateY(-50%);
-
-  transition:
-    color 180ms ease,
-    background 180ms ease,
-    opacity 180ms ease;
+  background: linear-gradient(var(--edge-shade-direction), #4c40302b, transparent);
+  opacity: 0;
+  cursor: pointer;
+  transition: opacity 180ms ease;
 }
 
 .bookletEdgePrevious {
+  --edge-shade-direction: 90deg;
   left: 0;
 }
 
 .bookletEdgeNext {
+  --edge-shade-direction: 270deg;
   right: 0;
 }
 
-.bookletEdgeButton:hover {
-  color: rgba(20, 19, 17, 0.72);
-
-  background: linear-gradient(90deg, rgba(40, 37, 32, 0.08), transparent);
+.bookletEdgeButton:enabled:hover,
+.bookletEdgeButton:focus-visible {
+  opacity: 1;
 }
 
-.bookletEdgeNext:hover {
-  background: linear-gradient(270deg, rgba(40, 37, 32, 0.08), transparent);
-}
+.bookletEdgeButton:disabled { pointer-events: none; }
 
 .bookletEdgeButton:focus-visible {
-  outline: 1px solid rgba(30, 28, 25, 0.55);
+  outline: 1px solid #4c4030b3;
   outline-offset: -4px;
 }
 
-/* =========================================================
-   NAVIGATION HINT
-   ========================================================= */
-
-.bookletNavigationHint {
+.pageAnnouncement {
   position: absolute;
-
-  left: 50%;
-  bottom: 7px;
-
-  z-index: 25;
-
-  display: flex;
-  gap: 13px;
-
-  transform: translateX(-50%);
-
-  pointer-events: none;
-
-  font-family: var(--font-ui);
-  font-size: 12px;
-
-  color: rgba(50, 47, 42, 0.15);
-
-  transition:
-    color 180ms ease,
-    opacity 180ms ease;
-}
-
-.bookletPageSpread:hover .bookletNavigationHint {
-  color: rgba(50, 47, 42, 0.38);
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 /* =========================================================
@@ -931,19 +876,18 @@
 
 @media (max-width: 900px) {
   .bookletPageSpread {
+    --booklet-right-pose: perspective(900px) rotateY(-9deg) rotateZ(0.45deg)
+      translateX(-6px) translateY(0px) translateZ(-6px);
+
     width: min(var(--booklet-width), 100%);
 
     height: min(var(--booklet-height), 100%);
   }
 
-  .bookletContent {
-    padding: 20px 20px 32px;
+  .bookletOuter {
+    --page-padding: 20px 20px 32px;
   }
 
-  .bookletPageRight {
-    transform: perspective(900px) rotateY(-9deg) rotateZ(0.45deg)
-      translateX(-6px) translateZ(-6px);
-  }
 }
 
 @media (max-width: 640px) {
@@ -975,12 +919,9 @@
     transform: translate3d(0, 0, 0) scale(0.98) rotateZ(-2deg);
   }
 
-  .bookletContent {
-    padding: 18px 16px 30px;
-  }
-
-  .bookletLyrics {
-    font-size: var(--text-sm);
+  .bookletOuter {
+    --page-padding: 18px 16px 30px;
+    --lyric-size: var(--text-sm);
   }
 
   .bookletPageNumberLeft,
@@ -1004,8 +945,7 @@
 @media (prefers-reduced-motion: reduce) {
   .bookletTab,
   .bookletPageSpread,
-  .bookletEdgeButton,
-  .bookletNavigationHint {
+  .bookletEdgeButton {
     transition: none;
   }
 }
@@ -1033,7 +973,7 @@
 
   display: grid;
 
-  grid-template-columns: 54% 52%;
+  grid-template-columns: var(--booklet-left-width) var(--booklet-right-width);
 
   visibility: hidden;
   pointer-events: none;
@@ -1054,13 +994,15 @@
   background: transparent;
 }
 
+.bookletMeasurePageRight { margin-bottom: var(--booklet-right-recess); }
+
 .bookletMeasureContent {
   position: relative;
 
   width: 100%;
   height: 100%;
 
-  padding: 24px 28px 28px;
+  padding: var(--page-padding);
 
   display: flex;
   flex-direction: column;
@@ -1139,16 +1081,6 @@
   overflow-wrap: anywhere;
 }
 
-/* Keep the pagination source aligned with the compact mobile lyric style. */
-@media (max-width: 640px) {
-  .bookletMeasureLyrics,
-  .bookletLineMeasureSource {
-    font-size: var(--text-sm);
-    line-height: 1;
-    letter-spacing: -0.1px;
-  }
-}
-
 /* A successful response stays readable before a hidden surface can be measured. */
 .lyricsFallback { overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; }
 .bookletStatus { min-height: 0; overflow: auto; color: #3d3a34; font: var(--text-control, 14px)/1.5 var(--font-ui); }
@@ -1162,9 +1094,9 @@
 .bookletLineMeasureSource,
 .turnText {
   font-family: var(--font-editorial);
-  font-size: var(--text-reading, 18px);
-  line-height: 1.38;
-  letter-spacing: 0;
+  font-size: var(--lyric-size);
+  line-height: 1;
+  letter-spacing: -0.1px;
 }
 
 .turnText {
@@ -1173,56 +1105,18 @@
   overflow: hidden;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  color: #39362f;
+  color: #4e4c4c;
+  text-rendering: optimizeLegibility;
 }
 
-.bookletLyrics { color: #39362f; }
+.bookletContent[data-turn-receiving="true"] { opacity: 0; }
+.stationaryPageCopy { position: absolute; inset: 0; pointer-events: none; }
 
-.bookletToolbar {
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  z-index: 45;
-  width: var(--booklet-width);
-  height: 40px;
-  display: grid;
-  grid-template-columns: minmax(96px, 1fr) auto minmax(96px, 1fr);
-  align-items: center;
-  gap: 12px;
-  padding: 3px 6px;
-  border: 1px solid #6c7471;
-  border-radius: 0;
-  background: var(--material-silver, linear-gradient(115deg, #bcc4c2, #9eaaa8 45%, #c4ccca));
-  box-shadow: inset 0 1px #f1f4ed8a, 0 2px 4px #0004;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.isOpen .bookletToolbar { opacity: 1; pointer-events: auto; }
-
-.bookletToolbar button {
-  min-width: 0;
-  height: 32px;
-  padding: 0 10px;
-  border: 1px solid var(--color-vfd-border);
-  border-top-color: var(--color-phosphor-dim);
-  border-radius: 0;
-  background: var(--color-vfd-bg);
-  color: var(--color-phosphor);
-  font: var(--text-control, 14px)/1.2 var(--font-ui);
-  cursor: pointer;
-}
-
-.bookletToolbar button:disabled { color: #636c59; cursor: default; }
-.bookletToolbar button:focus-visible { outline: 2px solid var(--color-phosphor); outline-offset: 2px; }
-.bookletToolbar span { color: #202b25; white-space: nowrap; font: var(--text-control, 14px)/1.2 var(--font-ui); }
-
-/* This sheet turns around the binding. Static reading faces and the toolbar
-   never inherit its transform; completion only removes this visual duplicate. */
+/* Reuse the static paper poses at both ends of the turn. Each side has the
+   dimensions of the page it represents, with the same hinge line. */
 .turningLeaf {
   position: absolute;
-  top: 0;
-  height: 100%;
+  inset: 0;
   z-index: 20;
   transform-style: preserve-3d;
   pointer-events: none;
@@ -1231,11 +1125,37 @@
   animation-fill-mode: both;
 }
 
-.turningNext { left: 54%; width: 52%; transform-origin: left center; animation-name: leafNext; }
-.turningPrevious { left: 0; width: 54%; transform-origin: right center; animation-name: leafPrevious; }
+.turningNext { animation-name: leafNext; }
+.turningPrevious { animation-name: leafPrevious; }
 .turnFront,
-.turnBack { position: absolute; inset: 0; backface-visibility: hidden; box-shadow: 0 3px 14px #0004; }
+.turnBack { position: absolute; top: 0; backface-visibility: hidden; }
+.turningLeaf .bookletPageLeft { left: 0; width: var(--booklet-left-width); height: 100%; }
+.turningLeaf .bookletPageRight {
+  left: var(--booklet-left-width);
+  width: var(--booklet-right-width);
+  height: calc(100% - var(--booklet-right-recess));
+  margin: 0;
+}
+.turnFront { transform: none; }
 .turnBack { transform: rotateY(180deg); }
-@keyframes leafNext { from { transform: rotateY(0); } to { transform: rotateY(-180deg); } }
-@keyframes leafPrevious { from { transform: rotateY(0); } to { transform: rotateY(180deg); } }
+@keyframes leafNext {
+  from {
+    transform-origin: var(--booklet-left-width) calc(50% - var(--booklet-right-recess) / 2);
+    transform: var(--booklet-right-pose) rotateY(0deg);
+  }
+  to {
+    transform-origin: var(--booklet-left-width) 50%;
+    transform: var(--booklet-left-pose) rotateY(-180deg);
+  }
+}
+@keyframes leafPrevious {
+  from {
+    transform-origin: var(--booklet-left-width) 50%;
+    transform: var(--booklet-left-pose) rotateY(0deg);
+  }
+  to {
+    transform-origin: var(--booklet-left-width) calc(50% - var(--booklet-right-recess) / 2);
+    transform: var(--booklet-right-pose) rotateY(180deg);
+  }
+}
 @media (prefers-reduced-motion: reduce) { .turningLeaf { display: none; animation: none; } }

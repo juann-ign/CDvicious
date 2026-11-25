@@ -19,8 +19,8 @@ const close = (actual, expected) => assert.ok(Math.abs(actual - expected) < 1e-7
 const project = (bounds, fit) => ({
   left: bounds.left * fit.scale + fit.x,
   right: bounds.right * fit.scale + fit.x,
-  top: bounds.top * fit.scale + fit.y,
-  bottom: bounds.bottom * fit.scale + fit.y,
+  top: bounds.top * (fit.scaleY ?? fit.scale) + fit.y,
+  bottom: bounds.bottom * (fit.scaleY ?? fit.scale) + fit.y,
 });
 function assertInside(rect, slot) {
   assert.ok(rect.left >= slot.left - 1e-7, `Left edge ${rect.left} outside ${slot.left}`);
@@ -87,6 +87,7 @@ test("Split increases the closed player from10to18percent within the actual two-
     assertInside(visible, result.slot); assertInside(opened, result.slot);
     close(visible.bottom, opened.bottom);
     close((visible.top + visible.bottom) / 2, height * .48);
+    assert.ok(visible.bottom - visible.top >= (closed.bottom - closed.top) * result.closed.scale * 1.15);
     close(result.slot.centerY, height * .48);
     assert.ok(result.slot.right + result.slot.gap <= bookletLeft + 1e-7);
     close(result.slot.left, width === 1440 ? 16 : 8);

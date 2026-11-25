@@ -83,15 +83,15 @@ test("Split balance normal mock: equipment grows within the available width, bot
       inside(control.rect, current.front, 2);
       expect(control.hit).toBe(true);
       const old = previous.controls.find((item) => item.label === control.label);
-      expect(control.rect.height / old.rect.height).toBeGreaterThanOrEqual(1.30);
-      expect(control.rect.height / old.rect.height).toBeLessThanOrEqual(1.52);
+      expect(control.rect.height / old.rect.height).toBeGreaterThanOrEqual(1.50);
+      expect(control.rect.height / old.rect.height).toBeLessThanOrEqual(1.80);
     }
     inside(current.knob.rect, current.front, 2); expect(current.knob.hit).toBe(true);
     expect(current.scene).toEqual(previous.scene);
     expect(current.footer.rect.height).toBe(128);
     expect(current.region.bottom).toBe(current.footer.rect.top);
     await hiddenFooter(page);
-    await expect(page.getByTestId("lyrics-pagination-controls")).toBeInViewport({ ratio: 1 });
+    await expect(page.getByTestId("lyrics-paper")).toBeInViewport({ ratio: 1 });
     expect(await hardware(page).evaluate((node) => node === window.__splitBalanceDeck)).toBe(true);
   }
   await page.setViewportSize({ width: 1440, height: 900 });

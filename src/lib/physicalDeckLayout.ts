@@ -5,6 +5,7 @@ export function fitDeck(bounds: DeckBounds, width: number, height: number, cente
 }
 
 type SplitDeckFrame = { width: number; height: number; bookletLeft: number | null };
+const SPLIT_HEIGHT_RATIO = 1.16;
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 const finitePositive = (value: number) => Number.isFinite(value) && value > 0;
 const validBounds = (bounds: DeckBounds) => Object.values(bounds).every(Number.isFinite)
@@ -27,17 +28,16 @@ export function fitSplitDeck(closed: DeckBounds, open: DeckBounds, frame: SplitD
   const maxBottom = height - top;
 
   const fitWithin = (bounds: DeckBounds, availableHeight: number, bottom: number) => {
-    if (!validBounds(bounds)) return { scale: 0, x: centerX, y: bottom };
+    if (!validBounds(bounds)) return { scale: 0, scaleY: 0, x: centerX, y: bottom };
     const measuredWidth = bounds.right - bounds.left, measuredHeight = bounds.bottom - bounds.top;
-    const fitted = fitDeck(bounds, slotWidth, availableHeight, centerX, bottom);
-    // fitDeck's existing .1 minimum remains unchanged for Deck. Split must also
-    // fit a narrow measured slot smaller than that floor.
-    const scale = Math.min(fitted.scale, slotWidth / measuredWidth, availableHeight / measuredHeight);
-    return { scale, x: centerX - (bounds.left * scale + bounds.right * scale) / 2, y: bottom - bounds.bottom * scale };
+    // Give the front and top more height in Split's width-limited slot.
+    const scale = Math.min(slotWidth / measuredWidth, availableHeight / (measuredHeight * SPLIT_HEIGHT_RATIO));
+    const scaleY = scale * SPLIT_HEIGHT_RATIO;
+    return { scale, scaleY, x: centerX - (bounds.left + bounds.right) * scale / 2, y: bottom - bounds.bottom * scaleY };
   };
   const closedHeight = Math.min(Math.max(.001, height - 96), maxBottom - top);
   const initial = fitWithin(closed, closedHeight, 0);
-  const visibleHeight = validBounds(closed) ? (closed.bottom - closed.top) * initial.scale : 0;
+  const visibleHeight = validBounds(closed) ? (closed.bottom - closed.top) * initial.scaleY : 0;
   const bottom = clamp(height * .48 + visibleHeight / 2, top + visibleHeight, maxBottom);
   const closedFit = fitWithin(closed, closedHeight, bottom);
   const openFit = fitWithin(open, bottom - top, bottom);

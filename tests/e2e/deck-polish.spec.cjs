@@ -60,7 +60,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 1280, height: 800
       expect(Math.abs(paper.y - approved.paperTop)).toBeLessThan(2);
       expect(Math.abs(paper.width - approved.paperWidth)).toBeLessThan(2);
       expect(Math.abs(paper.height - approved.paperHeight)).toBeLessThan(2);
-      await expect(page.getByTestId("lyrics-pagination-controls")).toBeInViewport({ ratio: 1 });
+      await expect(page.getByTestId("lyrics-paper")).toBeInViewport({ ratio: 1 });
       for (const text of ["CDV / LINEAR COMPACT DISC", "PRECISION / DUAL SLIDE", "LEVEL", "CDV–01 / COMPACT DISC"]) {
         await expect(hardware(page).getByText(text, { exact: true })).not.toBeVisible();
       }

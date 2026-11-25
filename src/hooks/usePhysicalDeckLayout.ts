@@ -12,14 +12,14 @@ export function usePhysicalDeckLayout(viewport: RefObject<HTMLDivElement | null>
       if (!frameRect.width || !designRect.width) return;
       const measure = (air: boolean): DeckBounds => {
         const projected = design.getBoundingClientRect();
-        const ratio = projected.width / 1280;
+        const ratioX = projected.width / 1280, ratioY = projected.height / 660;
         const nodes = [...body.querySelectorAll<HTMLElement>("[data-deck-surface]")];
         if (air) { const disc = body.querySelector<HTMLElement>("[data-deck-air-disc]"); if (disc) nodes.push(disc); }
         const bounds = nodes.map(node => node.getBoundingClientRect());
-        return { left: (Math.min(...bounds.map(r => r.left)) - projected.left) / ratio,
-          right: (Math.max(...bounds.map(r => r.right)) - projected.left) / ratio,
-          top: (Math.min(...bounds.map(r => r.top)) - projected.top) / ratio,
-          bottom: (Math.max(...bounds.map(r => r.bottom)) - projected.top) / ratio };
+        return { left: (Math.min(...bounds.map(r => r.left)) - projected.left) / ratioX,
+          right: (Math.max(...bounds.map(r => r.right)) - projected.left) / ratioX,
+          top: (Math.min(...bounds.map(r => r.top)) - projected.top) / ratioY,
+          bottom: (Math.max(...bounds.map(r => r.bottom)) - projected.top) / ratioY };
       };
       // Synchronous layout-only probes; restore the current mechanical value
       // before paint. The flight remains the only owner of its animation clock.
@@ -40,7 +40,7 @@ export function usePhysicalDeckLayout(viewport: RefObject<HTMLDivElement | null>
         const priority = booklet.style.getPropertyPriority("--pSplit");
         try {
           booklet.style.setProperty("--pSplit", "1");
-          const parts = [...booklet.querySelectorAll<HTMLElement>('[data-testid="lyrics-booklet"], [data-testid="lyrics-paper"], [data-booklet-page-half], [data-testid="lyrics-pagination-controls"], [aria-label="Booklet de letras"]')]
+          const parts = [...booklet.querySelectorAll<HTMLElement>('[data-testid="lyrics-booklet"], [data-testid="lyrics-paper"], [data-booklet-page-half], [aria-label="Booklet de letras"]')]
             .map(node => node.getBoundingClientRect()).filter(rect => rect.width > 0 && rect.height > 0);
           if (parts.length) bookletLeft = Math.min(...parts.map(rect => rect.left)) - frameRect.left;
         } finally {
@@ -62,6 +62,8 @@ export function usePhysicalDeckLayout(viewport: RefObject<HTMLDivElement | null>
       for (const [name, fit] of Object.entries(fits)) {
         body.style.setProperty(`--${name}-x`, `${fit.x}px`); body.style.setProperty(`--${name}-y`, `${fit.y}px`); body.style.setProperty(`--${name}-s`, String(fit.scale));
       }
+      body.style.setProperty("--split-closed-sy", String(split.closed.scaleY));
+      body.style.setProperty("--split-open-sy", String(split.open.scaleY));
       frame.dataset.closedBounds = JSON.stringify(closed); frame.dataset.openBounds = JSON.stringify(open);
       frame.dataset.splitSlot = JSON.stringify(split.slot);
       frame.dataset.layoutMeasurements = String(Number(frame.dataset.layoutMeasurements ?? 0) + 1);

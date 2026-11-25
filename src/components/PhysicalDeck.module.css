@@ -75,11 +75,14 @@
   --closed-x: calc(var(--deck-closed-x, 0px) + (var(--split-closed-x, 0px) - var(--deck-closed-x, 0px)) * var(--pSplit, 0));
   --closed-y: calc(var(--deck-closed-y, 0px) + (var(--split-closed-y, 0px) - var(--deck-closed-y, 0px)) * var(--pSplit, 0));
   --closed-s: calc(var(--deck-closed-s, 1) + (var(--split-closed-s, 1) - var(--deck-closed-s, 1)) * var(--pSplit, 0));
+  --closed-sy: calc(var(--deck-closed-s, 1) + (var(--split-closed-sy, 1) - var(--deck-closed-s, 1)) * var(--pSplit, 0));
   --open-x: calc(var(--deck-open-x, 0px) + (var(--split-open-x, 0px) - var(--deck-open-x, 0px)) * var(--pSplit, 0));
   --open-y: calc(var(--deck-open-y, 0px) + (var(--split-open-y, 0px) - var(--deck-open-y, 0px)) * var(--pSplit, 0));
   --open-s: calc(var(--deck-open-s, 1) + (var(--split-open-s, 1) - var(--deck-open-s, 1)) * var(--pSplit, 0));
+  --open-sy: calc(var(--deck-open-s, 1) + (var(--split-open-sy, 1) - var(--deck-open-s, 1)) * var(--pSplit, 0));
   transform: translate3d(calc(var(--closed-x) + (var(--open-x) - var(--closed-x)) * var(--open-weight)), calc(var(--closed-y) + (var(--open-y) - var(--closed-y)) * var(--open-weight)), 0)
-    scale(calc((var(--closed-s) + (var(--open-s) - var(--closed-s)) * var(--open-weight)) / var(--deck-density)));
+    scale(calc((var(--closed-s) + (var(--open-s) - var(--closed-s)) * var(--open-weight)) / var(--deck-density)),
+      calc((var(--closed-sy) + (var(--open-sy) - var(--closed-sy)) * var(--open-weight)) / var(--deck-density)));
   will-change: transform;
 }
 
