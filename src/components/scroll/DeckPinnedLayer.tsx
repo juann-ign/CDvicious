@@ -57,7 +57,8 @@ export function DeckPinnedLayer() {
   const confirmed = playback.phase === "confirmed" ? playback.snapshot : null;
   const hasNewerData = Boolean(data && (data.sampledAt ?? 0) >= (confirmed?.sampledAt ?? Infinity));
   if (confirmed && hasNewerData) releasedConfirmation.current = playback.attempt?.attemptId ?? null;
-  const restoring = playback.busy && (playback.phase === "failed" || playback.phase === "cancelled");
+  const recoverDisc = playback.phase === "failed" || playback.phase === "degraded" || playback.phase === "cancelled";
+  const restoring = playback.busy && recoverDisc;
   const visibleData = loading || restoring ? frozen.current
     : confirmed && releasedConfirmation.current !== playback.attempt?.attemptId ? confirmed : data;
   if (!loading) presented.current = visibleData;
@@ -234,8 +235,8 @@ export function DeckPinnedLayer() {
   }, []);
 
   useEffect(() => {
-    if (playback.phase === "failed" || playback.phase === "cancelled") setDockVisual(priorDockVisual.current);
-  }, [playback.phase, playback.attempt?.attemptId]);
+    if (recoverDisc) setDockVisual(priorDockVisual.current);
+  }, [recoverDisc, playback.attempt?.attemptId]);
 
   const cancel = useCallback(() => {
     const current = playbackRef.current;

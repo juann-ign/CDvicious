@@ -12,8 +12,8 @@ function load(filename, dependencies = {}, globals = {}) {
 }
 const tick = () => new Promise(setImmediate);
 const album = { id: "album-target", uri: "spotify:album:album-target", name: "Target", artists: [], images: [] };
-function harness({ getVolume, setVolume, pause, resume, observation, click, playResponse } = {}) {
-  const coordinator = load("src/lib/playbackSnapshotCoordinator.ts");
+function harness({ getVolume, setVolume, pause, resume, observation, click, playResponse, clock = Date } = {}) {
+  const coordinator = load("src/lib/playbackSnapshotCoordinator.ts", {}, { Date: clock });
   const events = [], operations = [], listeners = new Map(), timers = new Map();
   let timerId = 0, currentVolume = .6;
   class Event { constructor(type) { this.type = type; } }
@@ -34,7 +34,7 @@ function harness({ getVolume, setVolume, pause, resume, observation, click, play
   };
   const mechanical = { armMechanicalDockClick: () => ({ play: async (options) => { operations.push(["click", options.safeToPlay]); return click ? click(options) : options.safeToPlay ? "disabled" : "unsafe"; }, dispose() { operations.push(["dispose"]); } }) };
   const runtime = load("src/lib/discPlayback.ts", { "./playbackSnapshotCoordinator": coordinator, "./mockPlayback": { mockPlayback: null }, "./mechanicalDockClick": mechanical }, {
-    process: { env: { NEXT_PUBLIC_SPOTIFY_MOCK: "0" } }, window,
+    process: { env: { NEXT_PUBLIC_SPOTIFY_MOCK: "0" } }, window, Date: clock,
     document: { documentElement: { dataset: {} }, visibilityState: "visible" },
     Event, CustomEvent,
     fetch: async (url, options) => {
@@ -163,6 +163,34 @@ test("the real 25-second deadline fails docking and restores volume before publi
   assert.equal(run.operations.some(([kind]) => kind === "resume"), false);
   assert.equal(run.operations.filter(([kind]) => kind === "volume").at(-1)[1], .6);
   assert.equal(run.timers.size, 0);
+});
+
+test("a slow dock leaves the full confirmation window after resume, even if the tab was suspended", async () => {
+  for (const observationDelay of [14_999, 15_001]) {
+    let time = 100_000;
+    let returnObservation;
+    const run = harness({
+      clock: class extends Date { static now() { return time; } },
+      observation: () => new Promise((resolve) => { returnObservation = resolve; }),
+    });
+    const task = run.execute();
+    await tick();
+    time += 22_000;
+    run.execute.markDocked();
+    await tick();
+    assert.deepEqual([...run.timers.values()].map(({ ms }) => ms), [15_000]);
+    time += observationDelay;
+    returnObservation({
+      sampledAt: time, deviceId: "device-target", isPlaying: true,
+      track: { id: "track-target", album: { id: album.id } },
+    });
+    const inTime = observationDelay < 15_000;
+    assert.equal((await task).success, inTime);
+    assert.equal(run.coordinator.getPlaybackState().phase, inTime ? "confirmed" : "degraded");
+    assert.equal(Boolean(run.coordinator.getConfirmedPlayback()), inTime);
+    assert.deepEqual(run.operations.filter(([kind]) => kind === "volume").map(([, value]) => value), [0, .6]);
+    assert.equal(run.timers.size, 0);
+  }
 });
 
 test("volume-read failure never invents 0.5, mutes or sends a playback request", async () => {

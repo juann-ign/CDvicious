@@ -35,12 +35,29 @@ export function createDiscPlaybackExecution(album: AlbumItem, deviceId: string, 
   const click = armMechanicalDockClick();
   let task: Promise<PlayExecutionResult> | null = null;
   let timeout: number | null = null;
+  let deadlineAt = Infinity;
+  let awaitingConfirmation = false;
   let timedOut = false;
   let cancelEventSent = false;
   let unregisterCancellation: () => void = () => undefined;
   let resolveDock: () => void = () => undefined;
   const dock = new Promise<void>((resolve) => { resolveDock = resolve; });
   const clearDeadline = () => { if (timeout !== null) { window.clearTimeout(timeout); timeout = null; } };
+  const expire = () => {
+    timedOut = true;
+    controller.abort();
+    click.dispose();
+    if (!task) {
+      failPlaybackAttempt(attempt.attemptId, TIMEOUT_MESSAGE);
+      cleanup();
+      finishPlaybackAttempt(attempt.attemptId);
+    }
+  };
+  const startDeadline = (durationMs: number) => {
+    clearDeadline();
+    deadlineAt = Date.now() + durationMs;
+    timeout = window.setTimeout(expire, durationMs);
+  };
   const cleanup = () => {
     clearDeadline();
     window.removeEventListener("cdvicious:disc-flight-playback-ready", ready);
@@ -48,6 +65,8 @@ export function createDiscPlaybackExecution(album: AlbumItem, deviceId: string, 
     unregisterCancellation(); click.dispose();
   };
   const assertActive = () => {
+    // Background tabs can deliver an elapsed timer after a fetch has resolved.
+    if (!controller.signal.aborted && Date.now() >= deadlineAt) expire();
     if (controller.signal.aborted || !isActivePlaybackAttempt(attempt.attemptId)) throw new Error("Playback attempt aborted");
   };
   const execute = (() => task ??= run()) as StartPlayExecution;
@@ -78,10 +97,7 @@ export function createDiscPlaybackExecution(album: AlbumItem, deviceId: string, 
   if (!controller.signal.aborted) {
     window.addEventListener("cdvicious:disc-flight-playback-ready", ready);
     window.addEventListener("cdvicious:disc-flight-cancelled", cancelled);
-    timeout = window.setTimeout(() => {
-      timedOut = true; controller.abort(); click.dispose();
-      if (!task) { failPlaybackAttempt(attempt.attemptId, TIMEOUT_MESSAGE); cleanup(); finishPlaybackAttempt(attempt.attemptId); }
-    }, 25_000);
+    startDeadline(25_000);
     window.dispatchEvent(new CustomEvent("cdvicious:disc-flight-started", { detail: attempt }));
   }
   return execute;
@@ -148,6 +164,9 @@ export function createDiscPlaybackExecution(album: AlbumItem, deviceId: string, 
       await untilAborted(player.seek(0).catch(() => undefined), controller.signal);
       assertActive();
       await untilAborted(player.resume(), controller.signal);
+      assertActive();
+      awaitingConfirmation = true;
+      startDeadline(15_000);
 
       // Neither HTTP 200 nor arrival changes the VFD. Request a new observation
       // after resume, and match album identity, device, freshness and attempt.
@@ -162,6 +181,7 @@ export function createDiscPlaybackExecution(album: AlbumItem, deviceId: string, 
           if (observation.status === 401 || observation.status === 429) throw new Error(observation.status === 401 ? "Tu sesión de Spotify expiró. Volvé a iniciar sesión." : "Spotify está limitando las solicitudes. Esperá antes de reintentar.");
           snapshot = observation.ok ? await untilAborted(observation.json(), controller.signal) : null;
         }
+        assertActive();
         if (snapshot && matchesPlaybackSnapshot(attempt, snapshot, requestedAt)) {
           if (!await restoreVolume()) throw new Error("No se pudo restaurar el volumen original del dispositivo. Reintentá.");
           assertActive();
@@ -185,7 +205,8 @@ export function createDiscPlaybackExecution(album: AlbumItem, deviceId: string, 
       const restored = await restoreVolume();
       if (!result.success && !result.cancelled) {
         if (!restored) result.message = "No se pudo restaurar el volumen original del dispositivo. Reintentá.";
-        failPlaybackAttempt(attempt.attemptId, result.message ?? TIMEOUT_MESSAGE);
+        failPlaybackAttempt(attempt.attemptId, result.message ?? TIMEOUT_MESSAGE,
+          timedOut && awaitingConfirmation && restored ? "degraded" : "failed");
       }
       cleanup(); finishPlaybackAttempt(attempt.attemptId);
     }

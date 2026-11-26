@@ -41,7 +41,7 @@ jobs:
       - name: Typecheck
         run: npm run test
 
-      - name: Playback state contract tests
+      - name: Playback state contract
         run: npm run test:playback-contract
 
       - name: Production build

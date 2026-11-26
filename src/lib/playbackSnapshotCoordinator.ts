@@ -14,7 +14,7 @@ export interface ConfirmedPlayback {
   attemptId: string;
   snapshot: NowPlayingResponse;
 }
-export type PlaybackPhase = "idle" | "loading" | "docked" | "confirmed" | "failed" | "cancelled";
+export type PlaybackPhase = "idle" | "loading" | "docked" | "confirmed" | "degraded" | "failed" | "cancelled";
 export interface PlaybackState {
   phase: PlaybackPhase;
   attempt: Readonly<PlaybackAttempt> | null;
@@ -76,9 +76,9 @@ export function cancelPlaybackAttempt(attemptId: string, message = "Carga cancel
   cancel?.();
   return true;
 }
-export function failPlaybackAttempt(attemptId: string, message: string) {
+export function failPlaybackAttempt(attemptId: string, message: string, phase: "failed" | "degraded" = "failed") {
   if (!isActivePlaybackAttempt(attemptId) || !["loading", "docked"].includes(playbackState.phase)) return false;
-  publish({ phase: "failed", message, snapshot: null });
+  publish({ phase, message, snapshot: null });
   return true;
 }
 export function setPlaybackDockClick(attemptId: string, dockClick: MechanicalDockClickOutcome) {

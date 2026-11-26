@@ -8,9 +8,9 @@
     "start": "next start",
     "lint": "next lint",
     "test": "tsc --noEmit",
-    "test:playback-contract": "node --test tests/contracts/playback-snapshot-contract.test.mjs",
-    "test:unit": "node --test tests/*.test.cjs",
+    "test:unit": "node --test tests/*.test.cjs tests/contracts/*.test.mjs",
     "test:playback": "node --test tests/playback-contract.test.cjs",
+    "test:playback-contract": "node --test tests/contracts/playback-snapshot-contract.test.mjs tests/playback-contract.test.cjs tests/deck-playback-lifecycle.test.cjs tests/direct-track-playback.test.cjs tests/now-playing-store.test.cjs",
     "test:catalog": "node --test tests/catalog-routes.test.cjs",
     "test:e2e": "playwright test"
   },

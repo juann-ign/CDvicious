@@ -1,6 +1,7 @@
 "use client";
 
 import type { NowPlayingResponse } from "@/types/spotify";
+import { getPlaybackState, subscribePlaybackState } from "./playbackSnapshotCoordinator";
 
 const POLL_INTERVAL_MS = 5_000;
 const EVENT_DEBOUNCE_MS = 200;
@@ -33,6 +34,8 @@ let timer: ReturnType<typeof setTimeout> | null = null;
 let eventDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 let observersInstalled = false;
+let unsubscribePlayback: (() => void) | null = null;
+let handoffPending = false;
 
 const notify = () => {
   for (const listener of listeners) {
@@ -53,6 +56,7 @@ const canRefresh = () =>
   subscriberCount > 0 &&
   document.visibilityState === "visible" &&
   !quotaExceeded &&
+  !handoffPending &&
   !inFlight;
 
 const clearTimer = () => {
@@ -81,7 +85,7 @@ const scheduleNextPoll = () => {
   if (
     subscriberCount === 0 ||
     document.visibilityState !== "visible" ||
-    quotaExceeded
+    quotaExceeded || handoffPending
   ) {
     return;
   }
@@ -113,11 +117,13 @@ const fetchNowPlaying = async (source: RefreshSource) => {
       cache: "no-store",
       signal: controller.signal,
     });
+    if (controller.signal.aborted) return;
 
     if (res.status === 429) {
       const body = (await res.json().catch(() => null)) as {
         reason?: string;
       } | null;
+      if (controller.signal.aborted) return;
 
       if (body?.reason === "QUOTA_EXCEEDED") {
         quotaExceeded = true;
@@ -147,7 +153,7 @@ const fetchNowPlaying = async (source: RefreshSource) => {
 
     const json: NowPlayingResponse = await res.json();
 
-    if (document.visibilityState !== "visible") {
+    if (controller.signal.aborted || document.visibilityState !== "visible") {
       return;
     }
 
@@ -157,7 +163,7 @@ const fetchNowPlaying = async (source: RefreshSource) => {
       requestStartedAt: startedAt,
     });
   } catch (error) {
-    if (error instanceof DOMException && error.name === "AbortError") {
+    if (controller.signal.aborted || (error instanceof DOMException && error.name === "AbortError")) {
       return;
     }
 
@@ -169,13 +175,6 @@ const fetchNowPlaying = async (source: RefreshSource) => {
     if (abortController === controller) {
       abortController = null;
       inFlight = false;
-    }
-
-    if (
-      subscriberCount > 0 &&
-      !quotaExceeded &&
-      document.visibilityState === "visible"
-    ) {
       scheduleNextPoll();
     }
   }
@@ -198,6 +197,7 @@ const refresh = (source: RefreshSource) => {
     source === "visibility" &&
     Date.now() - lastRefreshAt < REFRESH_THROTTLE_MS
   ) {
+    scheduleNextPoll();
     return;
   }
 
@@ -248,12 +248,32 @@ const handleVisibilityChange = () => {
   }
 };
 
+// During handoff only the executor may observe the new album. An older poll
+// must never replace the display, even if it started in the same millisecond.
+const handlePlaybackChange = () => {
+  const state = getPlaybackState();
+  if (state.busy === handoffPending) return;
+  handoffPending = state.busy;
+  if (handoffPending) {
+    clearTimer();
+    clearEventDebounce();
+    abortInFlight();
+    return;
+  }
+  if (state.phase === "confirmed" && state.snapshot) {
+    setSnapshot({ data: state.snapshot, error: false });
+  }
+  scheduleNextPoll();
+};
+
 const installObservers = () => {
   if (observersInstalled || typeof window === "undefined") {
     return;
   }
 
   observersInstalled = true;
+  unsubscribePlayback = subscribePlaybackState(handlePlaybackChange);
+  handlePlaybackChange();
 
   window.addEventListener(
     "cdvicious:player_state_changed",
@@ -268,6 +288,9 @@ const uninstallObservers = () => {
   }
 
   observersInstalled = false;
+  unsubscribePlayback?.();
+  unsubscribePlayback = null;
+  handoffPending = false;
   window.removeEventListener(
     "cdvicious:player_state_changed",
     handlePlayerStateChanged,
